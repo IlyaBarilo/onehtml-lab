@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const standalone = await readFile(new URL('../onehtml-lab.html', import.meta.url), 'utf8');
+assert(standalone.includes('data:image/svg+xml,'), 'Favicon must be embedded');
+assert(standalone.includes('Permission is hereby granted, free of charge'), 'Standalone file must include its MIT license');
+assert(!standalone.includes('не распространяется по лицензии MIT'), 'Standalone file must not retain separate logo restrictions');
+assert(!standalone.includes('<!-- APP_'), 'No template markers may remain');
+assert(!/<(?:script|link)[^>]+(?:src|href)="https?:/i.test(standalone), 'No external application resources');
+const expectedVersion = process.argv[2];
+assert(process.argv.length <= 3, 'Use: node tests/build.mjs [v1.2.3]');
+const matches = [...standalone.matchAll(/class="app-version"/g)];
+if (expectedVersion) {
+  assert.match(expectedVersion, /^v\d+(?:\.\d+){0,3}$/);
+  assert.equal(matches.length, 1, 'Release must show one version element');
+  assert(standalone.includes(`aria-label="Версия ${expectedVersion}"`));
+} else {
+  assert.equal(matches.length, 0, 'Local build must not show a version');
+}
+console.log('Standalone artifact passed build checks.');

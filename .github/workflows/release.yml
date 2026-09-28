@@ -1,0 +1,45 @@
+name: Сборка выпуска
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.event.release.draft == false
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+      - name: Проверить тег и происхождение исходников
+        shell: bash
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+(\.[0-9]+){0,3}$ ]] || { echo 'Нужен числовой тег вида v1.2.3'; exit 1; }
+          git fetch origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor HEAD origin/main || { echo 'Тег должен указывать на коммит из main'; exit 1; }
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: node build.mjs --release-tag=$RELEASE_TAG
+      - run: node tests/build.mjs "$RELEASE_TAG"
+      - run: npm run test:unit
+      - run: npm run test:clean
+      - run: node tests/browser.mjs --engines=chromium
+      - name: Прикрепить готовый HTML к выпуску
+        run: gh release upload "$RELEASE_TAG" onehtml-lab.html
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}

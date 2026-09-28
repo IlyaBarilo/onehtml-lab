@@ -1,0 +1,16 @@
+{
+  "name": "onehtml-lab",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs",
+    "format:text": "node scripts/format-text.mjs",
+    "test:build": "node tests/build.mjs",
+    "test:pages": "node tests/pages.mjs",
+    "test:clean": "node tests/clean-copy.mjs",
+    "test:unit": "node tests/unit.mjs",
+    "test:e2e": "node tests/browser.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}

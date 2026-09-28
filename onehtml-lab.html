@@ -1,0 +1,458 @@
+<!doctype html>
+<!--
+MIT License
+
+Copyright (c) 2026 Ilya Barilo
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; webrtc 'block'; frame-src about:; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Вставьте HTML-игру, проверьте её в изолированном окне и сохраните одним файлом.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="OneHTML Lab">
+  <meta property="og:description" content="Редактор одной HTML-игры для телефона и компьютера: вставить, проверить и сохранить.">
+  <meta property="og:url" content="https://ilyabarilo.github.io/onehtml-lab/">
+  <meta property="og:image" content="https://ilyabarilo.github.io/onehtml-lab/assets/social-preview.png">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20class%3D%22app-mark%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2232%22%20height%3D%2232%22%20viewBox%3D%220%200%2032%2032%22%20fill%3D%22none%22%20aria-hidden%3D%22true%22%20focusable%3D%22false%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%228%22%20fill%3D%22%232D6CDF%22%2F%3E%3Cpath%20d%3D%22M10%206h8l6%206v12a2%202%200%200%201-2%202H10a2%202%200%200%201-2-2V8a2%202%200%200%201%202-2Z%22%20fill%3D%22%23FFFFFF%22%2F%3E%3Cpath%20d%3D%22M18%206v5a1%201%200%200%200%201%201h5%22%20fill%3D%22%23BFD6FF%22%2F%3E%3Cpath%20d%3D%22m13.5%2015.5-2.5%202.5%202.5%202.5m5-5%202.5%202.5-2.5%202.5%22%20stroke%3D%22%232D6CDF%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E%0D%0A">
+  <title>OneHTML Lab</title>
+  <style>:root {
+  color-scheme: light;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #253d5a;
+  background: #fcfdff;
+  --toolbar-height: 64px;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+button, input, textarea { font: inherit; }
+button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button:disabled { cursor: default; }
+:focus-visible { outline: 2px solid #2d6cdf; outline-offset: 3px; }
+.app { width: 100%; height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+.toolbar {
+  flex: 0 0 auto;
+  min-height: calc(var(--toolbar-height) + env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: env(safe-area-inset-top) max(14px, env(safe-area-inset-right)) 0 max(22px, env(safe-area-inset-left));
+  background: #edf3fd;
+  border-bottom: 1px solid #dbe5f3;
+}
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.app-mark { display: block; width: 32px; height: 32px; flex-shrink: 0; }
+h1 { margin: 0; color: #233955; white-space: nowrap; font-size: 18px; font-weight: 650; letter-spacing: -.55px; line-height: 1.2; }
+h1 span { font-weight: 450; color: #637e9f; }
+.app-version { color: #637e9f; font-size: 12px; white-space: nowrap; }
+.actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.icon-button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #4f6b91;
+  padding: 0;
+}
+.icon-button:hover:not(:disabled) { color: #245fb9; background: #e1ebfa; border-color: #cfddf1; }
+.icon-button:active:not(:disabled) { background: #d3e2f7; }
+.icon-button:disabled { color: #a9b8cc; opacity: .42; }
+.icon { width: 22px; height: 22px; display: block; }
+.run-button { margin-left: 4px; background: #2d6cdf; color: #ffffff; border-color: #2d6cdf; }
+.run-button:hover:not(:disabled) { background: #2059bf; border-color: #2059bf; color: #ffffff; }
+.run-button:active:not(:disabled) { background: #1c4fae; border-color: #1c4fae; }
+.run-button:disabled { background: #e2eaf6; border-color: #d4deef; color: #9daec7; }
+.workspace { width: 100%; flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; }
+textarea {
+  display: block;
+  width: 100%;
+  height: 100%;
+  resize: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  padding: 20px 22px max(20px, env(safe-area-inset-bottom));
+  background: #fcfdff;
+  color: #283c53;
+  caret-color: #2d6cdf;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 15px;
+  line-height: 1.65;
+  tab-size: 2;
+  scrollbar-width: thin;
+  scrollbar-color: #c3cfe0 #fcfdff;
+}
+textarea::placeholder { color: rgba(96, 116, 143, .42); opacity: 1; }
+textarea::selection { color: #173c72; background: #dbe9ff; }
+textarea:focus-visible { outline: none; }
+#preview, iframe { display: block; width: 100%; height: 100%; margin: 0; border: 0; border-radius: 0; background: #ffffff; color-scheme: light; }
+.notice {
+  flex: 0 0 auto;
+  width: 100%;
+  margin: 0;
+  padding: 9px max(14px, env(safe-area-inset-right)) 9px max(14px, env(safe-area-inset-left));
+  border-bottom: 1px solid #c3d6f2;
+  background: #edf4ff;
+  color: #2b4a75;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.notice.error { border-bottom-color: #92acd0; color: #233d63; }
+dialog { position: fixed; top: max(12px, env(safe-area-inset-top)); right: 0; bottom: auto; left: 0; width: min(380px, calc(100% - 32px)); max-height: calc(100dvh - 24px); margin: 0 auto; overflow-y: auto; padding: 24px; border: 1px solid #d5e1f1; border-radius: 12px; box-shadow: 0 24px 80px #173a6533; background: #ffffff; color: #253d5a; }
+dialog::backdrop { background: #11284a40; }
+h2 { margin: 0 0 22px; font-size: 20px; font-weight: 600; letter-spacing: -.4px; }
+.dialog-copy { margin: 0; color: #526b8c; font-size: 14px; line-height: 1.5; }
+dialog label { display: block; font-size: 13px; color: #60748f; margin-bottom: 8px; }
+dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #b9cbe3; border-radius: 6px; background: #fcfdff; color: #253d5a; font-size: 16px; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+.dialog-actions button { min-width: 84px; min-height: 44px; padding: 10px 16px; border: 1px solid #d0ddef; border-radius: 6px; background: #f0f5fc; color: #3e5d84; font-size: 14px; font-weight: 550; }
+.dialog-actions button:hover { background: #e1ebfa; }
+.dialog-actions button.primary { background: #2d6cdf; border-color: #2d6cdf; color: #ffffff; }
+.dialog-actions button.primary:hover { background: #2059bf; }
+@media (max-width: 600px) {
+  :root { --toolbar-height: 58px; }
+  .toolbar { padding-right: max(8px, env(safe-area-inset-right)); padding-left: max(14px, env(safe-area-inset-left)); gap: 10px; }
+  h1 { font-size: 17px; }
+  .brand { gap: 8px; }
+  .app-mark { width: 30px; height: 30px; }
+  .actions { gap: 3px; }
+  .run-button { margin-left: 3px; }
+  textarea { padding: 16px 14px max(16px, env(safe-area-inset-bottom)); font-size: 16px; }
+}
+@media (max-width: 440px) {
+  :root { --toolbar-height: 96px; }
+  .toolbar { flex-direction: column; justify-content: center; gap: 0; padding: env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); }
+  .brand { gap: 6px; min-height: 38px; }
+  .app-mark { width: 28px; height: 28px; }
+  h1 { font-size: 16px; letter-spacing: -.45px; }
+  .app-version { font-size: 11px; }
+  .actions { width: 100%; justify-content: space-evenly; }
+}
+@media (max-height: 480px) and (min-width: 381px) { :root { --toolbar-height: 54px; } }
+</style>
+</head>
+<body>
+  <main class="app">
+    <header class="toolbar">
+      <div class="brand">
+        <svg class="app-mark" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true" focusable="false"><rect width="32" height="32" rx="8" fill="#2D6CDF"/><path d="M10 6h8l6 6v12a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" fill="#FFFFFF"/><path d="M18 6v5a1 1 0 0 0 1 1h5" fill="#BFD6FF"/><path d="m13.5 15.5-2.5 2.5 2.5 2.5m5-5 2.5 2.5-2.5 2.5" stroke="#2D6CDF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <h1>OneHTML <span>Lab</span></h1>
+      </div>
+      <div class="actions" role="group" aria-label="Действия с HTML">
+        <button id="paste" class="icon-button" type="button" aria-label="Вставить" title="Вставить — заменить весь код">
+          <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="8" y="3" width="8" height="4" rx="1.3"/><path d="M12 10v7m-3-3 3 3 3-3"/></svg>
+        </button>
+        <button id="clear" class="icon-button" type="button" aria-label="Очистить код" title="Очистить весь код" disabled>
+          <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.5 7h15M9 7V4.5h6V7m-8.5 0 .8 12a2 2 0 0 0 2 1.8h5.4a2 2 0 0 0 2-1.8l.8-12M10 10.5v6M14 10.5v6"/></svg>
+        </button>
+        <button id="save" class="icon-button" type="button" aria-label="Сохранить" title="Сохранить HTML" disabled>
+          <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v12m-4-4 4 4 4-4M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+        </button>
+        <button id="share" class="icon-button" type="button" aria-label="Поделиться" title="Отправить HTML-файл" disabled>
+          <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="18" cy="5" r="2.2"/><circle cx="6" cy="12" r="2.2"/><circle cx="18" cy="19" r="2.2"/><path d="m8 11 7.9-4.7M8 13l7.9 4.7"/></svg>
+        </button>
+        <button id="run" class="icon-button run-button" type="button" aria-label="Запустить" title="Запустить" disabled>
+          <span id="play-icon"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 4.8c0-.85.94-1.37 1.66-.9l10 6.7a1.08 1.08 0 0 1 0 1.8l-10 6.7A1.08 1.08 0 0 1 8 18.2Z"/></svg></span>
+          <span id="stop-icon" hidden><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><rect x="5" y="5" width="14" height="14" rx="1.5"/></svg></span>
+        </button>
+      </div>
+    </header>
+    <p id="status" class="notice" role="status" aria-live="polite" hidden></p>
+    <section class="workspace" aria-label="Рабочая область">
+      <textarea id="code" aria-label="HTML-код" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Вставьте HTML-код…"></textarea>
+      <div id="preview" hidden></div>
+    </section>
+  </main>
+  <dialog id="save-dialog" aria-labelledby="save-title">
+    <form id="save-form">
+      <h2 id="save-title">Сохранить HTML</h2>
+      <label for="filename">Имя файла</label>
+      <input id="filename" name="filename" value="game.html" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="dialog-actions"><button id="cancel-save" type="button">Отмена</button><button class="primary" type="submit">ОК</button></div>
+    </form>
+  </dialog>
+  <dialog id="clear-dialog" aria-labelledby="clear-title">
+    <form id="clear-form">
+      <h2 id="clear-title">Очистить код?</h2>
+      <p class="dialog-copy">Весь код в поле будет удалён. Это действие нельзя отменить.</p>
+      <div class="dialog-actions"><button id="cancel-clear" type="button">Отмена</button><button class="primary" type="submit">Очистить</button></div>
+    </form>
+  </dialog>
+  <script>(function () {
+"use strict";
+// Prototype helpers are concatenated into one private closure by build.mjs.
+const previewPolicy = [
+  "default-src 'none'", "script-src 'unsafe-inline'", "style-src 'unsafe-inline'",
+  'img-src data: blob:', 'media-src data: blob:', 'font-src data:',
+  "connect-src 'none'", "webrtc 'block'", "frame-src 'none'", "object-src 'none'",
+  "base-uri 'none'", "form-action 'none'", "worker-src 'none'"
+].join('; ');
+
+function makePreview(code) {
+  const frame = document.createElement('iframe');
+  frame.title = 'Запущенная игра';
+  frame.setAttribute('sandbox', 'allow-scripts');
+  frame.setAttribute('referrerpolicy', 'no-referrer');
+  frame.setAttribute('allow', "camera 'none'; microphone 'none'; geolocation 'none'; clipboard-read 'none'; clipboard-write 'none'; payment 'none'");
+  // Policy is parsed before any user markup. The original source is never
+  // assigned to the host DOM and remains unchanged in the editor and export.
+  // The host's frame-src policy additionally restricts frame self-navigation.
+  frame.srcdoc = '<!doctype html><meta charset="utf-8">'
+    + '<meta http-equiv="Content-Security-Policy" content="' + previewPolicy + '">'
+    + code;
+  return frame;
+}
+
+function htmlFilename(value) {
+  const name = value.trim().replace(/[<>:"/\\|?*\u0000-\u001f\u007f]/g, '_').replace(/[. ]+$/g, '');
+  if (!name) return 'game.html';
+  return /\.html$/i.test(name) ? name : name + '.html';
+}
+
+function downloadHtml(code, filename) {
+  const blob = new Blob([code], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = htmlFilename(filename);
+  document.body.append(anchor);
+  try { anchor.click(); }
+  finally {
+    anchor.remove();
+    // Some browsers consume the Blob asynchronously after the click.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+}
+
+async function shareHtml(code, filename, shareNavigator = navigator) {
+  const file = new File([code], htmlFilename(filename), { type: 'text/html' });
+  const data = { files: [file] };
+  if (!shareNavigator.share || !shareNavigator.canShare?.(data)) return 'unsupported';
+  try {
+    await shareNavigator.share(data);
+    return 'shared';
+  } catch (error) {
+    if (error?.name === 'AbortError') return 'cancelled';
+    throw error;
+  }
+}
+
+const codeField = document.querySelector('#code');
+const preview = document.querySelector('#preview');
+const pasteButton = document.querySelector('#paste');
+const clearButton = document.querySelector('#clear');
+const saveButton = document.querySelector('#save');
+const shareButton = document.querySelector('#share');
+const runButton = document.querySelector('#run');
+const status = document.querySelector('#status');
+const saveDialog = document.querySelector('#save-dialog');
+const clearDialog = document.querySelector('#clear-dialog');
+const filenameField = document.querySelector('#filename');
+let running = false;
+let readingClipboard = false;
+let replaceOnNextPaste = false;
+let currentFilename = 'game.html';
+let statusTimeout;
+
+function inform(text = '', error = false, persistent = false) {
+  clearTimeout(statusTimeout);
+  status.textContent = text;
+  status.hidden = !text;
+  status.classList.toggle('error', error);
+  if (text && !error && !persistent) statusTimeout = setTimeout(() => { status.hidden = true; }, 6000);
+}
+
+function offerManualPaste() {
+  replaceOnNextPaste = true;
+  codeField.focus();
+  codeField.select();
+  inform('Буфер недоступен. Код выделен — выберите «Вставить» в меню поля.', false, true);
+}
+
+async function readClipboardWithTimeout() {
+  let timer;
+  try {
+    return await Promise.race([
+      navigator.clipboard.readText(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('clipboard-timeout')), 12_000);
+      })
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function updateControls() {
+  const empty = !codeField.value.trim();
+  pasteButton.disabled = running || readingClipboard;
+  clearButton.disabled = !codeField.value || running || readingClipboard;
+  saveButton.disabled = empty;
+  shareButton.disabled = empty;
+  runButton.disabled = !running && (empty || readingClipboard);
+  const action = running ? 'Стоп' : 'Запустить';
+  runButton.setAttribute('aria-label', action);
+  runButton.title = action;
+  document.querySelector('#play-icon').hidden = running;
+  document.querySelector('#stop-icon').hidden = !running;
+}
+
+codeField.addEventListener('input', () => { replaceOnNextPaste = false; inform(); updateControls(); });
+// Native paste is intentionally left to the textarea and the browser. It
+// respects the selection/caret unless the Paste button requested replacement.
+codeField.addEventListener('paste', event => {
+  if (!replaceOnNextPaste) return;
+  replaceOnNextPaste = false;
+  const text = event.clipboardData?.getData('text/plain');
+  if (typeof text !== 'string') return; // Let the browser insert into the selection.
+  event.preventDefault();
+  if (!text.trim()) {
+    inform('В буфере обмена нет текста. Сначала скопируйте HTML-код.');
+    return;
+  }
+  codeField.value = text;
+  codeField.scrollTop = 0;
+  codeField.scrollLeft = 0;
+  inform('Код вставлен. Можно запускать.');
+  updateControls();
+});
+pasteButton.addEventListener('click', async () => {
+  const previous = codeField.value;
+  if (!navigator.clipboard?.readText) {
+    offerManualPaste();
+    return;
+  }
+  readingClipboard = true;
+  updateControls();
+  inform('Читаю буфер… Подтвердите вставку в запросе браузера.', false, true);
+  try {
+    const text = await readClipboardWithTimeout();
+    if (codeField.value !== previous) {
+      inform('Код уже изменён. Нажмите «Вставить» ещё раз, чтобы заменить его.');
+      return;
+    }
+    if (!text.trim()) {
+      inform('В буфере обмена нет текста. Сначала скопируйте HTML-код.');
+      return;
+    }
+    replaceOnNextPaste = false;
+    codeField.value = text;
+    codeField.scrollTop = 0;
+    codeField.scrollLeft = 0;
+    inform('Код вставлен. Можно запускать.');
+  } catch {
+    if (codeField.value === previous) offerManualPaste();
+    else inform('Код изменён, пока браузер запрашивал буфер. Нажмите «Вставить» ещё раз.');
+  } finally {
+    readingClipboard = false;
+    updateControls();
+  }
+});
+
+runButton.addEventListener('click', () => {
+  inform();
+  if (running) {
+    // Removing the document tears down its timers, media and event handlers.
+    preview.replaceChildren();
+    preview.hidden = true;
+    codeField.hidden = false;
+    running = false;
+  } else if (codeField.value.trim()) {
+    try {
+      const frame = makePreview(codeField.value);
+      codeField.blur();
+      codeField.hidden = true;
+      preview.hidden = false;
+      preview.replaceChildren(frame);
+      running = true;
+    } catch {
+      preview.replaceChildren();
+      preview.hidden = true;
+      codeField.hidden = false;
+      inform('Не удалось открыть игру. Код остался в поле.', true);
+    }
+  }
+  updateControls();
+});
+
+saveButton.addEventListener('click', () => {
+  filenameField.value = 'game.html';
+  saveDialog.showModal();
+  filenameField.focus();
+  filenameField.select();
+});
+clearButton.addEventListener('click', () => {
+  if (!codeField.value || running) return;
+  inform();
+  clearDialog.showModal();
+});
+document.querySelector('#cancel-clear').addEventListener('click', () => clearDialog.close());
+document.querySelector('#clear-form').addEventListener('submit', event => {
+  event.preventDefault();
+  if (running) return;
+  clearDialog.close();
+  codeField.value = '';
+  codeField.scrollTop = 0;
+  codeField.scrollLeft = 0;
+  replaceOnNextPaste = false;
+  inform('Код очищен.');
+  updateControls();
+});
+shareButton.addEventListener('click', async () => {
+  if (!codeField.value.trim()) return;
+  inform();
+  try {
+    const result = await shareHtml(codeField.value, currentFilename);
+    if (result === 'unsupported') {
+      inform('Передача HTML-файла здесь недоступна. Сохраните его и отправьте через приложение «Файлы».');
+    }
+  } catch {
+    inform('Не удалось отправить HTML-файл. Сохраните его и отправьте через приложение «Файлы».', true);
+  }
+});
+document.querySelector('#cancel-save').addEventListener('click', () => saveDialog.close());
+document.querySelector('#save-form').addEventListener('submit', event => {
+  event.preventDefault();
+  try {
+    const filename = htmlFilename(filenameField.value);
+    downloadHtml(codeField.value, filename);
+    currentFilename = filename;
+    saveDialog.close();
+    inform('Файл передан браузеру для сохранения.');
+  } catch {
+    saveDialog.close();
+    inform('Не удалось передать файл браузеру. Код остался в поле.', true);
+  }
+});
+updateControls();
+
+})();</script>
+</body>
+</html>

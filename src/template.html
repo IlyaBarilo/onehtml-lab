@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; webrtc 'block'; frame-src about:; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Вставьте HTML-игру, проверьте её в изолированном окне и сохраните одним файлом.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="OneHTML Lab">
+  <meta property="og:description" content="Редактор одной HTML-игры для телефона и компьютера: вставить, проверить и сохранить.">
+  <meta property="og:url" content="https://ilyabarilo.github.io/onehtml-lab/">
+  <meta property="og:image" content="https://ilyabarilo.github.io/onehtml-lab/assets/social-preview.png">
+  <link rel="icon" type="image/svg+xml" href="<!-- APP_FAVICON -->">
+  <title>OneHTML Lab</title>
+  <style>/* APP_STYLES */</style>
+</head>
+<body>
+  <main class="app">
+    <header class="toolbar">
+      <div class="brand">
+        <!-- ICON:app -->
+        <h1>OneHTML <span>Lab</span></h1>
+        <!-- APP_VERSION -->
+      </div>
+      <div class="actions" role="group" aria-label="Действия с HTML">
+        <button id="paste" class="icon-button" type="button" aria-label="Вставить" title="Вставить — заменить весь код">
+          <!-- ICON:paste -->
+        </button>
+        <button id="clear" class="icon-button" type="button" aria-label="Очистить код" title="Очистить весь код" disabled>
+          <!-- ICON:clear -->
+        </button>
+        <button id="save" class="icon-button" type="button" aria-label="Сохранить" title="Сохранить HTML" disabled>
+          <!-- ICON:save -->
+        </button>
+        <button id="share" class="icon-button" type="button" aria-label="Поделиться" title="Отправить HTML-файл" disabled>
+          <!-- ICON:share -->
+        </button>
+        <button id="run" class="icon-button run-button" type="button" aria-label="Запустить" title="Запустить" disabled>
+          <span id="play-icon"><!-- ICON:play --></span>
+          <span id="stop-icon" hidden><!-- ICON:stop --></span>
+        </button>
+      </div>
+    </header>
+    <p id="status" class="notice" role="status" aria-live="polite" hidden></p>
+    <section class="workspace" aria-label="Рабочая область">
+      <textarea id="code" aria-label="HTML-код" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Вставьте HTML-код…"></textarea>
+      <div id="preview" hidden></div>
+    </section>
+  </main>
+  <dialog id="save-dialog" aria-labelledby="save-title">
+    <form id="save-form">
+      <h2 id="save-title">Сохранить HTML</h2>
+      <label for="filename">Имя файла</label>
+      <input id="filename" name="filename" value="game.html" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="dialog-actions"><button id="cancel-save" type="button">Отмена</button><button class="primary" type="submit">ОК</button></div>
+    </form>
+  </dialog>
+  <dialog id="clear-dialog" aria-labelledby="clear-title">
+    <form id="clear-form">
+      <h2 id="clear-title">Очистить код?</h2>
+      <p class="dialog-copy">Весь код в поле будет удалён. Это действие нельзя отменить.</p>
+      <div class="dialog-actions"><button id="cancel-clear" type="button">Отмена</button><button class="primary" type="submit">Очистить</button></div>
+    </form>
+  </dialog>
+  <script>/* APP_SCRIPT */</script>
+</body>
+</html>
