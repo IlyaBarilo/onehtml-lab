@@ -209,10 +209,12 @@ async function runCase(browser, engine, url, mode) {
     assert.equal(context.pages().length, 1);
     // Let asynchronous load attempts reach the interception boundary.
     await page.waitForTimeout(150);
-    assert.deepEqual(escapes, []);
-    check('Sandbox blocks parent DOM/storage, popup/top navigation, form and external resource/network attempts');
+    assert((await page.locator('#preview > iframe').getAttribute('srcdoc')).includes("script-src 'unsafe-inline' https:"), 'Network-enabled preview permits HTTPS resources');
+    assert(!escapes.some(request => /\/(?:popup|top|frame|form)$/.test(request)), 'Sandbox still blocks popups, navigation, nested frames and forms');
+    check('Sandbox blocks parent DOM/storage, popup/top navigation and forms while permitting HTTPS resources');
     await page.locator('#run').click();
     assert.equal(await code.inputValue(), hostile);
+    escapes.length = 0;
 
     for (const navigation of [
       `<script>location.href='https://onehtml.invalid/self'</script>`,
@@ -249,7 +251,7 @@ async function runCase(browser, engine, url, mode) {
         const header = document.querySelector('.toolbar').getBoundingClientRect();
         const work = document.querySelector('.workspace').getBoundingClientRect();
         const editor = document.querySelector('#code').getBoundingClientRect();
-        const buttons = [...document.querySelectorAll('.actions button')].map(el => {
+        const buttons = [...document.querySelectorAll('.actions button')].filter(el => !el.hidden).map(el => {
           const rect = el.getBoundingClientRect();
           return { width: rect.width, height: rect.height, top: rect.top, bottom: rect.bottom, right: rect.right, name: el.getAttribute('aria-label'), svg: el.querySelectorAll('svg').length };
         });
@@ -266,7 +268,7 @@ async function runCase(browser, engine, url, mode) {
       assert.equal(layout.editor.width, layout.width);
       assert(Math.abs(layout.editor.height - (layout.height - layout.header.bottom)) < 1);
       assert.equal(layout.background, 'rgb(252, 253, 255)');
-      assert.equal(layout.buttons.length, 5);
+      assert.equal(layout.buttons.length, 7);
       assert(layout.buttons.every(button => button.width >= 44 && button.height >= 44 && button.top >= 0 && button.bottom <= layout.header.bottom && button.right <= layout.width && button.name && button.svg), 'All icon controls fit the toolbar and have accessible names');
     }
     await page.setViewportSize(viewport);

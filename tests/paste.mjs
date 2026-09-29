@@ -13,7 +13,7 @@ function createApp(clipboard) {
   function element(selector) {
     if (!elements.has(selector)) elements.set(selector, {
       value: '', hidden: false, disabled: false, listeners: {},
-      classList: { toggle() {} },
+      classList: { toggle() {}, add() {}, remove() {} },
       addEventListener(name, listener) { this.listeners[name] = listener; },
       setAttribute() {},
       showModal() { this.open = true; },
@@ -27,6 +27,7 @@ function createApp(clipboard) {
   }
   const sandbox = {
     document: { querySelector: element },
+    window: { addEventListener() {} },
     navigator: { clipboard },
     setTimeout(fn, ms) { timers.push({ fn, ms }); return timers.length; },
     clearTimeout: () => {},

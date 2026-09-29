@@ -23,6 +23,8 @@ jobs:
       - run: npm run test:unit
       - run: npm run test:clean
       - run: node tests/browser.mjs --engines=chromium
+      - run: npm run test:network
+      - run: npm run test:draft
       - run: node scripts/prepare-pages.mjs
       - run: npm run test:pages
       - uses: actions/configure-pages@v6

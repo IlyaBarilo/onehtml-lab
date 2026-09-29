@@ -25,7 +25,7 @@ SOFTWARE.
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; webrtc 'block'; frame-src about:; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https:; style-src 'unsafe-inline' https:; img-src data: blob: https:; media-src data: blob: https:; font-src data: https:; connect-src https: wss:; webrtc 'block'; frame-src about:; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <meta name="description" content="Вставьте HTML-игру, проверьте её в изолированном окне и сохраните одним файлом.">
@@ -87,6 +87,37 @@ h1 span { font-weight: 450; color: #637e9f; }
 .run-button:hover:not(:disabled) { background: #2059bf; border-color: #2059bf; color: #ffffff; }
 .run-button:active:not(:disabled) { background: #1c4fae; border-color: #1c4fae; }
 .run-button:disabled { background: #e2eaf6; border-color: #d4deef; color: #9daec7; }
+.expert-button[aria-pressed="true"] { background: #dceaff; border-color: #c3d9f8; color: #2059bf; }
+.network-button.is-off { background: #eff2f6; border-color: #d6dfeb; color: #667a96; }
+.expert-tools {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 4px max(12px, env(safe-area-inset-right)) 4px max(12px, env(safe-area-inset-left));
+  border-bottom: 1px solid #dbe5f3;
+  background: #f5f8fd;
+}
+.import-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 7px 11px;
+  border: 1px solid #cfddf1;
+  border-radius: 7px;
+  background: #e9f1fc;
+  color: #315c93;
+  font-size: 13px;
+  font-weight: 550;
+}
+.import-button:hover { background: #dceaff; }
+.import-button:disabled { opacity: .5; cursor: default; }
+.draft-status { min-width: 0; color: #607895; font-size: 12px; text-align: right; }
+.draft-status.error { color: #9a4a4a; }
 .workspace { width: 100%; flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; }
 textarea {
   display: block;
@@ -125,6 +156,21 @@ textarea:focus-visible { outline: none; }
   overflow-wrap: anywhere;
 }
 .notice.error { border-bottom-color: #92acd0; color: #233d63; }
+.network-status {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  width: 100%;
+  padding: 7px max(14px, env(safe-area-inset-right)) 7px max(14px, env(safe-area-inset-left));
+  border-bottom: 1px solid #c3d6f2;
+  background: #eaf3ff;
+  color: #2b4a75;
+  font-size: 12px;
+  line-height: 1.35;
+}
+#network-message { font-weight: 600; }
 dialog { position: fixed; top: max(12px, env(safe-area-inset-top)); right: 0; bottom: auto; left: 0; width: min(380px, calc(100% - 32px)); max-height: calc(100dvh - 24px); margin: 0 auto; overflow-y: auto; padding: 24px; border: 1px solid #d5e1f1; border-radius: 12px; box-shadow: 0 24px 80px #173a6533; background: #ffffff; color: #253d5a; }
 dialog::backdrop { background: #11284a40; }
 h2 { margin: 0 0 22px; font-size: 20px; font-weight: 600; letter-spacing: -.4px; }
@@ -155,6 +201,10 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
   .app-version { font-size: 11px; }
   .actions { width: 100%; justify-content: space-evenly; }
 }
+@media (max-width: 360px) {
+  .toolbar { padding-right: 4px; padding-left: 4px; }
+  .actions { gap: 0; }
+}
 @media (max-height: 480px) and (min-width: 381px) { :root { --toolbar-height: 54px; } }
 </style>
 </head>
@@ -178,13 +228,29 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
         <button id="share" class="icon-button" type="button" aria-label="Поделиться" title="Отправить HTML-файл" disabled>
           <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="18" cy="5" r="2.2"/><circle cx="6" cy="12" r="2.2"/><circle cx="18" cy="19" r="2.2"/><path d="m8 11 7.9-4.7M8 13l7.9 4.7"/></svg>
         </button>
+        <button id="network-toggle" class="icon-button network-button" type="button" aria-label="Доступ в интернет для игры" aria-pressed="true" title="Интернет включён — нажмите, чтобы выключить">
+          <span id="network-on-icon"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.7 5.5 3.7 9s-1.2 6.5-3.7 9c-2.5-2.5-3.7-5.5-3.7-9S9.5 5.5 12 3z"/></svg></span>
+          <span id="network-off-icon" hidden><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.2 8A9 9 0 0 0 16 20M8 4.2A9 9 0 0 1 20 16M3 12h4m5-9c2 2 3.2 4.3 3.6 7M12 21c-1.4-1.4-2.4-3-3-4.7M3 3l18 18"/></svg></span>
+        </button>
         <button id="run" class="icon-button run-button" type="button" aria-label="Запустить" title="Запустить" disabled>
           <span id="play-icon"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 4.8c0-.85.94-1.37 1.66-.9l10 6.7a1.08 1.08 0 0 1 0 1.8l-10 6.7A1.08 1.08 0 0 1 8 18.2Z"/></svg></span>
           <span id="stop-icon" hidden><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><rect x="5" y="5" width="14" height="14" rx="1.5"/></svg></span>
         </button>
+        <button id="expert-toggle" class="icon-button expert-button" type="button" aria-label="Экспертный режим" aria-pressed="false" title="Включить экспертный режим">
+          <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 3.5h4l.6 2.1 1.9.8 1.9-1.1 2.8 2.8-1.1 1.9.8 1.9 2.1.6v4l-2.1.6-.8 1.9 1.1 1.9-2.8 2.8-1.9-1.1-1.9.8-.6 2.1h-4l-.6-2.1-1.9-.8-1.9 1.1-2.8-2.8 1.1-1.9-.8-1.9L1 15.5v-4l2.1-.6.8-1.9-1.1-1.9 2.8-2.8 1.9 1.1 1.9-.8z" transform="translate(0 -1.5) scale(.92) translate(1 2)"/><circle cx="12" cy="12" r="3.2"/></svg>
+        </button>
       </div>
     </header>
+    <div id="expert-tools" class="expert-tools" hidden>
+      <button id="import" class="import-button" type="button" title="Открыть HTML-файл с устройства"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 15V3m0 12-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg> <span>Открыть HTML</span></button>
+      <span id="draft-status" class="draft-status" role="status" aria-live="polite"></span>
+      <input id="import-file" type="file" accept=".html,.htm,text/html" hidden>
+    </div>
     <p id="status" class="notice" role="status" aria-live="polite" hidden></p>
+    <div id="network-status" class="network-status" hidden>
+      <span id="network-message" role="status" aria-live="polite">Игра использует интернет</span>
+      <span id="network-metrics">Файлов: <span id="network-count">0</span> · учтено: <span id="network-kb">(нет данных)</span></span>
+    </div>
     <section class="workspace" aria-label="Рабочая область">
       <textarea id="code" aria-label="HTML-код" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Вставьте HTML-код…"></textarea>
       <div id="preview" hidden></div>
@@ -205,17 +271,56 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
       <div class="dialog-actions"><button id="cancel-clear" type="button">Отмена</button><button class="primary" type="submit">Очистить</button></div>
     </form>
   </dialog>
+  <dialog id="replace-dialog" aria-labelledby="replace-title">
+    <form method="dialog">
+      <h2 id="replace-title">Заменить код?</h2>
+      <p id="replace-copy" class="dialog-copy">Текущий код будет заменён. Если он нужен отдельно, сначала сохраните его HTML-файлом.</p>
+      <div class="dialog-actions"><button value="cancel" type="submit">Отмена</button><button class="primary" value="replace" type="submit">Заменить</button></div>
+    </form>
+  </dialog>
+  <dialog id="restore-dialog" aria-labelledby="restore-title">
+    <form method="dialog">
+      <h2 id="restore-title">Найден черновик</h2>
+      <p class="dialog-copy">В браузере есть сохранённый черновик, а в поле уже находится другой код. Восстановить черновик или оставить текущий код вместо него?</p>
+      <div class="dialog-actions"><button value="cancel" type="submit">Отмена</button><button value="current" type="submit">Оставить код</button><button class="primary" value="restore" type="submit">Восстановить</button></div>
+    </form>
+  </dialog>
   <script>(function () {
 "use strict";
 // Prototype helpers are concatenated into one private closure by build.mjs.
-const previewPolicy = [
-  "default-src 'none'", "script-src 'unsafe-inline'", "style-src 'unsafe-inline'",
-  'img-src data: blob:', 'media-src data: blob:', 'font-src data:',
-  "connect-src 'none'", "webrtc 'block'", "frame-src 'none'", "object-src 'none'",
-  "base-uri 'none'", "form-action 'none'", "worker-src 'none'"
-].join('; ');
+function previewPolicy(networkAllowed) {
+  return [
+    "default-src 'none'",
+    `script-src 'unsafe-inline'${networkAllowed ? ' https:' : ''}`,
+    `style-src 'unsafe-inline'${networkAllowed ? ' https:' : ''}`,
+    `img-src data: blob:${networkAllowed ? ' https:' : ''}`,
+    `media-src data: blob:${networkAllowed ? ' https:' : ''}`,
+    `font-src data:${networkAllowed ? ' https:' : ''}`,
+    `connect-src ${networkAllowed ? 'https: wss:' : "'none'"}`,
+    "webrtc 'block'", "frame-src 'none'", "object-src 'none'",
+    "base-uri 'none'", "form-action 'none'", "worker-src 'none'"
+  ].join('; ');
+}
 
-function makePreview(code) {
+// Resource Timing reports downloads, but cross-origin sizes can be hidden.
+// The probe sends diagnostics only; it does not enforce a traffic quota.
+const trafficProbe = `<script>
+(() => {
+  if (!window.PerformanceObserver) return;
+  try {
+    const observer = new PerformanceObserver(list => {
+      for (const entry of list.getEntries()) {
+        if (!entry.name.startsWith('https://')) continue;
+        parent.postMessage({ type: 'onehtml-lab:network-resource', bytes: entry.transferSize || 0 }, '*');
+      }
+    });
+    observer.observe({ type: 'resource', buffered: true });
+    addEventListener('pagehide', () => observer.disconnect(), { once: true });
+  } catch {}
+})();
+<\/script>`;
+
+function makePreview(code, networkAllowed = true) {
   const frame = document.createElement('iframe');
   frame.title = 'Запущенная игра';
   frame.setAttribute('sandbox', 'allow-scripts');
@@ -225,7 +330,8 @@ function makePreview(code) {
   // assigned to the host DOM and remains unchanged in the editor and export.
   // The host's frame-src policy additionally restricts frame self-navigation.
   frame.srcdoc = '<!doctype html><meta charset="utf-8">'
-    + '<meta http-equiv="Content-Security-Policy" content="' + previewPolicy + '">'
+    + '<meta http-equiv="Content-Security-Policy" content="' + previewPolicy(networkAllowed) + '">'
+    + (networkAllowed ? trafficProbe : '')
     + code;
   return frame;
 }
@@ -264,6 +370,43 @@ async function shareHtml(code, filename, shareNavigator = navigator) {
   }
 }
 
+// One expert draft per browser origin. The editor also works if storage fails.
+let draftDatabasePromise;
+
+function draftDatabase() {
+  if (!draftDatabasePromise) draftDatabasePromise = new Promise((resolve, reject) => {
+    if (!window.indexedDB) return reject(new Error('IndexedDB unavailable'));
+    const request = indexedDB.open('onehtml-lab-draft', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('drafts');
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+    request.onblocked = () => reject(new Error('IndexedDB blocked'));
+  });
+  return draftDatabasePromise;
+}
+
+async function readExpertDraft() {
+  const database = await draftDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction('drafts', 'readonly');
+    const request = transaction.objectStore('drafts').get('expert');
+    request.onsuccess = () => resolve(request.result ?? null);
+    request.onerror = () => reject(request.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+async function writeExpertDraft(code) {
+  const database = await draftDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction('drafts', 'readwrite');
+    transaction.objectStore('drafts').put(code, 'expert');
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
 const codeField = document.querySelector('#code');
 const preview = document.querySelector('#preview');
 const pasteButton = document.querySelector('#paste');
@@ -271,15 +414,90 @@ const clearButton = document.querySelector('#clear');
 const saveButton = document.querySelector('#save');
 const shareButton = document.querySelector('#share');
 const runButton = document.querySelector('#run');
+const expertButton = document.querySelector('#expert-toggle');
+const networkButton = document.querySelector('#network-toggle');
+const expertTools = document.querySelector('#expert-tools');
+const importButton = document.querySelector('#import');
+const importFile = document.querySelector('#import-file');
+const draftStatus = document.querySelector('#draft-status');
 const status = document.querySelector('#status');
+const networkStatus = document.querySelector('#network-status');
+const networkCountField = document.querySelector('#network-count');
+const networkKbField = document.querySelector('#network-kb');
 const saveDialog = document.querySelector('#save-dialog');
 const clearDialog = document.querySelector('#clear-dialog');
+const replaceDialog = document.querySelector('#replace-dialog');
+const restoreDialog = document.querySelector('#restore-dialog');
 const filenameField = document.querySelector('#filename');
 let running = false;
 let readingClipboard = false;
 let replaceOnNextPaste = false;
 let currentFilename = 'game.html';
 let statusTimeout;
+const settingsKey = 'onehtml-lab-settings';
+const storedSettings = readSettings();
+let expertMode = storedSettings.expertMode;
+let networkAllowed = storedSettings.networkAllowed;
+let modeBusy = false;
+let draftChecked = false;
+let draftAvailable = false;
+let draftSaveTimer;
+let draftRevision = 0;
+let draftQueue = Promise.resolve();
+let activeFrame = null;
+let networkCount = 0;
+let networkBytes = 0;
+
+function readSettings() {
+  try {
+    const value = JSON.parse(localStorage.getItem(settingsKey));
+    return {
+      expertMode: value?.mode === 'expert',
+      networkAllowed: value?.networkAllowed !== false
+    };
+  } catch {
+    return { expertMode: false, networkAllowed: true };
+  }
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem(settingsKey, JSON.stringify({
+      mode: expertMode ? 'expert' : 'simple',
+      networkAllowed
+    }));
+    return true;
+  } catch {
+    inform('Не удалось сохранить настройки режима и интернета в браузере.', true, true);
+    return false;
+  }
+}
+
+function previewNetworkAllowed() {
+  return networkAllowed;
+}
+
+function resetNetworkStatus() {
+  networkCount = 0;
+  networkBytes = 0;
+  networkCountField.textContent = '0';
+  networkKbField.textContent = '(нет данных)';
+  networkStatus.hidden = true;
+}
+
+window.addEventListener('message', event => {
+  if (!running || !previewNetworkAllowed() || !activeFrame || event.source !== activeFrame.contentWindow) return;
+  if (event.data?.type !== 'onehtml-lab:network-resource') return;
+  const bytes = event.data.bytes;
+  if (typeof bytes !== 'number' || !Number.isFinite(bytes) || bytes < 0) return;
+  networkCount += 1;
+  networkBytes = Math.min(Number.MAX_SAFE_INTEGER, networkBytes + Math.floor(bytes));
+  networkCountField.textContent = String(networkCount);
+  const kb = networkBytes / 1024;
+  networkKbField.textContent = networkBytes === 0 ? '(нет данных)' : kb < 0.1
+    ? '<0,1 КБ' : `${kb.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} КБ`;
+  if (networkCount === 1) networkStatus.hidden = false;
+});
 
 function inform(text = '', error = false, persistent = false) {
   clearTimeout(statusTimeout);
@@ -287,6 +505,64 @@ function inform(text = '', error = false, persistent = false) {
   status.hidden = !text;
   status.classList.toggle('error', error);
   if (text && !error && !persistent) statusTimeout = setTimeout(() => { status.hidden = true; }, 6000);
+}
+
+function setDraftStatus(text, error = false) {
+  draftStatus.textContent = text;
+  draftStatus.classList.toggle('error', error);
+}
+
+function saveDraftNow() {
+  if (!expertMode || !draftAvailable) return Promise.resolve();
+  clearTimeout(draftSaveTimer);
+  draftSaveTimer = undefined;
+  const code = codeField.value;
+  const revision = ++draftRevision;
+  setDraftStatus('Сохранение…');
+  const operation = draftQueue.catch(() => {}).then(() => writeExpertDraft(code));
+  draftQueue = operation;
+  operation.then(
+    () => { if (revision === draftRevision) setDraftStatus('Сохранено'); },
+    () => {
+      if (revision === draftRevision) {
+        setDraftStatus('Не сохранено', true);
+        inform('Черновик не сохранён. Сохраните код HTML-файлом.', true, true);
+      }
+    }
+  );
+  return operation;
+}
+
+function scheduleDraftSave() {
+  if (!expertMode || !draftAvailable) return;
+  clearTimeout(draftSaveTimer);
+  draftRevision += 1;
+  setDraftStatus('Сохранение…');
+  draftSaveTimer = setTimeout(saveDraftNow, 700);
+}
+
+window.addEventListener('pagehide', () => {
+  if (draftSaveTimer) void saveDraftNow();
+});
+
+function chooseDialog(dialog) {
+  return new Promise(resolve => {
+    dialog.addEventListener('close', () => resolve(dialog.returnValue || 'cancel'), { once: true });
+    dialog.showModal();
+  });
+}
+
+async function confirmReplacement(nextCode) {
+  if (!expertMode || !codeField.value || codeField.value === nextCode) return true;
+  return await chooseDialog(replaceDialog) === 'replace';
+}
+
+function replaceCode(code) {
+  codeField.value = code;
+  codeField.scrollTop = 0;
+  codeField.scrollLeft = 0;
+  scheduleDraftSave();
+  updateControls();
 }
 
 function offerManualPaste() {
@@ -312,19 +588,32 @@ async function readClipboardWithTimeout() {
 
 function updateControls() {
   const empty = !codeField.value.trim();
-  pasteButton.disabled = running || readingClipboard;
-  clearButton.disabled = !codeField.value || running || readingClipboard;
+  pasteButton.disabled = running || readingClipboard || modeBusy;
+  clearButton.disabled = !codeField.value || running || readingClipboard || modeBusy;
   saveButton.disabled = empty;
   shareButton.disabled = empty;
-  runButton.disabled = !running && (empty || readingClipboard);
+  runButton.disabled = modeBusy || (!running && (empty || readingClipboard));
+  expertButton.disabled = modeBusy;
+  expertTools.hidden = !expertMode;
+  importButton.disabled = modeBusy;
   const action = running ? 'Стоп' : 'Запустить';
   runButton.setAttribute('aria-label', action);
   runButton.title = action;
   document.querySelector('#play-icon').hidden = running;
   document.querySelector('#stop-icon').hidden = !running;
+  expertButton.setAttribute('aria-pressed', String(expertMode));
+  expertButton.title = expertMode ? 'Вернуться в простой режим' : 'Включить экспертный режим';
+  networkButton.disabled = modeBusy;
+  networkButton.setAttribute('aria-pressed', String(networkAllowed));
+  networkButton.title = networkAllowed
+    ? 'Интернет включён — нажмите, чтобы выключить'
+    : 'Интернет выключен — нажмите, чтобы включить';
+  document.querySelector('#network-on-icon').hidden = !networkAllowed;
+  document.querySelector('#network-off-icon').hidden = networkAllowed;
+  networkButton.classList.toggle('is-off', !networkAllowed);
 }
 
-codeField.addEventListener('input', () => { replaceOnNextPaste = false; inform(); updateControls(); });
+codeField.addEventListener('input', () => { replaceOnNextPaste = false; inform(); scheduleDraftSave(); updateControls(); });
 // Native paste is intentionally left to the textarea and the browser. It
 // respects the selection/caret unless the Paste button requested replacement.
 codeField.addEventListener('paste', event => {
@@ -337,16 +626,13 @@ codeField.addEventListener('paste', event => {
     inform('В буфере обмена нет текста. Сначала скопируйте HTML-код.');
     return;
   }
-  codeField.value = text;
-  codeField.scrollTop = 0;
-  codeField.scrollLeft = 0;
+  replaceCode(text);
   inform('Код вставлен. Можно запускать.');
-  updateControls();
 });
 pasteButton.addEventListener('click', async () => {
   const previous = codeField.value;
   if (!navigator.clipboard?.readText) {
-    offerManualPaste();
+    if (await confirmReplacement(null)) offerManualPaste();
     return;
   }
   readingClipboard = true;
@@ -362,13 +648,21 @@ pasteButton.addEventListener('click', async () => {
       inform('В буфере обмена нет текста. Сначала скопируйте HTML-код.');
       return;
     }
+    if (!await confirmReplacement(text)) {
+      inform();
+      return;
+    }
+    if (codeField.value !== previous) {
+      inform('Код изменён. Нажмите «Вставить» ещё раз, чтобы заменить его.');
+      return;
+    }
     replaceOnNextPaste = false;
-    codeField.value = text;
-    codeField.scrollTop = 0;
-    codeField.scrollLeft = 0;
+    replaceCode(text);
     inform('Код вставлен. Можно запускать.');
   } catch {
-    if (codeField.value === previous) offerManualPaste();
+    if (codeField.value === previous) {
+      if (await confirmReplacement(null)) offerManualPaste();
+    }
     else inform('Код изменён, пока браузер запрашивал буфер. Нажмите «Вставить» ещё раз.');
   } finally {
     readingClipboard = false;
@@ -376,30 +670,146 @@ pasteButton.addEventListener('click', async () => {
   }
 });
 
+function stopPreview() {
+  // Removing the document tears down its timers, media and event handlers.
+  activeFrame = null;
+  preview.replaceChildren();
+  preview.hidden = true;
+  codeField.hidden = false;
+  running = false;
+  resetNetworkStatus();
+}
+
+function startPreview() {
+  try {
+    const frame = makePreview(codeField.value, previewNetworkAllowed());
+    resetNetworkStatus();
+    codeField.blur();
+    codeField.hidden = true;
+    preview.hidden = false;
+    activeFrame = null;
+    preview.replaceChildren(frame);
+    activeFrame = frame;
+    running = true;
+  } catch {
+    stopPreview();
+    inform('Не удалось открыть игру. Код остался в поле.', true);
+  }
+}
+
 runButton.addEventListener('click', () => {
   inform();
-  if (running) {
-    // Removing the document tears down its timers, media and event handlers.
-    preview.replaceChildren();
-    preview.hidden = true;
-    codeField.hidden = false;
-    running = false;
-  } else if (codeField.value.trim()) {
-    try {
-      const frame = makePreview(codeField.value);
-      codeField.blur();
-      codeField.hidden = true;
-      preview.hidden = false;
-      preview.replaceChildren(frame);
-      running = true;
-    } catch {
-      preview.replaceChildren();
-      preview.hidden = true;
-      codeField.hidden = false;
-      inform('Не удалось открыть игру. Код остался в поле.', true);
+  if (running) stopPreview();
+  else if (codeField.value.trim()) startPreview();
+  updateControls();
+});
+
+expertButton.addEventListener('click', async () => {
+  if (modeBusy) return;
+  modeBusy = true;
+  updateControls();
+  const wasRunning = running;
+  try {
+    if (expertMode) {
+      if (wasRunning) stopPreview();
+      let saveError = false;
+      await saveDraftNow().catch(() => { saveError = true; });
+      expertMode = false;
+      const settingsSaved = saveSettings();
+      if (wasRunning && !saveError && settingsSaved) inform('Игра остановлена при смене режима.');
+    } else {
+      let storageError = false;
+      let restoredCode = null;
+      if (!draftChecked) {
+        try {
+          const saved = await readExpertDraft();
+          draftAvailable = true;
+          if (saved !== null && saved !== codeField.value) {
+            if (codeField.value) {
+              const choice = await chooseDialog(restoreDialog);
+              if (choice === 'cancel') return;
+              if (choice === 'restore') restoredCode = saved;
+            } else restoredCode = saved;
+          }
+          draftChecked = true;
+        } catch {
+          draftAvailable = false;
+          draftChecked = true;
+          storageError = true;
+        }
+      }
+      if (wasRunning) stopPreview();
+      if (restoredCode !== null) replaceCode(restoredCode);
+      expertMode = true;
+      const settingsSaved = saveSettings();
+      if (draftAvailable) scheduleDraftSave();
+      else setDraftStatus('Не сохраняется', true);
+      if (storageError) inform('Автосохранение недоступно. Сохраните код HTML-файлом.', true, true);
+      if (wasRunning && !storageError && settingsSaved) inform('Игра остановлена при смене режима.');
     }
+    updateControls();
+  } finally {
+    modeBusy = false;
+    updateControls();
+  }
+});
+
+networkButton.addEventListener('click', () => {
+  networkAllowed = !networkAllowed;
+  const settingsSaved = saveSettings();
+  if (running) {
+    startPreview();
+    if (running && settingsSaved) inform('Настройка интернета изменена. Игра перезапущена.');
   }
   updateControls();
+});
+
+async function restoreStartupDraft() {
+  modeBusy = true;
+  codeField.disabled = true;
+  setDraftStatus('Открываю черновик…');
+  updateControls();
+  try {
+    const saved = await readExpertDraft();
+    draftAvailable = true;
+    draftChecked = true;
+    if (saved !== null) codeField.value = saved;
+    setDraftStatus('Сохранено');
+  } catch {
+    draftAvailable = false;
+    draftChecked = true;
+    setDraftStatus('Не сохраняется', true);
+    inform('Автосохранение недоступно. Сохраните код HTML-файлом.', true, true);
+  } finally {
+    modeBusy = false;
+    codeField.disabled = false;
+    updateControls();
+  }
+}
+
+importButton.addEventListener('click', () => {
+  if (expertMode && !modeBusy) importFile.click();
+});
+
+importFile.addEventListener('change', async () => {
+  const file = importFile.files?.[0];
+  importFile.value = '';
+  if (!expertMode || !file) return;
+  if (!/\.html?$/i.test(file.name)) {
+    inform('Выберите файл с расширением .html или .htm.', true);
+    return;
+  }
+  try {
+    const code = await file.text();
+    if (!expertMode) return;
+    if (!await confirmReplacement(code)) return;
+    if (running) stopPreview();
+    replaceOnNextPaste = false;
+    replaceCode(code);
+    inform('HTML-файл открыт в редакторе.');
+  } catch {
+    inform('Не удалось прочитать HTML-файл. Текущий код сохранён.', true);
+  }
 });
 
 saveButton.addEventListener('click', () => {
@@ -418,12 +828,9 @@ document.querySelector('#clear-form').addEventListener('submit', event => {
   event.preventDefault();
   if (running) return;
   clearDialog.close();
-  codeField.value = '';
-  codeField.scrollTop = 0;
-  codeField.scrollLeft = 0;
+  replaceCode('');
   replaceOnNextPaste = false;
   inform('Код очищен.');
-  updateControls();
 });
 shareButton.addEventListener('click', async () => {
   if (!codeField.value.trim()) return;
@@ -452,6 +859,7 @@ document.querySelector('#save-form').addEventListener('submit', event => {
   }
 });
 updateControls();
+if (expertMode) void restoreStartupDraft();
 
 })();</script>
 </body>

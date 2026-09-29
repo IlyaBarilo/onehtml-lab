@@ -12,12 +12,12 @@ template = template.replace(/^([ \t]*)<!-- APP_VERSION -->\r?\n/m, (_, indent) =
   releaseTag ? `${indent}<span class="app-version" aria-label="Версия ${releaseTag}">${releaseTag}</span>\n` : '');
 const appIcon = await readFile(join(root, 'src/icons/app.svg'), 'utf8');
 template = template.replace('<!-- APP_FAVICON -->', `data:image/svg+xml,${encodeURIComponent(appIcon)}`);
-for (const name of ['app', 'paste', 'clear', 'save', 'share', 'play', 'stop']) {
+for (const name of ['app', 'paste', 'clear', 'save', 'share', 'play', 'stop', 'expert', 'network-on', 'network-off', 'import']) {
   const icon = await readFile(join(root, 'src/icons', name + '.svg'), 'utf8');
   template = template.replace(`<!-- ICON:${name} -->`, () => icon.trim());
 }
 const css = await readFile(join(root, 'src/styles.css'), 'utf8');
-const files = ['sandbox.js', 'exporter.js', 'app.js'];
+const files = ['sandbox.js', 'exporter.js', 'draft.js', 'app.js'];
 const script = '(function () {\n"use strict";\n' + (await Promise.all(files.map(name => readFile(join(root, 'src', name), 'utf8')))).join('\n') + '\n})();';
 const license = (await readFile(join(root, 'LICENSE'), 'utf8')).trim();
 const html = template.replace('/* APP_STYLES */', () => css.replace(/<\/style/gi, '<\\/style'))
