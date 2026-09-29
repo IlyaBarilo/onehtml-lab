@@ -1,4 +1,5 @@
-// One expert draft per browser origin. The editor also works if storage fails.
+// One working draft per browser origin. Keep the original key to restore drafts
+// saved by earlier versions, when this storage was limited to expert mode.
 let draftDatabasePromise;
 
 function draftDatabase() {
@@ -13,7 +14,7 @@ function draftDatabase() {
   return draftDatabasePromise;
 }
 
-async function readExpertDraft() {
+async function readWorkingDraft() {
   const database = await draftDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction('drafts', 'readonly');
@@ -24,11 +25,35 @@ async function readExpertDraft() {
   });
 }
 
-async function writeExpertDraft(code) {
+async function writeWorkingDraft(code) {
   const database = await draftDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction('drafts', 'readwrite');
     transaction.objectStore('drafts').put(code, 'expert');
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+async function readPreviousPaste() {
+  const database = await draftDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction('drafts', 'readonly');
+    const request = transaction.objectStore('drafts').get('previous-paste');
+    request.onsuccess = () => resolve(request.result ?? null);
+    request.onerror = () => reject(request.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+async function writePreviousPaste(code) {
+  const database = await draftDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction('drafts', 'readwrite');
+    const store = transaction.objectStore('drafts');
+    if (code === null) store.delete('previous-paste');
+    else store.put(code, 'previous-paste');
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);

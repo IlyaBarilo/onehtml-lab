@@ -62,6 +62,7 @@ h1 span { font-weight: 450; color: #637e9f; }
   border-bottom: 1px solid #dbe5f3;
   background: #f5f8fd;
 }
+.expert-actions { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .import-button {
   display: inline-flex;
   align-items: center;
@@ -78,6 +79,21 @@ h1 span { font-weight: 450; color: #637e9f; }
 }
 .import-button:hover { background: #dceaff; }
 .import-button:disabled { opacity: .5; cursor: default; }
+.expert-icon-button {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #cfddf1;
+  border-radius: 7px;
+  background: #e9f1fc;
+  color: #315c93;
+}
+.expert-icon-button:hover:not(:disabled) { background: #dceaff; }
+.expert-icon-button[aria-pressed="true"] { background: #dceaff; border-color: #9dbfea; color: #2059bf; }
+.expert-icon-button:disabled { opacity: .35; cursor: default; }
 .draft-status { min-width: 0; color: #607895; font-size: 12px; text-align: right; }
 .draft-status.error { color: #9a4a4a; }
 .workspace { width: 100%; flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; }
@@ -105,6 +121,25 @@ textarea::placeholder { color: rgba(96, 116, 143, .42); opacity: 1; }
 textarea::selection { color: #173c72; background: #dbe9ff; }
 textarea:focus-visible { outline: none; }
 #preview, iframe { display: block; width: 100%; height: 100%; margin: 0; border: 0; border-radius: 0; background: #ffffff; color-scheme: light; }
+.comparison { width: 100%; height: 100%; overflow: auto; background: #fcfdff; }
+.comparison-legend { display: flex; gap: 14px; padding: 12px 22px 0; color: #526b8c; font-size: 12px; }
+.comparison-legend span::before { content: ""; display: inline-block; width: 11px; height: 11px; margin-right: 5px; border-radius: 2px; vertical-align: -1px; }
+.legend-added::before { background: #c8efcf; }
+.legend-removed::before { background: #ffd8d5; }
+.diff-content {
+  margin: 0;
+  padding: 12px 22px max(20px, env(safe-area-inset-bottom));
+  color: #283c53;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 15px;
+  line-height: 1.65;
+  tab-size: 2;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.diff-added { background: #d8f4df; color: #145d2a; border-radius: 2px; }
+.diff-removed { background: #ffe0dd; color: #9b2d27; border-radius: 2px; text-decoration: line-through; text-decoration-thickness: 1px; }
+.diff-removed + .diff-added { margin-left: .2em; }
 .notice {
   flex: 0 0 auto;
   width: 100%;
@@ -153,6 +188,8 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
   .actions { gap: 3px; }
   .run-button { margin-left: 3px; }
   textarea { padding: 16px 14px max(16px, env(safe-area-inset-bottom)); font-size: 16px; }
+  .comparison-legend { padding-left: 14px; }
+  .diff-content { padding-left: 14px; padding-right: 14px; font-size: 16px; }
 }
 @media (max-width: 440px) {
   :root { --toolbar-height: 96px; }
@@ -162,6 +199,8 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
   h1 { font-size: 16px; letter-spacing: -.45px; }
   .app-version { font-size: 11px; }
   .actions { width: 100%; justify-content: space-evenly; }
+  .expert-tools { flex-wrap: wrap; gap: 2px 8px; }
+  .draft-status { margin-left: auto; }
 }
 @media (max-width: 360px) {
   .toolbar { padding-right: 4px; padding-left: 4px; }

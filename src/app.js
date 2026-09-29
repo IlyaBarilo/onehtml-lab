@@ -9,6 +9,10 @@ const expertButton = document.querySelector('#expert-toggle');
 const networkButton = document.querySelector('#network-toggle');
 const expertTools = document.querySelector('#expert-tools');
 const importButton = document.querySelector('#import');
+const compareButton = document.querySelector('#compare');
+const restorePreviousButton = document.querySelector('#restore-previous');
+const comparison = document.querySelector('#comparison');
+const diffContent = document.querySelector('#diff-content');
 const importFile = document.querySelector('#import-file');
 const draftStatus = document.querySelector('#draft-status');
 const status = document.querySelector('#status');
@@ -18,7 +22,6 @@ const networkKbField = document.querySelector('#network-kb');
 const saveDialog = document.querySelector('#save-dialog');
 const clearDialog = document.querySelector('#clear-dialog');
 const replaceDialog = document.querySelector('#replace-dialog');
-const restoreDialog = document.querySelector('#restore-dialog');
 const filenameField = document.querySelector('#filename');
 let running = false;
 let readingClipboard = false;
@@ -30,11 +33,14 @@ const storedSettings = readSettings();
 let expertMode = storedSettings.expertMode;
 let networkAllowed = storedSettings.networkAllowed;
 let modeBusy = false;
-let draftChecked = false;
 let draftAvailable = false;
 let draftSaveTimer;
 let draftRevision = 0;
 let draftQueue = Promise.resolve();
+let previousPaste = null;
+let previousPasteQueue = Promise.resolve();
+let pendingNativePaste = null;
+let comparisonOpen = false;
 let activeFrame = null;
 let networkCount = 0;
 let networkBytes = 0;
@@ -103,14 +109,57 @@ function setDraftStatus(text, error = false) {
   draftStatus.classList.toggle('error', error);
 }
 
+function rememberPreviousPaste(before, after) {
+  if (before === after) return;
+  previousPaste = before;
+  previousPasteQueue = previousPasteQueue.catch(() => {}).then(() => writePreviousPaste(before));
+  void previousPasteQueue.catch(() => {
+    inform('Прошлый код доступен сейчас, но не сохранён в браузере.', true, true);
+  });
+  updateControls();
+}
+
+function clearPreviousPaste() {
+  previousPaste = null;
+  previousPasteQueue = previousPasteQueue.catch(() => {}).then(() => writePreviousPaste(null));
+  void previousPasteQueue.catch(() => {});
+  updateControls();
+}
+
+function closeComparison() {
+  if (!comparisonOpen) return;
+  comparisonOpen = false;
+  comparison.hidden = true;
+  diffContent.replaceChildren();
+  if (!running) codeField.hidden = false;
+  updateControls();
+}
+
+function openComparison() {
+  if (previousPaste === null || running) return;
+  const nodes = codeDiff(previousPaste, codeField.value).map(part => {
+    if (part.type === 'same') return document.createTextNode(part.text);
+    const mark = document.createElement('span');
+    mark.className = part.type === 'added' ? 'diff-added' : 'diff-removed';
+    mark.textContent = part.text;
+    return mark;
+  });
+  diffContent.replaceChildren(...nodes);
+  comparison.scrollTop = 0;
+  comparison.hidden = false;
+  codeField.hidden = true;
+  comparisonOpen = true;
+  updateControls();
+}
+
 function saveDraftNow() {
-  if (!expertMode || !draftAvailable) return Promise.resolve();
+  if (!draftAvailable) return Promise.resolve();
   clearTimeout(draftSaveTimer);
   draftSaveTimer = undefined;
   const code = codeField.value;
   const revision = ++draftRevision;
   setDraftStatus('Сохранение…');
-  const operation = draftQueue.catch(() => {}).then(() => writeExpertDraft(code));
+  const operation = draftQueue.catch(() => {}).then(() => writeWorkingDraft(code));
   draftQueue = operation;
   operation.then(
     () => { if (revision === draftRevision) setDraftStatus('Сохранено'); },
@@ -125,7 +174,7 @@ function saveDraftNow() {
 }
 
 function scheduleDraftSave() {
-  if (!expertMode || !draftAvailable) return;
+  if (!draftAvailable) return;
   clearTimeout(draftSaveTimer);
   draftRevision += 1;
   setDraftStatus('Сохранение…');
@@ -148,7 +197,9 @@ async function confirmReplacement(nextCode) {
   return await chooseDialog(replaceDialog) === 'replace';
 }
 
-function replaceCode(code) {
+function replaceCode(code, fromPaste = false) {
+  if (fromPaste) rememberPreviousPaste(codeField.value, code);
+  closeComparison();
   codeField.value = code;
   codeField.scrollTop = 0;
   codeField.scrollLeft = 0;
@@ -187,6 +238,12 @@ function updateControls() {
   expertButton.disabled = modeBusy;
   expertTools.hidden = !expertMode;
   importButton.disabled = modeBusy;
+  const canRestore = expertMode && !running && !modeBusy && previousPaste !== null && previousPaste !== codeField.value;
+  compareButton.disabled = !canRestore;
+  restorePreviousButton.disabled = !canRestore;
+  compareButton.setAttribute('aria-pressed', String(comparisonOpen));
+  compareButton.setAttribute('aria-label', comparisonOpen ? 'Закрыть сравнение' : 'Сравнить с прошлым кодом');
+  compareButton.title = comparisonOpen ? 'Закрыть сравнение' : 'Сравнить с прошлым кодом';
   const action = running ? 'Стоп' : 'Запустить';
   runButton.setAttribute('aria-label', action);
   runButton.title = action;
@@ -204,11 +261,24 @@ function updateControls() {
   networkButton.classList.toggle('is-off', !networkAllowed);
 }
 
-codeField.addEventListener('input', () => { replaceOnNextPaste = false; inform(); scheduleDraftSave(); updateControls(); });
+codeField.addEventListener('input', () => {
+  if (pendingNativePaste !== null) {
+    rememberPreviousPaste(pendingNativePaste, codeField.value);
+    pendingNativePaste = null;
+  }
+  replaceOnNextPaste = false;
+  inform();
+  scheduleDraftSave();
+  updateControls();
+});
 // Native paste is intentionally left to the textarea and the browser. It
 // respects the selection/caret unless the Paste button requested replacement.
 codeField.addEventListener('paste', event => {
-  if (!replaceOnNextPaste) return;
+  if (!replaceOnNextPaste) {
+    pendingNativePaste = codeField.value;
+    setTimeout(() => { pendingNativePaste = null; }, 0);
+    return;
+  }
   replaceOnNextPaste = false;
   const text = event.clipboardData?.getData('text/plain');
   if (typeof text !== 'string') return; // Let the browser insert into the selection.
@@ -217,7 +287,7 @@ codeField.addEventListener('paste', event => {
     inform('В буфере обмена нет текста. Сначала скопируйте HTML-код.');
     return;
   }
-  replaceCode(text);
+  replaceCode(text, true);
   inform('Код вставлен. Можно запускать.');
 });
 pasteButton.addEventListener('click', async () => {
@@ -248,7 +318,7 @@ pasteButton.addEventListener('click', async () => {
       return;
     }
     replaceOnNextPaste = false;
-    replaceCode(text);
+    replaceCode(text, true);
     inform('Код вставлен. Можно запускать.');
   } catch {
     if (codeField.value === previous) {
@@ -273,6 +343,7 @@ function stopPreview() {
 
 function startPreview() {
   try {
+    closeComparison();
     const frame = makePreview(codeField.value, previewNetworkAllowed());
     resetNetworkStatus();
     codeField.blur();
@@ -295,54 +366,15 @@ runButton.addEventListener('click', () => {
   updateControls();
 });
 
-expertButton.addEventListener('click', async () => {
+expertButton.addEventListener('click', () => {
   if (modeBusy) return;
-  modeBusy = true;
-  updateControls();
   const wasRunning = running;
-  try {
-    if (expertMode) {
-      if (wasRunning) stopPreview();
-      let saveError = false;
-      await saveDraftNow().catch(() => { saveError = true; });
-      expertMode = false;
-      const settingsSaved = saveSettings();
-      if (wasRunning && !saveError && settingsSaved) inform('Игра остановлена при смене режима.');
-    } else {
-      let storageError = false;
-      let restoredCode = null;
-      if (!draftChecked) {
-        try {
-          const saved = await readExpertDraft();
-          draftAvailable = true;
-          if (saved !== null && saved !== codeField.value) {
-            if (codeField.value) {
-              const choice = await chooseDialog(restoreDialog);
-              if (choice === 'cancel') return;
-              if (choice === 'restore') restoredCode = saved;
-            } else restoredCode = saved;
-          }
-          draftChecked = true;
-        } catch {
-          draftAvailable = false;
-          draftChecked = true;
-          storageError = true;
-        }
-      }
-      if (wasRunning) stopPreview();
-      if (restoredCode !== null) replaceCode(restoredCode);
-      expertMode = true;
-      const settingsSaved = saveSettings();
-      if (draftAvailable) scheduleDraftSave();
-      else setDraftStatus('Не сохраняется', true);
-      if (storageError) inform('Автосохранение недоступно. Сохраните код HTML-файлом.', true, true);
-      if (wasRunning && !storageError && settingsSaved) inform('Игра остановлена при смене режима.');
-    }
-    updateControls();
-  } finally {
-    modeBusy = false;
-    updateControls();
-  }
+  if (wasRunning) stopPreview();
+  closeComparison();
+  expertMode = !expertMode;
+  const settingsSaved = saveSettings();
+  if (wasRunning && settingsSaved) inform('Игра остановлена при смене режима.');
+  updateControls();
 });
 
 networkButton.addEventListener('click', () => {
@@ -360,18 +392,22 @@ async function restoreStartupDraft() {
   codeField.disabled = true;
   setDraftStatus('Открываю черновик…');
   updateControls();
+  let timer;
   try {
-    const saved = await readExpertDraft();
+    const [saved, previous] = await Promise.race([
+      Promise.all([readWorkingDraft(), readPreviousPaste()]),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('draft-timeout')), 4000); })
+    ]);
     draftAvailable = true;
-    draftChecked = true;
     if (saved !== null) codeField.value = saved;
+    previousPaste = previous;
     setDraftStatus('Сохранено');
   } catch {
     draftAvailable = false;
-    draftChecked = true;
     setDraftStatus('Не сохраняется', true);
     inform('Автосохранение недоступно. Сохраните код HTML-файлом.', true, true);
   } finally {
+    clearTimeout(timer);
     modeBusy = false;
     codeField.disabled = false;
     updateControls();
@@ -380,6 +416,21 @@ async function restoreStartupDraft() {
 
 importButton.addEventListener('click', () => {
   if (expertMode && !modeBusy) importFile.click();
+});
+
+compareButton.addEventListener('click', () => {
+  if (!expertMode || running || modeBusy) return;
+  if (comparisonOpen) closeComparison();
+  else openComparison();
+});
+
+restorePreviousButton.addEventListener('click', async () => {
+  if (!expertMode || running || modeBusy || previousPaste === null || previousPaste === codeField.value) return;
+  const previous = previousPaste;
+  if (!await confirmReplacement(previous) || previousPaste !== previous) return;
+  replaceCode(previous);
+  clearPreviousPaste();
+  inform('Прошлый код восстановлен.');
 });
 
 importFile.addEventListener('change', async () => {
@@ -450,4 +501,4 @@ document.querySelector('#save-form').addEventListener('submit', event => {
   }
 });
 updateControls();
-if (expertMode) void restoreStartupDraft();
+void restoreStartupDraft();

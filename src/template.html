@@ -50,7 +50,11 @@
       </div>
     </header>
     <div id="expert-tools" class="expert-tools" hidden>
-      <button id="import" class="import-button" type="button" title="Открыть HTML-файл с устройства"><!-- ICON:import --> <span>Открыть HTML</span></button>
+      <div class="expert-actions">
+        <button id="import" class="import-button" type="button" title="Открыть HTML-файл с устройства"><!-- ICON:import --> <span>Открыть HTML</span></button>
+        <button id="compare" class="expert-icon-button" type="button" aria-label="Сравнить с прошлым кодом" aria-pressed="false" title="Сравнить с прошлым кодом" disabled><!-- ICON:compare --></button>
+        <button id="restore-previous" class="expert-icon-button" type="button" aria-label="Вернуть прошлый код" title="Вернуть прошлый код" disabled><!-- ICON:restore --></button>
+      </div>
       <span id="draft-status" class="draft-status" role="status" aria-live="polite"></span>
       <input id="import-file" type="file" accept=".html,.htm,text/html" hidden>
     </div>
@@ -61,6 +65,10 @@
     </div>
     <section class="workspace" aria-label="Рабочая область">
       <textarea id="code" aria-label="HTML-код" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Вставьте HTML-код…"></textarea>
+      <div id="comparison" class="comparison" role="region" aria-label="Сравнение с прошлым кодом" hidden>
+        <div class="comparison-legend"><span class="legend-added">Добавлено</span><span class="legend-removed">Удалено</span></div>
+        <pre id="diff-content" class="diff-content"></pre>
+      </div>
       <div id="preview" hidden></div>
     </section>
   </main>
@@ -84,13 +92,6 @@
       <h2 id="replace-title">Заменить код?</h2>
       <p id="replace-copy" class="dialog-copy">Текущий код будет заменён. Если он нужен отдельно, сначала сохраните его HTML-файлом.</p>
       <div class="dialog-actions"><button value="cancel" type="submit">Отмена</button><button class="primary" value="replace" type="submit">Заменить</button></div>
-    </form>
-  </dialog>
-  <dialog id="restore-dialog" aria-labelledby="restore-title">
-    <form method="dialog">
-      <h2 id="restore-title">Найден черновик</h2>
-      <p class="dialog-copy">В браузере есть сохранённый черновик, а в поле уже находится другой код. Восстановить черновик или оставить текущий код вместо него?</p>
-      <div class="dialog-actions"><button value="cancel" type="submit">Отмена</button><button value="current" type="submit">Оставить код</button><button class="primary" value="restore" type="submit">Восстановить</button></div>
     </form>
   </dialog>
   <script>/* APP_SCRIPT */</script>

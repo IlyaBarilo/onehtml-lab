@@ -100,6 +100,7 @@ h1 span { font-weight: 450; color: #637e9f; }
   border-bottom: 1px solid #dbe5f3;
   background: #f5f8fd;
 }
+.expert-actions { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .import-button {
   display: inline-flex;
   align-items: center;
@@ -116,6 +117,21 @@ h1 span { font-weight: 450; color: #637e9f; }
 }
 .import-button:hover { background: #dceaff; }
 .import-button:disabled { opacity: .5; cursor: default; }
+.expert-icon-button {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #cfddf1;
+  border-radius: 7px;
+  background: #e9f1fc;
+  color: #315c93;
+}
+.expert-icon-button:hover:not(:disabled) { background: #dceaff; }
+.expert-icon-button[aria-pressed="true"] { background: #dceaff; border-color: #9dbfea; color: #2059bf; }
+.expert-icon-button:disabled { opacity: .35; cursor: default; }
 .draft-status { min-width: 0; color: #607895; font-size: 12px; text-align: right; }
 .draft-status.error { color: #9a4a4a; }
 .workspace { width: 100%; flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; }
@@ -143,6 +159,25 @@ textarea::placeholder { color: rgba(96, 116, 143, .42); opacity: 1; }
 textarea::selection { color: #173c72; background: #dbe9ff; }
 textarea:focus-visible { outline: none; }
 #preview, iframe { display: block; width: 100%; height: 100%; margin: 0; border: 0; border-radius: 0; background: #ffffff; color-scheme: light; }
+.comparison { width: 100%; height: 100%; overflow: auto; background: #fcfdff; }
+.comparison-legend { display: flex; gap: 14px; padding: 12px 22px 0; color: #526b8c; font-size: 12px; }
+.comparison-legend span::before { content: ""; display: inline-block; width: 11px; height: 11px; margin-right: 5px; border-radius: 2px; vertical-align: -1px; }
+.legend-added::before { background: #c8efcf; }
+.legend-removed::before { background: #ffd8d5; }
+.diff-content {
+  margin: 0;
+  padding: 12px 22px max(20px, env(safe-area-inset-bottom));
+  color: #283c53;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 15px;
+  line-height: 1.65;
+  tab-size: 2;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.diff-added { background: #d8f4df; color: #145d2a; border-radius: 2px; }
+.diff-removed { background: #ffe0dd; color: #9b2d27; border-radius: 2px; text-decoration: line-through; text-decoration-thickness: 1px; }
+.diff-removed + .diff-added { margin-left: .2em; }
 .notice {
   flex: 0 0 auto;
   width: 100%;
@@ -191,6 +226,8 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
   .actions { gap: 3px; }
   .run-button { margin-left: 3px; }
   textarea { padding: 16px 14px max(16px, env(safe-area-inset-bottom)); font-size: 16px; }
+  .comparison-legend { padding-left: 14px; }
+  .diff-content { padding-left: 14px; padding-right: 14px; font-size: 16px; }
 }
 @media (max-width: 440px) {
   :root { --toolbar-height: 96px; }
@@ -200,6 +237,8 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
   h1 { font-size: 16px; letter-spacing: -.45px; }
   .app-version { font-size: 11px; }
   .actions { width: 100%; justify-content: space-evenly; }
+  .expert-tools { flex-wrap: wrap; gap: 2px 8px; }
+  .draft-status { margin-left: auto; }
 }
 @media (max-width: 360px) {
   .toolbar { padding-right: 4px; padding-left: 4px; }
@@ -242,7 +281,11 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
       </div>
     </header>
     <div id="expert-tools" class="expert-tools" hidden>
-      <button id="import" class="import-button" type="button" title="Открыть HTML-файл с устройства"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 15V3m0 12-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg> <span>Открыть HTML</span></button>
+      <div class="expert-actions">
+        <button id="import" class="import-button" type="button" title="Открыть HTML-файл с устройства"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v2H3z"/><path d="M3 11h18l-2 8H5z"/></svg> <span>Открыть HTML</span></button>
+        <button id="compare" class="expert-icon-button" type="button" aria-label="Сравнить с прошлым кодом" aria-pressed="false" title="Сравнить с прошлым кодом" disabled><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5h6M4 9h6M14 5h6M14 9h6M4 15h6m-3-3v6M14 15h6"/></svg></button>
+        <button id="restore-previous" class="expert-icon-button" type="button" aria-label="Вернуть прошлый код" title="Вернуть прошлый код" disabled><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 8V4m0 4h4M4 8a8 8 0 1 1-1 6"/><path d="M12 7v5l3 2"/></svg></button>
+      </div>
       <span id="draft-status" class="draft-status" role="status" aria-live="polite"></span>
       <input id="import-file" type="file" accept=".html,.htm,text/html" hidden>
     </div>
@@ -253,6 +296,10 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
     </div>
     <section class="workspace" aria-label="Рабочая область">
       <textarea id="code" aria-label="HTML-код" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Вставьте HTML-код…"></textarea>
+      <div id="comparison" class="comparison" role="region" aria-label="Сравнение с прошлым кодом" hidden>
+        <div class="comparison-legend"><span class="legend-added">Добавлено</span><span class="legend-removed">Удалено</span></div>
+        <pre id="diff-content" class="diff-content"></pre>
+      </div>
       <div id="preview" hidden></div>
     </section>
   </main>
@@ -276,13 +323,6 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
       <h2 id="replace-title">Заменить код?</h2>
       <p id="replace-copy" class="dialog-copy">Текущий код будет заменён. Если он нужен отдельно, сначала сохраните его HTML-файлом.</p>
       <div class="dialog-actions"><button value="cancel" type="submit">Отмена</button><button class="primary" value="replace" type="submit">Заменить</button></div>
-    </form>
-  </dialog>
-  <dialog id="restore-dialog" aria-labelledby="restore-title">
-    <form method="dialog">
-      <h2 id="restore-title">Найден черновик</h2>
-      <p class="dialog-copy">В браузере есть сохранённый черновик, а в поле уже находится другой код. Восстановить черновик или оставить текущий код вместо него?</p>
-      <div class="dialog-actions"><button value="cancel" type="submit">Отмена</button><button value="current" type="submit">Оставить код</button><button class="primary" value="restore" type="submit">Восстановить</button></div>
     </form>
   </dialog>
   <script>(function () {
@@ -370,7 +410,8 @@ async function shareHtml(code, filename, shareNavigator = navigator) {
   }
 }
 
-// One expert draft per browser origin. The editor also works if storage fails.
+// One working draft per browser origin. Keep the original key to restore drafts
+// saved by earlier versions, when this storage was limited to expert mode.
 let draftDatabasePromise;
 
 function draftDatabase() {
@@ -385,7 +426,7 @@ function draftDatabase() {
   return draftDatabasePromise;
 }
 
-async function readExpertDraft() {
+async function readWorkingDraft() {
   const database = await draftDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction('drafts', 'readonly');
@@ -396,7 +437,7 @@ async function readExpertDraft() {
   });
 }
 
-async function writeExpertDraft(code) {
+async function writeWorkingDraft(code) {
   const database = await draftDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction('drafts', 'readwrite');
@@ -405,6 +446,113 @@ async function writeExpertDraft(code) {
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);
   });
+}
+
+async function readPreviousPaste() {
+  const database = await draftDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction('drafts', 'readonly');
+    const request = transaction.objectStore('drafts').get('previous-paste');
+    request.onsuccess = () => resolve(request.result ?? null);
+    request.onerror = () => reject(request.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+async function writePreviousPaste(code) {
+  const database = await draftDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction('drafts', 'readwrite');
+    const store = transaction.objectStore('drafts');
+    if (code === null) store.delete('previous-paste');
+    else store.put(code, 'previous-paste');
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+// Token-level diff keeps short code changes readable without treating HTML as markup.
+function codeTokens(code) {
+  return code.match(/\r\n|\r|\n|[^\S\r\n]+|[A-Za-z0-9_\u0400-\u04FF]+|[^\r\n]/g) || [];
+}
+
+function codeDiff(before, after) {
+  const oldTokens = codeTokens(before);
+  const newTokens = codeTokens(after);
+  let start = 0;
+  while (start < oldTokens.length && start < newTokens.length && oldTokens[start] === newTokens[start]) start++;
+  let oldEnd = oldTokens.length;
+  let newEnd = newTokens.length;
+  while (oldEnd > start && newEnd > start && oldTokens[oldEnd - 1] === newTokens[newEnd - 1]) {
+    oldEnd--;
+    newEnd--;
+  }
+
+  const result = [];
+  function append(type, text) {
+    if (!text) return;
+    const last = result[result.length - 1];
+    if (last?.type === type) last.text += text;
+    else result.push({ type, text });
+  }
+  append('same', oldTokens.slice(0, start).join(''));
+  const oldMiddle = oldTokens.slice(start, oldEnd);
+  const newMiddle = newTokens.slice(start, newEnd);
+  if (!oldMiddle.length) append('added', newMiddle.join(''));
+  else if (!newMiddle.length) append('removed', oldMiddle.join(''));
+  else {
+    const length = oldMiddle.length + newMiddle.length;
+    let frontier = new Map([[1, 0]]);
+    const trace = [];
+    let completed = false;
+    // A completely different large game can be shown as one replacement.
+    const limit = Math.min(length, 800);
+    for (let depth = 0; depth <= limit && !completed; depth++) {
+      trace.push(new Map(frontier));
+      const next = new Map();
+      for (let diagonal = -depth; diagonal <= depth; diagonal += 2) {
+        const down = diagonal === -depth || (diagonal !== depth &&
+          (frontier.get(diagonal - 1) ?? -1) < (frontier.get(diagonal + 1) ?? -1));
+        let x = down ? (frontier.get(diagonal + 1) ?? 0) : (frontier.get(diagonal - 1) ?? 0) + 1;
+        let y = x - diagonal;
+        while (x < oldMiddle.length && y < newMiddle.length && oldMiddle[x] === newMiddle[y]) { x++; y++; }
+        next.set(diagonal, x);
+        if (x >= oldMiddle.length && y >= newMiddle.length) {
+          let backX = oldMiddle.length;
+          let backY = newMiddle.length;
+          const steps = [];
+          for (let backDepth = depth; backDepth >= 0; backDepth--) {
+            const previous = trace[backDepth];
+            const backDiagonal = backX - backY;
+            const cameDown = backDiagonal === -backDepth || (backDiagonal !== backDepth &&
+              (previous.get(backDiagonal - 1) ?? -1) < (previous.get(backDiagonal + 1) ?? -1));
+            const priorDiagonal = cameDown ? backDiagonal + 1 : backDiagonal - 1;
+            const priorX = previous.get(priorDiagonal) ?? 0;
+            const priorY = priorX - priorDiagonal;
+            while (backX > priorX && backY > priorY) {
+              steps.push(['same', oldMiddle[--backX]]);
+              backY--;
+            }
+            if (backDepth > 0) {
+              if (cameDown) steps.push(['added', newMiddle[--backY]]);
+              else steps.push(['removed', oldMiddle[--backX]]);
+            }
+          }
+          for (let index = steps.length - 1; index >= 0; index--) append(...steps[index]);
+          completed = true;
+          break;
+        }
+      }
+      frontier = next;
+    }
+    if (!completed) {
+      append('removed', oldMiddle.join(''));
+      append('added', newMiddle.join(''));
+    }
+  }
+  append('same', oldTokens.slice(oldEnd).join(''));
+  return result;
 }
 
 const codeField = document.querySelector('#code');
@@ -418,6 +566,10 @@ const expertButton = document.querySelector('#expert-toggle');
 const networkButton = document.querySelector('#network-toggle');
 const expertTools = document.querySelector('#expert-tools');
 const importButton = document.querySelector('#import');
+const compareButton = document.querySelector('#compare');
+const restorePreviousButton = document.querySelector('#restore-previous');
+const comparison = document.querySelector('#comparison');
+const diffContent = document.querySelector('#diff-content');
 const importFile = document.querySelector('#import-file');
 const draftStatus = document.querySelector('#draft-status');
 const status = document.querySelector('#status');
@@ -427,7 +579,6 @@ const networkKbField = document.querySelector('#network-kb');
 const saveDialog = document.querySelector('#save-dialog');
 const clearDialog = document.querySelector('#clear-dialog');
 const replaceDialog = document.querySelector('#replace-dialog');
-const restoreDialog = document.querySelector('#restore-dialog');
 const filenameField = document.querySelector('#filename');
 let running = false;
 let readingClipboard = false;
@@ -439,11 +590,14 @@ const storedSettings = readSettings();
 let expertMode = storedSettings.expertMode;
 let networkAllowed = storedSettings.networkAllowed;
 let modeBusy = false;
-let draftChecked = false;
 let draftAvailable = false;
 let draftSaveTimer;
 let draftRevision = 0;
 let draftQueue = Promise.resolve();
+let previousPaste = null;
+let previousPasteQueue = Promise.resolve();
+let pendingNativePaste = null;
+let comparisonOpen = false;
 let activeFrame = null;
 let networkCount = 0;
 let networkBytes = 0;
@@ -512,14 +666,57 @@ function setDraftStatus(text, error = false) {
   draftStatus.classList.toggle('error', error);
 }
 
+function rememberPreviousPaste(before, after) {
+  if (before === after) return;
+  previousPaste = before;
+  previousPasteQueue = previousPasteQueue.catch(() => {}).then(() => writePreviousPaste(before));
+  void previousPasteQueue.catch(() => {
+    inform('Прошлый код доступен сейчас, но не сохранён в браузере.', true, true);
+  });
+  updateControls();
+}
+
+function clearPreviousPaste() {
+  previousPaste = null;
+  previousPasteQueue = previousPasteQueue.catch(() => {}).then(() => writePreviousPaste(null));
+  void previousPasteQueue.catch(() => {});
+  updateControls();
+}
+
+function closeComparison() {
+  if (!comparisonOpen) return;
+  comparisonOpen = false;
+  comparison.hidden = true;
+  diffContent.replaceChildren();
+  if (!running) codeField.hidden = false;
+  updateControls();
+}
+
+function openComparison() {
+  if (previousPaste === null || running) return;
+  const nodes = codeDiff(previousPaste, codeField.value).map(part => {
+    if (part.type === 'same') return document.createTextNode(part.text);
+    const mark = document.createElement('span');
+    mark.className = part.type === 'added' ? 'diff-added' : 'diff-removed';
+    mark.textContent = part.text;
+    return mark;
+  });
+  diffContent.replaceChildren(...nodes);
+  comparison.scrollTop = 0;
+  comparison.hidden = false;
+  codeField.hidden = true;
+  comparisonOpen = true;
+  updateControls();
+}
+
 function saveDraftNow() {
-  if (!expertMode || !draftAvailable) return Promise.resolve();
+  if (!draftAvailable) return Promise.resolve();
   clearTimeout(draftSaveTimer);
   draftSaveTimer = undefined;
   const code = codeField.value;
   const revision = ++draftRevision;
   setDraftStatus('Сохранение…');
-  const operation = draftQueue.catch(() => {}).then(() => writeExpertDraft(code));
+  const operation = draftQueue.catch(() => {}).then(() => writeWorkingDraft(code));
   draftQueue = operation;
   operation.then(
     () => { if (revision === draftRevision) setDraftStatus('Сохранено'); },
@@ -534,7 +731,7 @@ function saveDraftNow() {
 }
 
 function scheduleDraftSave() {
-  if (!expertMode || !draftAvailable) return;
+  if (!draftAvailable) return;
   clearTimeout(draftSaveTimer);
   draftRevision += 1;
   setDraftStatus('Сохранение…');
@@ -557,7 +754,9 @@ async function confirmReplacement(nextCode) {
   return await chooseDialog(replaceDialog) === 'replace';
 }
 
-function replaceCode(code) {
+function replaceCode(code, fromPaste = false) {
+  if (fromPaste) rememberPreviousPaste(codeField.value, code);
+  closeComparison();
   codeField.value = code;
   codeField.scrollTop = 0;
   codeField.scrollLeft = 0;
@@ -596,6 +795,12 @@ function updateControls() {
   expertButton.disabled = modeBusy;
   expertTools.hidden = !expertMode;
   importButton.disabled = modeBusy;
+  const canRestore = expertMode && !running && !modeBusy && previousPaste !== null && previousPaste !== codeField.value;
+  compareButton.disabled = !canRestore;
+  restorePreviousButton.disabled = !canRestore;
+  compareButton.setAttribute('aria-pressed', String(comparisonOpen));
+  compareButton.setAttribute('aria-label', comparisonOpen ? 'Закрыть сравнение' : 'Сравнить с прошлым кодом');
+  compareButton.title = comparisonOpen ? 'Закрыть сравнение' : 'Сравнить с прошлым кодом';
   const action = running ? 'Стоп' : 'Запустить';
   runButton.setAttribute('aria-label', action);
   runButton.title = action;
@@ -613,11 +818,24 @@ function updateControls() {
   networkButton.classList.toggle('is-off', !networkAllowed);
 }
 
-codeField.addEventListener('input', () => { replaceOnNextPaste = false; inform(); scheduleDraftSave(); updateControls(); });
+codeField.addEventListener('input', () => {
+  if (pendingNativePaste !== null) {
+    rememberPreviousPaste(pendingNativePaste, codeField.value);
+    pendingNativePaste = null;
+  }
+  replaceOnNextPaste = false;
+  inform();
+  scheduleDraftSave();
+  updateControls();
+});
 // Native paste is intentionally left to the textarea and the browser. It
 // respects the selection/caret unless the Paste button requested replacement.
 codeField.addEventListener('paste', event => {
-  if (!replaceOnNextPaste) return;
+  if (!replaceOnNextPaste) {
+    pendingNativePaste = codeField.value;
+    setTimeout(() => { pendingNativePaste = null; }, 0);
+    return;
+  }
   replaceOnNextPaste = false;
   const text = event.clipboardData?.getData('text/plain');
   if (typeof text !== 'string') return; // Let the browser insert into the selection.
@@ -626,7 +844,7 @@ codeField.addEventListener('paste', event => {
     inform('В буфере обмена нет текста. Сначала скопируйте HTML-код.');
     return;
   }
-  replaceCode(text);
+  replaceCode(text, true);
   inform('Код вставлен. Можно запускать.');
 });
 pasteButton.addEventListener('click', async () => {
@@ -657,7 +875,7 @@ pasteButton.addEventListener('click', async () => {
       return;
     }
     replaceOnNextPaste = false;
-    replaceCode(text);
+    replaceCode(text, true);
     inform('Код вставлен. Можно запускать.');
   } catch {
     if (codeField.value === previous) {
@@ -682,6 +900,7 @@ function stopPreview() {
 
 function startPreview() {
   try {
+    closeComparison();
     const frame = makePreview(codeField.value, previewNetworkAllowed());
     resetNetworkStatus();
     codeField.blur();
@@ -704,54 +923,15 @@ runButton.addEventListener('click', () => {
   updateControls();
 });
 
-expertButton.addEventListener('click', async () => {
+expertButton.addEventListener('click', () => {
   if (modeBusy) return;
-  modeBusy = true;
-  updateControls();
   const wasRunning = running;
-  try {
-    if (expertMode) {
-      if (wasRunning) stopPreview();
-      let saveError = false;
-      await saveDraftNow().catch(() => { saveError = true; });
-      expertMode = false;
-      const settingsSaved = saveSettings();
-      if (wasRunning && !saveError && settingsSaved) inform('Игра остановлена при смене режима.');
-    } else {
-      let storageError = false;
-      let restoredCode = null;
-      if (!draftChecked) {
-        try {
-          const saved = await readExpertDraft();
-          draftAvailable = true;
-          if (saved !== null && saved !== codeField.value) {
-            if (codeField.value) {
-              const choice = await chooseDialog(restoreDialog);
-              if (choice === 'cancel') return;
-              if (choice === 'restore') restoredCode = saved;
-            } else restoredCode = saved;
-          }
-          draftChecked = true;
-        } catch {
-          draftAvailable = false;
-          draftChecked = true;
-          storageError = true;
-        }
-      }
-      if (wasRunning) stopPreview();
-      if (restoredCode !== null) replaceCode(restoredCode);
-      expertMode = true;
-      const settingsSaved = saveSettings();
-      if (draftAvailable) scheduleDraftSave();
-      else setDraftStatus('Не сохраняется', true);
-      if (storageError) inform('Автосохранение недоступно. Сохраните код HTML-файлом.', true, true);
-      if (wasRunning && !storageError && settingsSaved) inform('Игра остановлена при смене режима.');
-    }
-    updateControls();
-  } finally {
-    modeBusy = false;
-    updateControls();
-  }
+  if (wasRunning) stopPreview();
+  closeComparison();
+  expertMode = !expertMode;
+  const settingsSaved = saveSettings();
+  if (wasRunning && settingsSaved) inform('Игра остановлена при смене режима.');
+  updateControls();
 });
 
 networkButton.addEventListener('click', () => {
@@ -769,18 +949,22 @@ async function restoreStartupDraft() {
   codeField.disabled = true;
   setDraftStatus('Открываю черновик…');
   updateControls();
+  let timer;
   try {
-    const saved = await readExpertDraft();
+    const [saved, previous] = await Promise.race([
+      Promise.all([readWorkingDraft(), readPreviousPaste()]),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('draft-timeout')), 4000); })
+    ]);
     draftAvailable = true;
-    draftChecked = true;
     if (saved !== null) codeField.value = saved;
+    previousPaste = previous;
     setDraftStatus('Сохранено');
   } catch {
     draftAvailable = false;
-    draftChecked = true;
     setDraftStatus('Не сохраняется', true);
     inform('Автосохранение недоступно. Сохраните код HTML-файлом.', true, true);
   } finally {
+    clearTimeout(timer);
     modeBusy = false;
     codeField.disabled = false;
     updateControls();
@@ -789,6 +973,21 @@ async function restoreStartupDraft() {
 
 importButton.addEventListener('click', () => {
   if (expertMode && !modeBusy) importFile.click();
+});
+
+compareButton.addEventListener('click', () => {
+  if (!expertMode || running || modeBusy) return;
+  if (comparisonOpen) closeComparison();
+  else openComparison();
+});
+
+restorePreviousButton.addEventListener('click', async () => {
+  if (!expertMode || running || modeBusy || previousPaste === null || previousPaste === codeField.value) return;
+  const previous = previousPaste;
+  if (!await confirmReplacement(previous) || previousPaste !== previous) return;
+  replaceCode(previous);
+  clearPreviousPaste();
+  inform('Прошлый код восстановлен.');
 });
 
 importFile.addEventListener('change', async () => {
@@ -859,7 +1058,7 @@ document.querySelector('#save-form').addEventListener('submit', event => {
   }
 });
 updateControls();
-if (expertMode) void restoreStartupDraft();
+void restoreStartupDraft();
 
 })();</script>
 </body>

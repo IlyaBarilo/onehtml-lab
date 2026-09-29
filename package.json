@@ -8,6 +8,7 @@
     "test:pages": "node tests/pages.mjs",
     "test:network": "node tests/network.mjs",
     "test:draft": "node tests/draft.mjs",
+    "test:previous": "node tests/previous.mjs",
     "test:clean": "node tests/clean-copy.mjs",
     "test:unit": "node tests/unit.mjs",
     "test:e2e": "node tests/browser.mjs"

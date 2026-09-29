@@ -7,7 +7,7 @@ import { runInNewContext } from 'node:vm';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const source = await readFile(join(root, 'src/app.js'), 'utf8');
 
-function createApp(clipboard) {
+async function createApp(clipboard) {
   const elements = new Map();
   const timers = [];
   function element(selector) {
@@ -31,9 +31,14 @@ function createApp(clipboard) {
     navigator: { clipboard },
     setTimeout(fn, ms) { timers.push({ fn, ms }); return timers.length; },
     clearTimeout: () => {},
-    makePreview: () => ({})
+    makePreview: () => ({}),
+    readWorkingDraft: async () => null,
+    writeWorkingDraft: async () => {},
+    readPreviousPaste: async () => null,
+    writePreviousPaste: async () => {}
   };
   runInNewContext(source, sandbox);
+  await new Promise(resolve => setImmediate(resolve));
   return {
     code: element('#code'), paste: element('#paste'), clear: element('#clear'),
     clearDialog: element('#clear-dialog'), cancelClear: element('#cancel-clear'),
@@ -42,7 +47,7 @@ function createApp(clipboard) {
   };
 }
 
-const missing = createApp(undefined);
+const missing = await createApp(undefined);
 missing.code.value = 'старый код';
 await missing.paste.listeners.click();
 assert(missing.code.focused && missing.code.selected);
@@ -55,18 +60,18 @@ missing.code.listeners.paste({
 assert(prevented);
 assert.equal(missing.code.value, '<html>новая игра</html>');
 
-const denied = createApp({ readText: () => Promise.reject(new Error('denied')) });
+const denied = await createApp({ readText: () => Promise.reject(new Error('denied')) });
 denied.code.value = 'сохранить код';
 await denied.paste.listeners.click();
 assert(denied.code.focused && denied.code.selected);
 assert.equal(denied.code.value, 'сохранить код');
 
-const allowed = createApp({ readText: () => Promise.resolve('<html>из буфера</html>') });
+const allowed = await createApp({ readText: () => Promise.resolve('<html>из буфера</html>') });
 allowed.code.value = 'заменить целиком';
 await allowed.paste.listeners.click();
 assert.equal(allowed.code.value, '<html>из буфера</html>');
 
-const hanging = createApp({ readText: () => new Promise(() => {}) });
+const hanging = await createApp({ readText: () => new Promise(() => {}) });
 hanging.code.value = 'прежний код';
 const pending = hanging.paste.listeners.click();
 assert.match(hanging.status.textContent, /Читаю буфер/);
@@ -78,7 +83,7 @@ await pending;
 assert(hanging.code.focused && hanging.code.selected);
 assert.equal(hanging.paste.disabled, false);
 
-const clear = createApp(undefined);
+const clear = await createApp(undefined);
 assert(clear.clear.disabled);
 clear.code.value = '<html>сохранить</html>';
 clear.code.listeners.input();
