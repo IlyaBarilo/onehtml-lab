@@ -31,6 +31,31 @@ const trafficProbe = `<script>
 })();
 </script>`;
 
+const errorProbe = `<script>
+(() => {
+  const report = (kind, message, filename, line, column) => {
+    try {
+      parent.postMessage({
+        type: 'onehtml-lab:runtime-error',
+        kind,
+        message: String(message || 'Неизвестная ошибка').slice(0, 500),
+        filename: String(filename || '').slice(0, 160),
+        line: Number.isInteger(line) && line > 0 ? line : 0,
+        column: Number.isInteger(column) && column > 0 ? column : 0
+      }, '*');
+    } catch {}
+  };
+  addEventListener('error', event => {
+    if (typeof event.message === 'string') report('error', event.message, event.filename, event.lineno, event.colno);
+  });
+  addEventListener('unhandledrejection', event => {
+    let message = 'Необработанное отклонение Promise';
+    try { message = event.reason?.message || String(event.reason); } catch {}
+    report('rejection', message, '', 0, 0);
+  });
+})();
+</script>`;
+
 function makePreview(code, networkAllowed = true) {
   const frame = document.createElement('iframe');
   frame.title = 'Запущенная игра';
@@ -42,6 +67,7 @@ function makePreview(code, networkAllowed = true) {
   // The host's frame-src policy additionally restricts frame self-navigation.
   frame.srcdoc = '<!doctype html><meta charset="utf-8">'
     + '<meta http-equiv="Content-Security-Policy" content="' + previewPolicy(networkAllowed) + '">'
+    + errorProbe
     + (networkAllowed ? trafficProbe : '')
     + code;
   return frame;

@@ -26,12 +26,13 @@ async function createApp(clipboard) {
     return elements.get(selector);
   }
   const sandbox = {
-    document: { querySelector: element },
+    document: { querySelector: element, querySelectorAll: () => [] },
     window: { addEventListener() {} },
     navigator: { clipboard },
     setTimeout(fn, ms) { timers.push({ fn, ms }); return timers.length; },
     clearTimeout: () => {},
     makePreview: () => ({}),
+    examples: [],
     readWorkingDraft: async () => null,
     writeWorkingDraft: async () => {},
     readPreviousPaste: async () => null,

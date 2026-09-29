@@ -100,7 +100,8 @@ h1 span { font-weight: 450; color: #637e9f; }
   border-bottom: 1px solid #dbe5f3;
   background: #f5f8fd;
 }
-.expert-actions { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.expert-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.expert-resource-actions { display: flex; align-items: center; gap: 6px; }
 .import-button {
   display: inline-flex;
   align-items: center;
@@ -191,6 +192,20 @@ textarea:focus-visible { outline: none; }
   overflow-wrap: anywhere;
 }
 .notice.error { border-bottom-color: #92acd0; color: #233d63; }
+.runtime-error {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px max(14px, env(safe-area-inset-right)) 7px max(14px, env(safe-area-inset-left));
+  border-bottom: 1px solid #e6b4ad;
+  background: #fff0ed;
+  color: #8b312d;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.runtime-error button { flex: 0 0 auto; min-height: 36px; border: 1px solid #dda7a0; border-radius: 6px; background: #fff9f7; color: #8b312d; padding: 5px 9px; }
 .network-status {
   flex: 0 0 auto;
   display: flex;
@@ -217,6 +232,27 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
 .dialog-actions button:hover { background: #e1ebfa; }
 .dialog-actions button.primary { background: #2d6cdf; border-color: #2d6cdf; color: #ffffff; }
 .dialog-actions button.primary:hover { background: #2059bf; }
+.guide-dialog { width: min(680px, calc(100% - 24px)); max-height: calc(100dvh - 24px); padding: 20px; }
+.guide-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.guide-heading h2 { margin-bottom: 10px; }
+.guide-heading button { min-width: 40px; min-height: 40px; border: 0; border-radius: 7px; background: #edf3fd; color: #315c93; font-size: 20px; }
+.guide-dialog p { margin: 0 0 15px; color: #526b8c; line-height: 1.45; font-size: 14px; }
+.guide-dialog h3 { margin: 20px 0 10px; font-size: 16px; }
+.platform-tabs { display: flex; gap: 6px; margin: 14px 0; }
+.platform-tab { min-height: 44px; padding: 9px 15px; border: 1px solid #c9d9ee; border-radius: 7px; background: #f4f8fd; color: #526b8c; font-weight: 600; }
+.platform-tab[aria-selected="true"] { background: #dceaff; border-color: #9dbfea; color: #2059bf; }
+.guide-prompts { display: flex; flex-wrap: wrap; gap: 8px; }
+.guide-prompts button, .example-card button { min-height: 42px; border: 1px solid #b7cff0; border-radius: 7px; background: #e9f1fc; color: #28588f; padding: 7px 11px; font-size: 13px; font-weight: 600; }
+.guide-prompts button:disabled { opacity: .4; }
+.service-list { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.service-list li { display: grid; gap: 3px; padding: 10px 12px; border: 1px solid #e0e8f4; border-radius: 8px; background: #fafcff; font-size: 13px; }
+.service-list li > span:not(.service-links) { color: #607895; }
+.service-links { display: flex; flex-wrap: wrap; gap: 5px 13px; margin-top: 4px; }
+.service-links a { color: #235eaf; }
+.example-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.example-card { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: 12px; border: 1px solid #d7e3f2; border-radius: 9px; background: #f7faff; font-size: 13px; }
+.example-card span { flex: 1; color: #607895; line-height: 1.4; }
+#copy-text { display: block; width: 100%; height: min(42dvh, 280px); margin-top: 16px; padding: 10px; border: 1px solid #b9cbe3; border-radius: 6px; background: #fcfdff; color: #253d5a; font-size: 14px; line-height: 1.4; }
 @media (max-width: 600px) {
   :root { --toolbar-height: 58px; }
   .toolbar { padding-right: max(8px, env(safe-area-inset-right)); padding-left: max(14px, env(safe-area-inset-left)); gap: 10px; }
@@ -228,6 +264,8 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
   textarea { padding: 16px 14px max(16px, env(safe-area-inset-bottom)); font-size: 16px; }
   .comparison-legend { padding-left: 14px; }
   .diff-content { padding-left: 14px; padding-right: 14px; font-size: 16px; }
+  .example-list { grid-template-columns: 1fr; }
+  .runtime-error { align-items: flex-start; flex-direction: column; }
 }
 @media (max-width: 440px) {
   :root { --toolbar-height: 96px; }
@@ -286,6 +324,10 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
         <button id="compare" class="expert-icon-button" type="button" aria-label="Сравнить с прошлым кодом" aria-pressed="false" title="Сравнить с прошлым кодом" disabled><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5h6M4 9h6M14 5h6M14 9h6M4 15h6m-3-3v6M14 15h6"/></svg></button>
         <button id="restore-previous" class="expert-icon-button" type="button" aria-label="Вернуть прошлый код" title="Вернуть прошлый код" disabled><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 8V4m0 4h4M4 8a8 8 0 1 1-1 6"/><path d="M12 7v5l3 2"/></svg></button>
       </div>
+      <div class="expert-resource-actions">
+        <button id="ai-open" class="import-button" type="button" title="AI-сервисы и готовые запросы">AI и запросы</button>
+        <button id="examples-open" class="import-button" type="button" title="Открыть примеры игр">Примеры игр</button>
+      </div>
       <span id="draft-status" class="draft-status" role="status" aria-live="polite"></span>
       <input id="import-file" type="file" accept=".html,.htm,text/html" hidden>
     </div>
@@ -293,6 +335,10 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
     <div id="network-status" class="network-status" hidden>
       <span id="network-message" role="status" aria-live="polite">Игра использует интернет</span>
       <span id="network-metrics">Файлов: <span id="network-count">0</span> · учтено: <span id="network-kb">(нет данных)</span></span>
+    </div>
+    <div id="runtime-error" class="runtime-error" role="alert" hidden>
+      <span id="runtime-error-message"></span>
+      <button id="copy-error" type="button">Скопировать ошибку</button>
     </div>
     <section class="workspace" aria-label="Рабочая область">
       <textarea id="code" aria-label="HTML-код" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Вставьте HTML-код…"></textarea>
@@ -325,8 +371,43 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
       <div class="dialog-actions"><button value="cancel" type="submit">Отмена</button><button class="primary" value="replace" type="submit">Заменить</button></div>
     </form>
   </dialog>
+  <dialog id="ai-dialog" class="guide-dialog" aria-labelledby="ai-title">
+    <div class="guide-heading"><h2 id="ai-title">AI и запросы</h2><button id="ai-close" type="button" aria-label="Закрыть AI и запросы">✕</button></div>
+    <p>Выберите запрос для нужного экрана. После копирования замените [тема игры] на свою идею. Полученный HTML-код вставьте в редактор, запустите и сохраните.</p>
+    <div class="platform-tabs" role="tablist" aria-label="Устройство для запроса">
+      <button class="platform-tab" type="button" role="tab" data-platform="mobile" aria-selected="true">Телефон</button>
+      <button class="platform-tab" type="button" role="tab" data-platform="desktop" aria-selected="false">Компьютер</button>
+    </div>
+    <div class="guide-prompts">
+      <button id="prompt-create" type="button">Копировать запрос для новой игры</button>
+      <button id="prompt-change" type="button">Копировать запрос для изменения кода</button>
+    </div>
+    <h3>AI-сервисы</h3>
+    <ul class="service-list">
+      <li><strong>Алиса AI</strong><span>Создание игры и объяснение кода</span><span class="service-links"><a href="https://alice.yandex.ru/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=com.yandex.aliceapp" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/id6621272550" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
+      <li><strong>GigaChat</strong><span>Создание и исправление HTML/JavaScript</span><span class="service-links"><a href="https://giga.chat/" target="_blank" rel="noopener noreferrer">Сайт</a></span></li>
+      <li><strong>DeepSeek</strong><span>Вариант для работы с кодом в диалоге</span><span class="service-links"><a href="https://chat.deepseek.com/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=com.deepseek.chat" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/deepseek-ai-%D0%B0%D1%81%D1%81%D0%B8%D1%81%D1%82%D0%B5%D0%BD%D1%82/id6737597349" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
+      <li><strong>Qwen Studio</strong><span>Создание и доработка игры</span><span class="service-links"><a href="https://qwen.ai/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=ai.qwenlm.chat.android" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/qwen-studio/id6743778442" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
+    </ul>
+  </dialog>
+  <dialog id="examples-dialog" class="guide-dialog" aria-labelledby="examples-title">
+    <div class="guide-heading"><h2 id="examples-title">Примеры игр</h2><button id="examples-close" type="button" aria-label="Закрыть примеры">✕</button></div>
+    <p>Откройте копию примера, измените код и сохраните свою версию.</p>
+    <div class="platform-tabs" role="tablist" aria-label="Устройство для примеров">
+      <button class="platform-tab" type="button" role="tab" data-platform="mobile" aria-selected="true">Телефон</button>
+      <button class="platform-tab" type="button" role="tab" data-platform="desktop" aria-selected="false">Компьютер</button>
+    </div>
+    <div id="example-list" class="example-list"></div>
+  </dialog>
+  <dialog id="copy-dialog" aria-labelledby="copy-title">
+    <h2 id="copy-title">Скопируйте текст</h2>
+    <p class="dialog-copy">Браузер не разрешил автоматическое копирование. Выделенный текст можно скопировать через меню поля.</p>
+    <textarea id="copy-text" readonly aria-label="Текст для копирования"></textarea>
+    <div class="dialog-actions"><button id="copy-close" type="button">Закрыть</button></div>
+  </dialog>
   <script>(function () {
 "use strict";
+const examples = [{"id":"catch-circle","platform":"mobile","title":"Поймай круг","description":"Касайтесь цели на всём экране.","code":"<!doctype html>\r\n<html lang=\"ru\">\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\r\n<title>Поймай круг</title>\r\n<style>\r\n*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}body{color:#173b64;font:16px system-ui,sans-serif}main{position:relative;width:100vw;height:100vh;height:100dvh;overflow:hidden;background:#ddecff}.field{position:absolute;inset:0;overflow:hidden;background:radial-gradient(circle at 25% 30%,#f7fbff 0,#ddecff 42%,#b9d7ff 100%);touch-action:manipulation}.top{position:absolute;z-index:1;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:max(16px,env(safe-area-inset-top)) 18px 12px;pointer-events:none}h1{margin:0;font-size:clamp(21px,6vw,30px)}.hint{margin:4px 0 0;font-size:13px}.info{display:flex;gap:16px;font-weight:700;white-space:nowrap}.target{position:absolute;width:76px;height:76px;border:0;border-radius:50%;background:#ef687e;box-shadow:0 8px 0 #ad3b56,0 15px 30px #5a6f9540;touch-action:manipulation}.target:active{transform:translateY(5px);box-shadow:0 3px 0 #ad3b56}.start{position:absolute;z-index:2;top:50%;left:50%;transform:translate(-50%,-50%);min-width:190px;min-height:58px;padding:12px 22px;border:0;border-radius:14px;background:#2868c7;color:white;font:700 19px system-ui;box-shadow:0 10px 30px #234d8b44}@media(max-width:360px){.top{flex-wrap:wrap}.info{width:100%;justify-content:space-between}}\r\n</style>\r\n</head>\r\n<body>\r\n<main><div class=\"field\" id=\"field\"><button class=\"target\" id=\"target\" aria-label=\"Поймать круг\" hidden></button></div><div class=\"top\"><div><h1>Поймай круг</h1><p class=\"hint\">Касайтесь цели 30 секунд</p></div><div class=\"info\"><span>Очки: <b id=\"score\">0</b></span><span>Время: <b id=\"time\">30</b></span></div></div><button class=\"start\" id=\"start\">Начать игру</button></main>\r\n<script>\r\nconst field=document.querySelector('#field'),target=document.querySelector('#target'),start=document.querySelector('#start');\r\nconst scoreText=document.querySelector('#score'),timeText=document.querySelector('#time');\r\nlet score=0,time=30,timer;\r\nfunction move(){const edge=12,top=Math.min(110,Math.max(0,field.clientHeight-target.offsetHeight));const width=Math.max(0,field.clientWidth-target.offsetWidth-edge*2),height=Math.max(0,field.clientHeight-target.offsetHeight-top-edge);target.style.left=edge+Math.floor(Math.random()*width)+'px';target.style.top=top+Math.floor(Math.random()*height)+'px'}\r\nfunction finish(){clearInterval(timer);target.hidden=true;start.hidden=false;start.textContent='Сыграть ещё'}\r\nstart.onclick=()=>{clearInterval(timer);score=0;time=30;scoreText.textContent=score;timeText.textContent=time;start.hidden=true;target.hidden=false;move();timer=setInterval(()=>{time--;timeText.textContent=time;if(time<=0)finish()},1000)};\r\ntarget.onclick=()=>{score++;scoreText.textContent=score;move()};\r\n<\/script>\r\n</body>\r\n</html>\r\n"},{"id":"memory","platform":"mobile","title":"Найди пару","description":"Открывайте пары касанием карточек.","code":"<!doctype html>\r\n<html lang=\"ru\">\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\r\n<title>Найди пару</title>\r\n<style>\r\n*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}body{background:#e7defd;color:#302b53;font:16px system-ui,sans-serif}main{display:flex;flex-direction:column;width:100vw;height:100vh;height:100dvh;padding:max(16px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom));background:linear-gradient(160deg,#f4efff,#d9ccf7)}h1{margin:0 0 3px;font-size:clamp(22px,6vw,32px)}p{margin:0 0 8px;font-size:14px}.status{min-height:24px;font-weight:700}.board{flex:1;min-height:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}.card{min-width:0;min-height:0;border:0;border-radius:12px;background:#6546c4;color:white;font-size:clamp(30px,8vw,58px);font-weight:700;touch-action:manipulation;box-shadow:0 5px 0 #442b94}.card.open,.card.matched{background:#fff;color:#302b53;box-shadow:inset 0 0 0 2px #b8a4ee}.card.matched{background:#d9f6e5}.restart{flex:0 0 auto;min-height:52px;border:0;border-radius:12px;background:#6546c4;color:white;font:700 17px system-ui}@media(max-height:460px){p{display:none}.board{margin:4px 0}.card{font-size:24px}}\r\n</style>\r\n</head>\r\n<body>\r\n<main><h1>Найди пару</h1><p>Откройте все шесть пар. Запоминайте расположение карточек.</p><div class=\"status\" id=\"status\"></div><div class=\"board\" id=\"board\"></div><button class=\"restart\" id=\"restart\">Новая игра</button></main>\r\n<script>\r\nconst symbols=['★','♥','☀','☂','♫','◆'];\r\nconst board=document.querySelector('#board'),status=document.querySelector('#status');\r\nlet first=null,locked=false,matches=0,moves=0,flipTimer;\r\nfunction newGame(){clearTimeout(flipTimer);first=null;locked=false;matches=0;moves=0;status.textContent='Ходы: 0';board.replaceChildren();const cards=[...symbols,...symbols];for(let i=cards.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]]}cards.forEach(symbol=>{const card=document.createElement('button');card.className='card';card.type='button';card.textContent='?';card.setAttribute('aria-label','Закрытая карточка');card.dataset.symbol=symbol;card.onclick=()=>openCard(card);board.append(card)})}\r\nfunction openCard(card){if(locked||card===first||card.classList.contains('matched'))return;card.textContent=card.dataset.symbol;card.classList.add('open');card.setAttribute('aria-label',card.dataset.symbol);if(!first){first=card;return}moves++;status.textContent='Ходы: '+moves;if(first.dataset.symbol===card.dataset.symbol){first.classList.add('matched');card.classList.add('matched');first=null;matches++;if(matches===symbols.length)status.textContent='Победа! Ходы: '+moves;return}locked=true;const old=first;first=null;flipTimer=setTimeout(()=>{old.classList.remove('open');card.classList.remove('open');old.textContent=card.textContent='?';old.setAttribute('aria-label','Закрытая карточка');card.setAttribute('aria-label','Закрытая карточка');locked=false},700)}\r\ndocument.querySelector('#restart').onclick=newGame;newGame();\r\n<\/script>\r\n</body>\r\n</html>\r\n"},{"id":"reaction","platform":"mobile","title":"Проверь реакцию","description":"Коснитесь экрана после смены цвета.","code":"<!doctype html>\r\n<html lang=\"ru\">\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\r\n<title>Проверь реакцию</title>\r\n<style>\r\n*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}body{background:#286e7b;color:white;font:16px system-ui,sans-serif}main{display:flex;flex-direction:column;width:100vw;height:100vh;height:100dvh;text-align:center}header{flex:0 0 auto;padding:max(18px,env(safe-area-inset-top)) 16px 14px}h1{margin:0 0 4px;font-size:clamp(24px,7vw,34px)}p{margin:0;font-size:14px}.pad{flex:1;width:100%;min-height:0;border:0;border-radius:0;background:#337886;color:white;font:700 clamp(28px,8vw,52px) system-ui;touch-action:manipulation;padding:24px}.pad.waiting{background:#dc9a38}.pad.ready{background:#45a966}.pad.result{background:#457aab}.best{flex:0 0 auto;padding:14px 16px max(16px,env(safe-area-inset-bottom));font-weight:700}\r\n</style>\r\n</head>\r\n<body>\r\n<main><header><h1>Проверь реакцию</h1><p>Дождитесь зелёного цвета и коснитесь экрана</p></header><button id=\"pad\" class=\"pad\">Начать</button><div class=\"best\" id=\"best\">Лучший результат: —</div></main>\r\n<script>\r\nconst pad=document.querySelector('#pad'),best=document.querySelector('#best');let state='idle',timer,started,record=Infinity;\r\npad.onclick=()=>{if(state==='waiting'){clearTimeout(timer);state='idle';pad.className='pad';pad.textContent='Рано! Попробуйте снова';return}if(state==='ready'){const elapsed=Math.round(performance.now()-started);record=Math.min(record,elapsed);best.textContent='Лучший результат: '+record+' мс';state='result';pad.className='pad result';pad.textContent=elapsed+' мс — ещё раз';return}state='waiting';pad.className='pad waiting';pad.textContent='Ждите зелёного…';timer=setTimeout(()=>{state='ready';started=performance.now();pad.className='pad ready';pad.textContent='Нажмите!'},1500+Math.random()*2500)};\r\n<\/script>\r\n</body>\r\n</html>\r\n"},{"id":"snake","platform":"desktop","title":"Змейка","description":"Управляйте стрелками или WASD.","code":"<!doctype html>\r\n<html lang=\"ru\">\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\r\n<title>Змейка</title>\r\n<style>\r\n*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}body{background:#081b2b;color:#f1faff;font:16px system-ui,sans-serif}canvas{display:block;width:100vw;height:100vh;height:100dvh}.hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:20px 28px;pointer-events:none;text-shadow:0 2px 8px #081b2b}h1{margin:0;font-size:26px}.score{font-size:20px;font-weight:700}.overlay{position:absolute;inset:0;display:grid;place-items:center;background:#071827b8;text-align:center}.overlay[hidden]{display:none}.content{padding:24px}h2{margin:0 0 10px;font-size:clamp(32px,5vw,58px)}p{margin:0 0 26px;color:#c6e1ed}.start{min-width:190px;min-height:56px;padding:12px 24px;border:0;border-radius:12px;background:#48c9ac;color:#062b2a;font:700 18px system-ui}\r\n</style>\r\n</head>\r\n<body>\r\n<canvas id=\"game\" aria-label=\"Поле игры Змейка\"></canvas><div class=\"hud\"><h1>Змейка</h1><div class=\"score\">Очки: <span id=\"score\">0</span></div></div><div class=\"overlay\" id=\"overlay\"><div class=\"content\"><h2 id=\"message\">Змейка</h2><p>Стрелки или WASD — направление. Пробел — начать заново.</p><button class=\"start\" id=\"start\">Начать игру</button></div></div>\r\n<script>\r\nconst canvas=document.querySelector('#game'),ctx=canvas.getContext('2d'),overlay=document.querySelector('#overlay'),message=document.querySelector('#message'),scoreText=document.querySelector('#score');\r\nconst cell=28;let cols,rows,snake,food,direction,nextDirection,score=0,timer,playing=false;\r\nfunction resize(){const ratio=Math.min(devicePixelRatio||1,2),w=innerWidth,h=innerHeight;canvas.width=Math.floor(w*ratio);canvas.height=Math.floor(h*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);cols=Math.max(8,Math.floor(w/cell));rows=Math.max(8,Math.floor(h/cell));if(playing)end('Размер окна изменён');else draw()}\r\nfunction randomFood(){do{food={x:Math.floor(Math.random()*cols),y:Math.floor(Math.random()*rows)}}while(snake.some(part=>part.x===food.x&&part.y===food.y))}\r\nfunction draw(){const w=innerWidth,h=innerHeight;ctx.fillStyle='#081b2b';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#143148';ctx.lineWidth=1;for(let x=0;x<w;x+=cell){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=cell){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}if(!snake)return;ctx.fillStyle='#f2648b';ctx.beginPath();ctx.arc((food.x+.5)*cell,(food.y+.5)*cell,cell*.34,0,Math.PI*2);ctx.fill();snake.forEach((part,index)=>{ctx.fillStyle=index===0?'#8df1cf':'#45c7a9';ctx.fillRect(part.x*cell+2,part.y*cell+2,cell-4,cell-4)})}\r\nfunction end(text){clearInterval(timer);playing=false;message.textContent=text;overlay.hidden=false}\r\nfunction start(){clearInterval(timer);const x=Math.floor(cols/2),y=Math.floor(rows/2);snake=[{x,y},{x:x-1,y},{x:x-2,y},{x:x-3,y}];direction={x:1,y:0};nextDirection=direction;score=0;scoreText.textContent='0';randomFood();playing=true;overlay.hidden=true;draw();timer=setInterval(tick,130)}\r\nfunction tick(){direction=nextDirection;const head={x:snake[0].x+direction.x,y:snake[0].y+direction.y};const eats=head.x===food.x&&head.y===food.y;if(head.x<0||head.y<0||head.x>=cols||head.y>=rows||snake.slice(0,eats?snake.length:snake.length-1).some(part=>part.x===head.x&&part.y===head.y)){end('Игра окончена');return}snake.unshift(head);if(eats){score++;scoreText.textContent=score;randomFood()}else snake.pop();draw()}\r\naddEventListener('keydown',event=>{const keys={ArrowUp:[0,-1],KeyW:[0,-1],ArrowDown:[0,1],KeyS:[0,1],ArrowLeft:[-1,0],KeyA:[-1,0],ArrowRight:[1,0],KeyD:[1,0]};if(event.code==='Space'){event.preventDefault();if(!playing)start();return}const vector=keys[event.code];if(!vector)return;event.preventDefault();if(playing&&(vector[0]!==-direction.x||vector[1]!==-direction.y))nextDirection={x:vector[0],y:vector[1]}});\r\ndocument.querySelector('#start').onclick=start;addEventListener('resize',resize);resize();\r\n<\/script>\r\n</body>\r\n</html>\r\n"},{"id":"falling-stars","platform":"desktop","title":"Лови звёзды","description":"Двигайте платформу мышью.","code":"<!doctype html>\r\n<html lang=\"ru\">\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\r\n<title>Лови звёзды</title>\r\n<style>\r\n*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}body{background:#121735;color:#fff;font:16px system-ui,sans-serif}canvas{display:block;width:100vw;height:100vh;height:100dvh}.hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:20px 28px;pointer-events:none;text-shadow:0 2px 8px #121735}h1{margin:0;font-size:26px}.numbers{display:flex;gap:22px;font-weight:700;font-size:18px}.overlay{position:absolute;inset:0;display:grid;place-items:center;background:#10142dbb;text-align:center}.overlay[hidden]{display:none}.content{padding:24px}h2{margin:0 0 10px;font-size:clamp(32px,5vw,58px)}p{margin:0 0 26px;color:#d9d7f2}.start{min-width:190px;min-height:56px;padding:12px 24px;border:0;border-radius:12px;background:#ffd46e;color:#4a2d17;font:700 18px system-ui}\r\n</style>\r\n</head>\r\n<body>\r\n<canvas id=\"game\" aria-label=\"Поле игры Лови звёзды\"></canvas><div class=\"hud\"><h1>Лови звёзды</h1><div class=\"numbers\"><span>Очки: <b id=\"score\">0</b></span><span>Время: <b id=\"time\">30</b></span></div></div><div class=\"overlay\" id=\"overlay\"><div class=\"content\"><h2 id=\"message\">Лови звёзды</h2><p>Двигайте мышь, чтобы поймать падающие звёзды за 30 секунд.</p><button class=\"start\" id=\"start\">Начать игру</button></div></div>\r\n<script>\r\nconst canvas=document.querySelector('#game'),ctx=canvas.getContext('2d'),overlay=document.querySelector('#overlay'),message=document.querySelector('#message');\r\nconst scoreText=document.querySelector('#score'),timeText=document.querySelector('#time');let width,height,paddleX,stars=[],score=0,playing=false,lastTime=0,spawn=0,remaining=30,frame;\r\nfunction resize(){const ratio=Math.min(devicePixelRatio||1,2);width=innerWidth;height=innerHeight;canvas.width=Math.floor(width*ratio);canvas.height=Math.floor(height*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);paddleX=Math.min(Math.max(paddleX||width/2,60),width-60);draw()}\r\nfunction draw(){ctx.fillStyle='#121735';ctx.fillRect(0,0,width,height);ctx.fillStyle='#232c56';for(let x=40;x<width;x+=100)for(let y=50;y<height;y+=100)ctx.fillRect(x,y,2,2);for(const star of stars){ctx.fillStyle='#ffd46e';ctx.beginPath();ctx.arc(star.x,star.y,star.r,0,Math.PI*2);ctx.fill()}ctx.fillStyle='#78d7f1';ctx.fillRect(paddleX-62,height-50,124,18)}\r\nfunction end(){playing=false;cancelAnimationFrame(frame);message.textContent='Ваш счёт: '+score;overlay.hidden=false}\r\nfunction start(){cancelAnimationFrame(frame);stars=[];score=0;remaining=30;spawn=0;lastTime=performance.now();scoreText.textContent='0';timeText.textContent='30';playing=true;overlay.hidden=true;frame=requestAnimationFrame(update)}\r\nfunction update(now){if(!playing)return;const dt=Math.min((now-lastTime)/1000,.05);lastTime=now;remaining-=dt;if(remaining<=0){timeText.textContent='0';end();return}timeText.textContent=Math.ceil(remaining);spawn+=dt;if(spawn>.55){spawn=0;stars.push({x:24+Math.random()*Math.max(1,width-48),y:-20,r:11,speed:180+Math.random()*120})}for(const star of stars)star.y+=star.speed*dt;stars=stars.filter(star=>{if(star.y>=height-53&&star.y<=height-18&&Math.abs(star.x-paddleX)<72){score++;scoreText.textContent=score;return false}return star.y<height+20});draw();frame=requestAnimationFrame(update)}\r\naddEventListener('pointermove',event=>{paddleX=Math.min(Math.max(event.clientX,62),Math.max(62,width-62));draw()});document.querySelector('#start').onclick=start;addEventListener('resize',resize);resize();\r\n<\/script>\r\n</body>\r\n</html>\r\n"},{"id":"space-reaction","platform":"desktop","title":"Реакция на пробел","description":"Нажмите пробел после сигнала.","code":"<!doctype html>\r\n<html lang=\"ru\">\r\n<head>\r\n<meta charset=\"utf-8\">\r\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\r\n<title>Реакция на пробел</title>\r\n<style>\r\n*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}body{background:#164a68;color:white;font:16px system-ui,sans-serif}.pad{display:grid;place-items:center;width:100vw;height:100vh;height:100dvh;border:0;background:#164a68;color:white;text-align:center;cursor:pointer}.pad.waiting{background:#b77b29}.pad.ready{background:#208f6b}.pad.result{background:#285e9e}.center{padding:24px}h1{margin:0 0 16px;font-size:clamp(34px,6vw,74px)}.message{display:block;font-size:clamp(22px,3vw,38px);font-weight:700}.hint{display:block;margin-top:20px;font-size:16px;font-weight:400;opacity:.85}.best{position:absolute;right:28px;bottom:24px;font-size:18px;font-weight:700;pointer-events:none}\r\n</style>\r\n</head>\r\n<body>\r\n<button id=\"pad\" class=\"pad\"><span class=\"center\"><h1>Реакция на пробел</h1><span class=\"message\" id=\"message\">Пробел — начать</span><span class=\"hint\">Дождитесь зелёного цвета и нажмите пробел. Можно также щёлкнуть мышью.</span></span></button><div class=\"best\" id=\"best\">Лучший результат: —</div>\r\n<script>\r\nconst pad=document.querySelector('#pad'),message=document.querySelector('#message'),best=document.querySelector('#best');let state='idle',timer,started,record=Infinity;\r\nfunction action(){if(state==='waiting'){clearTimeout(timer);state='idle';pad.className='pad';message.textContent='Рано! Попробуйте снова';return}if(state==='ready'){const elapsed=Math.round(performance.now()-started);record=Math.min(record,elapsed);best.textContent='Лучший результат: '+record+' мс';state='result';pad.className='pad result';message.textContent=elapsed+' мс — ещё раз';return}state='waiting';pad.className='pad waiting';message.textContent='Ждите зелёного…';timer=setTimeout(()=>{state='ready';started=performance.now();pad.className='pad ready';message.textContent='Нажмите пробел!'},1500+Math.random()*2500)}\r\npad.onclick=action;addEventListener('keydown',event=>{if(event.code==='Space'&&!event.repeat){event.preventDefault();action()}});\r\n<\/script>\r\n</body>\r\n</html>\r\n"}];
 // Prototype helpers are concatenated into one private closure by build.mjs.
 function previewPolicy(networkAllowed) {
   return [
@@ -360,6 +441,31 @@ const trafficProbe = `<script>
 })();
 <\/script>`;
 
+const errorProbe = `<script>
+(() => {
+  const report = (kind, message, filename, line, column) => {
+    try {
+      parent.postMessage({
+        type: 'onehtml-lab:runtime-error',
+        kind,
+        message: String(message || 'Неизвестная ошибка').slice(0, 500),
+        filename: String(filename || '').slice(0, 160),
+        line: Number.isInteger(line) && line > 0 ? line : 0,
+        column: Number.isInteger(column) && column > 0 ? column : 0
+      }, '*');
+    } catch {}
+  };
+  addEventListener('error', event => {
+    if (typeof event.message === 'string') report('error', event.message, event.filename, event.lineno, event.colno);
+  });
+  addEventListener('unhandledrejection', event => {
+    let message = 'Необработанное отклонение Promise';
+    try { message = event.reason?.message || String(event.reason); } catch {}
+    report('rejection', message, '', 0, 0);
+  });
+})();
+<\/script>`;
+
 function makePreview(code, networkAllowed = true) {
   const frame = document.createElement('iframe');
   frame.title = 'Запущенная игра';
@@ -371,6 +477,7 @@ function makePreview(code, networkAllowed = true) {
   // The host's frame-src policy additionally restricts frame self-navigation.
   frame.srcdoc = '<!doctype html><meta charset="utf-8">'
     + '<meta http-equiv="Content-Security-Policy" content="' + previewPolicy(networkAllowed) + '">'
+    + errorProbe
     + (networkAllowed ? trafficProbe : '')
     + code;
   return frame;
@@ -576,6 +683,15 @@ const status = document.querySelector('#status');
 const networkStatus = document.querySelector('#network-status');
 const networkCountField = document.querySelector('#network-count');
 const networkKbField = document.querySelector('#network-kb');
+const runtimeError = document.querySelector('#runtime-error');
+const runtimeErrorMessage = document.querySelector('#runtime-error-message');
+const aiButton = document.querySelector('#ai-open');
+const examplesButton = document.querySelector('#examples-open');
+const aiDialog = document.querySelector('#ai-dialog');
+const examplesDialog = document.querySelector('#examples-dialog');
+const exampleList = document.querySelector('#example-list');
+const copyDialog = document.querySelector('#copy-dialog');
+const copyTextField = document.querySelector('#copy-text');
 const saveDialog = document.querySelector('#save-dialog');
 const clearDialog = document.querySelector('#clear-dialog');
 const replaceDialog = document.querySelector('#replace-dialog');
@@ -601,6 +717,9 @@ let comparisonOpen = false;
 let activeFrame = null;
 let networkCount = 0;
 let networkBytes = 0;
+let runtimeErrorReport = '';
+let runtimeErrorCount = 0;
+let selectedPlatform = 'mobile';
 
 function readSettings() {
   try {
@@ -640,8 +759,23 @@ function resetNetworkStatus() {
 }
 
 window.addEventListener('message', event => {
-  if (!running || !previewNetworkAllowed() || !activeFrame || event.source !== activeFrame.contentWindow) return;
-  if (event.data?.type !== 'onehtml-lab:network-resource') return;
+  if (!running || !activeFrame || event.source !== activeFrame.contentWindow) return;
+  if (event.data?.type === 'onehtml-lab:runtime-error') {
+    const detail = event.data;
+    if (!['error', 'rejection'].includes(detail.kind) || typeof detail.message !== 'string') return;
+    const message = detail.message === 'Script error.'
+      ? 'Ошибка JavaScript (браузер не сообщил подробности)'
+      : detail.message.slice(0, 500);
+    const place = Number.isInteger(detail.line) && detail.line > 0
+      ? ` (строка документа ${detail.line}${Number.isInteger(detail.column) && detail.column > 0 ? `, столбец ${detail.column}` : ''})`
+      : '';
+    runtimeErrorCount += 1;
+    runtimeErrorReport = `${detail.kind === 'rejection' ? 'Необработанный Promise' : 'Ошибка JavaScript'}: ${message}${place}`;
+    runtimeErrorMessage.textContent = `Ошибка игры${runtimeErrorCount > 1 ? ` (${runtimeErrorCount})` : ''}: ${message}${place}`;
+    runtimeError.hidden = false;
+    return;
+  }
+  if (!previewNetworkAllowed() || event.data?.type !== 'onehtml-lab:network-resource') return;
   const bytes = event.data.bytes;
   if (typeof bytes !== 'number' || !Number.isFinite(bytes) || bytes < 0) return;
   networkCount += 1;
@@ -653,6 +787,13 @@ window.addEventListener('message', event => {
   if (networkCount === 1) networkStatus.hidden = false;
 });
 
+function clearRuntimeError() {
+  runtimeErrorReport = '';
+  runtimeErrorCount = 0;
+  runtimeErrorMessage.textContent = '';
+  runtimeError.hidden = true;
+}
+
 function inform(text = '', error = false, persistent = false) {
   clearTimeout(statusTimeout);
   status.textContent = text;
@@ -660,6 +801,81 @@ function inform(text = '', error = false, persistent = false) {
   status.classList.toggle('error', error);
   if (text && !error && !persistent) statusTimeout = setTimeout(() => { status.hidden = true; }, 6000);
 }
+
+async function copyOrSelect(text, successMessage) {
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard-unavailable');
+    await navigator.clipboard.writeText(text);
+    inform(successMessage);
+  } catch {
+    copyTextField.value = text;
+    copyDialog.showModal();
+    copyTextField.focus();
+    copyTextField.select();
+  }
+}
+
+const gamePrompts = {
+  mobile: {
+    create: 'Сделай игру про [тема игры] для телефона. Сделай одним файлом HTML со встроенными CSS и JavaScript. Игра должна занимать весь экран, управляться касанием и позволять сыграть ещё раз. Верни только полный HTML-код.',
+    change: 'Измени игру ниже по моему описанию. Верни полный HTML-файл, чтобы я мог целиком заменить прежний код. Сохрани полноэкранный вид на телефоне и управление касанием. Если задача изменения ещё не указана, сначала спроси, что именно поменять.\n\nТекущий код:\n'
+  },
+  desktop: {
+    create: 'Сделай игру про [тема игры] для компьютера. Сделай одним файлом HTML со встроенными CSS и JavaScript. Игра должна занимать всё окно браузера, управляться мышью или клавиатурой и позволять сыграть ещё раз. Верни только полный HTML-код.',
+    change: 'Измени игру ниже по моему описанию. Верни полный HTML-файл, чтобы я мог целиком заменить прежний код. Сохрани полноэкранный вид в браузере компьютера и управление мышью или клавиатурой. Если задача изменения ещё не указана, сначала спроси, что именно поменять.\n\nТекущий код:\n'
+  }
+};
+
+function renderExamples() {
+  exampleList.replaceChildren();
+  for (const example of examples.filter(item => item.platform === selectedPlatform)) {
+    const card = document.createElement('div');
+    card.className = 'example-card';
+    const title = document.createElement('strong');
+    title.textContent = example.title;
+    const description = document.createElement('span');
+    description.textContent = example.description;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Открыть копию';
+    button.addEventListener('click', async () => {
+      examplesDialog.close();
+      if (!await confirmReplacement(example.code)) return;
+      if (running) stopPreview();
+      replaceOnNextPaste = false;
+      replaceCode(example.code, true);
+      inform(`Пример «${example.title}» открыт. Измените код и сохраните свою версию.`);
+    });
+    card.append(title, description, button);
+    exampleList.append(card);
+  }
+}
+
+function setPlatform(platform) {
+  if (!['mobile', 'desktop'].includes(platform)) return;
+  selectedPlatform = platform;
+  for (const tab of document.querySelectorAll('.platform-tab')) {
+    tab.setAttribute('aria-selected', String(tab.dataset.platform === platform));
+  }
+  renderExamples();
+}
+
+for (const tab of document.querySelectorAll('.platform-tab')) {
+  tab.addEventListener('click', () => setPlatform(tab.dataset.platform));
+}
+renderExamples();
+aiButton.addEventListener('click', () => { if (expertMode && !modeBusy) aiDialog.showModal(); });
+examplesButton.addEventListener('click', () => { if (expertMode && !modeBusy) examplesDialog.showModal(); });
+document.querySelector('#ai-close').addEventListener('click', () => aiDialog.close());
+document.querySelector('#examples-close').addEventListener('click', () => examplesDialog.close());
+document.querySelector('#copy-close').addEventListener('click', () => copyDialog.close());
+document.querySelector('#prompt-create').addEventListener('click', () => void copyOrSelect(gamePrompts[selectedPlatform].create, 'Запрос для новой игры скопирован.'));
+document.querySelector('#prompt-change').addEventListener('click', () => {
+  if (codeField.value.trim()) void copyOrSelect(gamePrompts[selectedPlatform].change + codeField.value, 'Запрос с текущим кодом скопирован.');
+});
+document.querySelector('#copy-error').addEventListener('click', () => {
+  if (runtimeErrorReport) void copyOrSelect(runtimeErrorReport, 'Ошибка игры скопирована.');
+});
 
 function setDraftStatus(text, error = false) {
   draftStatus.textContent = text;
@@ -757,6 +973,7 @@ async function confirmReplacement(nextCode) {
 function replaceCode(code, fromPaste = false) {
   if (fromPaste) rememberPreviousPaste(codeField.value, code);
   closeComparison();
+  clearRuntimeError();
   codeField.value = code;
   codeField.scrollTop = 0;
   codeField.scrollLeft = 0;
@@ -795,6 +1012,9 @@ function updateControls() {
   expertButton.disabled = modeBusy;
   expertTools.hidden = !expertMode;
   importButton.disabled = modeBusy;
+  aiButton.disabled = modeBusy;
+  examplesButton.disabled = modeBusy;
+  document.querySelector('#prompt-change').disabled = empty;
   const canRestore = expertMode && !running && !modeBusy && previousPaste !== null && previousPaste !== codeField.value;
   compareButton.disabled = !canRestore;
   restorePreviousButton.disabled = !canRestore;
@@ -825,6 +1045,7 @@ codeField.addEventListener('input', () => {
   }
   replaceOnNextPaste = false;
   inform();
+  clearRuntimeError();
   scheduleDraftSave();
   updateControls();
 });
@@ -901,6 +1122,7 @@ function stopPreview() {
 function startPreview() {
   try {
     closeComparison();
+    clearRuntimeError();
     const frame = makePreview(codeField.value, previewNetworkAllowed());
     resetNetworkStatus();
     codeField.blur();

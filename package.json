@@ -11,6 +11,7 @@
     "test:previous": "node tests/previous.mjs",
     "test:clean": "node tests/clean-copy.mjs",
     "test:unit": "node tests/unit.mjs",
+    "test:stage7": "node tests/stage7.mjs",
     "test:e2e": "node tests/browser.mjs"
   },
   "devDependencies": {

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Лови звёзды</title>
+<style>
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}body{background:#121735;color:#fff;font:16px system-ui,sans-serif}canvas{display:block;width:100vw;height:100vh;height:100dvh}.hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;gap:20px;padding:20px 28px;pointer-events:none;text-shadow:0 2px 8px #121735}h1{margin:0;font-size:26px}.numbers{display:flex;gap:22px;font-weight:700;font-size:18px}.overlay{position:absolute;inset:0;display:grid;place-items:center;background:#10142dbb;text-align:center}.overlay[hidden]{display:none}.content{padding:24px}h2{margin:0 0 10px;font-size:clamp(32px,5vw,58px)}p{margin:0 0 26px;color:#d9d7f2}.start{min-width:190px;min-height:56px;padding:12px 24px;border:0;border-radius:12px;background:#ffd46e;color:#4a2d17;font:700 18px system-ui}
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Поле игры Лови звёзды"></canvas><div class="hud"><h1>Лови звёзды</h1><div class="numbers"><span>Очки: <b id="score">0</b></span><span>Время: <b id="time">30</b></span></div></div><div class="overlay" id="overlay"><div class="content"><h2 id="message">Лови звёзды</h2><p>Двигайте мышь, чтобы поймать падающие звёзды за 30 секунд.</p><button class="start" id="start">Начать игру</button></div></div>
+<script>
+const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d'),overlay=document.querySelector('#overlay'),message=document.querySelector('#message');
+const scoreText=document.querySelector('#score'),timeText=document.querySelector('#time');let width,height,paddleX,stars=[],score=0,playing=false,lastTime=0,spawn=0,remaining=30,frame;
+function resize(){const ratio=Math.min(devicePixelRatio||1,2);width=innerWidth;height=innerHeight;canvas.width=Math.floor(width*ratio);canvas.height=Math.floor(height*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);paddleX=Math.min(Math.max(paddleX||width/2,60),width-60);draw()}
+function draw(){ctx.fillStyle='#121735';ctx.fillRect(0,0,width,height);ctx.fillStyle='#232c56';for(let x=40;x<width;x+=100)for(let y=50;y<height;y+=100)ctx.fillRect(x,y,2,2);for(const star of stars){ctx.fillStyle='#ffd46e';ctx.beginPath();ctx.arc(star.x,star.y,star.r,0,Math.PI*2);ctx.fill()}ctx.fillStyle='#78d7f1';ctx.fillRect(paddleX-62,height-50,124,18)}
+function end(){playing=false;cancelAnimationFrame(frame);message.textContent='Ваш счёт: '+score;overlay.hidden=false}
+function start(){cancelAnimationFrame(frame);stars=[];score=0;remaining=30;spawn=0;lastTime=performance.now();scoreText.textContent='0';timeText.textContent='30';playing=true;overlay.hidden=true;frame=requestAnimationFrame(update)}
+function update(now){if(!playing)return;const dt=Math.min((now-lastTime)/1000,.05);lastTime=now;remaining-=dt;if(remaining<=0){timeText.textContent='0';end();return}timeText.textContent=Math.ceil(remaining);spawn+=dt;if(spawn>.55){spawn=0;stars.push({x:24+Math.random()*Math.max(1,width-48),y:-20,r:11,speed:180+Math.random()*120})}for(const star of stars)star.y+=star.speed*dt;stars=stars.filter(star=>{if(star.y>=height-53&&star.y<=height-18&&Math.abs(star.x-paddleX)<72){score++;scoreText.textContent=score;return false}return star.y<height+20});draw();frame=requestAnimationFrame(update)}
+addEventListener('pointermove',event=>{paddleX=Math.min(Math.max(event.clientX,62),Math.max(62,width-62));draw()});document.querySelector('#start').onclick=start;addEventListener('resize',resize);resize();
+</script>
+</body>
+</html>

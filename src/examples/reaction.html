@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Проверь реакцию</title>
+<style>
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}body{background:#286e7b;color:white;font:16px system-ui,sans-serif}main{display:flex;flex-direction:column;width:100vw;height:100vh;height:100dvh;text-align:center}header{flex:0 0 auto;padding:max(18px,env(safe-area-inset-top)) 16px 14px}h1{margin:0 0 4px;font-size:clamp(24px,7vw,34px)}p{margin:0;font-size:14px}.pad{flex:1;width:100%;min-height:0;border:0;border-radius:0;background:#337886;color:white;font:700 clamp(28px,8vw,52px) system-ui;touch-action:manipulation;padding:24px}.pad.waiting{background:#dc9a38}.pad.ready{background:#45a966}.pad.result{background:#457aab}.best{flex:0 0 auto;padding:14px 16px max(16px,env(safe-area-inset-bottom));font-weight:700}
+</style>
+</head>
+<body>
+<main><header><h1>Проверь реакцию</h1><p>Дождитесь зелёного цвета и коснитесь экрана</p></header><button id="pad" class="pad">Начать</button><div class="best" id="best">Лучший результат: —</div></main>
+<script>
+const pad=document.querySelector('#pad'),best=document.querySelector('#best');let state='idle',timer,started,record=Infinity;
+pad.onclick=()=>{if(state==='waiting'){clearTimeout(timer);state='idle';pad.className='pad';pad.textContent='Рано! Попробуйте снова';return}if(state==='ready'){const elapsed=Math.round(performance.now()-started);record=Math.min(record,elapsed);best.textContent='Лучший результат: '+record+' мс';state='result';pad.className='pad result';pad.textContent=elapsed+' мс — ещё раз';return}state='waiting';pad.className='pad waiting';pad.textContent='Ждите зелёного…';timer=setTimeout(()=>{state='ready';started=performance.now();pad.className='pad ready';pad.textContent='Нажмите!'},1500+Math.random()*2500)};
+</script>
+</body>
+</html>

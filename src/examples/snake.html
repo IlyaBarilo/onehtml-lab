@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Змейка</title>
+<style>
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}body{background:#081b2b;color:#f1faff;font:16px system-ui,sans-serif}canvas{display:block;width:100vw;height:100vh;height:100dvh}.hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:20px 28px;pointer-events:none;text-shadow:0 2px 8px #081b2b}h1{margin:0;font-size:26px}.score{font-size:20px;font-weight:700}.overlay{position:absolute;inset:0;display:grid;place-items:center;background:#071827b8;text-align:center}.overlay[hidden]{display:none}.content{padding:24px}h2{margin:0 0 10px;font-size:clamp(32px,5vw,58px)}p{margin:0 0 26px;color:#c6e1ed}.start{min-width:190px;min-height:56px;padding:12px 24px;border:0;border-radius:12px;background:#48c9ac;color:#062b2a;font:700 18px system-ui}
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Поле игры Змейка"></canvas><div class="hud"><h1>Змейка</h1><div class="score">Очки: <span id="score">0</span></div></div><div class="overlay" id="overlay"><div class="content"><h2 id="message">Змейка</h2><p>Стрелки или WASD — направление. Пробел — начать заново.</p><button class="start" id="start">Начать игру</button></div></div>
+<script>
+const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d'),overlay=document.querySelector('#overlay'),message=document.querySelector('#message'),scoreText=document.querySelector('#score');
+const cell=28;let cols,rows,snake,food,direction,nextDirection,score=0,timer,playing=false;
+function resize(){const ratio=Math.min(devicePixelRatio||1,2),w=innerWidth,h=innerHeight;canvas.width=Math.floor(w*ratio);canvas.height=Math.floor(h*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);cols=Math.max(8,Math.floor(w/cell));rows=Math.max(8,Math.floor(h/cell));if(playing)end('Размер окна изменён');else draw()}
+function randomFood(){do{food={x:Math.floor(Math.random()*cols),y:Math.floor(Math.random()*rows)}}while(snake.some(part=>part.x===food.x&&part.y===food.y))}
+function draw(){const w=innerWidth,h=innerHeight;ctx.fillStyle='#081b2b';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#143148';ctx.lineWidth=1;for(let x=0;x<w;x+=cell){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}for(let y=0;y<h;y+=cell){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}if(!snake)return;ctx.fillStyle='#f2648b';ctx.beginPath();ctx.arc((food.x+.5)*cell,(food.y+.5)*cell,cell*.34,0,Math.PI*2);ctx.fill();snake.forEach((part,index)=>{ctx.fillStyle=index===0?'#8df1cf':'#45c7a9';ctx.fillRect(part.x*cell+2,part.y*cell+2,cell-4,cell-4)})}
+function end(text){clearInterval(timer);playing=false;message.textContent=text;overlay.hidden=false}
+function start(){clearInterval(timer);const x=Math.floor(cols/2),y=Math.floor(rows/2);snake=[{x,y},{x:x-1,y},{x:x-2,y},{x:x-3,y}];direction={x:1,y:0};nextDirection=direction;score=0;scoreText.textContent='0';randomFood();playing=true;overlay.hidden=true;draw();timer=setInterval(tick,130)}
+function tick(){direction=nextDirection;const head={x:snake[0].x+direction.x,y:snake[0].y+direction.y};const eats=head.x===food.x&&head.y===food.y;if(head.x<0||head.y<0||head.x>=cols||head.y>=rows||snake.slice(0,eats?snake.length:snake.length-1).some(part=>part.x===head.x&&part.y===head.y)){end('Игра окончена');return}snake.unshift(head);if(eats){score++;scoreText.textContent=score;randomFood()}else snake.pop();draw()}
+addEventListener('keydown',event=>{const keys={ArrowUp:[0,-1],KeyW:[0,-1],ArrowDown:[0,1],KeyS:[0,1],ArrowLeft:[-1,0],KeyA:[-1,0],ArrowRight:[1,0],KeyD:[1,0]};if(event.code==='Space'){event.preventDefault();if(!playing)start();return}const vector=keys[event.code];if(!vector)return;event.preventDefault();if(playing&&(vector[0]!==-direction.x||vector[1]!==-direction.y))nextDirection={x:vector[0],y:vector[1]}});
+document.querySelector('#start').onclick=start;addEventListener('resize',resize);resize();
+</script>
+</body>
+</html>

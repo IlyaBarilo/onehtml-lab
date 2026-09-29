@@ -19,6 +19,15 @@ const status = document.querySelector('#status');
 const networkStatus = document.querySelector('#network-status');
 const networkCountField = document.querySelector('#network-count');
 const networkKbField = document.querySelector('#network-kb');
+const runtimeError = document.querySelector('#runtime-error');
+const runtimeErrorMessage = document.querySelector('#runtime-error-message');
+const aiButton = document.querySelector('#ai-open');
+const examplesButton = document.querySelector('#examples-open');
+const aiDialog = document.querySelector('#ai-dialog');
+const examplesDialog = document.querySelector('#examples-dialog');
+const exampleList = document.querySelector('#example-list');
+const copyDialog = document.querySelector('#copy-dialog');
+const copyTextField = document.querySelector('#copy-text');
 const saveDialog = document.querySelector('#save-dialog');
 const clearDialog = document.querySelector('#clear-dialog');
 const replaceDialog = document.querySelector('#replace-dialog');
@@ -44,6 +53,9 @@ let comparisonOpen = false;
 let activeFrame = null;
 let networkCount = 0;
 let networkBytes = 0;
+let runtimeErrorReport = '';
+let runtimeErrorCount = 0;
+let selectedPlatform = 'mobile';
 
 function readSettings() {
   try {
@@ -83,8 +95,23 @@ function resetNetworkStatus() {
 }
 
 window.addEventListener('message', event => {
-  if (!running || !previewNetworkAllowed() || !activeFrame || event.source !== activeFrame.contentWindow) return;
-  if (event.data?.type !== 'onehtml-lab:network-resource') return;
+  if (!running || !activeFrame || event.source !== activeFrame.contentWindow) return;
+  if (event.data?.type === 'onehtml-lab:runtime-error') {
+    const detail = event.data;
+    if (!['error', 'rejection'].includes(detail.kind) || typeof detail.message !== 'string') return;
+    const message = detail.message === 'Script error.'
+      ? 'Ошибка JavaScript (браузер не сообщил подробности)'
+      : detail.message.slice(0, 500);
+    const place = Number.isInteger(detail.line) && detail.line > 0
+      ? ` (строка документа ${detail.line}${Number.isInteger(detail.column) && detail.column > 0 ? `, столбец ${detail.column}` : ''})`
+      : '';
+    runtimeErrorCount += 1;
+    runtimeErrorReport = `${detail.kind === 'rejection' ? 'Необработанный Promise' : 'Ошибка JavaScript'}: ${message}${place}`;
+    runtimeErrorMessage.textContent = `Ошибка игры${runtimeErrorCount > 1 ? ` (${runtimeErrorCount})` : ''}: ${message}${place}`;
+    runtimeError.hidden = false;
+    return;
+  }
+  if (!previewNetworkAllowed() || event.data?.type !== 'onehtml-lab:network-resource') return;
   const bytes = event.data.bytes;
   if (typeof bytes !== 'number' || !Number.isFinite(bytes) || bytes < 0) return;
   networkCount += 1;
@@ -96,6 +123,13 @@ window.addEventListener('message', event => {
   if (networkCount === 1) networkStatus.hidden = false;
 });
 
+function clearRuntimeError() {
+  runtimeErrorReport = '';
+  runtimeErrorCount = 0;
+  runtimeErrorMessage.textContent = '';
+  runtimeError.hidden = true;
+}
+
 function inform(text = '', error = false, persistent = false) {
   clearTimeout(statusTimeout);
   status.textContent = text;
@@ -103,6 +137,81 @@ function inform(text = '', error = false, persistent = false) {
   status.classList.toggle('error', error);
   if (text && !error && !persistent) statusTimeout = setTimeout(() => { status.hidden = true; }, 6000);
 }
+
+async function copyOrSelect(text, successMessage) {
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error('clipboard-unavailable');
+    await navigator.clipboard.writeText(text);
+    inform(successMessage);
+  } catch {
+    copyTextField.value = text;
+    copyDialog.showModal();
+    copyTextField.focus();
+    copyTextField.select();
+  }
+}
+
+const gamePrompts = {
+  mobile: {
+    create: 'Сделай игру про [тема игры] для телефона. Сделай одним файлом HTML со встроенными CSS и JavaScript. Игра должна занимать весь экран, управляться касанием и позволять сыграть ещё раз. Верни только полный HTML-код.',
+    change: 'Измени игру ниже по моему описанию. Верни полный HTML-файл, чтобы я мог целиком заменить прежний код. Сохрани полноэкранный вид на телефоне и управление касанием. Если задача изменения ещё не указана, сначала спроси, что именно поменять.\n\nТекущий код:\n'
+  },
+  desktop: {
+    create: 'Сделай игру про [тема игры] для компьютера. Сделай одним файлом HTML со встроенными CSS и JavaScript. Игра должна занимать всё окно браузера, управляться мышью или клавиатурой и позволять сыграть ещё раз. Верни только полный HTML-код.',
+    change: 'Измени игру ниже по моему описанию. Верни полный HTML-файл, чтобы я мог целиком заменить прежний код. Сохрани полноэкранный вид в браузере компьютера и управление мышью или клавиатурой. Если задача изменения ещё не указана, сначала спроси, что именно поменять.\n\nТекущий код:\n'
+  }
+};
+
+function renderExamples() {
+  exampleList.replaceChildren();
+  for (const example of examples.filter(item => item.platform === selectedPlatform)) {
+    const card = document.createElement('div');
+    card.className = 'example-card';
+    const title = document.createElement('strong');
+    title.textContent = example.title;
+    const description = document.createElement('span');
+    description.textContent = example.description;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Открыть копию';
+    button.addEventListener('click', async () => {
+      examplesDialog.close();
+      if (!await confirmReplacement(example.code)) return;
+      if (running) stopPreview();
+      replaceOnNextPaste = false;
+      replaceCode(example.code, true);
+      inform(`Пример «${example.title}» открыт. Измените код и сохраните свою версию.`);
+    });
+    card.append(title, description, button);
+    exampleList.append(card);
+  }
+}
+
+function setPlatform(platform) {
+  if (!['mobile', 'desktop'].includes(platform)) return;
+  selectedPlatform = platform;
+  for (const tab of document.querySelectorAll('.platform-tab')) {
+    tab.setAttribute('aria-selected', String(tab.dataset.platform === platform));
+  }
+  renderExamples();
+}
+
+for (const tab of document.querySelectorAll('.platform-tab')) {
+  tab.addEventListener('click', () => setPlatform(tab.dataset.platform));
+}
+renderExamples();
+aiButton.addEventListener('click', () => { if (expertMode && !modeBusy) aiDialog.showModal(); });
+examplesButton.addEventListener('click', () => { if (expertMode && !modeBusy) examplesDialog.showModal(); });
+document.querySelector('#ai-close').addEventListener('click', () => aiDialog.close());
+document.querySelector('#examples-close').addEventListener('click', () => examplesDialog.close());
+document.querySelector('#copy-close').addEventListener('click', () => copyDialog.close());
+document.querySelector('#prompt-create').addEventListener('click', () => void copyOrSelect(gamePrompts[selectedPlatform].create, 'Запрос для новой игры скопирован.'));
+document.querySelector('#prompt-change').addEventListener('click', () => {
+  if (codeField.value.trim()) void copyOrSelect(gamePrompts[selectedPlatform].change + codeField.value, 'Запрос с текущим кодом скопирован.');
+});
+document.querySelector('#copy-error').addEventListener('click', () => {
+  if (runtimeErrorReport) void copyOrSelect(runtimeErrorReport, 'Ошибка игры скопирована.');
+});
 
 function setDraftStatus(text, error = false) {
   draftStatus.textContent = text;
@@ -200,6 +309,7 @@ async function confirmReplacement(nextCode) {
 function replaceCode(code, fromPaste = false) {
   if (fromPaste) rememberPreviousPaste(codeField.value, code);
   closeComparison();
+  clearRuntimeError();
   codeField.value = code;
   codeField.scrollTop = 0;
   codeField.scrollLeft = 0;
@@ -238,6 +348,9 @@ function updateControls() {
   expertButton.disabled = modeBusy;
   expertTools.hidden = !expertMode;
   importButton.disabled = modeBusy;
+  aiButton.disabled = modeBusy;
+  examplesButton.disabled = modeBusy;
+  document.querySelector('#prompt-change').disabled = empty;
   const canRestore = expertMode && !running && !modeBusy && previousPaste !== null && previousPaste !== codeField.value;
   compareButton.disabled = !canRestore;
   restorePreviousButton.disabled = !canRestore;
@@ -268,6 +381,7 @@ codeField.addEventListener('input', () => {
   }
   replaceOnNextPaste = false;
   inform();
+  clearRuntimeError();
   scheduleDraftSave();
   updateControls();
 });
@@ -344,6 +458,7 @@ function stopPreview() {
 function startPreview() {
   try {
     closeComparison();
+    clearRuntimeError();
     const frame = makePreview(codeField.value, previewNetworkAllowed());
     resetNetworkStatus();
     codeField.blur();

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Найди пару</title>
+<style>
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}body{background:#e7defd;color:#302b53;font:16px system-ui,sans-serif}main{display:flex;flex-direction:column;width:100vw;height:100vh;height:100dvh;padding:max(16px,env(safe-area-inset-top)) 14px max(14px,env(safe-area-inset-bottom));background:linear-gradient(160deg,#f4efff,#d9ccf7)}h1{margin:0 0 3px;font-size:clamp(22px,6vw,32px)}p{margin:0 0 8px;font-size:14px}.status{min-height:24px;font-weight:700}.board{flex:1;min-height:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}.card{min-width:0;min-height:0;border:0;border-radius:12px;background:#6546c4;color:white;font-size:clamp(30px,8vw,58px);font-weight:700;touch-action:manipulation;box-shadow:0 5px 0 #442b94}.card.open,.card.matched{background:#fff;color:#302b53;box-shadow:inset 0 0 0 2px #b8a4ee}.card.matched{background:#d9f6e5}.restart{flex:0 0 auto;min-height:52px;border:0;border-radius:12px;background:#6546c4;color:white;font:700 17px system-ui}@media(max-height:460px){p{display:none}.board{margin:4px 0}.card{font-size:24px}}
+</style>
+</head>
+<body>
+<main><h1>Найди пару</h1><p>Откройте все шесть пар. Запоминайте расположение карточек.</p><div class="status" id="status"></div><div class="board" id="board"></div><button class="restart" id="restart">Новая игра</button></main>
+<script>
+const symbols=['★','♥','☀','☂','♫','◆'];
+const board=document.querySelector('#board'),status=document.querySelector('#status');
+let first=null,locked=false,matches=0,moves=0,flipTimer;
+function newGame(){clearTimeout(flipTimer);first=null;locked=false;matches=0;moves=0;status.textContent='Ходы: 0';board.replaceChildren();const cards=[...symbols,...symbols];for(let i=cards.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cards[i],cards[j]]=[cards[j],cards[i]]}cards.forEach(symbol=>{const card=document.createElement('button');card.className='card';card.type='button';card.textContent='?';card.setAttribute('aria-label','Закрытая карточка');card.dataset.symbol=symbol;card.onclick=()=>openCard(card);board.append(card)})}
+function openCard(card){if(locked||card===first||card.classList.contains('matched'))return;card.textContent=card.dataset.symbol;card.classList.add('open');card.setAttribute('aria-label',card.dataset.symbol);if(!first){first=card;return}moves++;status.textContent='Ходы: '+moves;if(first.dataset.symbol===card.dataset.symbol){first.classList.add('matched');card.classList.add('matched');first=null;matches++;if(matches===symbols.length)status.textContent='Победа! Ходы: '+moves;return}locked=true;const old=first;first=null;flipTimer=setTimeout(()=>{old.classList.remove('open');card.classList.remove('open');old.textContent=card.textContent='?';old.setAttribute('aria-label','Закрытая карточка');card.setAttribute('aria-label','Закрытая карточка');locked=false},700)}
+document.querySelector('#restart').onclick=newGame;newGame();
+</script>
+</body>
+</html>

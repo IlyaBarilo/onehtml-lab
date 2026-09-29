@@ -55,6 +55,10 @@
         <button id="compare" class="expert-icon-button" type="button" aria-label="Сравнить с прошлым кодом" aria-pressed="false" title="Сравнить с прошлым кодом" disabled><!-- ICON:compare --></button>
         <button id="restore-previous" class="expert-icon-button" type="button" aria-label="Вернуть прошлый код" title="Вернуть прошлый код" disabled><!-- ICON:restore --></button>
       </div>
+      <div class="expert-resource-actions">
+        <button id="ai-open" class="import-button" type="button" title="AI-сервисы и готовые запросы">AI и запросы</button>
+        <button id="examples-open" class="import-button" type="button" title="Открыть примеры игр">Примеры игр</button>
+      </div>
       <span id="draft-status" class="draft-status" role="status" aria-live="polite"></span>
       <input id="import-file" type="file" accept=".html,.htm,text/html" hidden>
     </div>
@@ -62,6 +66,10 @@
     <div id="network-status" class="network-status" hidden>
       <span id="network-message" role="status" aria-live="polite">Игра использует интернет</span>
       <span id="network-metrics">Файлов: <span id="network-count">0</span> · учтено: <span id="network-kb">(нет данных)</span></span>
+    </div>
+    <div id="runtime-error" class="runtime-error" role="alert" hidden>
+      <span id="runtime-error-message"></span>
+      <button id="copy-error" type="button">Скопировать ошибку</button>
     </div>
     <section class="workspace" aria-label="Рабочая область">
       <textarea id="code" aria-label="HTML-код" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Вставьте HTML-код…"></textarea>
@@ -93,6 +101,40 @@
       <p id="replace-copy" class="dialog-copy">Текущий код будет заменён. Если он нужен отдельно, сначала сохраните его HTML-файлом.</p>
       <div class="dialog-actions"><button value="cancel" type="submit">Отмена</button><button class="primary" value="replace" type="submit">Заменить</button></div>
     </form>
+  </dialog>
+  <dialog id="ai-dialog" class="guide-dialog" aria-labelledby="ai-title">
+    <div class="guide-heading"><h2 id="ai-title">AI и запросы</h2><button id="ai-close" type="button" aria-label="Закрыть AI и запросы">✕</button></div>
+    <p>Выберите запрос для нужного экрана. После копирования замените [тема игры] на свою идею. Полученный HTML-код вставьте в редактор, запустите и сохраните.</p>
+    <div class="platform-tabs" role="tablist" aria-label="Устройство для запроса">
+      <button class="platform-tab" type="button" role="tab" data-platform="mobile" aria-selected="true">Телефон</button>
+      <button class="platform-tab" type="button" role="tab" data-platform="desktop" aria-selected="false">Компьютер</button>
+    </div>
+    <div class="guide-prompts">
+      <button id="prompt-create" type="button">Копировать запрос для новой игры</button>
+      <button id="prompt-change" type="button">Копировать запрос для изменения кода</button>
+    </div>
+    <h3>AI-сервисы</h3>
+    <ul class="service-list">
+      <li><strong>Алиса AI</strong><span>Создание игры и объяснение кода</span><span class="service-links"><a href="https://alice.yandex.ru/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=com.yandex.aliceapp" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/id6621272550" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
+      <li><strong>GigaChat</strong><span>Создание и исправление HTML/JavaScript</span><span class="service-links"><a href="https://giga.chat/" target="_blank" rel="noopener noreferrer">Сайт</a></span></li>
+      <li><strong>DeepSeek</strong><span>Вариант для работы с кодом в диалоге</span><span class="service-links"><a href="https://chat.deepseek.com/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=com.deepseek.chat" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/deepseek-ai-%D0%B0%D1%81%D1%81%D0%B8%D1%81%D1%82%D0%B5%D0%BD%D1%82/id6737597349" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
+      <li><strong>Qwen Studio</strong><span>Создание и доработка игры</span><span class="service-links"><a href="https://qwen.ai/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=ai.qwenlm.chat.android" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/qwen-studio/id6743778442" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
+    </ul>
+  </dialog>
+  <dialog id="examples-dialog" class="guide-dialog" aria-labelledby="examples-title">
+    <div class="guide-heading"><h2 id="examples-title">Примеры игр</h2><button id="examples-close" type="button" aria-label="Закрыть примеры">✕</button></div>
+    <p>Откройте копию примера, измените код и сохраните свою версию.</p>
+    <div class="platform-tabs" role="tablist" aria-label="Устройство для примеров">
+      <button class="platform-tab" type="button" role="tab" data-platform="mobile" aria-selected="true">Телефон</button>
+      <button class="platform-tab" type="button" role="tab" data-platform="desktop" aria-selected="false">Компьютер</button>
+    </div>
+    <div id="example-list" class="example-list"></div>
+  </dialog>
+  <dialog id="copy-dialog" aria-labelledby="copy-title">
+    <h2 id="copy-title">Скопируйте текст</h2>
+    <p class="dialog-copy">Браузер не разрешил автоматическое копирование. Выделенный текст можно скопировать через меню поля.</p>
+    <textarea id="copy-text" readonly aria-label="Текст для копирования"></textarea>
+    <div class="dialog-actions"><button id="copy-close" type="button">Закрыть</button></div>
   </dialog>
   <script>/* APP_SCRIPT */</script>
 </body>

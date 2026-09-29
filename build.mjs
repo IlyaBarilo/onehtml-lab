@@ -18,7 +18,21 @@ for (const name of ['app', 'paste', 'clear', 'save', 'share', 'play', 'stop', 'e
 }
 const css = await readFile(join(root, 'src/styles.css'), 'utf8');
 const files = ['sandbox.js', 'exporter.js', 'draft.js', 'compare.js', 'app.js'];
-const script = '(function () {\n"use strict";\n' + (await Promise.all(files.map(name => readFile(join(root, 'src', name), 'utf8')))).join('\n') + '\n})();';
+const exampleFiles = [
+  { id: 'catch-circle', platform: 'mobile', title: 'Поймай круг', description: 'Касайтесь цели на всём экране.' },
+  { id: 'memory', platform: 'mobile', title: 'Найди пару', description: 'Открывайте пары касанием карточек.' },
+  { id: 'reaction', platform: 'mobile', title: 'Проверь реакцию', description: 'Коснитесь экрана после смены цвета.' },
+  { id: 'snake', platform: 'desktop', title: 'Змейка', description: 'Управляйте стрелками или WASD.' },
+  { id: 'falling-stars', platform: 'desktop', title: 'Лови звёзды', description: 'Двигайте платформу мышью.' },
+  { id: 'space-reaction', platform: 'desktop', title: 'Реакция на пробел', description: 'Нажмите пробел после сигнала.' }
+];
+const examples = await Promise.all(exampleFiles.map(async entry => ({
+  ...entry,
+  code: await readFile(join(root, 'src/examples', entry.id + '.html'), 'utf8')
+})));
+const script = '(function () {\n"use strict";\n'
+  + `const examples = ${JSON.stringify(examples)};\n`
+  + (await Promise.all(files.map(name => readFile(join(root, 'src', name), 'utf8')))).join('\n') + '\n})();';
 const license = (await readFile(join(root, 'LICENSE'), 'utf8')).trim();
 const html = template.replace('/* APP_STYLES */', () => css.replace(/<\/style/gi, '<\\/style'))
   .replace('/* APP_SCRIPT */', () => script.replace(/<\/script/gi, '<\\/script'))

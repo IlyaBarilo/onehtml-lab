@@ -62,7 +62,8 @@ h1 span { font-weight: 450; color: #637e9f; }
   border-bottom: 1px solid #dbe5f3;
   background: #f5f8fd;
 }
-.expert-actions { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.expert-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.expert-resource-actions { display: flex; align-items: center; gap: 6px; }
 .import-button {
   display: inline-flex;
   align-items: center;
@@ -153,6 +154,20 @@ textarea:focus-visible { outline: none; }
   overflow-wrap: anywhere;
 }
 .notice.error { border-bottom-color: #92acd0; color: #233d63; }
+.runtime-error {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px max(14px, env(safe-area-inset-right)) 7px max(14px, env(safe-area-inset-left));
+  border-bottom: 1px solid #e6b4ad;
+  background: #fff0ed;
+  color: #8b312d;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.runtime-error button { flex: 0 0 auto; min-height: 36px; border: 1px solid #dda7a0; border-radius: 6px; background: #fff9f7; color: #8b312d; padding: 5px 9px; }
 .network-status {
   flex: 0 0 auto;
   display: flex;
@@ -179,6 +194,27 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
 .dialog-actions button:hover { background: #e1ebfa; }
 .dialog-actions button.primary { background: #2d6cdf; border-color: #2d6cdf; color: #ffffff; }
 .dialog-actions button.primary:hover { background: #2059bf; }
+.guide-dialog { width: min(680px, calc(100% - 24px)); max-height: calc(100dvh - 24px); padding: 20px; }
+.guide-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.guide-heading h2 { margin-bottom: 10px; }
+.guide-heading button { min-width: 40px; min-height: 40px; border: 0; border-radius: 7px; background: #edf3fd; color: #315c93; font-size: 20px; }
+.guide-dialog p { margin: 0 0 15px; color: #526b8c; line-height: 1.45; font-size: 14px; }
+.guide-dialog h3 { margin: 20px 0 10px; font-size: 16px; }
+.platform-tabs { display: flex; gap: 6px; margin: 14px 0; }
+.platform-tab { min-height: 44px; padding: 9px 15px; border: 1px solid #c9d9ee; border-radius: 7px; background: #f4f8fd; color: #526b8c; font-weight: 600; }
+.platform-tab[aria-selected="true"] { background: #dceaff; border-color: #9dbfea; color: #2059bf; }
+.guide-prompts { display: flex; flex-wrap: wrap; gap: 8px; }
+.guide-prompts button, .example-card button { min-height: 42px; border: 1px solid #b7cff0; border-radius: 7px; background: #e9f1fc; color: #28588f; padding: 7px 11px; font-size: 13px; font-weight: 600; }
+.guide-prompts button:disabled { opacity: .4; }
+.service-list { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.service-list li { display: grid; gap: 3px; padding: 10px 12px; border: 1px solid #e0e8f4; border-radius: 8px; background: #fafcff; font-size: 13px; }
+.service-list li > span:not(.service-links) { color: #607895; }
+.service-links { display: flex; flex-wrap: wrap; gap: 5px 13px; margin-top: 4px; }
+.service-links a { color: #235eaf; }
+.example-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.example-card { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: 12px; border: 1px solid #d7e3f2; border-radius: 9px; background: #f7faff; font-size: 13px; }
+.example-card span { flex: 1; color: #607895; line-height: 1.4; }
+#copy-text { display: block; width: 100%; height: min(42dvh, 280px); margin-top: 16px; padding: 10px; border: 1px solid #b9cbe3; border-radius: 6px; background: #fcfdff; color: #253d5a; font-size: 14px; line-height: 1.4; }
 @media (max-width: 600px) {
   :root { --toolbar-height: 58px; }
   .toolbar { padding-right: max(8px, env(safe-area-inset-right)); padding-left: max(14px, env(safe-area-inset-left)); gap: 10px; }
@@ -190,6 +226,8 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
   textarea { padding: 16px 14px max(16px, env(safe-area-inset-bottom)); font-size: 16px; }
   .comparison-legend { padding-left: 14px; }
   .diff-content { padding-left: 14px; padding-right: 14px; font-size: 16px; }
+  .example-list { grid-template-columns: 1fr; }
+  .runtime-error { align-items: flex-start; flex-direction: column; }
 }
 @media (max-width: 440px) {
   :root { --toolbar-height: 96px; }
