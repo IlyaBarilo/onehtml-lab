@@ -32,11 +32,15 @@ async function createApp(clipboard) {
     setTimeout(fn, ms) { timers.push({ fn, ms }); return timers.length; },
     clearTimeout: () => {},
     makePreview: () => ({}),
+    gameStorageSnapshot: () => [],
+    registerGameStorageFrame: () => {},
+    handleGameStorageMessage: () => false,
     examples: [],
     readWorkingDraft: async () => null,
     writeWorkingDraft: async () => {},
     readPreviousPaste: async () => null,
-    writePreviousPaste: async () => {}
+    readHistoryState: async () => null,
+    writeHistoryState: async () => {}
   };
   runInNewContext(source, sandbox);
   await new Promise(resolve => setImmediate(resolve));

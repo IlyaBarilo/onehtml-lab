@@ -4,6 +4,8 @@ import { chromium, webkit } from 'playwright';
 
 const url = new URL('../onehtml-lab.html', import.meta.url).href;
 const example = await readFile(new URL('../src/examples/catch-circle.html', import.meta.url), 'utf8');
+const brokenSnakes = await Promise.all(['snake3d-turns', 'snake3d-rewrite'].map(name =>
+  readFile(new URL(`../src/examples/${name}.html`, import.meta.url), 'utf8')));
 const engines = process.argv.includes('--engines=chromium') ? [['chromium', chromium]] : [['chromium', chromium], ['webkit', webkit]];
 
 for (const [name, engine] of engines) {
@@ -102,6 +104,42 @@ for (const [name, engine] of engines) {
       await page.locator('#run').click();
     }
 
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const [index, expectedCode] of brokenSnakes.entries()) {
+      await page.locator('#examples-open').click();
+      await page.locator('.example-category[data-example-category="fix"]').click();
+      assert(await page.locator('#example-platform-tabs').isHidden());
+      assert.equal(await page.locator('.example-card').count(), 2);
+      await page.locator('.example-card').nth(index).getByRole('button', { name: 'Открыть копию' }).click();
+      await page.locator('#replace-dialog button[value="replace"]').click();
+      await page.waitForFunction(expected => document.querySelector('#code').value.replace(/\r\n/g, '\n') === expected.replace(/\r\n/g, '\n'), expectedCode);
+      assert.equal((await code.inputValue()).replace(/\r\n/g, '\n'), expectedCode.replace(/\r\n/g, '\n'));
+      if (index === 0) {
+        await page.locator('#network-toggle').click();
+        await page.locator('#run').click();
+        await page.waitForFunction(() => document.querySelector('#local-access-status').textContent.includes('виртуальный localStorage'));
+        assert.doesNotMatch(await page.locator('#runtime-error-message').innerText(), /SecurityError|Failed to read the 'localStorage'/);
+        await page.locator('#run').click();
+        await page.locator('#network-toggle').click();
+      }
+    }
+
+    await code.fill('<script>try { localStorage.getItem("game") } catch {}</script>');
+    await page.locator('#run').click();
+    await page.locator('#local-access-status').waitFor({ state: 'visible' });
+    assert.match(await page.locator('#local-access-status').innerText(), /виртуальный localStorage/);
+    assert(await page.locator('#runtime-error').isHidden());
+    await page.locator('#run').click();
+    await code.fill('<script>sessionStorage.getItem("game")</script>');
+    await page.locator('#run').click();
+    await page.locator('#runtime-error').waitFor({ state: 'visible' });
+    await page.waitForFunction(() => document.querySelector('#runtime-error-message').textContent.includes('sessionStorage'));
+    assert(await page.locator('#local-access-status').isHidden());
+    await page.locator('#copy-error').click();
+    assert.match(await page.locator('#copy-text').inputValue(), /sessionStorage/);
+    await page.locator('#copy-close').click();
+    await page.locator('#run').click();
+
     await code.fill('<script>throw new Error("Проверка диагностики")</script>');
     await page.locator('#run').click();
     await page.locator('#runtime-error').waitFor({ state: 'visible' });
@@ -113,6 +151,7 @@ for (const [name, engine] of engines) {
     await page.locator('#run').click();
     await code.fill('<p>Работает</p>');
     assert(await page.locator('#runtime-error').isHidden());
+    assert(await page.locator('#local-access-status').isHidden());
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(new URL('../src/examples/catch-circle.html', import.meta.url).href);
@@ -125,7 +164,7 @@ for (const [name, engine] of engines) {
     assert(Math.abs(desktopStandalone.width - desktopStandalone.screenWidth) < 1);
     assert(Math.abs(desktopStandalone.height - desktopStandalone.screenHeight) < 1);
     await context.close();
-    console.log(`${name} file: separate dialogs, platform prompts, six full-screen games, errors and copy fallback passed.`);
+    console.log(`${name} file: six full-screen games, two original repair examples, local-storage hints, errors and copy fallback passed.`);
   } finally {
     await browser.close();
   }

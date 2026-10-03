@@ -202,7 +202,8 @@ async function runCase(browser, engine, url, mode) {
     await securityFrame.waitForFunction(() => document.body.dataset.outcomes);
     const outcomes = await securityFrame.evaluate(() => JSON.parse(document.body.dataset.outcomes));
     assert.equal(outcomes.parent, 'SecurityError');
-    assert.equal(outcomes.storage, 'SecurityError');
+    assert.equal(outcomes.storage, 'allowed');
+    assert.equal(await page.evaluate(() => { try { return localStorage.getItem('attack'); } catch { return null; } }), null);
     assert.equal(outcomes.popup, true);
     assert.equal(await page.locator('body').getAttribute('data-compromised'), null);
     assert.equal(page.url(), url);
@@ -211,7 +212,7 @@ async function runCase(browser, engine, url, mode) {
     await page.waitForTimeout(150);
     assert((await page.locator('#preview > iframe').getAttribute('srcdoc')).includes("script-src 'unsafe-inline' https:"), 'Network-enabled preview permits HTTPS resources');
     assert(!escapes.some(request => /\/(?:popup|top|frame|form)$/.test(request)), 'Sandbox still blocks popups, navigation, nested frames and forms');
-    check('Sandbox blocks parent DOM/storage, popup/top navigation and forms while permitting HTTPS resources');
+    check('Sandbox blocks parent DOM and host storage while permitting isolated game storage and HTTPS resources');
     await page.locator('#run').click();
     assert.equal(await code.inputValue(), hostile);
     escapes.length = 0;

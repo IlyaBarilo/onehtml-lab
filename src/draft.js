@@ -1,5 +1,5 @@
-// One working draft per browser origin. Keep the original key to restore drafts
-// saved by earlier versions, when this storage was limited to expert mode.
+// One working draft and its history per browser origin. Keep the original draft
+// key to restore code saved by earlier expert-mode versions.
 let draftDatabasePromise;
 
 function draftDatabase() {
@@ -47,13 +47,24 @@ async function readPreviousPaste() {
   });
 }
 
-async function writePreviousPaste(code) {
+async function readHistoryState() {
+  const database = await draftDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction('drafts', 'readonly');
+    const request = transaction.objectStore('drafts').get('history');
+    request.onsuccess = () => resolve(request.result ?? null);
+    request.onerror = () => reject(request.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+async function writeHistoryState(state) {
   const database = await draftDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction('drafts', 'readwrite');
     const store = transaction.objectStore('drafts');
-    if (code === null) store.delete('previous-paste');
-    else store.put(code, 'previous-paste');
+    store.put(state, 'history');
+    store.delete('previous-paste');
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);

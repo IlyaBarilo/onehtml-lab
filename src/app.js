@@ -7,11 +7,20 @@ const shareButton = document.querySelector('#share');
 const runButton = document.querySelector('#run');
 const expertButton = document.querySelector('#expert-toggle');
 const networkButton = document.querySelector('#network-toggle');
+const storageButton = document.querySelector('#storage-toggle');
 const expertTools = document.querySelector('#expert-tools');
 const importButton = document.querySelector('#import');
 const compareButton = document.querySelector('#compare');
-const restorePreviousButton = document.querySelector('#restore-previous');
+const historyButton = document.querySelector('#history-open');
+const historyView = document.querySelector('#history-view');
+const historyList = document.querySelector('#history-list');
+const currentHistory = document.querySelector('#history-current');
 const comparison = document.querySelector('#comparison');
+const comparisonSource = document.querySelector('#comparison-source');
+const comparisonAdded = document.querySelector('#comparison-added');
+const comparisonRemoved = document.querySelector('#comparison-removed');
+const comparisonScrollbar = document.querySelector('#comparison-scrollbar');
+const comparisonScrollbarThumb = document.querySelector('#comparison-scrollbar-thumb');
 const diffContent = document.querySelector('#diff-content');
 const importFile = document.querySelector('#import-file');
 const draftStatus = document.querySelector('#draft-status');
@@ -21,6 +30,7 @@ const networkCountField = document.querySelector('#network-count');
 const networkKbField = document.querySelector('#network-kb');
 const runtimeError = document.querySelector('#runtime-error');
 const runtimeErrorMessage = document.querySelector('#runtime-error-message');
+const localAccessStatus = document.querySelector('#local-access-status');
 const aiButton = document.querySelector('#ai-open');
 const examplesButton = document.querySelector('#examples-open');
 const aiDialog = document.querySelector('#ai-dialog');
@@ -41,31 +51,39 @@ const settingsKey = 'onehtml-lab-settings';
 const storedSettings = readSettings();
 let expertMode = storedSettings.expertMode;
 let networkAllowed = storedSettings.networkAllowed;
+let gameStorageAllowed = storedSettings.gameStorageAllowed;
 let modeBusy = false;
 let draftAvailable = false;
 let draftSaveTimer;
 let draftRevision = 0;
 let draftQueue = Promise.resolve();
-let previousPaste = null;
-let previousPasteQueue = Promise.resolve();
+let historyState = { entries: [], verifiedCode: null };
+let historyQueue = Promise.resolve();
 let pendingNativePaste = null;
 let comparisonOpen = false;
+let historyOpen = false;
 let activeFrame = null;
 let networkCount = 0;
 let networkBytes = 0;
 let runtimeErrorReport = '';
+let runtimeErrorReportBase = '';
+let runtimeErrorMessageBase = '';
 let runtimeErrorCount = 0;
+const localApisUsed = new Set();
+const localApiNames = ['localStorage', 'sessionStorage', 'indexedDB', 'caches', 'document.cookie'];
 let selectedPlatform = 'mobile';
+let selectedExampleCategory = 'games';
 
 function readSettings() {
   try {
     const value = JSON.parse(localStorage.getItem(settingsKey));
     return {
       expertMode: value?.mode === 'expert',
-      networkAllowed: value?.networkAllowed !== false
+      networkAllowed: value?.networkAllowed !== false,
+      gameStorageAllowed: value?.gameStorageAllowed !== false
     };
   } catch {
-    return { expertMode: false, networkAllowed: true };
+    return { expertMode: false, networkAllowed: true, gameStorageAllowed: true };
   }
 }
 
@@ -73,11 +91,12 @@ function saveSettings() {
   try {
     localStorage.setItem(settingsKey, JSON.stringify({
       mode: expertMode ? 'expert' : 'simple',
-      networkAllowed
+      networkAllowed,
+      gameStorageAllowed
     }));
     return true;
   } catch {
-    inform('Не удалось сохранить настройки режима и интернета в браузере.', true, true);
+    inform('Не удалось сохранить настройки режима, интернета и хранилища в браузере.', true, true);
     return false;
   }
 }
@@ -95,7 +114,17 @@ function resetNetworkStatus() {
 }
 
 window.addEventListener('message', event => {
+  if (handleGameStorageMessage(event)) {
+    updateLocalAccessHint();
+    return;
+  }
   if (!running || !activeFrame || event.source !== activeFrame.contentWindow) return;
+  if (event.data?.type === 'onehtml-lab:local-access') {
+    if (!localApiNames.includes(event.data.api)) return;
+    localApisUsed.add(event.data.api);
+    updateLocalAccessHint();
+    return;
+  }
   if (event.data?.type === 'onehtml-lab:runtime-error') {
     const detail = event.data;
     if (!['error', 'rejection'].includes(detail.kind) || typeof detail.message !== 'string') return;
@@ -106,9 +135,10 @@ window.addEventListener('message', event => {
       ? ` (строка документа ${detail.line}${Number.isInteger(detail.column) && detail.column > 0 ? `, столбец ${detail.column}` : ''})`
       : '';
     runtimeErrorCount += 1;
-    runtimeErrorReport = `${detail.kind === 'rejection' ? 'Необработанный Promise' : 'Ошибка JavaScript'}: ${message}${place}`;
-    runtimeErrorMessage.textContent = `Ошибка игры${runtimeErrorCount > 1 ? ` (${runtimeErrorCount})` : ''}: ${message}${place}`;
+    runtimeErrorReportBase = `${detail.kind === 'rejection' ? 'Необработанный Promise' : 'Ошибка JavaScript'}: ${message}${place}`;
+    runtimeErrorMessageBase = `Ошибка игры${runtimeErrorCount > 1 ? ` (${runtimeErrorCount})` : ''}: ${message}${place}`;
     runtimeError.hidden = false;
+    updateLocalAccessHint();
     return;
   }
   if (!previewNetworkAllowed() || event.data?.type !== 'onehtml-lab:network-resource') return;
@@ -123,11 +153,36 @@ window.addEventListener('message', event => {
   if (networkCount === 1) networkStatus.hidden = false;
 });
 
+function updateLocalAccessHint() {
+  const hints = [];
+  if (gameStorageAllowed && localApisUsed.has('localStorage')) {
+    hints.push(gameStoragePersistent
+      ? 'Игра использует виртуальный localStorage. Данные игры сохраняются отдельно от редактора.'
+      : 'Игра использует виртуальный localStorage, но браузер не сохранил данные. Они доступны только до закрытия страницы.');
+  }
+  const blockedApis = [...localApisUsed].filter(api => api !== 'localStorage' || !gameStorageAllowed);
+  if (blockedApis.length) hints.push(`Игра обратилась к ${blockedApis.join(', ')}. В изолированном предпросмотре доступ к этим данным браузера ограничен; попросите ИИ обработать отсутствие доступа.`);
+  const hint = hints.join(' ');
+  if (runtimeError.hidden) {
+    localAccessStatus.textContent = hint;
+    localAccessStatus.hidden = !hint;
+  } else {
+    localAccessStatus.hidden = true;
+    runtimeErrorMessage.textContent = `${runtimeErrorMessageBase}${hint ? ` ${hint}` : ''}`;
+    runtimeErrorReport = `${runtimeErrorReportBase}${hint ? `\n${hint}` : ''}`;
+  }
+}
+
 function clearRuntimeError() {
   runtimeErrorReport = '';
+  runtimeErrorReportBase = '';
+  runtimeErrorMessageBase = '';
   runtimeErrorCount = 0;
+  localApisUsed.clear();
   runtimeErrorMessage.textContent = '';
   runtimeError.hidden = true;
+  localAccessStatus.textContent = '';
+  localAccessStatus.hidden = true;
 }
 
 function inform(text = '', error = false, persistent = false) {
@@ -164,7 +219,8 @@ const gamePrompts = {
 
 function renderExamples() {
   exampleList.replaceChildren();
-  for (const example of examples.filter(item => item.platform === selectedPlatform)) {
+  for (const example of examples.filter(item => (item.category || 'games') === selectedExampleCategory &&
+    (selectedExampleCategory === 'fix' || item.platform === selectedPlatform))) {
     const card = document.createElement('div');
     card.className = 'example-card';
     const title = document.createElement('strong');
@@ -178,13 +234,29 @@ function renderExamples() {
       examplesDialog.close();
       if (!await confirmReplacement(example.code)) return;
       if (running) stopPreview();
+      selectGameStorage(`example:${example.id}`);
       replaceOnNextPaste = false;
       replaceCode(example.code, true);
-      inform(`Пример «${example.title}» открыт. Измените код и сохраните свою версию.`);
+      inform(example.category === 'fix'
+        ? `Игра «${example.title}» открыта. Запустите её и попробуйте исправить ошибки.`
+        : `Пример «${example.title}» открыт. Измените код и сохраните свою версию.`);
     });
     card.append(title, description, button);
     exampleList.append(card);
   }
+}
+
+function setExampleCategory(category) {
+  if (!['games', 'fix'].includes(category)) return;
+  selectedExampleCategory = category;
+  for (const tab of document.querySelectorAll('.example-category')) {
+    tab.setAttribute('aria-selected', String(tab.dataset.exampleCategory === category));
+  }
+  document.querySelector('#example-platform-tabs').hidden = category === 'fix';
+  document.querySelector('#example-guide').textContent = category === 'fix'
+    ? 'Это исходные игры ИИ с ошибками. Откройте копию, запустите и попробуйте исправить её. Для 3D нужен интернет.'
+    : 'Откройте копию примера, измените код и сохраните свою версию.';
+  renderExamples();
 }
 
 function setPlatform(platform) {
@@ -198,6 +270,9 @@ function setPlatform(platform) {
 
 for (const tab of document.querySelectorAll('.platform-tab')) {
   tab.addEventListener('click', () => setPlatform(tab.dataset.platform));
+}
+for (const tab of document.querySelectorAll('.example-category')) {
+  tab.addEventListener('click', () => setExampleCategory(tab.dataset.exampleCategory));
 }
 renderExamples();
 aiButton.addEventListener('click', () => { if (expertMode && !modeBusy) aiDialog.showModal(); });
@@ -218,48 +293,320 @@ function setDraftStatus(text, error = false) {
   draftStatus.classList.toggle('error', error);
 }
 
-function rememberPreviousPaste(before, after) {
+function latestHistory() {
+  return historyState.entries[0] ?? null;
+}
+
+function persistHistory() {
+  const snapshot = JSON.parse(JSON.stringify(historyState));
+  historyQueue = historyQueue.catch(() => {}).then(() => writeHistoryState(snapshot));
+  void historyQueue.catch(() => inform('История доступна сейчас, но не сохранена в браузере.', true, true));
+}
+
+function archiveCode(before, after) {
   if (before === after) return;
-  previousPaste = before;
-  previousPasteQueue = previousPasteQueue.catch(() => {}).then(() => writePreviousPaste(before));
-  void previousPasteQueue.catch(() => {
-    inform('Прошлый код доступен сейчас, но не сохранён в браузере.', true, true);
-  });
+  if (before) {
+    historyState.entries.unshift({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      code: before,
+      createdAt: Date.now(),
+      verified: historyState.verifiedCode === before
+    });
+    historyState.entries.length = Math.min(historyState.entries.length, 20);
+  }
+  historyState.verifiedCode = null;
+  persistHistory();
   updateControls();
 }
 
-function clearPreviousPaste() {
-  previousPaste = null;
-  previousPasteQueue = previousPasteQueue.catch(() => {}).then(() => writePreviousPaste(null));
-  void previousPasteQueue.catch(() => {});
+function symbolCount(code) {
+  let count = 0;
+  for (const symbol of code) count++;
+  return count;
+}
+
+function formatSymbolCount(count) {
+  const lastTwo = count % 100;
+  const last = count % 10;
+  const unit = lastTwo >= 11 && lastTwo <= 14 ? 'символов' : last === 1 ? 'символ' : last >= 2 && last <= 4 ? 'символа' : 'символов';
+  return `${count} ${unit}`;
+}
+
+function changedSymbols(before, after) {
+  let added = 0;
+  let removed = 0;
+  for (const part of codeDiff(before, after)) {
+    if (part.type === 'added') added += symbolCount(part.text);
+    if (part.type === 'removed') removed += symbolCount(part.text);
+  }
+  return { added, removed };
+}
+
+function formatVersionDate(timestamp) {
+  const value = new Date(timestamp);
+  const twoDigits = number => String(number).padStart(2, '0');
+  return {
+    date: `${twoDigits(value.getDate())}.${twoDigits(value.getMonth() + 1)}.${value.getFullYear()}`,
+    time: `${twoDigits(value.getHours())}:${twoDigits(value.getMinutes())}:${twoDigits(value.getSeconds())}`
+  };
+}
+
+function historyIcon(kind) {
+  const paths = {
+    delete: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7m4-7v7',
+    restore: 'M4 8V4m0 4h4M4 8a8 8 0 1 1-1 6M12 7v5l3 2',
+    check: 'M4 12l5 5L20 6'
+  };
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.8');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', paths[kind]);
+  svg.append(path);
+  return svg;
+}
+
+function historyAction(kind, label, click) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'history-action';
+  button.setAttribute('aria-label', label);
+  button.title = label;
+  if (kind) button.append(historyIcon(kind));
+  button.addEventListener('click', click);
+  return button;
+}
+
+function historyMetrics(before, after) {
+  const metrics = document.createElement('div');
+  metrics.className = 'history-metrics';
+  const changes = changedSymbols(before, after);
+  for (const [kind, amount, label] of [['added', changes.added, 'Добавлено'], ['removed', changes.removed, 'Удалено']]) {
+    if (amount === 0) continue;
+    const metric = document.createElement('span');
+    metric.className = `history-metric history-${kind}`;
+    metric.setAttribute('aria-label', `${label} ${formatSymbolCount(amount)}`);
+    const icon = document.createElement('span');
+    icon.className = 'history-metric-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = kind === 'added' ? '+' : '−';
+    const value = document.createElement('span');
+    value.className = 'history-metric-value';
+    value.setAttribute('aria-hidden', 'true');
+    value.textContent = String(amount);
+    metric.append(icon, value);
+    metrics.append(metric);
+  }
+  return metrics;
+}
+
+function historyTime(timestamp, current = false, migrated = false) {
+  const time = document.createElement('span');
+  time.className = 'history-time';
+  if (current) {
+    time.textContent = 'Сейчас';
+    return time;
+  }
+  const formatted = formatVersionDate(timestamp);
+  const date = document.createElement('span');
+  date.className = 'history-date';
+  date.textContent = formatted.date;
+  const clock = document.createElement('span');
+  clock.className = 'history-clock';
+  clock.textContent = formatted.time;
+  time.append(date, clock);
+  time.setAttribute('aria-label', `${formatted.date} ${formatted.time}`);
+  time.title = `${formatted.date} ${formatted.time}` + (migrated ? ' · время переноса старой версии' : '');
+  return time;
+}
+
+function closeHistory() {
+  if (!historyOpen) return;
+  historyOpen = false;
+  historyView.hidden = true;
+  if (!running && !comparisonOpen) codeField.hidden = false;
   updateControls();
+}
+
+function openHistory() {
+  if (historyOpen || running || modeBusy || !expertMode) return;
+  closeComparison();
+  renderHistory();
+  codeField.hidden = true;
+  historyView.hidden = false;
+  historyOpen = true;
+  historyView.scrollTop = 0;
+  updateControls();
+}
+
+function renderHistory() {
+  const latest = latestHistory();
+  const currentVerified = historyState.verifiedCode === codeField.value;
+  currentHistory.classList.toggle('is-verified', currentVerified);
+  currentHistory.replaceChildren();
+  const currentTime = historyTime(null, true);
+  currentHistory.append(currentTime, historyMetrics(latest?.code ?? '', codeField.value));
+  const currentActions = document.createElement('div');
+  currentActions.className = 'history-entry-actions';
+  const compare = historyAction(null, 'Сравнить с последней прошлой версией', () => {
+    closeHistory();
+    openComparison();
+  });
+  compare.append(compareButton.querySelector('svg').cloneNode(true));
+  compare.disabled = !latest || latest.code === codeField.value;
+  const verified = historyAction('check', currentVerified ? 'Снять отметку верной версии' : 'Отметить текущую версию как верную', () => {
+    historyState.verifiedCode = currentVerified ? null : codeField.value;
+    persistHistory();
+    renderHistory();
+  });
+  verified.setAttribute('aria-pressed', String(currentVerified));
+  currentActions.append(compare, verified);
+  currentHistory.append(currentActions);
+  historyList.replaceChildren();
+  historyState.entries.forEach((entry, index) => {
+    const row = document.createElement('li');
+    row.className = 'history-row history-entry';
+    row.classList.toggle('is-verified', entry.verified);
+    const time = historyTime(entry.createdAt, false, entry.migrated);
+    if (entry.verified) {
+      time.querySelector('.history-clock').append(' ✓');
+      time.setAttribute('aria-label', `${time.getAttribute('aria-label')}, верная версия`);
+    }
+    const older = historyState.entries[index + 1];
+    row.append(time, historyMetrics(older?.code ?? '', entry.code));
+    const actions = document.createElement('div');
+    actions.className = 'history-entry-actions';
+    const compareEntry = historyAction(null, 'Сравнить эту версию с текущей', () => {
+      if (running || modeBusy) return;
+      closeHistory();
+      openComparison(entry);
+    });
+    compareEntry.append(compareButton.querySelector('svg').cloneNode(true));
+    compareEntry.disabled = entry.code === codeField.value;
+    const remove = historyAction('delete', 'Удалить версию', () => {
+      historyState.entries.splice(index, 1);
+      persistHistory();
+      renderHistory();
+      updateControls();
+    });
+    const restore = historyAction('restore', 'Вернуть версию', async () => {
+      if (running || modeBusy) return;
+      const current = codeField.value;
+      closeHistory();
+      if (!await confirmReplacement(entry.code) || codeField.value !== current) return;
+      replaceCode(entry.code, true);
+      historyState.verifiedCode = entry.verified ? entry.code : null;
+      persistHistory();
+      inform('Версия восстановлена. Предыдущий текущий код сохранён в истории.');
+    });
+    restore.disabled = entry.code === codeField.value;
+    actions.append(compareEntry, remove, restore);
+    row.append(actions);
+    historyList.append(row);
+  });
+  document.querySelector('#history-empty').hidden = historyState.entries.length > 0;
 }
 
 function closeComparison() {
   if (!comparisonOpen) return;
   comparisonOpen = false;
   comparison.hidden = true;
+  comparison.classList.remove('has-custom-scrollbar');
+  comparisonScrollbar.hidden = true;
+  comparisonSource.textContent = '';
+  comparisonAdded.textContent = formatSymbolCount(0);
+  comparisonRemoved.textContent = formatSymbolCount(0);
   diffContent.replaceChildren();
-  if (!running) codeField.hidden = false;
+  if (!running && !historyOpen) codeField.hidden = false;
   updateControls();
 }
 
-function openComparison() {
-  if (previousPaste === null || running) return;
-  const nodes = codeDiff(previousPaste, codeField.value).map(part => {
+function openComparison(baseline = latestHistory()) {
+  if (!baseline || running) return;
+  const versionDate = formatVersionDate(baseline.createdAt);
+  comparisonSource.textContent = `Текущий код и версия ${versionDate.date} ${versionDate.time}`;
+  const parts = codeDiff(baseline.code, codeField.value);
+  let added = 0;
+  let removed = 0;
+  const nodes = parts.map(part => {
     if (part.type === 'same') return document.createTextNode(part.text);
+    if (part.type === 'added') added += symbolCount(part.text);
+    else removed += symbolCount(part.text);
     const mark = document.createElement('span');
     mark.className = part.type === 'added' ? 'diff-added' : 'diff-removed';
     mark.textContent = part.text;
     return mark;
   });
+  comparisonAdded.textContent = formatSymbolCount(added);
+  comparisonRemoved.textContent = formatSymbolCount(removed);
   diffContent.replaceChildren(...nodes);
   comparison.scrollTop = 0;
   comparison.hidden = false;
   codeField.hidden = true;
   comparisonOpen = true;
+  updateComparisonScrollbar();
   updateControls();
 }
+
+function positionComparisonScrollbar() {
+  if (comparisonScrollbar.hidden) return;
+  const scrollRange = comparison.scrollHeight - comparison.clientHeight;
+  const travel = comparisonScrollbar.clientHeight - comparisonScrollbarThumb.offsetHeight;
+  const progress = scrollRange > 0 ? comparison.scrollTop / scrollRange : 0;
+  comparisonScrollbarThumb.style.transform = `translateY(${Math.round(travel * progress)}px)`;
+  comparisonScrollbar.setAttribute('aria-valuenow', String(Math.round(progress * 100)));
+}
+
+function updateComparisonScrollbar() {
+  if (!comparisonOpen) return;
+  const needed = comparison.scrollHeight > comparison.clientHeight + 1;
+  comparison.classList.toggle('has-custom-scrollbar', needed);
+  comparisonScrollbar.hidden = !needed;
+  if (!needed) return;
+  const trackHeight = comparisonScrollbar.clientHeight;
+  comparisonScrollbarThumb.style.height = `${Math.min(trackHeight, Math.max(48, Math.round(trackHeight * comparison.clientHeight / comparison.scrollHeight)))}px`;
+  positionComparisonScrollbar();
+}
+
+comparison.addEventListener('scroll', positionComparisonScrollbar);
+window.addEventListener('resize', updateComparisonScrollbar);
+comparisonScrollbar.addEventListener('pointerdown', event => {
+  if (comparisonScrollbar.hidden || event.button !== 0) return;
+  event.preventDefault();
+  const thumbTop = comparisonScrollbarThumb.getBoundingClientRect().top;
+  const offset = event.target === comparisonScrollbarThumb ? event.clientY - thumbTop : comparisonScrollbarThumb.offsetHeight / 2;
+  comparisonScrollbar.setPointerCapture(event.pointerId);
+  function move(pointer) {
+    const track = comparisonScrollbar.getBoundingClientRect();
+    const travel = track.height - comparisonScrollbarThumb.offsetHeight;
+    if (travel <= 0) return;
+    const position = Math.max(0, Math.min(travel, pointer.clientY - track.top - offset));
+    comparison.scrollTop = position / travel * (comparison.scrollHeight - comparison.clientHeight);
+  }
+  move(event);
+  function stop() {
+    comparisonScrollbar.removeEventListener('pointermove', move);
+    comparisonScrollbar.removeEventListener('pointerup', stop);
+    comparisonScrollbar.removeEventListener('pointercancel', stop);
+  }
+  comparisonScrollbar.addEventListener('pointermove', move);
+  comparisonScrollbar.addEventListener('pointerup', stop);
+  comparisonScrollbar.addEventListener('pointercancel', stop);
+});
+comparisonScrollbar.addEventListener('keydown', event => {
+  const step = Math.max(40, Math.round(comparison.clientHeight * .1));
+  const movements = { ArrowUp: -step, ArrowDown: step, PageUp: -comparison.clientHeight, PageDown: comparison.clientHeight };
+  if (event.key in movements) comparison.scrollTop += movements[event.key];
+  else if (event.key === 'Home') comparison.scrollTop = 0;
+  else if (event.key === 'End') comparison.scrollTop = comparison.scrollHeight;
+  else return;
+  event.preventDefault();
+});
 
 function saveDraftNow() {
   if (!draftAvailable) return Promise.resolve();
@@ -306,8 +653,13 @@ async function confirmReplacement(nextCode) {
   return await chooseDialog(replaceDialog) === 'replace';
 }
 
-function replaceCode(code, fromPaste = false) {
-  if (fromPaste) rememberPreviousPaste(codeField.value, code);
+function replaceCode(code, archive = false) {
+  closeHistory();
+  if (archive) archiveCode(codeField.value, code);
+  else if (codeField.value !== code && historyState.verifiedCode !== null) {
+    historyState.verifiedCode = null;
+    persistHistory();
+  }
   closeComparison();
   clearRuntimeError();
   codeField.value = code;
@@ -351,12 +703,14 @@ function updateControls() {
   aiButton.disabled = modeBusy;
   examplesButton.disabled = modeBusy;
   document.querySelector('#prompt-change').disabled = empty;
-  const canRestore = expertMode && !running && !modeBusy && previousPaste !== null && previousPaste !== codeField.value;
-  compareButton.disabled = !canRestore;
-  restorePreviousButton.disabled = !canRestore;
+  const baseline = latestHistory();
+  compareButton.disabled = !expertMode || running || modeBusy || (!comparisonOpen && (!baseline || baseline.code === codeField.value));
+  historyButton.disabled = !expertMode || running || modeBusy;
+  historyButton.setAttribute('aria-pressed', String(historyOpen));
+  historyButton.title = historyOpen ? 'Закрыть историю версий' : 'История версий';
   compareButton.setAttribute('aria-pressed', String(comparisonOpen));
-  compareButton.setAttribute('aria-label', comparisonOpen ? 'Закрыть сравнение' : 'Сравнить с прошлым кодом');
-  compareButton.title = comparisonOpen ? 'Закрыть сравнение' : 'Сравнить с прошлым кодом';
+  compareButton.setAttribute('aria-label', comparisonOpen ? 'Закрыть сравнение' : 'Сравнить с последней прошлой версией');
+  compareButton.title = comparisonOpen ? 'Закрыть сравнение' : 'Сравнить с последней прошлой версией';
   const action = running ? 'Стоп' : 'Запустить';
   runButton.setAttribute('aria-label', action);
   runButton.title = action;
@@ -372,12 +726,23 @@ function updateControls() {
   document.querySelector('#network-on-icon').hidden = !networkAllowed;
   document.querySelector('#network-off-icon').hidden = networkAllowed;
   networkButton.classList.toggle('is-off', !networkAllowed);
+  storageButton.disabled = modeBusy;
+  storageButton.setAttribute('aria-pressed', String(gameStorageAllowed));
+  storageButton.title = gameStorageAllowed
+    ? 'Хранилище игры включено — нажмите, чтобы выключить'
+    : 'Хранилище игры выключено — нажмите, чтобы включить';
+  document.querySelector('#storage-on-icon').hidden = !gameStorageAllowed;
+  document.querySelector('#storage-off-icon').hidden = gameStorageAllowed;
+  storageButton.classList.toggle('is-off', !gameStorageAllowed);
 }
 
 codeField.addEventListener('input', () => {
   if (pendingNativePaste !== null) {
-    rememberPreviousPaste(pendingNativePaste, codeField.value);
+    archiveCode(pendingNativePaste, codeField.value);
     pendingNativePaste = null;
+  } else if (historyState.verifiedCode !== null && historyState.verifiedCode !== codeField.value) {
+    historyState.verifiedCode = null;
+    persistHistory();
   }
   replaceOnNextPaste = false;
   inform();
@@ -457,9 +822,10 @@ function stopPreview() {
 
 function startPreview() {
   try {
+    closeHistory();
     closeComparison();
     clearRuntimeError();
-    const frame = makePreview(codeField.value, previewNetworkAllowed());
+    const frame = makePreview(codeField.value, previewNetworkAllowed(), gameStorageAllowed ? gameStorageSnapshot() : null);
     resetNetworkStatus();
     codeField.blur();
     codeField.hidden = true;
@@ -467,6 +833,7 @@ function startPreview() {
     activeFrame = null;
     preview.replaceChildren(frame);
     activeFrame = frame;
+    if (gameStorageAllowed) registerGameStorageFrame(frame);
     running = true;
   } catch {
     stopPreview();
@@ -485,6 +852,7 @@ expertButton.addEventListener('click', () => {
   if (modeBusy) return;
   const wasRunning = running;
   if (wasRunning) stopPreview();
+  closeHistory();
   closeComparison();
   expertMode = !expertMode;
   const settingsSaved = saveSettings();
@@ -502,6 +870,17 @@ networkButton.addEventListener('click', () => {
   updateControls();
 });
 
+storageButton.addEventListener('click', () => {
+  if (!expertMode || modeBusy) return;
+  gameStorageAllowed = !gameStorageAllowed;
+  const settingsSaved = saveSettings();
+  if (running) {
+    startPreview();
+    if (running && settingsSaved) inform('Настройка хранилища изменена. Игра перезапущена.');
+  }
+  updateControls();
+});
+
 async function restoreStartupDraft() {
   modeBusy = true;
   codeField.disabled = true;
@@ -509,13 +888,30 @@ async function restoreStartupDraft() {
   updateControls();
   let timer;
   try {
-    const [saved, previous] = await Promise.race([
-      Promise.all([readWorkingDraft(), readPreviousPaste()]),
+    const [saved, state, previous] = await Promise.race([
+      Promise.all([readWorkingDraft(), readHistoryState(), readPreviousPaste()]),
       new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('draft-timeout')), 4000); })
     ]);
     draftAvailable = true;
     if (saved !== null) codeField.value = saved;
-    previousPaste = previous;
+    if (state && Array.isArray(state.entries)) {
+      const migratedAt = Date.now();
+      const hasMissingTime = state.entries.some(entry => entry && !Number.isFinite(entry.createdAt));
+      historyState = {
+        entries: state.entries.filter(entry => entry && typeof entry.code === 'string' && typeof entry.id === 'string').slice(0, 20).map(entry => ({
+          id: entry.id,
+          code: entry.code,
+          createdAt: Number.isFinite(entry.createdAt) ? entry.createdAt : migratedAt,
+          migrated: entry.migrated === true || !Number.isFinite(entry.createdAt),
+          verified: entry.verified === true
+        })),
+        verifiedCode: typeof state.verifiedCode === 'string' && state.verifiedCode === codeField.value ? state.verifiedCode : null
+      };
+      if (hasMissingTime) persistHistory();
+    } else if (previous !== null) {
+      historyState.entries = [{ id: 'legacy-previous', code: previous, createdAt: Date.now(), migrated: true, verified: false }];
+      persistHistory();
+    }
     setDraftStatus('Сохранено');
   } catch {
     draftAvailable = false;
@@ -535,18 +931,18 @@ importButton.addEventListener('click', () => {
 
 compareButton.addEventListener('click', () => {
   if (!expertMode || running || modeBusy) return;
+  closeHistory();
   if (comparisonOpen) closeComparison();
   else openComparison();
 });
 
-restorePreviousButton.addEventListener('click', async () => {
-  if (!expertMode || running || modeBusy || previousPaste === null || previousPaste === codeField.value) return;
-  const previous = previousPaste;
-  if (!await confirmReplacement(previous) || previousPaste !== previous) return;
-  replaceCode(previous);
-  clearPreviousPaste();
-  inform('Прошлый код восстановлен.');
+historyButton.addEventListener('click', () => {
+  if (!expertMode || running || modeBusy) return;
+  if (historyOpen) closeHistory();
+  else openHistory();
 });
+document.querySelector('#history-close').addEventListener('click', closeHistory);
+document.querySelector('#comparison-close').addEventListener('click', closeComparison);
 
 importFile.addEventListener('change', async () => {
   const file = importFile.files?.[0];
@@ -561,8 +957,9 @@ importFile.addEventListener('change', async () => {
     if (!expertMode) return;
     if (!await confirmReplacement(code)) return;
     if (running) stopPreview();
+    selectGameStorage(`file:${file.name.slice(0, 170)}`);
     replaceOnNextPaste = false;
-    replaceCode(code);
+    replaceCode(code, true);
     inform('HTML-файл открыт в редакторе.');
   } catch {
     inform('Не удалось прочитать HTML-файл. Текущий код сохранён.', true);
@@ -577,6 +974,7 @@ saveButton.addEventListener('click', () => {
 });
 clearButton.addEventListener('click', () => {
   if (!codeField.value || running) return;
+  closeHistory();
   inform();
   clearDialog.showModal();
 });

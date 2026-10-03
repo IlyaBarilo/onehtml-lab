@@ -12,19 +12,21 @@ template = template.replace(/^([ \t]*)<!-- APP_VERSION -->\r?\n/m, (_, indent) =
   releaseTag ? `${indent}<span class="app-version" aria-label="Версия ${releaseTag}">${releaseTag}</span>\n` : '');
 const appIcon = await readFile(join(root, 'src/icons/app.svg'), 'utf8');
 template = template.replace('<!-- APP_FAVICON -->', `data:image/svg+xml,${encodeURIComponent(appIcon)}`);
-for (const name of ['app', 'paste', 'clear', 'save', 'share', 'play', 'stop', 'expert', 'network-on', 'network-off', 'import', 'compare', 'restore']) {
+for (const name of ['app', 'paste', 'clear', 'save', 'share', 'play', 'stop', 'expert', 'network-on', 'network-off', 'storage-on', 'storage-off', 'import', 'compare', 'restore']) {
   const icon = await readFile(join(root, 'src/icons', name + '.svg'), 'utf8');
   template = template.replace(`<!-- ICON:${name} -->`, () => icon.trim());
 }
 const css = await readFile(join(root, 'src/styles.css'), 'utf8');
-const files = ['sandbox.js', 'exporter.js', 'draft.js', 'compare.js', 'app.js'];
+const files = ['game-storage.js', 'sandbox.js', 'exporter.js', 'draft.js', 'compare.js', 'app.js'];
 const exampleFiles = [
   { id: 'catch-circle', platform: 'mobile', title: 'Поймай круг', description: 'Касайтесь цели на всём экране.' },
   { id: 'memory', platform: 'mobile', title: 'Найди пару', description: 'Открывайте пары касанием карточек.' },
   { id: 'reaction', platform: 'mobile', title: 'Проверь реакцию', description: 'Коснитесь экрана после смены цвета.' },
   { id: 'snake', platform: 'desktop', title: 'Змейка', description: 'Управляйте стрелками или WASD.' },
   { id: 'falling-stars', platform: 'desktop', title: 'Лови звёзды', description: 'Двигайте платформу мышью.' },
-  { id: 'space-reaction', platform: 'desktop', title: 'Реакция на пробел', description: 'Нажмите пробел после сигнала.' }
+  { id: 'space-reaction', platform: 'desktop', title: 'Реакция на пробел', description: 'Нажмите пробел после сигнала.' },
+  { id: 'snake3d-turns', category: 'fix', platform: 'mobile', title: 'Змейка 3D: повороты', description: 'Первый ответ ИИ: повороты влево и вправо перепутаны.' },
+  { id: 'snake3d-rewrite', category: 'fix', platform: 'mobile', title: 'Змейка 3D: после правки', description: 'Следующий ответ ИИ: игра переписана, камера смотрит сквозь голову.' }
 ];
 const examples = await Promise.all(exampleFiles.map(async entry => ({
   ...entry,
