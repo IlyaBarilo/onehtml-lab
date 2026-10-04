@@ -11,8 +11,8 @@ try {
   await cp(join(root, 'src'), join(scratch, 'src'), { recursive: true });
   await mkdir(join(scratch, 'tests'));
   for (const file of ['build.mjs', 'package.json', 'LICENSE']) await cp(join(root, file), join(scratch, file));
-  for (const file of ['paste.mjs', 'share.mjs', 'build.mjs']) await cp(join(root, 'tests', file), join(scratch, 'tests', file));
-  for (const script of [['build.mjs'], ['tests/build.mjs'], ['tests/paste.mjs'], ['tests/share.mjs']]) {
+  for (const file of ['paste.mjs', 'share.mjs', 'build.mjs', 'library-paths.mjs', 'library-package.mjs', 'library-extract.mjs']) await cp(join(root, 'tests', file), join(scratch, 'tests', file));
+  for (const script of [['build.mjs'], ['tests/build.mjs'], ['tests/paste.mjs'], ['tests/share.mjs'], ['tests/library-paths.mjs'], ['tests/library-package.mjs'], ['tests/library-extract.mjs']]) {
     const result = spawnSync(process.execPath, script, { cwd: scratch, encoding: 'utf8' });
     assert.equal(result.status, 0, `${script[0]} failed in clean copy:\n${result.stdout}\n${result.stderr}`);
   }

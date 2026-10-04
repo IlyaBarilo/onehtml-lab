@@ -12,10 +12,17 @@ const libraryRequest = document.querySelector('#library-request');
 const libraryRequestText = document.querySelector('#library-request-text');
 const libraryDownloadButton = document.querySelector('#library-download');
 const librarySkipButton = document.querySelector('#library-skip');
+const libraryFilesButton = document.querySelector('#library-files-button');
+const libraryFiles = document.querySelector('#library-files');
 const expertTools = document.querySelector('#expert-tools');
 const importButton = document.querySelector('#import');
 const compareButton = document.querySelector('#compare');
 const historyButton = document.querySelector('#history-open');
+const extractionButton = document.querySelector('#library-extract-open');
+const extractionPanel = document.querySelector('#library-extraction');
+const extractionList = document.querySelector('#library-extraction-list');
+const extractionSummary = document.querySelector('#library-extraction-summary');
+const extractionApply = document.querySelector('#library-extract-apply');
 const historyView = document.querySelector('#history-view');
 const historyList = document.querySelector('#history-list');
 const currentHistory = document.querySelector('#history-current');
@@ -43,12 +50,21 @@ const exampleList = document.querySelector('#example-list');
 const copyDialog = document.querySelector('#copy-dialog');
 const copyTextField = document.querySelector('#copy-text');
 const saveDialog = document.querySelector('#save-dialog');
+const saveOptions = document.querySelector('#save-options');
+const saveFilesPanel = document.querySelector('#save-files');
+const saveFileList = document.querySelector('#save-file-list');
+const saveTitle = document.querySelector('#save-title');
+const confirmSaveButton = document.querySelector('#confirm-save');
+const cancelSaveButton = document.querySelector('#cancel-save');
 const clearDialog = document.querySelector('#clear-dialog');
 const replaceDialog = document.querySelector('#replace-dialog');
 const filenameField = document.querySelector('#filename');
 const saveLibrariesField = document.querySelector('#save-libraries');
 const saveLibrariesHint = document.querySelector('#save-libraries-hint');
 const saveLibrariesOption = document.querySelector('#save-libraries-option');
+const saveLibrariesLabel = document.querySelector('#save-libraries-label');
+const saveLibrariesMode = document.querySelector('#save-libraries-mode');
+let saveLibrariesDescription = null;
 let running = false;
 let readingClipboard = false;
 let replaceOnNextPaste = false;
@@ -60,6 +76,8 @@ let expertMode = storedSettings.expertMode;
 let networkAllowed = storedSettings.networkAllowed;
 let gameStorageAllowed = storedSettings.gameStorageAllowed;
 let pendingLibraryAction = null;
+let pendingLocalLibrarySource = null;
+let previewRequest = 0;
 let modeBusy = false;
 let draftAvailable = false;
 let draftSaveTimer;
@@ -70,6 +88,12 @@ let historyQueue = Promise.resolve();
 let pendingNativePaste = null;
 let comparisonOpen = false;
 let historyOpen = false;
+let extractionOpen = false;
+let extractionBusy = false;
+let extractionRequest = 0;
+let extractionMode = 'cdn';
+let extractionPlan = null;
+let extractionCode = '';
 let activeFrame = null;
 let activeBundledLibraries = [];
 let networkCount = 0;
@@ -205,17 +229,27 @@ function inform(text = '', error = false, persistent = false) {
 
 function hideLibraryRequest() {
   pendingLibraryAction = null;
+  pendingLocalLibrarySource = null;
   libraryRequest.hidden = true;
   libraryDownloadButton.disabled = false;
   librarySkipButton.disabled = false;
+  libraryFilesButton.disabled = false;
 }
 
 function requestLibraries(prepared, action) {
   if (!prepared.missingLibraries?.length) return false;
   pendingLibraryAction = { action, code: codeField.value, references: prepared.missingLibraries };
   const titles = prepared.missingLibraries.map(item => item.title).join(', ');
-  const hosts = [...new Set(prepared.missingLibraries.flatMap(item => [item.url.split('/')[2], item.licenseUrl.split('/')[2]]))].join(', ');
-  libraryRequestText.textContent = `Для автономной игры скачайте: ${titles}. Источники: ${hosts}; до 4 МБ на библиотеку. Код и лицензия войдут в сохраняемый HTML.`;
+  const downloadable = prepared.missingLibraries.filter(item => item.url && item.licenseUrl);
+  const local = prepared.missingLibraries.filter(item => item.localPath);
+  const hosts = [...new Set(downloadable.flatMap(item => [item.url.split('/')[2], item.licenseUrl.split('/')[2]]))].join(', ');
+  libraryRequestText.textContent = `Для автономной игры нужны: ${titles}.`
+    + (downloadable.length ? ` Скачать с ${hosts}; до 4 МБ на библиотеку.` : '')
+    + (local.length ? ` Локальный файл: ${local[0].localPath}. Можно выбрать JS и полный текст MIT-лицензии.` : '')
+    + ' Код и лицензия войдут в сохраняемый HTML.';
+  libraryDownloadButton.hidden = !downloadable.length;
+  libraryFilesButton.hidden = !local.length;
+  libraryFilesButton.textContent = 'Выбрать JS и лицензию';
   libraryRequest.hidden = false;
   return true;
 }
@@ -225,21 +259,84 @@ libraryDownloadButton.addEventListener('click', async () => {
   if (!pending) return;
   libraryDownloadButton.disabled = true;
   librarySkipButton.disabled = true;
+  libraryFilesButton.disabled = true;
   try {
     let persisted = true;
-    for (const reference of pending.references) {
-      if (libraryCache.has(reference.key)) continue;
+    for (const reference of pending.references.filter(item => item.url && item.licenseUrl)) {
+      if (cachedLibrary(reference)) continue;
       libraryRequestText.textContent = `Загружается ${reference.title} и её лицензия…`;
       persisted = await downloadLibrary(reference) && persisted;
     }
+    const prepared = await prepareGameHtml(pending.code);
+    if (pending !== pendingLibraryAction || pending.code !== codeField.value) return;
     hideLibraryRequest();
+    if (pending.code === codeField.value) requestLibraries(prepared, pending.action);
     inform(persisted
       ? 'Библиотеки сохранены в браузере. Повторите запуск, сохранение или отправку.'
       : 'Библиотеки загружены для этого сеанса, но браузер не сохранил их. Повторите действие.', !persisted, !persisted);
   } catch {
+    if (pending !== pendingLibraryAction) return;
     libraryRequestText.textContent = 'Не удалось скачать библиотеку и её лицензию. Проверьте сеть или доступ CDN к загрузке из локального файла.';
     libraryDownloadButton.disabled = false;
     librarySkipButton.disabled = false;
+    libraryFilesButton.disabled = false;
+  }
+});
+
+libraryFilesButton.addEventListener('click', () => {
+  if (!pendingLibraryAction) return;
+  libraryFiles.value = '';
+  libraryFiles.click();
+});
+
+libraryFiles.addEventListener('change', async () => {
+  const pending = pendingLibraryAction;
+  const reference = pending?.references.find(item => item.localPath && !cachedLibrary(item));
+  const files = Array.from(libraryFiles.files || []);
+  libraryFiles.value = '';
+  if (!pending || !reference || !files.length) return;
+  libraryDownloadButton.disabled = true;
+  librarySkipButton.disabled = true;
+  libraryFilesButton.disabled = true;
+  try {
+    if (pending.code !== codeField.value) throw new Error('Код изменился. Повторите действие.');
+    const scripts = files.filter(file => /\.js$/i.test(file.name));
+    const licenses = files.filter(file => !/\.js$/i.test(file.name));
+    if (scripts.length > 1 || licenses.length > 1) throw new Error('Выберите один JS-файл и один файл его MIT-лицензии.');
+    if (scripts.length) {
+      const file = scripts[0];
+      if (file.name.toLowerCase() !== reference.filename.toLowerCase()) throw new Error(`Нужен файл ${reference.filename}.`);
+      if (!file.size || file.size > maxLibraryBytes) throw new Error('JS-файл должен быть не больше 4 МБ.');
+      const source = await file.text();
+      pendingLocalLibrarySource = { key: reference.key, source };
+    }
+    const source = pendingLocalLibrarySource?.key === reference.key ? pendingLocalLibrarySource.source : '';
+    if (!source) throw new Error(`Сначала выберите ${reference.filename}.`);
+    let license = localLibraryLicense(source);
+    if (licenses.length) {
+      if (licenses[0].size > maxLicenseBytes) throw new Error('Файл лицензии должен быть не больше 64 КБ.');
+      license = await licenses[0].text();
+    }
+    if (!license) {
+      libraryRequestText.textContent = `${reference.filename} прочитан. Теперь выберите файл с полным текстом его MIT-лицензии (LICENSE, .txt или .md).`;
+      libraryFilesButton.textContent = 'Выбрать лицензию';
+      return;
+    }
+    if (!validLibraryAsset(source, license)) throw new Error('Нужны безопасный для встраивания JS-файл и полный текст MIT-лицензии с авторскими правами.');
+    if (pending !== pendingLibraryAction || pending.code !== codeField.value) return;
+    const persisted = await importLocalLibrary(reference, source, license);
+    const prepared = await prepareGameHtml(pending.code);
+    if (pending !== pendingLibraryAction || pending.code !== codeField.value) return;
+    hideLibraryRequest();
+    requestLibraries(prepared, pending.action);
+    inform(persisted ? 'Библиотека и лицензия сохранены. Повторите запуск, сохранение или отправку.'
+      : 'Библиотека доступна для этого сеанса. Повторите действие.', !persisted, !persisted);
+  } catch (error) {
+    if (pending === pendingLibraryAction) libraryRequestText.textContent = error.message || 'Не удалось прочитать библиотеку.';
+  } finally {
+    libraryDownloadButton.disabled = false;
+    librarySkipButton.disabled = false;
+    libraryFilesButton.disabled = false;
   }
 });
 
@@ -252,7 +349,7 @@ librarySkipButton.addEventListener('click', async () => {
     return;
   }
   try {
-    if (pending.action === 'run') startPreview(false);
+    if (pending.action === 'run') await startPreview(false);
     else if (pending.action === 'share') {
       const result = await shareHtml(pending.code, currentFilename);
       if (result === 'unsupported') inform('Передача HTML-файла здесь недоступна. Сохраните его и отправьте через приложение «Файлы».');
@@ -495,16 +592,128 @@ function historyTime(timestamp, current = false, migrated = false) {
   return time;
 }
 
+function formatLibrarySize(bytes) {
+  return bytes < 1024 ? `${bytes} Б` : `${(bytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} КБ`;
+}
+
+function closeLibraryExtraction() {
+  if (!extractionOpen) return;
+  extractionOpen = false;
+  extractionBusy = false;
+  extractionRequest += 1;
+  extractionPlan = null;
+  extractionCode = '';
+  extractionPanel.hidden = true;
+  extractionList.replaceChildren();
+  if (!running && !comparisonOpen && !historyOpen) codeField.hidden = false;
+  updateControls();
+}
+
+async function refreshLibraryExtraction() {
+  const request = ++extractionRequest;
+  const code = codeField.value;
+  extractionBusy = true;
+  extractionPlan = null;
+  extractionApply.disabled = true;
+  extractionSummary.textContent = 'Проверяю библиотеки…';
+  try {
+    const plan = await planLibraryExtraction(code, extractionMode);
+    if (!extractionOpen || request !== extractionRequest) return;
+    if (code !== codeField.value) { closeLibraryExtraction(); return; }
+    extractionPlan = plan;
+    extractionCode = code;
+    extractionList.replaceChildren();
+    for (const row of plan.rows) {
+      const item = document.createElement('li');
+      item.className = 'library-extraction-row';
+      item.classList.toggle('is-blocked', !row.removable);
+      const title = document.createElement('strong');
+      title.textContent = row.title;
+      item.append(title);
+      if (row.removable) {
+        const size = document.createElement('span');
+        size.className = 'extraction-size';
+        size.textContent = (row.removedBytes < 0 ? '+' : '−') + formatLibrarySize(Math.abs(row.removedBytes));
+        item.append(size);
+      } else {
+        const note = document.createElement('span');
+        note.className = 'extraction-note';
+        note.textContent = row.note;
+        item.append(note);
+      }
+      extractionList.append(item);
+    }
+    extractionSummary.textContent = plan.count ? `${plan.removedBytes < 0 ? 'Увеличение' : 'Уменьшение'}: ${formatLibrarySize(Math.abs(plan.removedBytes))}`
+      : plan.rows.length ? 'Нет библиотек для выбранного варианта.' : 'Встроенные копии OneHTML Lab не найдены.';
+    extractionApply.disabled = !plan.count;
+  } catch {
+    if (request === extractionRequest && extractionOpen) extractionSummary.textContent = 'Не удалось проверить библиотеки. Код сохранён.';
+  } finally {
+    if (request === extractionRequest) extractionBusy = false;
+  }
+}
+
+function openLibraryExtraction() {
+  if (!expertMode || running || modeBusy || readingClipboard) return;
+  if (extractionOpen) { closeLibraryExtraction(); return; }
+  closeHistory();
+  closeComparison();
+  hideLibraryRequest();
+  inform();
+  extractionOpen = true;
+  extractionMode = 'cdn';
+  extractionPlan = null;
+  extractionPanel.hidden = false;
+  codeField.hidden = true;
+  extractionPanel.querySelector('.library-extraction-body').scrollTop = 0;
+  for (const button of document.querySelectorAll('.library-extraction-mode')) button.setAttribute('aria-pressed', String(button.dataset.libraryMode === extractionMode));
+  updateControls();
+  void refreshLibraryExtraction();
+}
+
+extractionButton.addEventListener('click', openLibraryExtraction);
+document.querySelector('#library-extract-close').addEventListener('click', () => { closeLibraryExtraction(); extractionButton.focus(); });
+for (const button of document.querySelectorAll('.library-extraction-mode')) button.addEventListener('click', () => {
+  if (!extractionOpen || extractionMode === button.dataset.libraryMode) return;
+  extractionMode = button.dataset.libraryMode;
+  for (const tab of document.querySelectorAll('.library-extraction-mode')) tab.setAttribute('aria-pressed', String(tab.dataset.libraryMode === extractionMode));
+  void refreshLibraryExtraction();
+});
+extractionApply.addEventListener('click', async () => {
+  if (!extractionOpen || extractionBusy || !extractionPlan?.count || extractionCode !== codeField.value) return;
+  const plan = extractionPlan;
+  const code = extractionCode;
+  const request = extractionRequest;
+  extractionBusy = true;
+  extractionApply.disabled = true;
+  try {
+    const persisted = await retainExtractionAssets(plan);
+    if (!extractionOpen || request !== extractionRequest || code !== codeField.value) return;
+    closeLibraryExtraction();
+    replaceCode(plan.html, true);
+    extractionButton.focus();
+    inform(persisted ? 'Библиотеки заменены ссылками. Предыдущий вариант доступен в истории.'
+      : 'Библиотеки заменены ссылками и доступны сейчас. Сохраните HTML и JS до закрытия редактора.', !persisted, !persisted);
+  } catch {
+    if (request === extractionRequest && extractionOpen) {
+      extractionBusy = false;
+      extractionApply.disabled = false;
+      inform('Не удалось вынести библиотеки. Код остался в поле.', true);
+    }
+  }
+});
+
 function closeHistory() {
   if (!historyOpen) return;
   historyOpen = false;
   historyView.hidden = true;
-  if (!running && !comparisonOpen) codeField.hidden = false;
+  if (!running && !comparisonOpen && !extractionOpen) codeField.hidden = false;
   updateControls();
 }
 
 function openHistory() {
   if (historyOpen || running || modeBusy || !expertMode) return;
+  closeLibraryExtraction();
   closeComparison();
   renderHistory();
   codeField.hidden = true;
@@ -592,12 +801,13 @@ function closeComparison() {
   comparisonAdded.textContent = formatSymbolCount(0);
   comparisonRemoved.textContent = formatSymbolCount(0);
   diffContent.replaceChildren();
-  if (!running && !historyOpen) codeField.hidden = false;
+  if (!running && !historyOpen && !extractionOpen) codeField.hidden = false;
   updateControls();
 }
 
 function openComparison(baseline = latestHistory()) {
   if (!baseline || running) return;
+  closeLibraryExtraction();
   const versionDate = formatVersionDate(baseline.createdAt);
   comparisonSource.textContent = `Текущий код и версия ${versionDate.date} ${versionDate.time}`;
   const parts = codeDiff(baseline.code, codeField.value);
@@ -724,6 +934,7 @@ async function confirmReplacement(nextCode) {
 }
 
 function replaceCode(code, archive = false) {
+  closeLibraryExtraction();
   closeHistory();
   if (archive) archiveCode(codeField.value, code);
   else if (codeField.value !== code && historyState.verifiedCode !== null) {
@@ -762,16 +973,19 @@ async function readClipboardWithTimeout() {
 
 function updateControls() {
   const empty = !codeField.value.trim();
-  pasteButton.disabled = running || readingClipboard || modeBusy;
-  clearButton.disabled = !codeField.value || running || readingClipboard || modeBusy;
-  saveButton.disabled = empty;
-  shareButton.disabled = empty;
-  runButton.disabled = modeBusy || (!running && (empty || readingClipboard));
+  pasteButton.disabled = running || readingClipboard || modeBusy || extractionOpen;
+  clearButton.disabled = !codeField.value || running || readingClipboard || modeBusy || extractionOpen;
+  saveButton.disabled = empty || extractionOpen;
+  shareButton.disabled = empty || extractionOpen;
+  runButton.disabled = modeBusy || extractionOpen || (!running && (empty || readingClipboard));
   expertButton.disabled = modeBusy;
   expertTools.hidden = !expertMode;
-  importButton.disabled = modeBusy;
-  aiButton.disabled = modeBusy;
-  examplesButton.disabled = modeBusy;
+  importButton.disabled = modeBusy || extractionOpen;
+  aiButton.disabled = modeBusy || extractionOpen;
+  examplesButton.disabled = modeBusy || extractionOpen;
+  extractionButton.disabled = !expertMode || running || modeBusy || readingClipboard || (!extractionOpen && !/data-onehtml-library\s*=/i.test(codeField.value));
+  extractionButton.setAttribute('aria-pressed', String(extractionOpen));
+  extractionButton.title = extractionOpen ? 'Вернуться к редактору' : 'Вынести встроенные библиотеки в ссылки';
   document.querySelector('#prompt-change').disabled = empty;
   const baseline = latestHistory();
   compareButton.disabled = !expertMode || running || modeBusy || (!comparisonOpen && (!baseline || baseline.code === codeField.value));
@@ -807,6 +1021,7 @@ function updateControls() {
 }
 
 codeField.addEventListener('input', () => {
+  closeLibraryExtraction();
   hideLibraryRequest();
   if (pendingNativePaste !== null) {
     archiveCode(pendingNativePaste, codeField.value);
@@ -882,6 +1097,7 @@ pasteButton.addEventListener('click', async () => {
 });
 
 function stopPreview() {
+  previewRequest += 1;
   // Removing the document tears down its timers, media and event handlers.
   activeFrame = null;
   preview.replaceChildren();
@@ -893,9 +1109,12 @@ function stopPreview() {
   updateLocalAccessHint();
 }
 
-function startPreview(replaceLibraries = true) {
+async function startPreview(replaceLibraries = true) {
+  const request = ++previewRequest;
+  const code = codeField.value;
   try {
-    const prepared = prepareGameHtml(codeField.value, replaceLibraries);
+    const prepared = await prepareGameHtml(code, replaceLibraries);
+    if (request !== previewRequest || code !== codeField.value) return;
     if (requestLibraries(prepared, 'run')) return;
     hideLibraryRequest();
     closeHistory();
@@ -914,20 +1133,25 @@ function startPreview(replaceLibraries = true) {
     activeBundledLibraries = [...new Set(prepared.bundledLibraries || [])];
     updateLocalAccessHint();
   } catch {
+    if (request !== previewRequest) return;
     stopPreview();
     inform('Не удалось открыть игру. Код остался в поле.', true);
+  } finally {
+    if (request === previewRequest) updateControls();
   }
 }
 
-runButton.addEventListener('click', () => {
+runButton.addEventListener('click', async () => {
   inform();
   if (running) stopPreview();
-  else if (codeField.value.trim()) startPreview();
+  else if (codeField.value.trim()) await startPreview();
   updateControls();
 });
 
 expertButton.addEventListener('click', () => {
   if (modeBusy) return;
+  closeLibraryExtraction();
+  previewRequest += 1;
   const wasRunning = running;
   if (wasRunning) stopPreview();
   closeHistory();
@@ -938,24 +1162,24 @@ expertButton.addEventListener('click', () => {
   updateControls();
 });
 
-networkButton.addEventListener('click', () => {
+networkButton.addEventListener('click', async () => {
   networkAllowed = !networkAllowed;
   const settingsSaved = saveSettings();
   if (running) {
     stopPreview();
-    startPreview();
+    await startPreview();
     if (running && settingsSaved) inform('Настройка интернета изменена. Игра перезапущена.');
   }
   updateControls();
 });
 
-storageButton.addEventListener('click', () => {
+storageButton.addEventListener('click', async () => {
   if (!expertMode || modeBusy) return;
   gameStorageAllowed = !gameStorageAllowed;
   const settingsSaved = saveSettings();
   if (running) {
     stopPreview();
-    startPreview();
+    await startPreview();
     if (running && settingsSaved) inform('Настройка хранилища изменена. Игра перезапущена.');
   }
   updateControls();
@@ -1047,23 +1271,61 @@ importFile.addEventListener('change', async () => {
   }
 });
 
-saveButton.addEventListener('click', () => {
-  const prepared = prepareGameHtml(codeField.value);
-  const available = Boolean(prepared.bundledLibraries?.length);
-  saveLibrariesField.disabled = !available;
-  saveLibrariesField.checked = available;
-  saveLibrariesOption.classList.toggle('is-disabled', !available);
-  if (available) {
-    const addedBytes = Math.max(0, new Blob([prepared.html]).size - new Blob([codeField.value]).size);
+function updateSaveLibrariesDescription() {
+  if (!saveLibrariesDescription) return;
+  const { available, addedBytes, missing } = saveLibrariesDescription;
+  const checked = available && saveLibrariesField.checked;
+  const separate = saveLibrariesMode.value === 'files';
+  saveLibrariesMode.hidden = !checked;
+  saveLibrariesMode.disabled = !checked;
+  saveLibrariesLabel.textContent = separate ? 'Сохранить библиотеки рядом с HTML' : 'Встроить библиотеки в файл';
+  if (checked && separate) {
+    saveLibrariesHint.textContent = 'HTML и JS скачаются отдельными файлами. Сохраните их в одну папку. Лицензии включены в JS.'
+      + (missing ? ' Неподготовленные библиотеки останутся по исходным ссылкам.' : '');
+  } else if (checked) {
     const size = (addedBytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 });
     saveLibrariesHint.textContent = `С библиотеками размер увеличится примерно на ${size} КБ; редактировать файл будет сложнее.`
-      + (prepared.missingLibraries?.length ? ' Остальные библиотеки останутся по внешним ссылкам.' : '');
+      + (missing ? ' Остальные библиотеки останутся по внешним ссылкам.' : '');
   } else {
-    saveLibrariesHint.textContent = prepared.missingLibraries?.length
-      ? 'Библиотек ещё нет в редакторе. Запустите игру, чтобы скачать их.'
-      : 'В этом коде нет библиотек для встраивания.';
+    saveLibrariesHint.textContent = available ? 'Сохранится код из поля как есть, без изменений.'
+      : missing ? 'Библиотек ещё нет в редакторе. Запустите игру, чтобы скачать их или выбрать локальные файлы.'
+        : 'В этом коде нет библиотек для встраивания.';
   }
+}
+
+saveLibrariesField.addEventListener('change', updateSaveLibrariesDescription);
+saveLibrariesMode.addEventListener('change', updateSaveLibrariesDescription);
+
+function updateSaveViewport() {
+  const viewport = window.visualViewport;
+  saveDialog.style.setProperty('--save-viewport-height', `${viewport?.height || window.innerHeight}px`);
+  saveDialog.style.setProperty('--save-viewport-top', `${viewport?.offsetTop || 0}px`);
+}
+window.visualViewport?.addEventListener('resize', updateSaveViewport);
+window.visualViewport?.addEventListener('scroll', updateSaveViewport);
+window.addEventListener('resize', updateSaveViewport);
+
+saveButton.addEventListener('click', async () => {
+  const code = codeField.value;
+  const prepared = await prepareGameHtml(code);
+  if (code !== codeField.value) return;
+  saveOptions.hidden = false;
+  saveFilesPanel.hidden = true;
+  saveFileList.replaceChildren();
+  saveTitle.textContent = 'Сохранить HTML';
+  confirmSaveButton.hidden = false;
+  cancelSaveButton.textContent = 'Отмена';
+  const available = Boolean(prepared.bundledLibraries?.length);
+  saveLibrariesField.disabled = !available;
+  const preference = extractedSavePreference(code);
+  saveLibrariesField.checked = available && preference !== 'cdn';
+  saveLibrariesMode.value = preference === 'files' ? 'files' : 'inline';
+  saveLibrariesOption.classList.toggle('is-disabled', !available);
+  saveLibrariesDescription = { available, missing: Boolean(prepared.missingLibraries?.length),
+    addedBytes: Math.max(0, new Blob([prepared.html]).size - new Blob([code]).size) };
+  updateSaveLibrariesDescription();
   filenameField.value = 'game.html';
+  updateSaveViewport();
   saveDialog.showModal();
   filenameField.focus();
   filenameField.select();
@@ -1087,7 +1349,9 @@ shareButton.addEventListener('click', async () => {
   if (!codeField.value.trim()) return;
   inform();
   try {
-    const prepared = prepareGameHtml(codeField.value);
+    const code = codeField.value;
+    const prepared = await prepareGameHtml(code);
+    if (code !== codeField.value) return;
     if (requestLibraries(prepared, 'share')) return;
     hideLibraryRequest();
     const result = await shareHtml(prepared.html, currentFilename);
@@ -1098,20 +1362,57 @@ shareButton.addEventListener('click', async () => {
     inform('Не удалось отправить HTML-файл. Сохраните его и отправьте через приложение «Файлы».', true);
   }
 });
-document.querySelector('#cancel-save').addEventListener('click', () => saveDialog.close());
-document.querySelector('#save-form').addEventListener('submit', event => {
+cancelSaveButton.addEventListener('click', () => saveDialog.close());
+saveDialog.addEventListener('close', () => saveFileList.replaceChildren());
+function showSaveFiles(files) {
+  saveOptions.hidden = true;
+  saveFilesPanel.hidden = false;
+  saveTitle.textContent = 'Скачать файлы';
+  confirmSaveButton.hidden = true;
+  cancelSaveButton.textContent = 'Закрыть';
+  saveFileList.replaceChildren();
+  for (const file of files) {
+    const item = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = file.name;
+    button.setAttribute('aria-label', `Скачать ${file.name}`);
+    button.addEventListener('click', () => {
+      try { downloadGameFile(file); }
+      catch { inform('Не удалось передать файл браузеру. Попробуйте скачать его ещё раз.', true); }
+    });
+    item.append(button);
+    saveFileList.append(item);
+  }
+  cancelSaveButton.focus();
+}
+document.querySelector('#save-form').addEventListener('submit', async event => {
   event.preventDefault();
+  if (!saveFilesPanel.hidden || confirmSaveButton.disabled) return;
+  confirmSaveButton.disabled = true;
   try {
     const filename = htmlFilename(filenameField.value);
-    const prepared = prepareGameHtml(codeField.value, !saveLibrariesField.disabled && saveLibrariesField.checked);
+    const code = codeField.value;
+    const withLibraries = !saveLibrariesField.disabled && saveLibrariesField.checked;
+    const separate = withLibraries && saveLibrariesMode.value === 'files';
+    const prepared = separate ? await prepareGameFiles(code, filename) : await prepareGameHtml(code, withLibraries);
+    if (code !== codeField.value || !saveDialog.open) return;
     hideLibraryRequest();
-    downloadHtml(prepared.html, filename);
-    currentFilename = filename;
-    saveDialog.close();
-    inform('Файл передан браузеру для сохранения.');
+    if (separate) {
+      showSaveFiles(prepared.files);
+      downloadGameFiles(prepared.files);
+      currentFilename = prepared.files[0].name;
+    } else {
+      downloadHtml(prepared.html, filename);
+      currentFilename = filename;
+      saveDialog.close();
+      inform('Файл передан браузеру для сохранения.');
+    }
   } catch {
-    saveDialog.close();
-    inform('Не удалось передать файл браузеру. Код остался в поле.', true);
+    if (saveFilesPanel.hidden) saveDialog.close();
+    inform('Не удалось передать все файлы браузеру. Код остался в поле.', true);
+  } finally {
+    confirmSaveButton.disabled = false;
   }
 });
 updateControls();

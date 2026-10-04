@@ -120,6 +120,7 @@ h1 span { font-weight: 450; color: #637e9f; }
 .import-button:disabled { opacity: .5; cursor: default; }
 .library-request { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 14px; padding: 9px max(14px, env(safe-area-inset-right)) 9px max(14px, env(safe-area-inset-left)); border-bottom: 1px solid #c8d9ef; background: #edf5ff; color: #25466d; font-size: 14px; line-height: 1.4; }
 .library-request-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.library-request > span { min-width: 0; overflow-wrap: anywhere; }
 .library-request button { min-height: 40px; padding: 7px 12px; border: 1px solid #b8ceed; border-radius: 6px; background: #fff; color: #245aa5; font-weight: 600; }
 .library-request button:first-child { background: #2d6cdf; border-color: #2d6cdf; color: #fff; }
 .library-request button:disabled { opacity: .5; }
@@ -252,8 +253,17 @@ dialog input:not([type="checkbox"]) { width: 100%; min-height: 46px; padding: 10
 dialog .save-library-option { display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 10px 0 0; color: #253d5a; font-size: 14px; cursor: pointer; }
 .save-library-option input { width: 20px; height: 20px; flex: 0 0 20px; margin: 0; accent-color: #2d6cdf; }
 .save-library-hint { margin: 0; color: #60748f; font-size: 13px; line-height: 1.4; }
-.save-library-option.is-disabled, .save-library-option.is-disabled + .save-library-hint { opacity: .45; cursor: default; }
+.save-library-mode { display: block; width: 100%; min-height: 44px; margin: 8px 0; padding: 8px 10px; border: 1px solid #b9cbe3; border-radius: 6px; background: #fcfdff; color: #253d5a; font-family: inherit; font-size: 16px; }
+.save-library-option.is-disabled, .save-library-option.is-disabled ~ .save-library-hint { opacity: .45; cursor: default; }
 #save-dialog .dialog-actions { margin-top: 16px; }
+#save-dialog { overflow: hidden; top: calc(var(--save-viewport-top, 0px) + max(12px, env(safe-area-inset-top))); max-height: calc(var(--save-viewport-height, 100dvh) - max(12px, env(safe-area-inset-top)) - 12px); }
+#save-form { display: flex; flex-direction: column; max-height: calc(var(--save-viewport-height, 100dvh) - max(12px, env(safe-area-inset-top)) - 60px); }
+#save-form > h2 { flex: 0 0 auto; }
+.save-content { min-height: 0; overflow-y: auto; }
+.save-file-list { display: grid; gap: 8px; padding: 0; margin: 14px 0 0; list-style: none; }
+.save-file-list button { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #c9d9ee; border-radius: 6px; background: #f0f5fc; color: #235eaf; font-family: inherit; font-size: 15px; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.save-file-list button:hover { background: #e1ebfa; }
+#save-dialog .dialog-actions { flex: 0 0 auto; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
 .dialog-actions button { min-width: 84px; min-height: 44px; padding: 10px 16px; border: 1px solid #d0ddef; border-radius: 6px; background: #f0f5fc; color: #3e5d84; font-size: 14px; font-weight: 550; }
 .dialog-actions button:hover { background: #e1ebfa; }
@@ -281,6 +291,21 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .example-card { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: 12px; border: 1px solid #d7e3f2; border-radius: 9px; background: #f7faff; font-size: 13px; }
 .example-card span { flex: 1; color: #607895; line-height: 1.4; }
 .history-view { width: 100%; height: 100%; overflow: auto; padding: 0 0 max(20px, env(safe-area-inset-bottom)); background: #fcfdff; }
+.library-extraction { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; overflow: hidden; background: #fcfdff; }
+.library-extraction-heading { flex: 0 0 auto; }
+.library-extraction-body { flex: 1; min-height: 0; overflow-y: auto; padding: 12px max(14px, env(safe-area-inset-right)) 8px max(14px, env(safe-area-inset-left)); }
+.library-extraction-intro { margin: 0; color: #526b8c; font-size: 16px; line-height: 1.45; }
+.library-extraction-mode[aria-pressed="true"] { background: #dceaff; border-color: #9dbfea; color: #2059bf; }
+.library-extraction-list { padding: 0; margin: 0; list-style: none; }
+.library-extraction-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; min-height: 56px; padding: 10px 0; border-bottom: 1px solid #dce6f3; font-size: 16px; overflow-wrap: anywhere; }
+.library-extraction-row strong { font-weight: 600; }
+.library-extraction-row .extraction-size { color: #217344; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.library-extraction-row .extraction-note { grid-column: 1 / -1; color: #60748f; font-size: 14px; line-height: 1.4; }
+.library-extraction-row.is-blocked strong { color: #60748f; }
+.library-extraction-footer { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; padding: 10px max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); border-top: 1px solid #dce6f3; background: #f3f7fd; }
+.library-extraction-footer p { margin: 0; color: #526b8c; font-size: 14px; line-height: 1.4; }
+.library-extraction-footer button { min-height: 44px; padding: 10px 14px; border: 1px solid #2d6cdf; border-radius: 7px; background: #2d6cdf; color: #fff; font-size: 15px; font-weight: 600; }
+.library-extraction-footer button:disabled { opacity: .35; }
 .history-heading { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; min-height: 64px; padding: 0 max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left)); background: #fcfdff; border-bottom: 1px solid #dbe5f3; }
 .history-heading h2 { margin: 0; font-size: 20px; }
 .history-heading button { width: 44px; height: 44px; border: 0; border-radius: 8px; background: #edf3fd; color: #315c93; font-size: 22px; }
@@ -409,6 +434,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
         <button id="compare" class="expert-icon-button" type="button" aria-label="Сравнить с последней прошлой версией" aria-pressed="false" title="Сравнить с последней прошлой версией" disabled><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5h6M4 9h6M14 5h6M14 9h6M4 15h6m-3-3v6M14 15h6"/></svg></button>
         <button id="history-open" class="expert-icon-button" type="button" aria-label="История версий" title="История версий"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 8V4m0 4h4M4 8a8 8 0 1 1-1 6"/><path d="M12 7v5l3 2"/></svg></button>
         <button id="storage-toggle" class="expert-icon-button storage-button" type="button" aria-label="Виртуальное хранилище игры" aria-pressed="true" title="Хранилище игры включено — нажмите, чтобы выключить"><span id="storage-on-icon"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="12" cy="5" rx="7" ry="2.5"/><path d="M5 5v13c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V5M5 11.5c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/></svg></span><span id="storage-off-icon" hidden><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="12" cy="5" rx="7" ry="2.5"/><path d="M5 5v13c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V5M5 11.5c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5M3 21 21 3"/></svg></span></button>
+        <button id="library-extract-open" class="expert-icon-button" type="button" aria-label="Вынести библиотеки" aria-pressed="false" title="Вынести встроенные библиотеки в ссылки" disabled><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 4H5v16h8M9 8l-2 4 2 4M13 12h8m-4-4 4 4-4 4"/></svg></button>
       </div>
       <div class="expert-resource-actions">
         <button id="ai-open" class="import-button" type="button" title="ИИ-боты и готовые запросы">AI и запросы</button>
@@ -420,7 +446,8 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
     <p id="status" class="notice" role="status" aria-live="polite" hidden></p>
     <div id="library-request" class="library-request" role="group" aria-label="Загрузка библиотеки" hidden>
       <span id="library-request-text"></span>
-      <div class="library-request-actions"><button id="library-download" type="button">Скачать</button><button id="library-skip" type="button">Без подмены</button></div>
+      <div class="library-request-actions"><button id="library-download" type="button">Скачать</button><button id="library-files-button" type="button" hidden>Выбрать JS и лицензию</button><button id="library-skip" type="button">Без подмены</button></div>
+      <input id="library-files" type="file" multiple hidden aria-label="JS-файл библиотеки и её MIT-лицензия">
     </div>
     <div id="network-status" class="network-status" hidden>
       <span id="network-message" role="status" aria-live="polite">Игра использует интернет</span>
@@ -446,16 +473,34 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
         <ol id="history-list" class="history-list"></ol>
       </section>
       <div id="preview" hidden></div>
+      <section id="library-extraction" class="library-extraction" aria-labelledby="library-extraction-title" hidden>
+        <div class="history-heading library-extraction-heading"><h2 id="library-extraction-title">Вынести библиотеки</h2><button id="library-extract-close" type="button" aria-label="Закрыть вынос библиотек" title="Вернуться к редактору">✕</button></div>
+        <div class="library-extraction-body">
+          <p class="library-extraction-intro">Замените встроенные библиотеки ссылками, чтобы сократить HTML для ИИ.</p>
+          <div class="platform-tabs" role="group" aria-label="Ссылки на библиотеки"><button class="platform-tab library-extraction-mode" type="button" data-library-mode="cdn" aria-pressed="true">CDN</button><button class="platform-tab library-extraction-mode" type="button" data-library-mode="files" aria-pressed="false">Файлы рядом</button></div>
+          <ul id="library-extraction-list" class="library-extraction-list"></ul>
+        </div>
+        <div class="library-extraction-footer"><p id="library-extraction-summary" role="status" aria-live="polite"></p><button id="library-extract-apply" type="button" disabled>Применить</button></div>
+      </section>
     </section>
   </main>
   <dialog id="save-dialog" aria-labelledby="save-title">
     <form id="save-form">
       <h2 id="save-title">Сохранить HTML</h2>
-      <label for="filename">Имя файла</label>
-      <input id="filename" name="filename" value="game.html" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <label id="save-libraries-option" class="save-library-option" for="save-libraries"><input id="save-libraries" type="checkbox" aria-describedby="save-libraries-hint"><span>Встроить библиотеки в файл</span></label>
-      <p id="save-libraries-hint" class="save-library-hint"></p>
-      <div class="dialog-actions"><button id="cancel-save" type="button">Отмена</button><button class="primary" type="submit">ОК</button></div>
+      <div class="save-content">
+        <div id="save-options">
+          <label for="filename">Имя HTML-файла</label>
+          <input id="filename" name="filename" value="game.html" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <label id="save-libraries-option" class="save-library-option" for="save-libraries"><input id="save-libraries" type="checkbox" aria-describedby="save-libraries-hint"><span id="save-libraries-label">Встроить библиотеки в файл</span></label>
+          <select id="save-libraries-mode" class="save-library-mode" aria-label="Как сохранить библиотеки" aria-describedby="save-libraries-hint" hidden><option value="inline">Внутри HTML</option><option value="files">Отдельные файлы</option></select>
+          <p id="save-libraries-hint" class="save-library-hint"></p>
+        </div>
+        <div id="save-files" hidden>
+          <p class="dialog-copy">Сохраните все файлы в одну папку, затем откройте HTML. Если скачались не все — нажмите на нужный файл.</p>
+          <ul id="save-file-list" class="save-file-list" aria-label="Файлы игры"></ul>
+        </div>
+      </div>
+      <div class="dialog-actions"><button id="cancel-save" type="button">Отмена</button><button id="confirm-save" class="primary" type="submit">ОК</button></div>
     </form>
   </dialog>
   <dialog id="clear-dialog" aria-labelledby="clear-title">
@@ -605,12 +650,14 @@ function handleGameStorageMessage(event) {
   return true;
 }
 
-// Only versioned classic script builds in this catalog can be embedded.
+// Classic scripts can come from the versioned catalog or user-selected local files.
 // ES modules and scripts with dependencies need a separate resolver.
 const libraryCache = new Map();
 let libraryCachePersistent = false;
 let libraryDatabasePromise;
-const libraryScriptTag = /<script\b([^>]*)>\s*<\/script\s*>/gi;
+const libraryScriptTag = /<!--[\s\S]*?-->|<(style|textarea|title|xmp|iframe|noembed|noframes)\b(?:[^"'<>]|"[^"]*"|'[^']*')*>[\s\S]*?<\/\1\s*>|<script\b((?:[^"'<>]|"[^"]*"|'[^']*')*)>[\s\S]*?<\/script\s*>/gi;
+const localDocumentScopes = new Map();
+let localSessionScope = 0;
 const maxLibraryBytes = 4 * 1024 * 1024;
 const maxLicenseBytes = 64 * 1024;
 
@@ -645,6 +692,98 @@ function libraryReference(url) {
   return null;
 }
 
+function scriptAttributes(text) {
+  const attributes = new Map();
+  for (const match of text.matchAll(/(?:^|\s)([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g)) {
+    const name = match[1].toLowerCase();
+    if (!attributes.has(name)) attributes.set(name, { value: match[2] ?? match[3] ?? match[4] ?? '', text: match[0].trim() });
+  }
+  return attributes;
+}
+
+function decodeScriptUrl(value) {
+  return value.replace(/&(?:amp|quot|apos|lt|gt|#\d+|#x[\da-f]+);/gi, entity => {
+    const named = { amp: '&', quot: '"', apos: "'", lt: '<', gt: '>' };
+    const name = entity.slice(1, -1).toLowerCase();
+    if (named[name]) return named[name];
+    const number = name[1] === 'x' ? parseInt(name.slice(2), 16) : Number(name.slice(1));
+    return number > 0 && number <= 0x10ffff ? String.fromCodePoint(number) : '\ufffd';
+  }).trim();
+}
+
+function localLibraryReference(url) {
+  if (!url || url.startsWith('//') || (/^[a-z][a-z\d+.-]*:/i.test(url) && !/^file:/i.test(url) && !/^[a-z]:[\\/]/i.test(url))) return null;
+  let path = url.replace(/\\/g, '/').split(/[?#]/)[0];
+  try { path = decodeURIComponent(path); } catch { return null; }
+  const filename = path.split('/').pop();
+  if (!/\.js$/i.test(filename)) return null;
+  let reference;
+  let title = filename;
+  const folders = path.split('/').slice(0, -1).reverse();
+  if (/^three(?:[._-](?:r\d{3}|v?0\.\d{3}\.0))?(?:\.min)?\.js$/i.test(filename)) {
+    title = 'Three.js';
+    const version = /[._-](?:r(\d{3})|v?0\.(\d{3})\.0)(?=[._-]|$)/i.exec(filename)
+      || folders.map(folder => /^(?:three(?:\.js)?[@._-])?(?:r(\d{3})|v?0\.(\d{3})\.0)$/i.exec(folder)).find(Boolean);
+    if (version) reference = libraryReference(`https://cdn.jsdelivr.net/npm/three@0.${version[1] || version[2]}.0/build/three.min.js`);
+  } else if (/^matter(?:-js)?(?:[._-]v?0\.\d+\.\d+)?(?:\.min)?\.js$/i.test(filename)) {
+    title = 'Matter.js';
+    const version = (/[._-]v?(0\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
+      || folders.map(folder => /^(?:matter(?:-js)?[@._-])?v?(0\.\d+\.\d+)$/i.exec(folder)).find(Boolean))?.[1];
+    if (version) reference = libraryReference(`https://cdn.jsdelivr.net/npm/matter-js@${version}/build/matter.min.js`);
+  } else if (/^phaser(?:[._-]v?3\.\d+\.\d+)?(?:\.min)?\.js$/i.test(filename)) {
+    title = 'Phaser';
+    const version = (/[._-]v?(3\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
+      || folders.map(folder => /^(?:phaser[@._-])?v?(3\.\d+\.\d+)$/i.exec(folder)).find(Boolean))?.[1];
+    if (version) reference = libraryReference(`https://cdn.jsdelivr.net/npm/phaser@${version}/dist/phaser.min.js`);
+  }
+  return { ...reference, title: reference?.title || title, localPath: path, filename };
+}
+
+async function localDocumentScope(code) {
+  if (localDocumentScopes.has(code)) return localDocumentScopes.get(code);
+  let scope;
+  try {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(code));
+    scope = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  } catch { scope = `session-${++localSessionScope}`; }
+  // Only keep a small number of large document strings in memory.
+  if (localDocumentScopes.size >= 8) localDocumentScopes.delete(localDocumentScopes.keys().next().value);
+  localDocumentScopes.set(code, scope);
+  return scope;
+}
+
+function localLibraryKey(scope, path) { return `local@${scope}:${encodeURIComponent(path)}`; }
+
+function cachedLibrary(reference) {
+  return (reference.assetKey && libraryCache.get(reference.assetKey))
+    || libraryCache.get(reference.key) || (reference.catalogKey && libraryCache.get(reference.catalogKey));
+}
+
+async function librarySourceHash(source) {
+  try {
+    const bytes = new TextEncoder().encode(source.replace(/\r\n?/g, '\n'));
+    const hash = await crypto.subtle.digest('SHA-256', bytes);
+    return [...new Uint8Array(hash)].map(value => value.toString(16).padStart(2, '0')).join('');
+  } catch { return ''; }
+}
+
+function libraryCatalogReference(key) {
+  let match = /^three@0\.(\d{3})\.0$/.exec(key || '');
+  if (match) return libraryReference(`https://cdn.jsdelivr.net/npm/three@0.${match[1]}.0/build/three.min.js`);
+  match = /^(matter-js|phaser)@([\d.]+)$/.exec(key || '');
+  if (match) return libraryReference(`https://cdn.jsdelivr.net/npm/${match[1]}@${match[2]}/${match[1] === 'phaser' ? 'dist/phaser.min.js' : 'build/matter.min.js'}`);
+  return null;
+}
+
+function libraryAttribute(value) {
+  return String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function libraryInlineAttributes(attributes) {
+  return [...attributes].filter(([name]) => !['src', 'integrity', 'crossorigin', 'referrerpolicy'].includes(name)
+    && !name.startsWith('data-onehtml-')).map(([, attribute]) => attribute.text).join(' ');
+}
+
 function libraryDatabase() {
   if (!libraryDatabasePromise) libraryDatabasePromise = new Promise((resolve, reject) => {
     if (!window.indexedDB) return reject(new Error('IndexedDB unavailable'));
@@ -668,7 +807,13 @@ async function loadLibraryCache() {
       transaction.onabort = () => reject(transaction.error);
     });
     for (const entry of entries) {
-      if (entry && libraryReference(entry.sourceUrl)?.key === entry.key
+      const knownSource = entry && typeof entry.key === 'string' && libraryReference(entry.sourceUrl)?.key === entry.key;
+      const localSource = entry && /^[a-f\d]{64}$/.test(entry.documentScope)
+        && localLibraryReference(entry.localPath) && entry.key === localLibraryKey(entry.documentScope, entry.localPath);
+      const extractedSource = entry && /^asset@[a-f\d]{64}$/.test(entry.key)
+        && validLibraryAsset(entry.source, entry.license)
+        && await librarySourceHash(entry.source + '\0' + entry.license) === entry.key.slice(6);
+      if ((knownSource || localSource || extractedSource)
         && validLibraryAsset(entry.source, entry.license)) libraryCache.set(entry.key, entry);
     }
     libraryCachePersistent = true;
@@ -690,33 +835,106 @@ function saveLibraryToCache(entry) {
 function libraryMatches(code) {
   const matches = [];
   for (const match of code.matchAll(libraryScriptTag)) {
-    if (/(?:^|\s)(?:async|defer|nomodule)(?:\s|=|$)/i.test(match[1])) continue;
-    const scriptType = /(?:^|\s)type\s*=\s*(["'])([^"']+)\1/i.exec(match[1])?.[2];
+    if (match[2] === undefined) continue;
+    const attributes = scriptAttributes(match[2]);
+    if (['async', 'defer', 'nomodule'].some(name => attributes.has(name))) continue;
+    const scriptType = attributes.get('type')?.value;
     if (scriptType && !/^(?:text|application)\/javascript$/i.test(scriptType)) continue;
-    const url = /(?:^|\s)src\s*=\s*(["'])(https:\/\/[^"']+)\1/i.exec(match[1])?.[2];
-    const reference = url && libraryReference(url);
-    if (reference) matches.push({ ...reference, tag: match[0], index: match.index });
+    const url = decodeScriptUrl(attributes.get('src')?.value || '');
+    const remoteUrl = url.startsWith('//') ? `https:${url}` : url;
+    const reference = libraryReference(remoteUrl.split(/[?#]/)[0]) || localLibraryReference(url);
+    const inlineAttributes = libraryInlineAttributes(attributes);
+    const assetKey = decodeScriptUrl(attributes.get('data-onehtml-asset')?.value || '');
+    if (reference) matches.push({ ...reference, originalUrl: url, tag: match[0], index: match.index, inlineAttributes,
+      assetKey: /^asset@[a-f\d]{64}$/.test(assetKey) ? assetKey : undefined });
   }
   return matches;
 }
 
-function prepareGameHtml(code, replaceLibraries = true) {
-  if (!replaceLibraries) return { html: code, bundledLibraries: [], missingLibraries: [] };
+async function resolvedLibraryMatches(code) {
   const matches = libraryMatches(code);
-  const missingLibraries = [...new Map(matches.filter(ref => !libraryCache.has(ref.key)).map(ref => [ref.key, ref])).values()];
+  if (matches.some(ref => ref.localPath)) {
+    const scope = await localDocumentScope(code);
+    for (const reference of matches.filter(ref => ref.localPath)) {
+      reference.catalogKey = reference.key;
+      reference.documentScope = scope;
+      reference.key = localLibraryKey(scope, reference.localPath);
+    }
+  }
+  return matches;
+}
+
+function packageFilename(value) {
+  let name = value.normalize('NFC').replace(/[<>:"/\\|?*\u0000-\u001f\u007f]/g, '_').replace(/[. ]+$/g, '');
+  const extension = /\.(?:html|js)$/i.exec(name)?.[0] || '';
+  if (Array.from(name).length > 160) name = Array.from(name).slice(0, 160 - extension.length).join('') + extension;
+  if (!name || name === '.' || name === '..') name = 'library.js';
+  if (/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name)) name = '_' + name;
+  return name;
+}
+
+function libraryFilename(reference, entry) {
+  if (reference.filename) return packageFilename(reference.filename);
+  const key = entry.catalogKey || entry.key;
+  const three = /^three@0\.(\d{3})\.0$/.exec(key);
+  if (three) return `three-r${three[1]}.min.js`;
+  const matter = /^matter-js@([\d.]+)$/.exec(key);
+  if (matter) return `matter-${matter[1]}.min.js`;
+  const phaser = /^phaser@([\d.]+)$/.exec(key);
+  if (phaser) return `phaser-${phaser[1]}.min.js`;
+  return 'library.js';
+}
+
+function licensedLibrarySource(reference, entry) {
+  const title = reference.title.replace(/[\r\n\u2028\u2029]/g, ' ');
+  const notice = `${title}, MIT license:\r\n${entry.license}`;
+  const comment = notice.includes('*/')
+    ? notice.split(/\r\n?|\n|\u2028|\u2029/).map(line => '// ' + line).join('\r\n')
+    : `/*!\r\n${notice}\r\n*/`;
+  return `${comment}\r\n${entry.source}`;
+}
+
+async function prepareGameHtml(code, replaceLibraries = true) {
+  if (!replaceLibraries) return { html: code, bundledLibraries: [], missingLibraries: [] };
+  const matches = await resolvedLibraryMatches(code);
+  const missingLibraries = [...new Map(matches.filter(ref => !cachedLibrary(ref)).map(ref => [ref.key, ref])).values()];
   let html = '';
   let cursor = 0;
   const bundledLibraries = [];
   for (const reference of matches) {
-    const entry = libraryCache.get(reference.key);
+    const entry = cachedLibrary(reference);
     if (!entry) continue;
     html += code.slice(cursor, reference.index);
-    html += `<!--\n${reference.title}, MIT license:\n${entry.license}\n-->\n<script data-onehtml-library="${reference.key}">\n${entry.source}\n<\/script>`;
+    const title = reference.title.replace(/--/g, '—').replace(/[<>]/g, '');
+    const catalog = libraryCatalogReference(entry.catalogKey || entry.key);
+    const cdn = catalog && libraryReference(entry.sourceUrl)?.key === catalog.key ? entry.sourceUrl : catalog?.url;
+    const metadata = { 'library': entry.key, 'bundle': '1', 'source': reference.originalUrl || reference.localPath || reference.url || '',
+      'filename': libraryFilename(reference, entry), 'sha256': await librarySourceHash(entry.source) };
+    if (cdn) { metadata.cdn = cdn; metadata.catalog = catalog.key; }
+    const attributes = Object.entries(metadata).map(([name, value]) => `data-onehtml-${name}="${libraryAttribute(value)}"`).join(' ');
+    html += `<!--onehtml-library:${encodeURIComponent(entry.key)}\n${title}, MIT license:\n${entry.license}\n-->\n<script ${reference.inlineAttributes ? reference.inlineAttributes + ' ' : ''}${attributes}>\n${entry.source}\n<\/script>`;
     cursor = reference.index + reference.tag.length;
     bundledLibraries.push(reference.title);
   }
   html += code.slice(cursor);
   return { html, bundledLibraries, missingLibraries };
+}
+
+async function importLocalLibrary(reference, source, license) {
+  if (!reference.localPath || !validLibraryAsset(source, license)) throw new Error('invalid library or license');
+  const entry = { key: reference.key, title: reference.title, source, license: license.trim(),
+    localPath: reference.localPath, documentScope: reference.documentScope,
+    bytes: new TextEncoder().encode(source).length, savedAt: Date.now() };
+  let persisted = false;
+  if (/^[a-f\d]{64}$/.test(reference.documentScope)) {
+    try { await saveLibraryToCache(entry); persisted = true; } catch {}
+  }
+  libraryCache.set(entry.key, entry);
+  return persisted;
+}
+
+function localLibraryLicense(source) {
+  return [...source.matchAll(/\/\*[\s\S]*?\*\//g)].map(match => match[0].slice(2, -2).replace(/^!/, '').trim()).find(license => validLibraryAsset(source, license)) || '';
 }
 
 async function readLimitedResponse(response, maxBytes) {
@@ -752,12 +970,12 @@ async function downloadLibrary(reference) {
     readLimitedResponse(licenseResponse, maxLicenseBytes)
   ]);
   if (!source.trim() || !validLibraryAsset(source, license)) throw new Error('invalid library or license');
-  const entry = { key: reference.key, title: reference.title, source, license: license.trim(),
+  const entry = { key: reference.catalogKey || reference.key, title: reference.title, source, license: license.trim(),
     sourceUrl: reference.url, licenseUrl: reference.licenseUrl,
     bytes: new TextEncoder().encode(source).length, savedAt: Date.now() };
   try { await saveLibraryToCache(entry); libraryCachePersistent = true; }
   catch { libraryCachePersistent = false; }
-  libraryCache.set(reference.key, entry);
+  libraryCache.set(entry.key, entry);
   return libraryCachePersistent;
 }
 
@@ -923,10 +1141,14 @@ function htmlFilename(value) {
 
 function downloadHtml(code, filename) {
   const blob = new Blob([code], { type: 'text/html;charset=utf-8' });
+  downloadBlob(blob, htmlFilename(filename));
+}
+
+function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = htmlFilename(filename);
+  anchor.download = filename;
   document.body.append(anchor);
   try { anchor.click(); }
   finally {
@@ -934,6 +1156,49 @@ function downloadHtml(code, filename) {
     // Some browsers consume the Blob asynchronously after the click.
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
+}
+
+async function prepareGameFiles(code, filename) {
+  const htmlName = packageFilename(htmlFilename(filename));
+  const matches = await resolvedLibraryMatches(code);
+  const missingLibraries = [...new Map(matches.filter(ref => !cachedLibrary(ref)).map(ref => [ref.key, ref])).values()];
+  const reservedNames = new Set([htmlName.toLowerCase(), ...missingLibraries.filter(ref => ref.filename).map(ref => packageFilename(ref.filename).toLowerCase())]);
+  const assets = new Map();
+  let html = '';
+  let cursor = 0;
+  for (const reference of matches) {
+    const entry = cachedLibrary(reference);
+    if (!entry) continue;
+    let asset = assets.get(entry.key);
+    if (!asset) {
+      const requested = libraryFilename(reference, entry);
+      let name = requested;
+      let number = 2;
+      while (reservedNames.has(name.toLowerCase())) {
+        const suffix = `-${number++}.js`;
+        name = Array.from(requested.replace(/\.js$/i, '')).slice(0, 160 - suffix.length).join('') + suffix;
+      }
+      reservedNames.add(name.toLowerCase());
+      asset = { name, content: licensedLibrarySource(reference, entry) };
+      assets.set(entry.key, asset);
+    }
+    html += code.slice(cursor, reference.index);
+    const pin = reference.assetKey ? ` data-onehtml-asset="${reference.assetKey}"` : '';
+    html += `<script ${reference.inlineAttributes ? reference.inlineAttributes + ' ' : ''}src="./${encodeURIComponent(asset.name)}"${pin}><\/script>`;
+    cursor = reference.index + reference.tag.length;
+  }
+  html += code.slice(cursor);
+  const files = [{ name: htmlName, content: html }, ...assets.values()];
+  return { html, files, missingLibraries };
+}
+
+function downloadGameFile(file) {
+  const type = /\.html$/i.test(file.name) ? 'text/html;charset=utf-8' : 'text/javascript;charset=utf-8';
+  downloadBlob(new Blob([file.content], { type }), file.name);
+}
+
+function downloadGameFiles(files) {
+  for (const file of files) downloadGameFile(file);
 }
 
 async function shareHtml(code, filename, shareNavigator = navigator) {
@@ -947,6 +1212,138 @@ async function shareHtml(code, filename, shareNavigator = navigator) {
     if (error?.name === 'AbortError') return 'cancelled';
     throw error;
   }
+}
+
+// Only explicitly marked OneHTML Lab copies can be removed from a document.
+// This parser reads source text; it never executes a library in the editor.
+function normalizedLibraryText(value) { return value.replace(/\r\n?/g, '\n'); }
+
+async function embeddedLibraryRows(code) {
+  const rows = [];
+  let comment = null;
+  for (const match of code.matchAll(libraryScriptTag)) {
+    // Keep the literal HTML comment opener out of the standalone script body.
+    if (match[0].startsWith('<' + '!--')) {
+      comment = { index: match.index, end: match.index + match[0].length, text: match[0].slice(4, -3) };
+      continue;
+    }
+    const adjacent = comment && /^\s*$/.test(code.slice(comment.end, match.index)) ? comment : null;
+    comment = null;
+    if (match[2] === undefined) continue;
+    const attributes = scriptAttributes(match[2]);
+    const value = name => decodeScriptUrl(attributes.get(`data-onehtml-${name}`)?.value || '');
+    const key = value('library');
+    if (!key || attributes.has('src')) continue;
+    const cached = libraryCache.get(key);
+    const catalog = libraryCatalogReference(value('catalog') || cached?.catalogKey || key);
+    const originalUrl = value('source') || cached?.localPath || cached?.sourceUrl || '';
+    const filename = packageFilename(value('filename') || libraryFilename({ filename: cached?.filename
+      || cached?.localPath?.split('/').pop() }, cached || { key }));
+    const bodyEnd = match[0].search(/<\/script\s*>$/i);
+    const source = match[0].slice(8 + match[2].length, bodyEnd).replace(/^\r?\n/, '').replace(/\r?\n$/, '');
+    const row = { index: match.index, end: match.index + match[0].length, start: match.index,
+      title: catalog?.title || filename, filename, key, originalUrl, source, license: '', cdn: '',
+      inlineAttributes: libraryInlineAttributes(attributes), reason: '' };
+    rows.push(row);
+    if (['async', 'defer', 'nomodule'].some(name => attributes.has(name))
+      || (attributes.get('type')?.value && !/^(?:text|application)\/javascript$/i.test(attributes.get('type').value))) {
+      row.reason = 'Этот способ подключения пока не поддерживается.';
+      continue;
+    }
+    const commentText = adjacent ? normalizedLibraryText(adjacent.text) : '';
+    const hash = await librarySourceHash(source);
+    if (value('bundle') === '1') {
+      const marker = `onehtml-library:${encodeURIComponent(key)}\n`;
+      const titleEnd = commentText.indexOf('\n', marker.length);
+      if (!commentText.startsWith(marker) || titleEnd < 0 || !commentText.slice(marker.length, titleEnd).endsWith(', MIT license:')) {
+        row.reason = 'Не найдена лицензия встроенной копии.';
+        continue;
+      }
+      row.license = commentText.slice(titleEnd + 1).trim();
+      if (!hash || !/^[a-f\d]{64}$/.test(value('sha256'))) {
+        row.reason = 'Недоступна проверка исходного кода библиотеки.';
+        continue;
+      }
+      if (hash !== value('sha256')) {
+        row.reason = 'Код библиотеки изменён — оставлен в HTML.';
+        continue;
+      }
+    } else {
+      if (!cached) { row.reason = 'Старая копия: нужна исходная библиотека в кэше.'; continue; }
+      const title = cached.title.replace(/--/g, '—').replace(/[<>]/g, '');
+      const expected = `\n${title}, MIT license:\n${cached.license}\n`;
+      if (normalizedLibraryText(source) !== normalizedLibraryText(cached.source)
+        || commentText !== normalizedLibraryText(expected)) {
+        row.reason = 'Исходный код или лицензия изменены — оставлены в HTML.';
+        continue;
+      }
+      row.license = cached.license;
+      if (!hash) { row.reason = 'Недоступна проверка исходного кода библиотеки.'; continue; }
+    }
+    if (!validLibraryAsset(row.source, row.license)) { row.reason = 'Не удалось проверить библиотеку и её MIT-лицензию.'; continue; }
+    row.start = adjacent.index;
+    row.assetKey = 'asset@' + await librarySourceHash(source + '\0' + row.license);
+    row.catalogKey = catalog?.key;
+    const requestedCdn = value('cdn') || (libraryReference(originalUrl)?.key === catalog?.key ? originalUrl : cached?.sourceUrl);
+    row.cdn = catalog ? (libraryReference(requestedCdn)?.key === catalog.key ? requestedCdn : catalog.url) : '';
+  }
+  return rows;
+}
+
+async function planLibraryExtraction(code, mode = 'cdn') {
+  if (!['cdn', 'files'].includes(mode)) throw new Error('Invalid library extraction mode');
+  const rows = await embeddedLibraryRows(code);
+  const names = new Set(libraryMatches(code).filter(ref => ref.filename).map(ref => packageFilename(ref.filename).toLowerCase()));
+  const assets = new Map();
+  let html = '';
+  let cursor = 0;
+  let count = 0;
+  for (const row of rows) {
+    if (row.reason || (mode === 'cdn' && !row.cdn)) {
+      row.note = row.reason || 'Нет CDN-адреса — выберите «Файлы рядом».';
+      row.removable = false;
+      continue;
+    }
+    let asset = assets.get(row.assetKey);
+    if (!asset) {
+      let name = row.filename;
+      let number = 2;
+      while (names.has(name.toLowerCase())) {
+        const suffix = `-${number++}.js`;
+        name = Array.from(row.filename.replace(/\.js$/i, '')).slice(0, 160 - suffix.length).join('') + suffix;
+      }
+      names.add(name.toLowerCase());
+      asset = { key: row.assetKey, title: row.title, source: row.source, license: row.license, filename: name,
+        catalogKey: row.catalogKey, sourceUrl: row.cdn, originalUrl: row.originalUrl,
+        bytes: new TextEncoder().encode(row.source).length, savedAt: Date.now() };
+      assets.set(asset.key, asset);
+    }
+    const url = mode === 'cdn' ? row.cdn : './' + encodeURIComponent(asset.filename);
+    const tag = `<script ${row.inlineAttributes ? row.inlineAttributes + ' ' : ''}src="${libraryAttribute(url)}" data-onehtml-asset="${asset.key}"><\/script>`;
+    html += code.slice(cursor, row.start) + tag;
+    cursor = row.end;
+    row.removable = true;
+    row.removedBytes = new Blob([code.slice(row.start, row.end)]).size - new Blob([tag]).size;
+    count += 1;
+  }
+  html += code.slice(cursor);
+  return { html, rows, assets: [...assets.values()], count, mode,
+    removedBytes: new Blob([code]).size - new Blob([html]).size };
+}
+
+async function retainExtractionAssets(plan) {
+  let persisted = true;
+  for (const entry of plan.assets) {
+    libraryCache.set(entry.key, entry);
+    try { await saveLibraryToCache(entry); }
+    catch { persisted = false; }
+  }
+  return persisted;
+}
+
+function extractedSavePreference(code) {
+  const refs = libraryMatches(code).filter(ref => ref.assetKey);
+  return refs.length ? (refs.some(ref => ref.localPath) ? 'files' : 'cdn') : null;
 }
 
 // One working draft and its history per browser origin. Keep the original draft
@@ -1119,10 +1516,17 @@ const libraryRequest = document.querySelector('#library-request');
 const libraryRequestText = document.querySelector('#library-request-text');
 const libraryDownloadButton = document.querySelector('#library-download');
 const librarySkipButton = document.querySelector('#library-skip');
+const libraryFilesButton = document.querySelector('#library-files-button');
+const libraryFiles = document.querySelector('#library-files');
 const expertTools = document.querySelector('#expert-tools');
 const importButton = document.querySelector('#import');
 const compareButton = document.querySelector('#compare');
 const historyButton = document.querySelector('#history-open');
+const extractionButton = document.querySelector('#library-extract-open');
+const extractionPanel = document.querySelector('#library-extraction');
+const extractionList = document.querySelector('#library-extraction-list');
+const extractionSummary = document.querySelector('#library-extraction-summary');
+const extractionApply = document.querySelector('#library-extract-apply');
 const historyView = document.querySelector('#history-view');
 const historyList = document.querySelector('#history-list');
 const currentHistory = document.querySelector('#history-current');
@@ -1150,12 +1554,21 @@ const exampleList = document.querySelector('#example-list');
 const copyDialog = document.querySelector('#copy-dialog');
 const copyTextField = document.querySelector('#copy-text');
 const saveDialog = document.querySelector('#save-dialog');
+const saveOptions = document.querySelector('#save-options');
+const saveFilesPanel = document.querySelector('#save-files');
+const saveFileList = document.querySelector('#save-file-list');
+const saveTitle = document.querySelector('#save-title');
+const confirmSaveButton = document.querySelector('#confirm-save');
+const cancelSaveButton = document.querySelector('#cancel-save');
 const clearDialog = document.querySelector('#clear-dialog');
 const replaceDialog = document.querySelector('#replace-dialog');
 const filenameField = document.querySelector('#filename');
 const saveLibrariesField = document.querySelector('#save-libraries');
 const saveLibrariesHint = document.querySelector('#save-libraries-hint');
 const saveLibrariesOption = document.querySelector('#save-libraries-option');
+const saveLibrariesLabel = document.querySelector('#save-libraries-label');
+const saveLibrariesMode = document.querySelector('#save-libraries-mode');
+let saveLibrariesDescription = null;
 let running = false;
 let readingClipboard = false;
 let replaceOnNextPaste = false;
@@ -1167,6 +1580,8 @@ let expertMode = storedSettings.expertMode;
 let networkAllowed = storedSettings.networkAllowed;
 let gameStorageAllowed = storedSettings.gameStorageAllowed;
 let pendingLibraryAction = null;
+let pendingLocalLibrarySource = null;
+let previewRequest = 0;
 let modeBusy = false;
 let draftAvailable = false;
 let draftSaveTimer;
@@ -1177,6 +1592,12 @@ let historyQueue = Promise.resolve();
 let pendingNativePaste = null;
 let comparisonOpen = false;
 let historyOpen = false;
+let extractionOpen = false;
+let extractionBusy = false;
+let extractionRequest = 0;
+let extractionMode = 'cdn';
+let extractionPlan = null;
+let extractionCode = '';
 let activeFrame = null;
 let activeBundledLibraries = [];
 let networkCount = 0;
@@ -1312,17 +1733,27 @@ function inform(text = '', error = false, persistent = false) {
 
 function hideLibraryRequest() {
   pendingLibraryAction = null;
+  pendingLocalLibrarySource = null;
   libraryRequest.hidden = true;
   libraryDownloadButton.disabled = false;
   librarySkipButton.disabled = false;
+  libraryFilesButton.disabled = false;
 }
 
 function requestLibraries(prepared, action) {
   if (!prepared.missingLibraries?.length) return false;
   pendingLibraryAction = { action, code: codeField.value, references: prepared.missingLibraries };
   const titles = prepared.missingLibraries.map(item => item.title).join(', ');
-  const hosts = [...new Set(prepared.missingLibraries.flatMap(item => [item.url.split('/')[2], item.licenseUrl.split('/')[2]]))].join(', ');
-  libraryRequestText.textContent = `Для автономной игры скачайте: ${titles}. Источники: ${hosts}; до 4 МБ на библиотеку. Код и лицензия войдут в сохраняемый HTML.`;
+  const downloadable = prepared.missingLibraries.filter(item => item.url && item.licenseUrl);
+  const local = prepared.missingLibraries.filter(item => item.localPath);
+  const hosts = [...new Set(downloadable.flatMap(item => [item.url.split('/')[2], item.licenseUrl.split('/')[2]]))].join(', ');
+  libraryRequestText.textContent = `Для автономной игры нужны: ${titles}.`
+    + (downloadable.length ? ` Скачать с ${hosts}; до 4 МБ на библиотеку.` : '')
+    + (local.length ? ` Локальный файл: ${local[0].localPath}. Можно выбрать JS и полный текст MIT-лицензии.` : '')
+    + ' Код и лицензия войдут в сохраняемый HTML.';
+  libraryDownloadButton.hidden = !downloadable.length;
+  libraryFilesButton.hidden = !local.length;
+  libraryFilesButton.textContent = 'Выбрать JS и лицензию';
   libraryRequest.hidden = false;
   return true;
 }
@@ -1332,21 +1763,84 @@ libraryDownloadButton.addEventListener('click', async () => {
   if (!pending) return;
   libraryDownloadButton.disabled = true;
   librarySkipButton.disabled = true;
+  libraryFilesButton.disabled = true;
   try {
     let persisted = true;
-    for (const reference of pending.references) {
-      if (libraryCache.has(reference.key)) continue;
+    for (const reference of pending.references.filter(item => item.url && item.licenseUrl)) {
+      if (cachedLibrary(reference)) continue;
       libraryRequestText.textContent = `Загружается ${reference.title} и её лицензия…`;
       persisted = await downloadLibrary(reference) && persisted;
     }
+    const prepared = await prepareGameHtml(pending.code);
+    if (pending !== pendingLibraryAction || pending.code !== codeField.value) return;
     hideLibraryRequest();
+    if (pending.code === codeField.value) requestLibraries(prepared, pending.action);
     inform(persisted
       ? 'Библиотеки сохранены в браузере. Повторите запуск, сохранение или отправку.'
       : 'Библиотеки загружены для этого сеанса, но браузер не сохранил их. Повторите действие.', !persisted, !persisted);
   } catch {
+    if (pending !== pendingLibraryAction) return;
     libraryRequestText.textContent = 'Не удалось скачать библиотеку и её лицензию. Проверьте сеть или доступ CDN к загрузке из локального файла.';
     libraryDownloadButton.disabled = false;
     librarySkipButton.disabled = false;
+    libraryFilesButton.disabled = false;
+  }
+});
+
+libraryFilesButton.addEventListener('click', () => {
+  if (!pendingLibraryAction) return;
+  libraryFiles.value = '';
+  libraryFiles.click();
+});
+
+libraryFiles.addEventListener('change', async () => {
+  const pending = pendingLibraryAction;
+  const reference = pending?.references.find(item => item.localPath && !cachedLibrary(item));
+  const files = Array.from(libraryFiles.files || []);
+  libraryFiles.value = '';
+  if (!pending || !reference || !files.length) return;
+  libraryDownloadButton.disabled = true;
+  librarySkipButton.disabled = true;
+  libraryFilesButton.disabled = true;
+  try {
+    if (pending.code !== codeField.value) throw new Error('Код изменился. Повторите действие.');
+    const scripts = files.filter(file => /\.js$/i.test(file.name));
+    const licenses = files.filter(file => !/\.js$/i.test(file.name));
+    if (scripts.length > 1 || licenses.length > 1) throw new Error('Выберите один JS-файл и один файл его MIT-лицензии.');
+    if (scripts.length) {
+      const file = scripts[0];
+      if (file.name.toLowerCase() !== reference.filename.toLowerCase()) throw new Error(`Нужен файл ${reference.filename}.`);
+      if (!file.size || file.size > maxLibraryBytes) throw new Error('JS-файл должен быть не больше 4 МБ.');
+      const source = await file.text();
+      pendingLocalLibrarySource = { key: reference.key, source };
+    }
+    const source = pendingLocalLibrarySource?.key === reference.key ? pendingLocalLibrarySource.source : '';
+    if (!source) throw new Error(`Сначала выберите ${reference.filename}.`);
+    let license = localLibraryLicense(source);
+    if (licenses.length) {
+      if (licenses[0].size > maxLicenseBytes) throw new Error('Файл лицензии должен быть не больше 64 КБ.');
+      license = await licenses[0].text();
+    }
+    if (!license) {
+      libraryRequestText.textContent = `${reference.filename} прочитан. Теперь выберите файл с полным текстом его MIT-лицензии (LICENSE, .txt или .md).`;
+      libraryFilesButton.textContent = 'Выбрать лицензию';
+      return;
+    }
+    if (!validLibraryAsset(source, license)) throw new Error('Нужны безопасный для встраивания JS-файл и полный текст MIT-лицензии с авторскими правами.');
+    if (pending !== pendingLibraryAction || pending.code !== codeField.value) return;
+    const persisted = await importLocalLibrary(reference, source, license);
+    const prepared = await prepareGameHtml(pending.code);
+    if (pending !== pendingLibraryAction || pending.code !== codeField.value) return;
+    hideLibraryRequest();
+    requestLibraries(prepared, pending.action);
+    inform(persisted ? 'Библиотека и лицензия сохранены. Повторите запуск, сохранение или отправку.'
+      : 'Библиотека доступна для этого сеанса. Повторите действие.', !persisted, !persisted);
+  } catch (error) {
+    if (pending === pendingLibraryAction) libraryRequestText.textContent = error.message || 'Не удалось прочитать библиотеку.';
+  } finally {
+    libraryDownloadButton.disabled = false;
+    librarySkipButton.disabled = false;
+    libraryFilesButton.disabled = false;
   }
 });
 
@@ -1359,7 +1853,7 @@ librarySkipButton.addEventListener('click', async () => {
     return;
   }
   try {
-    if (pending.action === 'run') startPreview(false);
+    if (pending.action === 'run') await startPreview(false);
     else if (pending.action === 'share') {
       const result = await shareHtml(pending.code, currentFilename);
       if (result === 'unsupported') inform('Передача HTML-файла здесь недоступна. Сохраните его и отправьте через приложение «Файлы».');
@@ -1602,16 +2096,128 @@ function historyTime(timestamp, current = false, migrated = false) {
   return time;
 }
 
+function formatLibrarySize(bytes) {
+  return bytes < 1024 ? `${bytes} Б` : `${(bytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} КБ`;
+}
+
+function closeLibraryExtraction() {
+  if (!extractionOpen) return;
+  extractionOpen = false;
+  extractionBusy = false;
+  extractionRequest += 1;
+  extractionPlan = null;
+  extractionCode = '';
+  extractionPanel.hidden = true;
+  extractionList.replaceChildren();
+  if (!running && !comparisonOpen && !historyOpen) codeField.hidden = false;
+  updateControls();
+}
+
+async function refreshLibraryExtraction() {
+  const request = ++extractionRequest;
+  const code = codeField.value;
+  extractionBusy = true;
+  extractionPlan = null;
+  extractionApply.disabled = true;
+  extractionSummary.textContent = 'Проверяю библиотеки…';
+  try {
+    const plan = await planLibraryExtraction(code, extractionMode);
+    if (!extractionOpen || request !== extractionRequest) return;
+    if (code !== codeField.value) { closeLibraryExtraction(); return; }
+    extractionPlan = plan;
+    extractionCode = code;
+    extractionList.replaceChildren();
+    for (const row of plan.rows) {
+      const item = document.createElement('li');
+      item.className = 'library-extraction-row';
+      item.classList.toggle('is-blocked', !row.removable);
+      const title = document.createElement('strong');
+      title.textContent = row.title;
+      item.append(title);
+      if (row.removable) {
+        const size = document.createElement('span');
+        size.className = 'extraction-size';
+        size.textContent = (row.removedBytes < 0 ? '+' : '−') + formatLibrarySize(Math.abs(row.removedBytes));
+        item.append(size);
+      } else {
+        const note = document.createElement('span');
+        note.className = 'extraction-note';
+        note.textContent = row.note;
+        item.append(note);
+      }
+      extractionList.append(item);
+    }
+    extractionSummary.textContent = plan.count ? `${plan.removedBytes < 0 ? 'Увеличение' : 'Уменьшение'}: ${formatLibrarySize(Math.abs(plan.removedBytes))}`
+      : plan.rows.length ? 'Нет библиотек для выбранного варианта.' : 'Встроенные копии OneHTML Lab не найдены.';
+    extractionApply.disabled = !plan.count;
+  } catch {
+    if (request === extractionRequest && extractionOpen) extractionSummary.textContent = 'Не удалось проверить библиотеки. Код сохранён.';
+  } finally {
+    if (request === extractionRequest) extractionBusy = false;
+  }
+}
+
+function openLibraryExtraction() {
+  if (!expertMode || running || modeBusy || readingClipboard) return;
+  if (extractionOpen) { closeLibraryExtraction(); return; }
+  closeHistory();
+  closeComparison();
+  hideLibraryRequest();
+  inform();
+  extractionOpen = true;
+  extractionMode = 'cdn';
+  extractionPlan = null;
+  extractionPanel.hidden = false;
+  codeField.hidden = true;
+  extractionPanel.querySelector('.library-extraction-body').scrollTop = 0;
+  for (const button of document.querySelectorAll('.library-extraction-mode')) button.setAttribute('aria-pressed', String(button.dataset.libraryMode === extractionMode));
+  updateControls();
+  void refreshLibraryExtraction();
+}
+
+extractionButton.addEventListener('click', openLibraryExtraction);
+document.querySelector('#library-extract-close').addEventListener('click', () => { closeLibraryExtraction(); extractionButton.focus(); });
+for (const button of document.querySelectorAll('.library-extraction-mode')) button.addEventListener('click', () => {
+  if (!extractionOpen || extractionMode === button.dataset.libraryMode) return;
+  extractionMode = button.dataset.libraryMode;
+  for (const tab of document.querySelectorAll('.library-extraction-mode')) tab.setAttribute('aria-pressed', String(tab.dataset.libraryMode === extractionMode));
+  void refreshLibraryExtraction();
+});
+extractionApply.addEventListener('click', async () => {
+  if (!extractionOpen || extractionBusy || !extractionPlan?.count || extractionCode !== codeField.value) return;
+  const plan = extractionPlan;
+  const code = extractionCode;
+  const request = extractionRequest;
+  extractionBusy = true;
+  extractionApply.disabled = true;
+  try {
+    const persisted = await retainExtractionAssets(plan);
+    if (!extractionOpen || request !== extractionRequest || code !== codeField.value) return;
+    closeLibraryExtraction();
+    replaceCode(plan.html, true);
+    extractionButton.focus();
+    inform(persisted ? 'Библиотеки заменены ссылками. Предыдущий вариант доступен в истории.'
+      : 'Библиотеки заменены ссылками и доступны сейчас. Сохраните HTML и JS до закрытия редактора.', !persisted, !persisted);
+  } catch {
+    if (request === extractionRequest && extractionOpen) {
+      extractionBusy = false;
+      extractionApply.disabled = false;
+      inform('Не удалось вынести библиотеки. Код остался в поле.', true);
+    }
+  }
+});
+
 function closeHistory() {
   if (!historyOpen) return;
   historyOpen = false;
   historyView.hidden = true;
-  if (!running && !comparisonOpen) codeField.hidden = false;
+  if (!running && !comparisonOpen && !extractionOpen) codeField.hidden = false;
   updateControls();
 }
 
 function openHistory() {
   if (historyOpen || running || modeBusy || !expertMode) return;
+  closeLibraryExtraction();
   closeComparison();
   renderHistory();
   codeField.hidden = true;
@@ -1699,12 +2305,13 @@ function closeComparison() {
   comparisonAdded.textContent = formatSymbolCount(0);
   comparisonRemoved.textContent = formatSymbolCount(0);
   diffContent.replaceChildren();
-  if (!running && !historyOpen) codeField.hidden = false;
+  if (!running && !historyOpen && !extractionOpen) codeField.hidden = false;
   updateControls();
 }
 
 function openComparison(baseline = latestHistory()) {
   if (!baseline || running) return;
+  closeLibraryExtraction();
   const versionDate = formatVersionDate(baseline.createdAt);
   comparisonSource.textContent = `Текущий код и версия ${versionDate.date} ${versionDate.time}`;
   const parts = codeDiff(baseline.code, codeField.value);
@@ -1831,6 +2438,7 @@ async function confirmReplacement(nextCode) {
 }
 
 function replaceCode(code, archive = false) {
+  closeLibraryExtraction();
   closeHistory();
   if (archive) archiveCode(codeField.value, code);
   else if (codeField.value !== code && historyState.verifiedCode !== null) {
@@ -1869,16 +2477,19 @@ async function readClipboardWithTimeout() {
 
 function updateControls() {
   const empty = !codeField.value.trim();
-  pasteButton.disabled = running || readingClipboard || modeBusy;
-  clearButton.disabled = !codeField.value || running || readingClipboard || modeBusy;
-  saveButton.disabled = empty;
-  shareButton.disabled = empty;
-  runButton.disabled = modeBusy || (!running && (empty || readingClipboard));
+  pasteButton.disabled = running || readingClipboard || modeBusy || extractionOpen;
+  clearButton.disabled = !codeField.value || running || readingClipboard || modeBusy || extractionOpen;
+  saveButton.disabled = empty || extractionOpen;
+  shareButton.disabled = empty || extractionOpen;
+  runButton.disabled = modeBusy || extractionOpen || (!running && (empty || readingClipboard));
   expertButton.disabled = modeBusy;
   expertTools.hidden = !expertMode;
-  importButton.disabled = modeBusy;
-  aiButton.disabled = modeBusy;
-  examplesButton.disabled = modeBusy;
+  importButton.disabled = modeBusy || extractionOpen;
+  aiButton.disabled = modeBusy || extractionOpen;
+  examplesButton.disabled = modeBusy || extractionOpen;
+  extractionButton.disabled = !expertMode || running || modeBusy || readingClipboard || (!extractionOpen && !/data-onehtml-library\s*=/i.test(codeField.value));
+  extractionButton.setAttribute('aria-pressed', String(extractionOpen));
+  extractionButton.title = extractionOpen ? 'Вернуться к редактору' : 'Вынести встроенные библиотеки в ссылки';
   document.querySelector('#prompt-change').disabled = empty;
   const baseline = latestHistory();
   compareButton.disabled = !expertMode || running || modeBusy || (!comparisonOpen && (!baseline || baseline.code === codeField.value));
@@ -1914,6 +2525,7 @@ function updateControls() {
 }
 
 codeField.addEventListener('input', () => {
+  closeLibraryExtraction();
   hideLibraryRequest();
   if (pendingNativePaste !== null) {
     archiveCode(pendingNativePaste, codeField.value);
@@ -1989,6 +2601,7 @@ pasteButton.addEventListener('click', async () => {
 });
 
 function stopPreview() {
+  previewRequest += 1;
   // Removing the document tears down its timers, media and event handlers.
   activeFrame = null;
   preview.replaceChildren();
@@ -2000,9 +2613,12 @@ function stopPreview() {
   updateLocalAccessHint();
 }
 
-function startPreview(replaceLibraries = true) {
+async function startPreview(replaceLibraries = true) {
+  const request = ++previewRequest;
+  const code = codeField.value;
   try {
-    const prepared = prepareGameHtml(codeField.value, replaceLibraries);
+    const prepared = await prepareGameHtml(code, replaceLibraries);
+    if (request !== previewRequest || code !== codeField.value) return;
     if (requestLibraries(prepared, 'run')) return;
     hideLibraryRequest();
     closeHistory();
@@ -2021,20 +2637,25 @@ function startPreview(replaceLibraries = true) {
     activeBundledLibraries = [...new Set(prepared.bundledLibraries || [])];
     updateLocalAccessHint();
   } catch {
+    if (request !== previewRequest) return;
     stopPreview();
     inform('Не удалось открыть игру. Код остался в поле.', true);
+  } finally {
+    if (request === previewRequest) updateControls();
   }
 }
 
-runButton.addEventListener('click', () => {
+runButton.addEventListener('click', async () => {
   inform();
   if (running) stopPreview();
-  else if (codeField.value.trim()) startPreview();
+  else if (codeField.value.trim()) await startPreview();
   updateControls();
 });
 
 expertButton.addEventListener('click', () => {
   if (modeBusy) return;
+  closeLibraryExtraction();
+  previewRequest += 1;
   const wasRunning = running;
   if (wasRunning) stopPreview();
   closeHistory();
@@ -2045,24 +2666,24 @@ expertButton.addEventListener('click', () => {
   updateControls();
 });
 
-networkButton.addEventListener('click', () => {
+networkButton.addEventListener('click', async () => {
   networkAllowed = !networkAllowed;
   const settingsSaved = saveSettings();
   if (running) {
     stopPreview();
-    startPreview();
+    await startPreview();
     if (running && settingsSaved) inform('Настройка интернета изменена. Игра перезапущена.');
   }
   updateControls();
 });
 
-storageButton.addEventListener('click', () => {
+storageButton.addEventListener('click', async () => {
   if (!expertMode || modeBusy) return;
   gameStorageAllowed = !gameStorageAllowed;
   const settingsSaved = saveSettings();
   if (running) {
     stopPreview();
-    startPreview();
+    await startPreview();
     if (running && settingsSaved) inform('Настройка хранилища изменена. Игра перезапущена.');
   }
   updateControls();
@@ -2154,23 +2775,61 @@ importFile.addEventListener('change', async () => {
   }
 });
 
-saveButton.addEventListener('click', () => {
-  const prepared = prepareGameHtml(codeField.value);
-  const available = Boolean(prepared.bundledLibraries?.length);
-  saveLibrariesField.disabled = !available;
-  saveLibrariesField.checked = available;
-  saveLibrariesOption.classList.toggle('is-disabled', !available);
-  if (available) {
-    const addedBytes = Math.max(0, new Blob([prepared.html]).size - new Blob([codeField.value]).size);
+function updateSaveLibrariesDescription() {
+  if (!saveLibrariesDescription) return;
+  const { available, addedBytes, missing } = saveLibrariesDescription;
+  const checked = available && saveLibrariesField.checked;
+  const separate = saveLibrariesMode.value === 'files';
+  saveLibrariesMode.hidden = !checked;
+  saveLibrariesMode.disabled = !checked;
+  saveLibrariesLabel.textContent = separate ? 'Сохранить библиотеки рядом с HTML' : 'Встроить библиотеки в файл';
+  if (checked && separate) {
+    saveLibrariesHint.textContent = 'HTML и JS скачаются отдельными файлами. Сохраните их в одну папку. Лицензии включены в JS.'
+      + (missing ? ' Неподготовленные библиотеки останутся по исходным ссылкам.' : '');
+  } else if (checked) {
     const size = (addedBytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 });
     saveLibrariesHint.textContent = `С библиотеками размер увеличится примерно на ${size} КБ; редактировать файл будет сложнее.`
-      + (prepared.missingLibraries?.length ? ' Остальные библиотеки останутся по внешним ссылкам.' : '');
+      + (missing ? ' Остальные библиотеки останутся по внешним ссылкам.' : '');
   } else {
-    saveLibrariesHint.textContent = prepared.missingLibraries?.length
-      ? 'Библиотек ещё нет в редакторе. Запустите игру, чтобы скачать их.'
-      : 'В этом коде нет библиотек для встраивания.';
+    saveLibrariesHint.textContent = available ? 'Сохранится код из поля как есть, без изменений.'
+      : missing ? 'Библиотек ещё нет в редакторе. Запустите игру, чтобы скачать их или выбрать локальные файлы.'
+        : 'В этом коде нет библиотек для встраивания.';
   }
+}
+
+saveLibrariesField.addEventListener('change', updateSaveLibrariesDescription);
+saveLibrariesMode.addEventListener('change', updateSaveLibrariesDescription);
+
+function updateSaveViewport() {
+  const viewport = window.visualViewport;
+  saveDialog.style.setProperty('--save-viewport-height', `${viewport?.height || window.innerHeight}px`);
+  saveDialog.style.setProperty('--save-viewport-top', `${viewport?.offsetTop || 0}px`);
+}
+window.visualViewport?.addEventListener('resize', updateSaveViewport);
+window.visualViewport?.addEventListener('scroll', updateSaveViewport);
+window.addEventListener('resize', updateSaveViewport);
+
+saveButton.addEventListener('click', async () => {
+  const code = codeField.value;
+  const prepared = await prepareGameHtml(code);
+  if (code !== codeField.value) return;
+  saveOptions.hidden = false;
+  saveFilesPanel.hidden = true;
+  saveFileList.replaceChildren();
+  saveTitle.textContent = 'Сохранить HTML';
+  confirmSaveButton.hidden = false;
+  cancelSaveButton.textContent = 'Отмена';
+  const available = Boolean(prepared.bundledLibraries?.length);
+  saveLibrariesField.disabled = !available;
+  const preference = extractedSavePreference(code);
+  saveLibrariesField.checked = available && preference !== 'cdn';
+  saveLibrariesMode.value = preference === 'files' ? 'files' : 'inline';
+  saveLibrariesOption.classList.toggle('is-disabled', !available);
+  saveLibrariesDescription = { available, missing: Boolean(prepared.missingLibraries?.length),
+    addedBytes: Math.max(0, new Blob([prepared.html]).size - new Blob([code]).size) };
+  updateSaveLibrariesDescription();
   filenameField.value = 'game.html';
+  updateSaveViewport();
   saveDialog.showModal();
   filenameField.focus();
   filenameField.select();
@@ -2194,7 +2853,9 @@ shareButton.addEventListener('click', async () => {
   if (!codeField.value.trim()) return;
   inform();
   try {
-    const prepared = prepareGameHtml(codeField.value);
+    const code = codeField.value;
+    const prepared = await prepareGameHtml(code);
+    if (code !== codeField.value) return;
     if (requestLibraries(prepared, 'share')) return;
     hideLibraryRequest();
     const result = await shareHtml(prepared.html, currentFilename);
@@ -2205,20 +2866,57 @@ shareButton.addEventListener('click', async () => {
     inform('Не удалось отправить HTML-файл. Сохраните его и отправьте через приложение «Файлы».', true);
   }
 });
-document.querySelector('#cancel-save').addEventListener('click', () => saveDialog.close());
-document.querySelector('#save-form').addEventListener('submit', event => {
+cancelSaveButton.addEventListener('click', () => saveDialog.close());
+saveDialog.addEventListener('close', () => saveFileList.replaceChildren());
+function showSaveFiles(files) {
+  saveOptions.hidden = true;
+  saveFilesPanel.hidden = false;
+  saveTitle.textContent = 'Скачать файлы';
+  confirmSaveButton.hidden = true;
+  cancelSaveButton.textContent = 'Закрыть';
+  saveFileList.replaceChildren();
+  for (const file of files) {
+    const item = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = file.name;
+    button.setAttribute('aria-label', `Скачать ${file.name}`);
+    button.addEventListener('click', () => {
+      try { downloadGameFile(file); }
+      catch { inform('Не удалось передать файл браузеру. Попробуйте скачать его ещё раз.', true); }
+    });
+    item.append(button);
+    saveFileList.append(item);
+  }
+  cancelSaveButton.focus();
+}
+document.querySelector('#save-form').addEventListener('submit', async event => {
   event.preventDefault();
+  if (!saveFilesPanel.hidden || confirmSaveButton.disabled) return;
+  confirmSaveButton.disabled = true;
   try {
     const filename = htmlFilename(filenameField.value);
-    const prepared = prepareGameHtml(codeField.value, !saveLibrariesField.disabled && saveLibrariesField.checked);
+    const code = codeField.value;
+    const withLibraries = !saveLibrariesField.disabled && saveLibrariesField.checked;
+    const separate = withLibraries && saveLibrariesMode.value === 'files';
+    const prepared = separate ? await prepareGameFiles(code, filename) : await prepareGameHtml(code, withLibraries);
+    if (code !== codeField.value || !saveDialog.open) return;
     hideLibraryRequest();
-    downloadHtml(prepared.html, filename);
-    currentFilename = filename;
-    saveDialog.close();
-    inform('Файл передан браузеру для сохранения.');
+    if (separate) {
+      showSaveFiles(prepared.files);
+      downloadGameFiles(prepared.files);
+      currentFilename = prepared.files[0].name;
+    } else {
+      downloadHtml(prepared.html, filename);
+      currentFilename = filename;
+      saveDialog.close();
+      inform('Файл передан браузеру для сохранения.');
+    }
   } catch {
-    saveDialog.close();
-    inform('Не удалось передать файл браузеру. Код остался в поле.', true);
+    if (saveFilesPanel.hidden) saveDialog.close();
+    inform('Не удалось передать все файлы браузеру. Код остался в поле.', true);
+  } finally {
+    confirmSaveButton.disabled = false;
   }
 });
 updateControls();

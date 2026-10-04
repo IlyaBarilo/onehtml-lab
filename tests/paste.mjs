@@ -108,7 +108,7 @@ assert.equal(clear.clearDialog.open, false);
 
 clear.code.value = '<html>игра</html>';
 clear.code.listeners.input();
-clear.run.listeners.click();
+await clear.run.listeners.click();
 assert(clear.clear.disabled);
 clear.clear.listeners.click();
 assert.equal(clear.clearDialog.open, false);
