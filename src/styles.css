@@ -80,6 +80,11 @@ h1 span { font-weight: 450; color: #637e9f; }
 }
 .import-button:hover { background: #dceaff; }
 .import-button:disabled { opacity: .5; cursor: default; }
+.library-request { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 14px; padding: 9px max(14px, env(safe-area-inset-right)) 9px max(14px, env(safe-area-inset-left)); border-bottom: 1px solid #c8d9ef; background: #edf5ff; color: #25466d; font-size: 14px; line-height: 1.4; }
+.library-request-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.library-request button { min-height: 40px; padding: 7px 12px; border: 1px solid #b8ceed; border-radius: 6px; background: #fff; color: #245aa5; font-weight: 600; }
+.library-request button:first-child { background: #2d6cdf; border-color: #2d6cdf; color: #fff; }
+.library-request button:disabled { opacity: .5; }
 .expert-icon-button {
   width: 44px;
   height: 44px;
@@ -205,7 +210,12 @@ dialog::backdrop { background: #11284a40; }
 h2 { margin: 0 0 22px; font-size: 20px; font-weight: 600; letter-spacing: -.4px; }
 .dialog-copy { margin: 0; color: #526b8c; font-size: 14px; line-height: 1.5; }
 dialog label { display: block; font-size: 13px; color: #60748f; margin-bottom: 8px; }
-dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #b9cbe3; border-radius: 6px; background: #fcfdff; color: #253d5a; font-size: 16px; }
+dialog input:not([type="checkbox"]) { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid #b9cbe3; border-radius: 6px; background: #fcfdff; color: #253d5a; font-size: 16px; }
+dialog .save-library-option { display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 10px 0 0; color: #253d5a; font-size: 14px; cursor: pointer; }
+.save-library-option input { width: 20px; height: 20px; flex: 0 0 20px; margin: 0; accent-color: #2d6cdf; }
+.save-library-hint { margin: 0; color: #60748f; font-size: 13px; line-height: 1.4; }
+.save-library-option.is-disabled, .save-library-option.is-disabled + .save-library-hint { opacity: .45; cursor: default; }
+#save-dialog .dialog-actions { margin-top: 16px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
 .dialog-actions button { min-width: 84px; min-height: 44px; padding: 10px 16px; border: 1px solid #d0ddef; border-radius: 6px; background: #f0f5fc; color: #3e5d84; font-size: 14px; font-weight: 550; }
 .dialog-actions button:hover { background: #e1ebfa; }
@@ -305,6 +315,8 @@ dialog input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px so
 @media (max-width: 360px) {
   .toolbar { padding-right: 4px; padding-left: 4px; }
   .actions { gap: 0; }
+  .expert-actions #import { width: 44px; min-width: 44px; padding: 0; }
+  .expert-actions #import span { display: none; }
   .expert-resource-actions .import-button { padding-right: 7px; padding-left: 7px; }
   .service-list li { grid-template-columns: 1fr; gap: 0; padding: 6px 0; }
   .service-links { gap: 4px 12px; }

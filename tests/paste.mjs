@@ -32,6 +32,8 @@ async function createApp(clipboard) {
     setTimeout(fn, ms) { timers.push({ fn, ms }); return timers.length; },
     clearTimeout: () => {},
     makePreview: () => ({}),
+    prepareGameHtml: code => ({ html: code, bundledLibraries: [], missingLibraries: [] }),
+    loadLibraryCache: async () => {},
     gameStorageSnapshot: () => [],
     registerGameStorageFrame: () => {},
     handleGameStorageMessage: () => false,

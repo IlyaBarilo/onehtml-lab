@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Тест FPS, касаний и библиотек</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; color: #eaf2ff; background: #091321; }
+    * { box-sizing: border-box; }
+    body { margin: 0; height: 100vh; height: 100dvh; overflow: hidden; }
+    button, input { font: inherit; }
+    button { min-height: 44px; border: 1px solid #2f4561; border-radius: 10px; background: #17283e; color: inherit; cursor: pointer; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #82bdff; outline-offset: 2px; }
+    button:disabled { cursor: default; opacity: .5; }
+    .app { display: flex; flex-direction: column; height: 100%; }
+    header, footer { flex: none; padding: 12px 16px; background: #101e30; }
+    .heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    h1 { margin: 0; font-size: clamp(18px, 2.5vw, 24px); }
+    .tag { color: #9eb5d2; font-size: 13px; white-space: nowrap; }
+    .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .metric { background: #17283e; border-radius: 10px; padding: 8px 12px; }
+    .metric strong { display: block; font-size: clamp(25px, 4vw, 34px); line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .metric span { display: block; margin-top: 4px; font-size: 13px; color: #a9bdd7; }
+    #fps { color: #7cdbb0; }
+    .modes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+    .mode { padding: 7px 10px; text-align: left; }
+    .mode b { display: block; font-size: 15px; }
+    .mode small { display: block; margin-top: 3px; color: #b4c6de; font-size: 12px; }
+    .library-size { display: block; margin-top: 3px; color: #b4c6de; font-size: 12px; font-variant-numeric: tabular-nums; }
+    .mode[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; box-shadow: inset 0 0 0 1px #7fb8fc; }
+    .mode[data-state="ready"] small { color: #91e6bb; }
+    .mode[data-state="failed"] small { color: #ffadb0; }
+    #stage { flex: 1; position: relative; overflow: hidden; min-height: 120px; touch-action: none; background: #091321; }
+    #scene, #touches { position: absolute; inset: 0; }
+    #scene canvas { display: block; }
+    #touches { width: 100%; height: 100%; pointer-events: none; }
+    .stage-note { position: absolute; top: 0; left: 0; right: 0; padding: 10px 12px 22px; pointer-events: none; color: #dce9fb; font-size: 14px; background: linear-gradient(#091321ed, #09132100); }
+    #message { display: block; color: #ffb2ae; margin-top: 5px; }
+    #paused { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; background: #09132188; font-size: 28px; font-weight: 700; }
+    #paused[hidden] { display: none; }
+    .controls { display: flex; align-items: center; gap: 10px; }
+    .load { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .load label { font-size: 14px; white-space: nowrap; }
+    #load-value { font-variant-numeric: tabular-nums; }
+    input[type="range"] { width: 100%; min-width: 30px; height: 44px; margin: 0; accent-color: #88bbff; }
+    .controls button { padding: 0 14px; font-size: 14px; }
+    .details { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 13px; color: #a9bdd7; font-variant-numeric: tabular-nums; }
+    @media (max-width: 600px) {
+      header, footer { padding: 10px; }
+      .tag { font-size: 12px; }
+      .metric { padding: 8px 10px; }
+      .modes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+      .mode:first-child { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; }
+      .mode:first-child small { margin: 0; }
+      .load { flex-wrap: wrap; gap: 0; }
+      .load label { width: 100%; }
+      input[type="range"] { height: 34px; }
+      .controls { gap: 8px; }
+      .controls button { padding: 0 10px; }
+      .details { flex-wrap: wrap; gap: 4px 12px; }
+    }
+    @media (max-height: 500px) and (min-width: 601px) {
+      header, footer { padding: 6px 12px; }
+      .heading { margin-bottom: 5px; }
+      .metric { padding: 5px 10px; }
+      .metric strong { font-size: 24px; }
+      .modes { margin-top: 6px; gap: 6px; }
+    }
+    @media (max-height: 580px) and (max-width: 600px) {
+      header, footer { padding: 6px 8px; }
+      .heading { margin-bottom: 5px; }
+      .metric { padding: 5px 8px; }
+      .metric strong { font-size: 23px; }
+      .mode { padding: 5px 8px; min-height: 40px; }
+      .modes { margin-top: 6px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div class="heading"><h1>FPS и касания</h1><span class="tag">Нажимайте на поле</span></div>
+      <div class="metrics" aria-label="Показатели теста">
+        <div class="metric"><strong id="fps">—</strong><span>FPS</span></div>
+        <div class="metric"><strong id="tap-count">0</strong><span>Нажатий</span></div>
+        <div class="metric"><strong id="finger-count">0 / 0</strong><span>Касаний / максимум</span></div>
+      </div>
+      <nav class="modes" aria-label="Выбор теста">
+        <button class="mode" data-mode="canvas" data-state="ready" aria-pressed="true"><b>Canvas 2D</b><small>Без библиотек</small></button>
+        <button class="mode" data-mode="three128" aria-pressed="false" disabled><b>Three.js r128</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
+        <button class="mode" data-mode="three160" aria-pressed="false" disabled><b>Three.js r160</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
+        <button class="mode" data-mode="matter" aria-pressed="false" disabled><b>Matter.js 0.20</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
+        <button class="mode" data-mode="phaser" aria-pressed="false" disabled><b>Phaser 3.90</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
+      </nav>
+    </header>
+    <section id="stage" aria-label="Поле теста: нажимайте или касайтесь несколькими пальцами">
+      <div id="scene"></div>
+      <canvas id="touches" aria-hidden="true"></canvas>
+      <div class="stage-note"><span id="scene-name">Движущиеся частицы · Canvas 2D</span><span id="message" role="status"></span></div>
+      <div id="paused" hidden>Пауза</div>
+    </section>
+    <footer>
+      <div class="controls">
+        <div class="load"><label for="load">Объектов: <b id="load-value">120</b></label><input id="load" type="range" min="20" max="10000" step="20" value="120"></div>
+        <button id="pause" aria-pressed="false">Пауза</button>
+        <button id="reset">Сброс</button>
+      </div>
+      <div class="details"><span id="frame-time">Кадр: —</span><span id="input-time">До кадра: —</span><span id="coordinates">Координаты: —</span></div>
+    </footer>
+  </main>
+  <script>
+    (() => {
+      'use strict';
+      const $ = id => document.getElementById(id);
+      const stage = $('stage');
+      const host = $('scene');
+      const overlay = $('touches');
+      const touchContext = overlay.getContext('2d');
+      const colors = ['#70b3ff', '#7be0b0', '#ffc777', '#c59dff', '#ff8f9f'];
+      const libraries = {};
+      const externalLibraryButtons = new Map();
+      const sizeFormat = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
+      const labels = {
+        canvas: 'Движущиеся частицы · Canvas 2D',
+        three128: 'Вращающиеся кубы · Three.js r128',
+        three160: 'Вращающиеся кубы · Three.js r160',
+        matter: 'Физика падающих шаров · Matter.js',
+        phaser: 'Движущиеся частицы · Phaser'
+      };
+      const pointers = new Map();
+      let rings = [];
+      let width = 1, height = 1, ratio = 1;
+      let mode = 'canvas', objectCount = 120, activeScene = null;
+      let paused = false, tapCount = 0, peakPointers = 0, pendingInput = null;
+      let frameStart = 0, frames = 0, lastFrame = null;
+      let generation = 0;
+
+      function resetFps() {
+        frameStart = performance.now();
+        frames = 0;
+        lastFrame = null;
+        $('fps').textContent = '—';
+        $('frame-time').textContent = 'Кадр: —';
+      }
+
+      function frameRendered(time) {
+        if (frames === 0) frameStart = time;
+        frames += 1;
+        if (pendingInput !== null) {
+          $('input-time').textContent = `До кадра: ${Math.max(0, time - pendingInput).toFixed(1)} мс`;
+          pendingInput = null;
+        }
+        const elapsed = time - frameStart;
+        if (elapsed >= 800) {
+          const fps = (frames - 1) * 1000 / elapsed;
+          $('fps').textContent = String(Math.round(fps));
+          $('frame-time').textContent = `Кадр: ${(1000 / fps).toFixed(1)} мс`;
+          frames = 1;
+          frameStart = time;
+        }
+        drawTouches(time);
+      }
+
+      function drawTouches(time) {
+        touchContext.clearRect(0, 0, width, height);
+        rings = rings.filter(ring => time - ring.time < 650);
+        for (const ring of rings) {
+          const progress = (time - ring.time) / 650;
+          touchContext.globalAlpha = 1 - progress;
+          touchContext.strokeStyle = '#fff';
+          touchContext.lineWidth = 2;
+          touchContext.beginPath();
+          touchContext.arc(ring.x, ring.y, 12 + progress * 45, 0, Math.PI * 2);
+          touchContext.stroke();
+        }
+        touchContext.globalAlpha = 1;
+        for (const point of pointers.values()) {
+          touchContext.fillStyle = '#b9deff66';
+          touchContext.strokeStyle = '#d9edff';
+          touchContext.lineWidth = 2;
+          touchContext.beginPath();
+          touchContext.arc(point.x, point.y, 24, 0, Math.PI * 2);
+          touchContext.fill();
+          touchContext.stroke();
+        }
+      }
+
+      function makeCanvas() {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        host.append(canvas);
+        const context = canvas.getContext('2d');
+        context.scale(ratio, ratio);
+        return context;
+      }
+
+      function particles() {
+        return Array.from({ length: objectCount }, (_, index) => ({
+          x: Math.random() * width, y: Math.random() * height,
+          vx: (Math.random() - .5) * 180, vy: (Math.random() - .5) * 180,
+          r: 3 + Math.random() * 5, color: colors[index % colors.length]
+        }));
+      }
+
+      function moveParticle(particle, seconds) {
+        particle.x += particle.vx * seconds;
+        particle.y += particle.vy * seconds;
+        if (particle.x < particle.r || particle.x > width - particle.r) particle.vx *= -1;
+        if (particle.y < particle.r || particle.y > height - particle.r) particle.vy *= -1;
+        particle.x = Math.max(particle.r, Math.min(width - particle.r, particle.x));
+        particle.y = Math.max(particle.r, Math.min(height - particle.r, particle.y));
+      }
+
+      function canvasScene() {
+        const context = makeCanvas();
+        const items = particles();
+        return {
+          tick(delta) {
+            context.clearRect(0, 0, width, height);
+            for (const item of items) {
+              moveParticle(item, delta / 1000);
+              context.fillStyle = item.color;
+              context.beginPath();
+              context.arc(item.x, item.y, item.r, 0, Math.PI * 2);
+              context.fill();
+            }
+          },
+          tap(x, y) {
+            for (const item of items) {
+              const dx = item.x - x, dy = item.y - y, distance = Math.max(20, Math.hypot(dx, dy));
+              item.vx += dx / distance * 60;
+              item.vy += dy / distance * 60;
+            }
+          },
+          dispose() {}
+        };
+      }
+
+      function threeScene(Three) {
+        const renderer = new Three.WebGLRenderer({ antialias: false });
+        renderer.setPixelRatio(ratio);
+        renderer.setSize(width, height);
+        renderer.setClearColor(0x091321);
+        const scene = new Three.Scene();
+        const camera = new Three.PerspectiveCamera(50, width / height, .1, 100);
+        camera.position.z = 15;
+        const geometry = new Three.BoxGeometry(.55, .55, .55);
+        const materials = colors.map(color => new Three.MeshBasicMaterial({ color }));
+        const cubes = [];
+        const columns = Math.ceil(Math.sqrt(objectCount * width / height));
+        const rows = Math.ceil(objectCount / columns);
+        const spanY = 11;
+        const spanX = spanY * width / height;
+        for (let index = 0; index < objectCount; index += 1) {
+          const cube = new Three.Mesh(geometry, materials[index % materials.length]);
+          cube.position.set(((index % columns + .5) / columns - .5) * spanX, ((Math.floor(index / columns) + .5) / rows - .5) * spanY, 0);
+          const scale = Math.min(1, spanX / columns, spanY / rows);
+          cube.scale.setScalar(scale);
+          cube.rotation.set(Math.random() * 3, Math.random() * 3, 0);
+          scene.add(cube);
+          cubes.push(cube);
+        }
+        host.append(renderer.domElement);
+        let kick = 0;
+        return {
+          tick(delta) {
+            const step = delta / 1000;
+            kick *= Math.exp(-step * 3);
+            cubes.forEach((cube, index) => {
+              cube.rotation.x += step * (1 + kick);
+              cube.rotation.y += step * (1.4 + kick);
+              cube.position.z = Math.sin(cube.rotation.y + index) * .7;
+            });
+            renderer.render(scene, camera);
+          },
+          tap() { kick = 5; },
+          dispose() {
+            geometry.dispose();
+            materials.forEach(material => material.dispose());
+            renderer.dispose();
+            renderer.forceContextLoss();
+          }
+        };
+      }
+
+      function matterScene(Matter) {
+        const context = makeCanvas();
+        const engine = Matter.Engine.create({ enableSleeping: true });
+        const walls = [
+          Matter.Bodies.rectangle(width / 2, height + 20, width + 80, 40, { isStatic: true }),
+          Matter.Bodies.rectangle(-20, height / 2, 40, height * 3, { isStatic: true }),
+          Matter.Bodies.rectangle(width + 20, height / 2, 40, height * 3, { isStatic: true })
+        ];
+        const items = Array.from({ length: objectCount }, (_, index) => {
+          const body = Matter.Bodies.circle(12 + Math.random() * Math.max(1, width - 24), Math.random() * height - height / 2, 4 + Math.random() * 4, { restitution: .75, friction: .02 });
+          body.testColor = colors[index % colors.length];
+          return body;
+        });
+        Matter.Composite.add(engine.world, [...walls, ...items]);
+        let accumulator = 0;
+        return {
+          tick(delta) {
+            accumulator = Math.min(accumulator + delta, 1000 / 20);
+            while (accumulator >= 1000 / 60) {
+              Matter.Engine.update(engine, 1000 / 60);
+              accumulator -= 1000 / 60;
+            }
+            context.clearRect(0, 0, width, height);
+            for (const body of items) {
+              context.fillStyle = body.testColor;
+              context.beginPath();
+              context.arc(body.position.x, body.position.y, body.circleRadius, 0, Math.PI * 2);
+              context.fill();
+            }
+          },
+          tap(x, y) {
+            items.forEach(body => {
+              Matter.Sleeping.set(body, false);
+              const dx = body.position.x - x;
+              Matter.Body.setVelocity(body, { x: Math.max(-8, Math.min(8, dx / 30)), y: -8 - Math.random() * 6 });
+            });
+          },
+          dispose() { Matter.Composite.clear(engine.world, false); Matter.Engine.clear(engine); }
+        };
+      }
+
+      function phaserScene(Phaser, sceneGeneration) {
+        let game;
+        let items = [];
+        let shapes = [];
+        const scene = {
+          create() {
+            items = particles();
+            shapes = items.map(item => this.add.circle(item.x, item.y, item.r, Number.parseInt(item.color.slice(1), 16)));
+          },
+          update(_time, delta) {
+            if (paused || document.hidden || sceneGeneration !== generation) return;
+            const seconds = Math.min(delta, 40) / 1000;
+            items.forEach((item, index) => { moveParticle(item, seconds); shapes[index].setPosition(item.x, item.y); });
+          }
+        };
+        game = new Phaser.Game({
+          type: Phaser.CANVAS, width, height, parent: host,
+          backgroundColor: '#091321', banner: false,
+          audio: { noAudio: true }, input: { mouse: false, touch: false, keyboard: false },
+          fps: { target: 60, smoothStep: false }, scene,
+          callbacks: { postBoot(bootedGame) {
+            bootedGame.events.on('postrender', () => {
+              if (!paused && !document.hidden && sceneGeneration === generation) frameRendered(performance.now());
+            });
+          } }
+        });
+        return {
+          ownLoop: true,
+          tap(x, y) {
+            items.forEach(item => {
+              const dx = item.x - x, dy = item.y - y, distance = Math.max(20, Math.hypot(dx, dy));
+              item.vx += dx / distance * 60;
+              item.vy += dy / distance * 60;
+            });
+          },
+          pause(value) { if (value) game.loop.sleep(); else game.loop.wake(); },
+          dispose() { game.destroy(true); game.loop.wake(); }
+        };
+      }
+
+      function startScene(nextMode = mode) {
+        generation += 1;
+        activeScene?.dispose();
+        activeScene = null;
+        host.replaceChildren();
+        mode = nextMode;
+        $('message').textContent = '';
+        try {
+          if (mode === 'canvas') activeScene = canvasScene();
+          else if (mode.startsWith('three')) activeScene = threeScene(libraries[mode]);
+          else if (mode === 'matter') activeScene = matterScene(libraries.matter);
+          else activeScene = phaserScene(libraries.phaser, generation);
+        } catch (error) {
+          const failedMode = mode;
+          mode = 'canvas';
+          host.replaceChildren();
+          activeScene = canvasScene();
+          $('message').textContent = `${failedMode}: ${error.message}. Продолжаем в Canvas 2D.`;
+        }
+        activeScene.pause?.(paused || document.hidden);
+        $('scene-name').textContent = labels[mode];
+        document.querySelectorAll('.mode').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mode === mode)));
+        resetFps();
+      }
+
+      function resize() {
+        const bounds = stage.getBoundingClientRect();
+        width = Math.max(1, Math.round(bounds.width));
+        height = Math.max(1, Math.round(bounds.height));
+        ratio = Math.min(devicePixelRatio || 1, 2);
+        overlay.width = Math.round(width * ratio);
+        overlay.height = Math.round(height * ratio);
+        touchContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+        pointers.clear();
+        $('finger-count').textContent = `0 / ${peakPointers}`;
+        startScene();
+      }
+
+      function showLibrarySize(button, bytes) {
+        const field = button.querySelector('.library-size');
+        const known = Number.isFinite(bytes) && bytes > 0;
+        const size = bytes < 1024 ? `${sizeFormat.format(bytes)} Б` : `${sizeFormat.format(bytes / 1024)} КБ`;
+        field.textContent = known ? `Размер: ${size}` : 'Размер: (нет данных)';
+        field.title = known ? `${sizeFormat.format(bytes)} байт кода; без лицензии и сетевого сжатия` : '';
+      }
+
+      if ('PerformanceObserver' in window) {
+        try {
+          const observer = new PerformanceObserver(list => {
+            for (const entry of list.getEntries()) {
+              const button = externalLibraryButtons.get(entry.name);
+              if (button) showLibrarySize(button, entry.decodedBodySize);
+            }
+          });
+          observer.observe({ type: 'resource', buffered: true });
+        } catch {}
+      }
+
+      window.registerLabLibrary = (id, library) => {
+        const button = document.querySelector(`[data-mode="${id}"]`);
+        libraries[id] = library;
+        button.disabled = !library;
+        button.dataset.state = library ? 'ready' : 'failed';
+        const libraryScript = document.currentScript?.previousElementSibling;
+        const embedded = libraryScript?.tagName === 'SCRIPT' && !libraryScript.hasAttribute('src');
+        button.querySelector('small').textContent = library ? (embedded ? 'Встроена в HTML' : 'Загружена с CDN') : 'Не загружена';
+        if (library && embedded) {
+          showLibrarySize(button, new TextEncoder().encode(libraryScript.textContent).byteLength);
+        } else if (library && libraryScript?.src) {
+          externalLibraryButtons.set(libraryScript.src, button);
+          const entry = performance.getEntriesByName(libraryScript.src, 'resource').slice(-1)[0];
+          showLibrarySize(button, entry?.decodedBodySize);
+        } else showLibrarySize(button, null);
+      };
+
+      stage.addEventListener('pointerdown', event => {
+        event.preventDefault();
+        const bounds = stage.getBoundingClientRect();
+        const point = { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
+        pointers.set(event.pointerId, point);
+        stage.setPointerCapture(event.pointerId);
+        tapCount += 1;
+        peakPointers = Math.max(peakPointers, pointers.size);
+        const time = performance.now();
+        pendingInput = paused ? null : time;
+        rings.push({ ...point, time });
+        $('tap-count').textContent = String(tapCount);
+        $('finger-count').textContent = `${pointers.size} / ${peakPointers}`;
+        $('coordinates').textContent = `Координаты: ${Math.round(point.x)}, ${Math.round(point.y)}`;
+        if (!paused) activeScene?.tap(point.x, point.y);
+        drawTouches(performance.now());
+      });
+      stage.addEventListener('pointermove', event => {
+        if (!pointers.has(event.pointerId)) return;
+        const bounds = stage.getBoundingClientRect();
+        pointers.set(event.pointerId, { x: event.clientX - bounds.left, y: event.clientY - bounds.top });
+        drawTouches(performance.now());
+      });
+      for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) stage.addEventListener(name, event => {
+        pointers.delete(event.pointerId);
+        $('finger-count').textContent = `${pointers.size} / ${peakPointers}`;
+        drawTouches(performance.now());
+      });
+      document.querySelectorAll('.mode').forEach(button => button.addEventListener('click', () => startScene(button.dataset.mode)));
+      $('load').addEventListener('input', event => { $('load-value').textContent = event.target.value; });
+      $('load').addEventListener('change', event => { objectCount = Number(event.target.value); startScene(); });
+      $('pause').addEventListener('click', () => {
+        paused = !paused;
+        $('pause').textContent = paused ? 'Продолжить' : 'Пауза';
+        $('pause').setAttribute('aria-pressed', String(paused));
+        $('paused').hidden = !paused;
+        activeScene.pause?.(paused);
+        pendingInput = null;
+        resetFps();
+      });
+      $('reset').addEventListener('click', () => {
+        tapCount = 0; peakPointers = pointers.size; rings = []; pendingInput = null;
+        $('tap-count').textContent = '0';
+        $('finger-count').textContent = `${pointers.size} / ${peakPointers}`;
+        $('input-time').textContent = 'До кадра: —';
+        $('coordinates').textContent = 'Координаты: —';
+        startScene();
+      });
+      document.addEventListener('visibilitychange', () => {
+        pointers.clear();
+        $('finger-count').textContent = `0 / ${peakPointers}`;
+        activeScene.pause?.(paused || document.hidden);
+        resetFps();
+      });
+      new ResizeObserver(resize).observe(stage);
+      resize();
+      function animate(time) {
+        requestAnimationFrame(animate);
+        if (paused || document.hidden || activeScene?.ownLoop) return;
+        const delta = lastFrame === null ? 1000 / 60 : Math.min(40, time - lastFrame);
+        lastFrame = time;
+        activeScene?.tick(delta);
+        frameRendered(performance.now());
+      }
+      requestAnimationFrame(animate);
+    })();
+  </script>
+  <!-- Exact classic builds let OneHTML Lab replace these links and include their MIT licenses on export. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>registerLabLibrary('three128', window.THREE?.REVISION === '128' ? window.THREE : null);</script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script>registerLabLibrary('three160', window.THREE?.REVISION === '160' ? window.THREE : null);</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js"></script>
+  <script>registerLabLibrary('matter', window.Matter?.version === '0.20.0' ? window.Matter : null);</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.90.0/phaser.min.js"></script>
+  <script>registerLabLibrary('phaser', window.Phaser?.VERSION === '3.90.0' ? window.Phaser : null);</script>
+</body>
+</html>

@@ -8,6 +8,10 @@ const runButton = document.querySelector('#run');
 const expertButton = document.querySelector('#expert-toggle');
 const networkButton = document.querySelector('#network-toggle');
 const storageButton = document.querySelector('#storage-toggle');
+const libraryRequest = document.querySelector('#library-request');
+const libraryRequestText = document.querySelector('#library-request-text');
+const libraryDownloadButton = document.querySelector('#library-download');
+const librarySkipButton = document.querySelector('#library-skip');
 const expertTools = document.querySelector('#expert-tools');
 const importButton = document.querySelector('#import');
 const compareButton = document.querySelector('#compare');
@@ -42,6 +46,9 @@ const saveDialog = document.querySelector('#save-dialog');
 const clearDialog = document.querySelector('#clear-dialog');
 const replaceDialog = document.querySelector('#replace-dialog');
 const filenameField = document.querySelector('#filename');
+const saveLibrariesField = document.querySelector('#save-libraries');
+const saveLibrariesHint = document.querySelector('#save-libraries-hint');
+const saveLibrariesOption = document.querySelector('#save-libraries-option');
 let running = false;
 let readingClipboard = false;
 let replaceOnNextPaste = false;
@@ -52,6 +59,7 @@ const storedSettings = readSettings();
 let expertMode = storedSettings.expertMode;
 let networkAllowed = storedSettings.networkAllowed;
 let gameStorageAllowed = storedSettings.gameStorageAllowed;
+let pendingLibraryAction = null;
 let modeBusy = false;
 let draftAvailable = false;
 let draftSaveTimer;
@@ -63,6 +71,7 @@ let pendingNativePaste = null;
 let comparisonOpen = false;
 let historyOpen = false;
 let activeFrame = null;
+let activeBundledLibraries = [];
 let networkCount = 0;
 let networkBytes = 0;
 let runtimeErrorReport = '';
@@ -157,17 +166,17 @@ function updateLocalAccessHint() {
   const hints = [];
   if (gameStorageAllowed && localApisUsed.has('localStorage')) {
     hints.push(gameStoragePersistent
-      ? 'Игра использует виртуальный localStorage. Данные игры сохраняются отдельно от редактора.'
+      ? 'Игра использует виртуальный localStorage.'
       : 'Игра использует виртуальный localStorage, но браузер не сохранил данные. Они доступны только до закрытия страницы.');
   }
   const blockedApis = [...localApisUsed].filter(api => api !== 'localStorage' || !gameStorageAllowed);
   if (blockedApis.length) hints.push(`Игра обратилась к ${blockedApis.join(', ')}. В изолированном предпросмотре доступ к этим данным браузера ограничен; попросите ИИ обработать отсутствие доступа.`);
   const hint = hints.join(' ');
-  if (runtimeError.hidden) {
-    localAccessStatus.textContent = hint;
-    localAccessStatus.hidden = !hint;
-  } else {
-    localAccessStatus.hidden = true;
+  const libraryHint = activeBundledLibraries.length ? `Встроено: ${activeBundledLibraries.join(', ')}.` : '';
+  const statusHint = [runtimeError.hidden ? hint : '', libraryHint].filter(Boolean).join(' ');
+  localAccessStatus.textContent = statusHint;
+  localAccessStatus.hidden = !statusHint;
+  if (!runtimeError.hidden) {
     runtimeErrorMessage.textContent = `${runtimeErrorMessageBase}${hint ? ` ${hint}` : ''}`;
     runtimeErrorReport = `${runtimeErrorReportBase}${hint ? `\n${hint}` : ''}`;
   }
@@ -178,6 +187,7 @@ function clearRuntimeError() {
   runtimeErrorReportBase = '';
   runtimeErrorMessageBase = '';
   runtimeErrorCount = 0;
+  activeBundledLibraries = [];
   localApisUsed.clear();
   runtimeErrorMessage.textContent = '';
   runtimeError.hidden = true;
@@ -192,6 +202,66 @@ function inform(text = '', error = false, persistent = false) {
   status.classList.toggle('error', error);
   if (text && !error && !persistent) statusTimeout = setTimeout(() => { status.hidden = true; }, 6000);
 }
+
+function hideLibraryRequest() {
+  pendingLibraryAction = null;
+  libraryRequest.hidden = true;
+  libraryDownloadButton.disabled = false;
+  librarySkipButton.disabled = false;
+}
+
+function requestLibraries(prepared, action) {
+  if (!prepared.missingLibraries?.length) return false;
+  pendingLibraryAction = { action, code: codeField.value, references: prepared.missingLibraries };
+  const titles = prepared.missingLibraries.map(item => item.title).join(', ');
+  const hosts = [...new Set(prepared.missingLibraries.flatMap(item => [item.url.split('/')[2], item.licenseUrl.split('/')[2]]))].join(', ');
+  libraryRequestText.textContent = `Для автономной игры скачайте: ${titles}. Источники: ${hosts}; до 4 МБ на библиотеку. Код и лицензия войдут в сохраняемый HTML.`;
+  libraryRequest.hidden = false;
+  return true;
+}
+
+libraryDownloadButton.addEventListener('click', async () => {
+  const pending = pendingLibraryAction;
+  if (!pending) return;
+  libraryDownloadButton.disabled = true;
+  librarySkipButton.disabled = true;
+  try {
+    let persisted = true;
+    for (const reference of pending.references) {
+      if (libraryCache.has(reference.key)) continue;
+      libraryRequestText.textContent = `Загружается ${reference.title} и её лицензия…`;
+      persisted = await downloadLibrary(reference) && persisted;
+    }
+    hideLibraryRequest();
+    inform(persisted
+      ? 'Библиотеки сохранены в браузере. Повторите запуск, сохранение или отправку.'
+      : 'Библиотеки загружены для этого сеанса, но браузер не сохранил их. Повторите действие.', !persisted, !persisted);
+  } catch {
+    libraryRequestText.textContent = 'Не удалось скачать библиотеку и её лицензию. Проверьте сеть или доступ CDN к загрузке из локального файла.';
+    libraryDownloadButton.disabled = false;
+    librarySkipButton.disabled = false;
+  }
+});
+
+librarySkipButton.addEventListener('click', async () => {
+  const pending = pendingLibraryAction;
+  if (!pending) return;
+  hideLibraryRequest();
+  if (pending.code !== codeField.value) {
+    inform('Код изменился. Повторите действие с актуальным кодом.', true);
+    return;
+  }
+  try {
+    if (pending.action === 'run') startPreview(false);
+    else if (pending.action === 'share') {
+      const result = await shareHtml(pending.code, currentFilename);
+      if (result === 'unsupported') inform('Передача HTML-файла здесь недоступна. Сохраните его и отправьте через приложение «Файлы».');
+    }
+  } catch {
+    inform('Не удалось выполнить действие. Код остался в поле.', true);
+  }
+  updateControls();
+});
 
 async function copyOrSelect(text, successMessage) {
   try {
@@ -254,7 +324,7 @@ function setExampleCategory(category) {
   }
   document.querySelector('#example-platform-tabs').hidden = category === 'fix';
   document.querySelector('#example-guide').textContent = category === 'fix'
-    ? 'Это исходные игры ИИ с ошибками. Откройте копию, запустите и попробуйте исправить её. Для 3D нужен интернет.'
+    ? 'Это исходные игры ИИ с ошибками. Откройте копию, запустите и попробуйте исправить её. При первом запуске загрузите Three.js; сохранённая копия работает без интернета игры.'
     : 'Откройте копию примера, измените код и сохраните свою версию.';
   renderExamples();
 }
@@ -737,6 +807,7 @@ function updateControls() {
 }
 
 codeField.addEventListener('input', () => {
+  hideLibraryRequest();
   if (pendingNativePaste !== null) {
     archiveCode(pendingNativePaste, codeField.value);
     pendingNativePaste = null;
@@ -818,14 +889,19 @@ function stopPreview() {
   codeField.hidden = false;
   running = false;
   resetNetworkStatus();
+  activeBundledLibraries = [];
+  updateLocalAccessHint();
 }
 
-function startPreview() {
+function startPreview(replaceLibraries = true) {
   try {
+    const prepared = prepareGameHtml(codeField.value, replaceLibraries);
+    if (requestLibraries(prepared, 'run')) return;
+    hideLibraryRequest();
     closeHistory();
     closeComparison();
     clearRuntimeError();
-    const frame = makePreview(codeField.value, previewNetworkAllowed(), gameStorageAllowed ? gameStorageSnapshot() : null);
+    const frame = makePreview(prepared.html, previewNetworkAllowed(), gameStorageAllowed ? gameStorageSnapshot() : null);
     resetNetworkStatus();
     codeField.blur();
     codeField.hidden = true;
@@ -835,6 +911,8 @@ function startPreview() {
     activeFrame = frame;
     if (gameStorageAllowed) registerGameStorageFrame(frame);
     running = true;
+    activeBundledLibraries = [...new Set(prepared.bundledLibraries || [])];
+    updateLocalAccessHint();
   } catch {
     stopPreview();
     inform('Не удалось открыть игру. Код остался в поле.', true);
@@ -864,6 +942,7 @@ networkButton.addEventListener('click', () => {
   networkAllowed = !networkAllowed;
   const settingsSaved = saveSettings();
   if (running) {
+    stopPreview();
     startPreview();
     if (running && settingsSaved) inform('Настройка интернета изменена. Игра перезапущена.');
   }
@@ -875,6 +954,7 @@ storageButton.addEventListener('click', () => {
   gameStorageAllowed = !gameStorageAllowed;
   const settingsSaved = saveSettings();
   if (running) {
+    stopPreview();
     startPreview();
     if (running && settingsSaved) inform('Настройка хранилища изменена. Игра перезапущена.');
   }
@@ -919,6 +999,7 @@ async function restoreStartupDraft() {
     inform('Автосохранение недоступно. Сохраните код HTML-файлом.', true, true);
   } finally {
     clearTimeout(timer);
+    await loadLibraryCache();
     modeBusy = false;
     codeField.disabled = false;
     updateControls();
@@ -967,6 +1048,21 @@ importFile.addEventListener('change', async () => {
 });
 
 saveButton.addEventListener('click', () => {
+  const prepared = prepareGameHtml(codeField.value);
+  const available = Boolean(prepared.bundledLibraries?.length);
+  saveLibrariesField.disabled = !available;
+  saveLibrariesField.checked = available;
+  saveLibrariesOption.classList.toggle('is-disabled', !available);
+  if (available) {
+    const addedBytes = Math.max(0, new Blob([prepared.html]).size - new Blob([codeField.value]).size);
+    const size = (addedBytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 });
+    saveLibrariesHint.textContent = `С библиотеками размер увеличится примерно на ${size} КБ; редактировать файл будет сложнее.`
+      + (prepared.missingLibraries?.length ? ' Остальные библиотеки останутся по внешним ссылкам.' : '');
+  } else {
+    saveLibrariesHint.textContent = prepared.missingLibraries?.length
+      ? 'Библиотек ещё нет в редакторе. Запустите игру, чтобы скачать их.'
+      : 'В этом коде нет библиотек для встраивания.';
+  }
   filenameField.value = 'game.html';
   saveDialog.showModal();
   filenameField.focus();
@@ -991,7 +1087,10 @@ shareButton.addEventListener('click', async () => {
   if (!codeField.value.trim()) return;
   inform();
   try {
-    const result = await shareHtml(codeField.value, currentFilename);
+    const prepared = prepareGameHtml(codeField.value);
+    if (requestLibraries(prepared, 'share')) return;
+    hideLibraryRequest();
+    const result = await shareHtml(prepared.html, currentFilename);
     if (result === 'unsupported') {
       inform('Передача HTML-файла здесь недоступна. Сохраните его и отправьте через приложение «Файлы».');
     }
@@ -1004,7 +1103,9 @@ document.querySelector('#save-form').addEventListener('submit', event => {
   event.preventDefault();
   try {
     const filename = htmlFilename(filenameField.value);
-    downloadHtml(codeField.value, filename);
+    const prepared = prepareGameHtml(codeField.value, !saveLibrariesField.disabled && saveLibrariesField.checked);
+    hideLibraryRequest();
+    downloadHtml(prepared.html, filename);
     currentFilename = filename;
     saveDialog.close();
     inform('Файл передан браузеру для сохранения.');

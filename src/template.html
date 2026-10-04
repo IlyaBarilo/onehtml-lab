@@ -51,7 +51,7 @@
     </header>
     <div id="expert-tools" class="expert-tools" hidden>
       <div class="expert-actions">
-        <button id="import" class="import-button" type="button" title="Открыть HTML-файл с устройства"><!-- ICON:import --> <span>Открыть HTML</span></button>
+        <button id="import" class="import-button" type="button" aria-label="Открыть HTML-файл с устройства" title="Открыть HTML-файл с устройства"><!-- ICON:import --> <span>Открыть HTML</span></button>
         <button id="compare" class="expert-icon-button" type="button" aria-label="Сравнить с последней прошлой версией" aria-pressed="false" title="Сравнить с последней прошлой версией" disabled><!-- ICON:compare --></button>
         <button id="history-open" class="expert-icon-button" type="button" aria-label="История версий" title="История версий"><!-- ICON:restore --></button>
         <button id="storage-toggle" class="expert-icon-button storage-button" type="button" aria-label="Виртуальное хранилище игры" aria-pressed="true" title="Хранилище игры включено — нажмите, чтобы выключить"><span id="storage-on-icon"><!-- ICON:storage-on --></span><span id="storage-off-icon" hidden><!-- ICON:storage-off --></span></button>
@@ -64,6 +64,10 @@
       <input id="import-file" type="file" accept=".html,.htm,text/html" hidden>
     </div>
     <p id="status" class="notice" role="status" aria-live="polite" hidden></p>
+    <div id="library-request" class="library-request" role="group" aria-label="Загрузка библиотеки" hidden>
+      <span id="library-request-text"></span>
+      <div class="library-request-actions"><button id="library-download" type="button">Скачать</button><button id="library-skip" type="button">Без подмены</button></div>
+    </div>
     <div id="network-status" class="network-status" hidden>
       <span id="network-message" role="status" aria-live="polite">Игра использует интернет</span>
       <span id="network-metrics">Файлов: <span id="network-count">0</span> · учтено: <span id="network-kb">(нет данных)</span></span>
@@ -95,6 +99,8 @@
       <h2 id="save-title">Сохранить HTML</h2>
       <label for="filename">Имя файла</label>
       <input id="filename" name="filename" value="game.html" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <label id="save-libraries-option" class="save-library-option" for="save-libraries"><input id="save-libraries" type="checkbox" aria-describedby="save-libraries-hint"><span>Встроить библиотеки в файл</span></label>
+      <p id="save-libraries-hint" class="save-library-hint"></p>
       <div class="dialog-actions"><button id="cancel-save" type="button">Отмена</button><button class="primary" type="submit">ОК</button></div>
     </form>
   </dialog>

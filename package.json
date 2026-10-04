@@ -13,6 +13,7 @@
     "test:unit": "node tests/unit.mjs",
     "test:stage7": "node tests/stage7.mjs",
     "test:game-storage": "node tests/game-storage.mjs",
+    "test:libraries": "node tests/library-bundle.mjs",
     "test:e2e": "node tests/browser.mjs"
   },
   "devDependencies": {
