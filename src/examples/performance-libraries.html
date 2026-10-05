@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Тест FPS, касаний и библиотек</title>
+  <title>Тест работы библиотек</title>
   <style>
     :root { color-scheme: dark; font-family: system-ui, sans-serif; color: #eaf2ff; background: #091321; }
     * { box-sizing: border-box; }
@@ -14,9 +14,27 @@
     button:disabled { cursor: default; opacity: .5; }
     .app { display: flex; flex-direction: column; height: 100%; }
     header, footer { flex: none; padding: 12px 16px; background: #101e30; }
-    .heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
     h1 { margin: 0; font-size: clamp(18px, 2.5vw, 24px); }
-    .tag { color: #9eb5d2; font-size: 13px; white-space: nowrap; }
+    #scenario { width: 140px; min-height: 36px; padding: 5px 8px; border: 1px solid #3b5676; border-radius: 8px; background: #17283e; color: #eaf2ff; font: inherit; font-size: 14px; }
+    .library-description { margin: 8px 0 0; color: #b8cce5; font-size: 13px; line-height: 1.4; }
+    .description-row { display: flex; align-items: center; gap: 8px; }
+    .description-row p { flex: 1; }
+    #info-toggle { flex: none; width: 32px; min-height: 32px; margin-top: 8px; padding: 0; font-size: 20px; }
+    .info-panel { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; background: #101e30; touch-action: auto; }
+    .info-panel[hidden] { display: none; }
+    .info-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid #2f4561; }
+    .info-heading h2 { margin: 0; font-size: 18px; }
+    #info-close { width: 44px; font-size: 24px; }
+    .info-body { overflow-y: auto; padding: 0 14px 16px; font-size: 15px; line-height: 1.5; }
+    .info-body p { margin: 12px 0; }
+    .app.info-open .metrics, .app.info-open .modes, .app.info-open .description-row, .app.info-open footer { display: none; }
+    .app.info-open .heading { margin-bottom: 0; }
+    .app.phaser-expanded header, .app.phaser-expanded .details { display: none; }
+    #phaser-expand { width: 44px; padding: 0; display: grid; place-items: center; }
+    #phaser-expand svg { width: 22px; height: 22px; }
+    #scene-stats { position: absolute; bottom: 8px; left: 10px; padding: 5px 8px; border-radius: 6px; background: #091321cc; pointer-events: none; font-size: 14px; }
+    .load[hidden] { display: none; }
     .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
     .metric { background: #17283e; border-radius: 10px; padding: 8px 12px; }
     .metric strong { display: block; font-size: clamp(25px, 4vw, 34px); line-height: 1.1; font-variant-numeric: tabular-nums; }
@@ -33,6 +51,21 @@
     #stage { flex: 1; position: relative; overflow: hidden; min-height: 120px; touch-action: none; background: #091321; }
     #scene, #touches { position: absolute; inset: 0; }
     #scene canvas { display: block; }
+    .phaser-hud { position: absolute; top: 36px; left: 10px; right: 10px; z-index: 1; display: flex; justify-content: space-between; gap: 6px; pointer-events: none; font-size: 14px; font-weight: 650; text-shadow: 0 1px 3px #071b29; }
+    .phaser-hud span { padding: 4px 8px; border-radius: 7px; background: #071b29c9; }
+    .phaser-pad { position: absolute; bottom: 8px; left: 10px; right: 10px; z-index: 1; display: flex; gap: 6px; }
+    .phaser-pad button { width: 48px; min-height: 44px; background: #10293de8; border-color: #83cbb6; font-size: 22px; user-select: none; touch-action: none; }
+    .phaser-pad button[data-phaser-action="jump"] { margin-left: auto; width: 94px; font-size: 15px; }
+    .phaser-pad button[data-phaser-action="demo"] { width: 62px; margin-left: 4px; font-size: 13px; }
+    .phaser-pad button[aria-pressed="true"] { color: #143329; background: #94ebc6; }
+    .phaser-result { position: absolute; inset: 70px 12px 60px; z-index: 1; display: grid; place-content: center; gap: 6px; text-align: center; pointer-events: none; font-size: 15px; background: #091e31d9; border: 1px solid #88dfc1; border-radius: 12px; }
+    .phaser-result b { font-size: 22px; }
+    .phaser-result[hidden] { display: none; }
+    .phaser-compact .phaser-pad { display: none; }
+    .phaser-compact .phaser-hud { top: 30px; font-size: 12px; }
+    .phaser-compact .phaser-hud span { padding: 2px 5px; }
+    .phaser-compact .phaser-result { inset: 4px 8px; font-size: 12px; }
+    .phaser-compact .phaser-result b { font-size: 16px; }
     #touches { width: 100%; height: 100%; pointer-events: none; }
     .stage-note { position: absolute; top: 0; left: 0; right: 0; padding: 10px 12px 22px; pointer-events: none; color: #dce9fb; font-size: 14px; background: linear-gradient(#091321ed, #09132100); }
     #message { display: block; color: #ffb2ae; margin-top: 5px; }
@@ -47,17 +80,23 @@
     .details { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 13px; color: #a9bdd7; font-variant-numeric: tabular-nums; }
     @media (max-width: 600px) {
       header, footer { padding: 10px; }
-      .tag { font-size: 12px; }
+      h1 { font-size: 18px; }
+      #scenario { width: 132px; }
       .metric { padding: 8px 10px; }
-      .modes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-      .mode:first-child { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; }
-      .mode:first-child small { margin: 0; }
+      .modes { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+      .modes::-webkit-scrollbar { height: 6px; }
+      .modes::-webkit-scrollbar-thumb { background: #4c7097; border-radius: 3px; }
+      .mode { flex: 0 0 150px; min-height: 70px; }
+      .mode:first-child { flex-basis: 110px; }
+      .mode:first-child small { margin-top: 3px; }
       .load { flex-wrap: wrap; gap: 0; }
       .load label { width: 100%; }
       input[type="range"] { height: 34px; }
       .controls { gap: 8px; }
       .controls button { padding: 0 10px; }
-      .details { flex-wrap: wrap; gap: 4px 12px; }
+      .details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; }
+      .details span { white-space: nowrap; }
+      .details span:last-child { grid-column: 1 / -1; }
     }
     @media (max-height: 500px) and (min-width: 601px) {
       header, footer { padding: 6px 12px; }
@@ -68,22 +107,36 @@
     }
     @media (max-height: 580px) and (max-width: 600px) {
       header, footer { padding: 6px 8px; }
-      .heading { margin-bottom: 5px; }
-      .metric { padding: 5px 8px; }
-      .metric strong { font-size: 23px; }
-      .mode { padding: 5px 8px; min-height: 40px; }
-      .modes { margin-top: 6px; }
+      header { padding-top: 4px; padding-bottom: 4px; }
+      .heading { margin-bottom: 3px; }
+      #scenario { min-height: 32px; }
+      .library-description { margin-top: 6px; }
+      .metric { padding: 4px 8px; }
+      .metric strong { font-size: 21px; }
+      .metric span { margin-top: 2px; font-size: 12px; }
+      .mode { flex: 0 0 138px; padding: 5px 8px; min-height: 64px; }
+      .library-size { margin-top: 2px; }
+      .modes { display: flex; overflow-x: auto; margin-top: 6px; padding-bottom: 4px; }
+      .mode:first-child { display: block; flex-basis: 110px; }
+      .mode:first-child small { margin-top: 3px; }
+      input[type="range"] { height: 28px; }
+      .details { margin-top: 4px; }
+      #stage { min-height: 64px; }
+    }
+    @media (max-height: 360px) {
+      body { overflow-y: auto; }
+      .app { min-height: 380px; }
     }
   </style>
 </head>
 <body>
   <main class="app">
     <header>
-      <div class="heading"><h1>FPS и касания</h1><span class="tag">Нажимайте на поле</span></div>
+      <div class="heading"><h1>Тест библиотек</h1><select id="scenario" aria-label="Режим теста для всех движков"><option value="showcase">Возможности</option><option value="compare">Сравнение</option><option value="load">Нагрузка</option></select></div>
       <div class="metrics" aria-label="Показатели теста">
         <div class="metric"><strong id="fps">—</strong><span>FPS</span></div>
         <div class="metric"><strong id="tap-count">0</strong><span>Нажатий</span></div>
-        <div class="metric"><strong id="finger-count">0 / 0</strong><span>Касаний / максимум</span></div>
+        <div class="metric" title="Текущее и максимальное число одновременных касаний"><strong id="finger-count">0 / 0</strong><span>Касания/макс.</span></div>
       </div>
       <nav class="modes" aria-label="Выбор теста">
         <button class="mode" data-mode="canvas" data-state="ready" aria-pressed="true"><b>Canvas 2D</b><small>Без библиотек</small></button>
@@ -92,12 +145,15 @@
         <button class="mode" data-mode="matter" aria-pressed="false" disabled><b>Matter.js 0.20</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="phaser" aria-pressed="false" disabled><b>Phaser 3.90</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
       </nav>
+      <div class="description-row"><p id="library-description" class="library-description"></p><button id="info-toggle" aria-label="Подробно о выбранной библиотеке" aria-expanded="false" aria-controls="library-info">i</button></div>
     </header>
     <section id="stage" aria-label="Поле теста: нажимайте или касайтесь несколькими пальцами">
       <div id="scene"></div>
       <canvas id="touches" aria-hidden="true"></canvas>
-      <div class="stage-note"><span id="scene-name">Движущиеся частицы · Canvas 2D</span><span id="message" role="status"></span></div>
+      <div class="stage-note"><span id="scene-name">Набережная · коснитесь сцены, чтобы сменить день и ночь</span><span id="message" role="status"></span></div>
+      <div id="scene-stats" hidden></div>
       <div id="paused" hidden>Пауза</div>
+      <section id="library-info" class="info-panel" aria-label="Описание библиотеки" hidden><div class="info-heading"><h2 id="info-title"></h2><button id="info-close" aria-label="Закрыть описание">×</button></div><div id="info-body" class="info-body"></div></section>
     </section>
     <footer>
       <div class="controls">
@@ -127,13 +183,57 @@
         matter: 'Физика падающих шаров · Matter.js',
         phaser: 'Движущиеся частицы · Phaser'
       };
+      const descriptions = {
+        canvas: 'Canvas 2D — рисование 2D без игровой библиотеки.',
+        three128: 'Three.js r128 — 3D-графика, старая версия.',
+        three160: 'Three.js r160 — 3D-графика, более поздняя версия.',
+        matter: 'Matter.js — физика: масса, столкновения и связи.',
+        phaser: 'Phaser — готовый набор систем для 2D-игры.'
+      };
+      const explanations = {
+        canvas: [
+          'Canvas 2D встроен в браузер. На нём можно рисовать интерфейсы, персонажей, фон, диаграммы и целые 2D-игры без дополнительных библиотек. Он подходит для небольших игр и собственных визуальных эффектов.',
+          'Canvas выполняет команды рисования. Правила игры, движение, столкновения, камеры, смену уровней и учёт очков разработчик организует сам. Сложную игру тоже можно написать, но готовые игровые системы придётся создавать вручную.',
+          'Возможности: набережная с многослойным фоном, водой, движущимся катером и переходом дня в ночь. Сравнение: шар и блоки рисуются Canvas, а упрощённый расчёт движения и столкновений написан в самом примере.'
+        ],
+        three128: [
+          'Three.js нужен для настоящей 3D-сцены: объёмных моделей, перспективы, камеры, света, теней и материалов. При движении камеры меняется вид всех граней, а освещение рассчитывается для поверхностей. Это удобно для 3D-игр, просмотра моделей и пространственных сцен.',
+          'r128 и r160 — разные выпуски одной библиотеки. r128 оставлен для проверки игр со старым кодом и старым API. В r160 изменились некоторые API, обработка цвета и настройки освещения; перенос старой игры может требовать правок. Более поздний выпуск не делает любую игру автоматически лучше или быстрее.',
+          'Обе версии показывают одну модель марсохода с одинаковыми материалами, камерой и согласованными настройками света и цвета. Разный цвет модели не используется для обозначения версии. В режиме «Сравнение» шар и башня те же, но объём, свет и тени рассчитывает Three.js; движение остаётся упрощённым расчётом примера. Three.js сам по себе не является движком столкновений.'
+        ],
+        three160: [
+          'Three.js даёт готовую основу для 3D: геометрию, камеры, материалы, свет, тени и работу с графическим процессором. Он полезен, когда нужен объём и пространственное движение, а не только плоский рисунок.',
+          'r160 — более поздний выпуск, чем r128, с изменениями API, цветового пространства и освещения. r128 нужен для совместимости со старым кодом; r160 позволяет проверить работу примера на другом поколении библиотеки. Эти номера не означают два разных вида игр, и r160 здесь не обозначен как самая новая версия.',
+          'Марсоход и параметры сцены общие для r128/r160, включая согласованную обработку цвета и света. Сравнивайте совместимость, размер и FPS на своём устройстве. В режиме «Сравнение» Three.js строит объёмные шар и блоки с тенями; физику для них рассчитывает код примера.'
+        ],
+        matter: [
+          'Matter.js рассчитывает 2D-физику твёрдых тел: падение, массу, трение, удары, вращение, связи и шарниры. Он нужен для головоломок с конструкциями, катапульт, маятников, падающих башен и механизмов, где поведение предметов должно зависеть от их взаимодействия.',
+          'Matter.js не рисует красивую игру вместо автора и не организует уровни, очки или персонажей. В этом примере изображение рисует Canvas, а библиотека рассчитывает движение тел и связи между ними. Для простой анимации без физики Matter.js не требуется.',
+          'Возможности: маятники, гибкий мост и перетаскивание тел. Сравнение: тот же шар ударяет ту же башню, но столкновения, наклон и вращение блоков рассчитывает Matter.js. Именно поведение после удара показывает разницу с упрощённым расчётом Canvas.'
+        ],
+        phaser: [
+          'Phaser — набор готовых систем для 2D-игры: игровой цикл, сцены, персонажи и картинки, анимации, ввод, камеры, таймеры, частицы, звуки и физика. Он полезен для аркад, платформеров и игр с несколькими уровнями, множеством объектов и игровыми событиями.',
+          'Его преимущество — объём готовой работы: можно настроить столкновение, анимацию, появление объектов по таймеру и эффект получения предмета, вместо того чтобы отдельно строить эти системы на Canvas. Правила, оформление и содержание игры всё равно задаёт автор. Такую же картинку можно нарисовать без Phaser; библиотека помогает организовать поведение всей игры. Кроме простой Arcade Physics, Phaser поддерживает и Matter для сложной физики.',
+          'Возможности: платформер «Лесная станция». Камера сопровождает робота через лес, переправу и станцию; дальний фон движется медленнее переднего. Arcade Physics рассчитывает прыжки, столкновения, перевозку на движущихся платформах и встречи с противниками. Анимации оживляют персонажей, таймер включает лазер, частицы и всплывающие очки отмечают сбор кристаллов. Есть двойной прыжок, здоровье, контрольная точка и завершение уровня. Демо проходит уровень автоматически; кнопки направления и прыжка либо стрелки/A/D и пробел передают управление вам. В низком поле робот бежит сам, касание вызывает прыжок. Сравнение: тот же шар и башня используют встроенную Matter-физику Phaser и частицы при ударе. Для вращающихся конструкций нужна Matter, а для прямоугольных платформ и персонажей подходит Arcade Physics.'
+        ]
+      };
+      const showcaseLabels = {
+        canvas: 'Набережная · касание переключает день и ночь',
+        three128: 'Марсоход · проведите по сцене, чтобы повернуть камеру',
+        three160: 'Марсоход · проведите по сцене, чтобы повернуть камеру',
+        matter: 'Механизмы · перетаскивайте тела или толкните маятники',
+        phaser: 'Лесная станция · двойной прыжок'
+      };
       const pointers = new Map();
       let rings = [];
       let width = 1, height = 1, ratio = 1;
       let mode = 'canvas', objectCount = 120, activeScene = null;
+      let scenario = 'showcase', infoOpen = false;
+      let phaserExpanded = false;
       let paused = false, tapCount = 0, peakPointers = 0, pendingInput = null;
       let frameStart = 0, frames = 0, lastFrame = null;
       let generation = 0;
+      let resizeRequest = null;
 
       function resetFps() {
         frameStart = performance.now();
@@ -337,7 +437,7 @@
             shapes = items.map(item => this.add.circle(item.x, item.y, item.r, Number.parseInt(item.color.slice(1), 16)));
           },
           update(_time, delta) {
-            if (paused || document.hidden || sceneGeneration !== generation) return;
+            if (paused || infoOpen || document.hidden || sceneGeneration !== generation) return;
             const seconds = Math.min(delta, 40) / 1000;
             items.forEach((item, index) => { moveParticle(item, seconds); shapes[index].setPosition(item.x, item.y); });
           }
@@ -349,7 +449,7 @@
           fps: { target: 60, smoothStep: false }, scene,
           callbacks: { postBoot(bootedGame) {
             bootedGame.events.on('postrender', () => {
-              if (!paused && !document.hidden && sceneGeneration === generation) frameRendered(performance.now());
+              if (!paused && !infoOpen && !document.hidden && sceneGeneration === generation) frameRendered(performance.now());
             });
           } }
         });
@@ -367,7 +467,882 @@
         };
       }
 
+      function comparisonLayout() {
+        const size = Math.max(7, Math.min(width * .07, height * .12));
+        const radius = Math.max(6, Math.min(width, height) * .045);
+        const floor = height * .85;
+        const blocks = Array.from({ length: 12 }, (_, index) => {
+          const x = width * .7 + (index % 3 - 1) * size;
+          const y = floor - (Math.floor(index / 3) + .5) * size;
+          return { x, y, startX: x, startY: y, vx: 0, vy: 0, angle: 0, color: colors[index % colors.length] };
+        });
+        return { size, radius, floor, gravity: height * 1.6, blocks, shots: 0,
+          ball: { x: width * .14, y: floor - radius, vx: 0, vy: 0 }, accumulator: 0 };
+      }
+
+      function comparisonShot(model, x, y) {
+        const start = { x: width * .14, y: model.floor - model.radius };
+        const dx = Math.max(width * .15, x - start.x), dy = y - start.y;
+        const distance = Math.hypot(dx, dy), speed = width * 1.1;
+        Object.assign(model.ball, start, { vx: dx / distance * speed, vy: dy / distance * speed - height * .35 });
+        model.shots += 1;
+      }
+
+      function comparisonStats(model) {
+        const moved = model.blocks.filter(item => Math.hypot(item.x - item.startX, item.y - item.startY) > model.size * .6 || Math.abs(item.angle) > .25).length;
+        $('scene-stats').textContent = `Сдвинуто: ${moved}/12 · Выстрелов: ${model.shots}`;
+      }
+
+      function stepComparison(model, delta) {
+        model.accumulator = Math.min(model.accumulator + delta, 50);
+        const { ball, blocks, size, radius, floor } = model;
+        while (model.accumulator >= 1000 / 120) {
+          model.accumulator -= 1000 / 120;
+          const seconds = 1 / 120;
+          for (const item of [ball, ...blocks]) {
+            item.vy += model.gravity * seconds;
+            item.x += item.vx * seconds; item.y += item.vy * seconds;
+            const half = item === ball ? radius : size / 2;
+            if (item.y + half > floor) {
+              item.y = floor - half; item.vy = Math.abs(item.vy) < 20 ? 0 : -Math.abs(item.vy) * (item === ball ? .45 : .08);
+              item.vx *= Math.exp(-seconds * 2);
+            }
+            if (item.x < half || item.x > width - half) { item.x = Math.max(half, Math.min(width - half, item.x)); item.vx *= -.4; }
+          }
+          for (let pass = 0; pass < 3; pass += 1) for (let i = 0; i < blocks.length; i += 1) for (let j = i + 1; j < blocks.length; j += 1) {
+            const a = blocks[i], b = blocks[j], dx = b.x - a.x, dy = b.y - a.y;
+            const overlapX = size - Math.abs(dx), overlapY = size - Math.abs(dy);
+            if (overlapX <= 0 || overlapY <= 0) continue;
+            if (overlapY < overlapX) {
+              const direction = dy < 0 ? -1 : 1;
+              a.y -= direction * overlapY * .5; b.y += direction * overlapY * .5;
+              const velocity = (a.vy + b.vy) * .5; a.vy = b.vy = velocity;
+            } else {
+              const direction = dx < 0 ? -1 : 1;
+              a.x -= direction * overlapX * .5; b.x += direction * overlapX * .5;
+              const velocity = (a.vx + b.vx) * .5; a.vx = b.vx = velocity;
+            }
+          }
+          for (const item of blocks) {
+            const closestX = Math.max(item.x - size / 2, Math.min(item.x + size / 2, ball.x));
+            const closestY = Math.max(item.y - size / 2, Math.min(item.y + size / 2, ball.y));
+            const dx = ball.x - closestX, dy = ball.y - closestY, distance = Math.hypot(dx, dy);
+            if (distance >= radius) continue;
+            const nx = distance > .001 ? dx / distance : -1, ny = distance > .001 ? dy / distance : 0;
+            const overlap = radius - distance;
+            ball.x += nx * overlap / 3; ball.y += ny * overlap / 3;
+            item.x -= nx * overlap * 2 / 3; item.y -= ny * overlap * 2 / 3;
+            const speed = (ball.vx - item.vx) * nx + (ball.vy - item.vy) * ny;
+            if (speed < 0) {
+              const impulse = -speed * 1.3 / 1.5;
+              ball.vx += nx * impulse * .5; ball.vy += ny * impulse * .5;
+              item.vx -= nx * impulse; item.vy -= ny * impulse;
+            }
+          }
+        }
+      }
+
+      function drawComparison(context, model) {
+        context.fillStyle = '#0b1929'; context.fillRect(0, 0, width, height);
+        context.strokeStyle = '#24374d'; context.lineWidth = 1;
+        for (let x = 0; x < width; x += 40) { context.beginPath(); context.moveTo(x, 0); context.lineTo(x, model.floor); context.stroke(); }
+        context.fillStyle = '#304966'; context.fillRect(0, model.floor, width, height - model.floor);
+        context.strokeStyle = '#9fc9ed'; context.setLineDash([4, 4]);
+        context.beginPath(); context.arc(width * .14, model.floor - model.radius, model.radius * 1.6, 0, Math.PI * 2); context.stroke(); context.setLineDash([]);
+        for (const item of model.blocks) {
+          context.save(); context.translate(item.x, item.y); context.rotate(item.angle);
+          context.fillStyle = item.color; context.fillRect(-model.size / 2, -model.size / 2, model.size, model.size);
+          context.strokeStyle = '#ffffff80'; context.strokeRect(-model.size / 2, -model.size / 2, model.size, model.size); context.restore();
+        }
+        context.fillStyle = '#efab6c'; context.beginPath(); context.arc(model.ball.x, model.ball.y, model.radius, 0, Math.PI * 2); context.fill();
+        context.strokeStyle = '#fff1d7'; context.lineWidth = 2; context.stroke();
+      }
+
+      function canvasComparison() {
+        const context = makeCanvas(), model = comparisonLayout();
+        return { tick(delta) { stepComparison(model, delta); drawComparison(context, model); comparisonStats(model); },
+          tap(x, y) { comparisonShot(model, x, y); }, dispose() {} };
+      }
+
+      function matterComparison(Matter) {
+        const context = makeCanvas(), model = comparisonLayout();
+        const engine = Matter.Engine.create(); engine.gravity.y = 1; engine.gravity.scale = model.gravity / 1e6;
+        const ball = Matter.Bodies.circle(model.ball.x, model.ball.y, model.radius, { restitution: .45, friction: .2, frictionAir: 0 });
+        Matter.Body.setMass(ball, 2);
+        const blocks = model.blocks.map(item => Matter.Bodies.rectangle(item.x, item.y, model.size, model.size,
+          { restitution: .08, friction: .35, frictionAir: 0, slop: .01 }));
+        blocks.forEach(body => Matter.Body.setMass(body, 1));
+        const walls = [Matter.Bodies.rectangle(width / 2, model.floor + 15, width + 60, 30, { isStatic: true }),
+          ...[-15, width + 15].map(x => Matter.Bodies.rectangle(x, height / 2, 30, height * 4, { isStatic: true }))];
+        Matter.Composite.add(engine.world, [ball, ...blocks, ...walls]);
+        let accumulator = 0;
+        return {
+          tick(delta) {
+            accumulator = Math.min(accumulator + delta, 50);
+            while (accumulator >= 1000 / 60) { Matter.Engine.update(engine, 1000 / 60); accumulator -= 1000 / 60; }
+            Object.assign(model.ball, ball.position);
+            blocks.forEach((body, index) => Object.assign(model.blocks[index], body.position, { angle: body.angle }));
+            drawComparison(context, model); comparisonStats(model);
+          },
+          tap(x, y) { comparisonShot(model, x, y); Matter.Body.setPosition(ball, { x: model.ball.x, y: model.ball.y });
+            Matter.Body.setVelocity(ball, { x: model.ball.vx / 60, y: model.ball.vy / 60 }); Matter.Body.setAngularVelocity(ball, 0); },
+          dispose() { Matter.Composite.clear(engine.world, false); Matter.Engine.clear(engine); }
+        };
+      }
+
+      function threeComparison(Three) {
+        const model = comparisonLayout(), unit = 12 / width;
+        const renderer = new Three.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(ratio, 1.5)); renderer.setSize(width, height); configureThreeRenderer(Three, renderer);
+        renderer.shadowMap.enabled = true; renderer.shadowMap.type = Three.PCFSoftShadowMap;
+        host.append(renderer.domElement);
+        const scene = new Three.Scene(); scene.background = threeColor(Three, '#0b1929');
+        const camera = new Three.PerspectiveCamera(38, width / height, .1, 100);
+        const distance = (height * unit + 1.8) / (2 * Math.tan(19 * Math.PI / 180));
+        camera.position.set(0, distance * .14, distance); camera.lookAt(0, 0, 0);
+        scene.add(new Three.HemisphereLight(threeColor(Three, '#e8f2ff'), threeColor(Three, '#213547'), 1.5));
+        const light = new Three.DirectionalLight(threeColor(Three, '#fff1d7'), 3);
+        light.position.set(-5, height * unit + 4, 8); light.castShadow = true; light.shadow.mapSize.set(1024, 1024);
+        Object.assign(light.shadow.camera, { left: -9, right: 9, top: height * unit + 6, bottom: -height * unit - 6, far: 60 });
+        light.shadow.normalBias = .02; scene.add(light);
+        const materials = colors.map(color => new Three.MeshStandardMaterial(threeMaterialColors(Three, { color, roughness: .45 })));
+        const ballMaterial = new Three.MeshStandardMaterial(threeMaterialColors(Three, { color: '#efab6c', roughness: .25 }));
+        const floorMaterial = new Three.MeshStandardMaterial(threeMaterialColors(Three, { color: '#304966', roughness: .85 }));
+        const blockGeometry = new Three.BoxGeometry(model.size * unit, model.size * unit, model.size * unit * 1.5);
+        const ballGeometry = new Three.SphereGeometry(model.radius * unit, 24, 16);
+        const floorGeometry = new Three.BoxGeometry(12.5, .25, 3);
+        const floor = new Three.Mesh(floorGeometry, floorMaterial); floor.position.y = (height / 2 - model.floor) * unit - .125; floor.receiveShadow = true; scene.add(floor);
+        const blocks = model.blocks.map((item, index) => {
+          const mesh = new Three.Mesh(blockGeometry, materials[index % materials.length]); mesh.castShadow = mesh.receiveShadow = true; scene.add(mesh); return mesh;
+        });
+        const ball = new Three.Mesh(ballGeometry, ballMaterial); ball.castShadow = true; scene.add(ball);
+        const position = (mesh, item) => mesh.position.set((item.x - width / 2) * unit, (height / 2 - item.y) * unit, 0);
+        return {
+          tick(delta) { stepComparison(model, delta); blocks.forEach((mesh, index) => position(mesh, model.blocks[index])); position(ball, model.ball); renderer.render(scene, camera); comparisonStats(model); },
+          tap(x, y) { comparisonShot(model, x, y); },
+          dispose() { [blockGeometry, ballGeometry, floorGeometry].forEach(item => item.dispose()); [...materials, ballMaterial, floorMaterial].forEach(item => item.dispose()); renderer.dispose(); renderer.forceContextLoss(); }
+        };
+      }
+
+      function phaserComparison(Phaser, sceneGeneration) {
+        const model = comparisonLayout(); let game, ball = null;
+        const scene = {
+          create() {
+            const texture = (key, color, circle = false) => {
+              const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64;
+              const ctx = canvas.getContext('2d'); ctx.fillStyle = color; ctx.strokeStyle = '#ffffff80'; ctx.lineWidth = 2;
+              if (circle) { ctx.beginPath(); ctx.arc(32, 32, 31, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+              else { ctx.fillRect(0, 0, 64, 64); ctx.strokeRect(1, 1, 62, 62); }
+              this.textures.addCanvas(key, canvas);
+            };
+            texture('ball', '#efab6c', true); colors.forEach((color, index) => texture('block' + index, color)); texture('spark', '#fff1d7', true);
+            this.add.rectangle(width / 2, height / 2, width, height, 0x0b1929);
+            this.add.rectangle(width / 2, (model.floor + height) / 2, width, height - model.floor, 0x304966);
+            this.matter.world.setBounds(0, -height * 2, width, model.floor + height * 2, 30);
+            ball = this.matter.add.image(model.ball.x, model.ball.y, 'ball', undefined,
+              { shape: { type: 'circle', radius: 32 }, restitution: .45, friction: .2, frictionAir: 0 }).setScale(model.radius / 32).setMass(2);
+            const blocks = model.blocks.map((item, index) => this.matter.add.image(item.x, item.y, 'block' + index % colors.length, undefined,
+              { restitution: .08, friction: .35, frictionAir: 0, slop: .01 }).setScale(model.size / 64).setMass(1));
+            this.blocks = blocks;
+            const particles = this.add.particles(0, 0, 'spark', { lifespan: 350, speed: { min: 30, max: 100 },
+              scale: { start: .07, end: 0 }, alpha: { start: 1, end: 0 }, emitting: false, maxParticles: 100 });
+            let lastHit = -1000;
+            this.matter.world.on('collisionstart', event => {
+              if (sceneGeneration !== generation || !ball) return;
+              const hit = event.pairs.some(pair => pair.bodyA === ball.body || pair.bodyB === ball.body);
+              if (hit && this.time.now - lastHit > 180) { lastHit = this.time.now; particles.explode(12, ball.x, ball.y); }
+            });
+          },
+          update() {
+            if (paused || infoOpen || document.hidden || sceneGeneration !== generation || !ball) return;
+            Object.assign(model.ball, { x: ball.x, y: ball.y });
+            this.blocks.forEach((body, index) => Object.assign(model.blocks[index], { x: body.x, y: body.y, angle: body.rotation })); comparisonStats(model);
+          }
+        };
+        game = new Phaser.Game({ type: Phaser.CANVAS, width, height, parent: host, banner: false, audio: { noAudio: true },
+          input: { mouse: false, touch: false, keyboard: false }, physics: { default: 'matter', matter: { gravity: { y: model.gravity / 1000 } } },
+          fps: { target: 60, smoothStep: false }, scene,
+          callbacks: { postBoot(booted) { booted.events.on('postrender', () => { if (!paused && !infoOpen && !document.hidden && sceneGeneration === generation) frameRendered(performance.now()); }); } }
+        });
+        return { ownLoop: true,
+          tap(x, y) { if (!ball) return; comparisonShot(model, x, y); ball.setPosition(model.ball.x, model.ball.y); ball.setVelocity(model.ball.vx / 60, model.ball.vy / 60); ball.setAngularVelocity(0); },
+          pause(value) { if (value) game.loop.sleep(); else game.loop.wake(); },
+          dispose() { ball = null; game.destroy(true); game.loop.wake(); }
+        };
+      }
+
+      function canvasShowcase() {
+        const context = makeCanvas();
+        let time = 0, night = 0, targetNight = 0;
+        const blend = (day, dark) => `rgb(${day.map((value, index) => Math.round(value + (dark[index] - value) * night)).join(',')})`;
+        const buildings = Array.from({ length: 18 }, (_, index) => ({
+          x: index / 18, height: .1 + (index * 7 % 11) / 60, windows: 3 + index % 4
+        }));
+        const stars = Array.from({ length: 35 }, (_, index) => ({ x: (index * .618) % 1, y: (index * .381) % .42 }));
+        return {
+          tick(delta) {
+            time += delta / 1000;
+            night += (targetNight - night) * Math.min(1, delta / 900);
+            const horizon = height * .54, waterline = height * .61;
+            const sky = context.createLinearGradient(0, 0, 0, waterline);
+            sky.addColorStop(0, blend([113, 180, 215], [12, 23, 53]));
+            sky.addColorStop(1, blend([245, 210, 172], [67, 63, 105]));
+            context.fillStyle = sky;
+            context.fillRect(0, 0, width, height);
+            context.globalAlpha = night;
+            context.fillStyle = '#e9f2ff';
+            for (const star of stars) context.fillRect(star.x * width, star.y * height, 1.5, 1.5);
+            context.globalAlpha = 1;
+            context.fillStyle = blend([255, 232, 170], [220, 228, 248]);
+            context.beginPath(); context.arc(width * .8, height * .2, Math.max(8, height * .055), 0, Math.PI * 2); context.fill();
+            for (const building of buildings) {
+              const x = building.x * width, top = horizon - building.height * height;
+              context.fillStyle = blend([96, 133, 148], [29, 41, 65]);
+              context.fillRect(x, top, width / 20, horizon - top);
+              context.fillStyle = blend([175, 207, 211], [219, 177, 95]);
+              for (let row = 0; row < building.windows; row += 1) for (let col = 0; col < 2; col += 1) {
+                context.fillRect(x + width / 100 + col * width / 50, top + 6 + row * 10, Math.max(2, width / 140), 4);
+              }
+            }
+            context.fillStyle = blend([70, 107, 124], [21, 34, 55]);
+            context.fillRect(0, horizon, width, waterline - horizon);
+            const water = context.createLinearGradient(0, waterline, 0, height);
+            water.addColorStop(0, blend([102, 171, 193], [33, 57, 86]));
+            water.addColorStop(1, blend([42, 112, 148], [10, 29, 50]));
+            context.fillStyle = water; context.fillRect(0, waterline, width, height - waterline);
+            context.strokeStyle = blend([167, 210, 219], [85, 116, 147]);
+            context.lineWidth = 1;
+            for (let row = 0; row < 12; row += 1) {
+              const y = waterline + (row + .5) / 12 * (height - waterline);
+              for (let index = 0; index < 7; index += 1) {
+                const x = ((index / 7 + row * .071 + time * .008) % 1) * width;
+                context.beginPath(); context.moveTo(x, y); context.lineTo(x + width * .04, y); context.stroke();
+              }
+            }
+            context.strokeStyle = '#435566'; context.lineWidth = Math.max(3, height * .025);
+            const bridgeY = height * .59;
+            context.beginPath(); context.moveTo(width * .04, bridgeY); context.lineTo(width * .62, bridgeY); context.stroke();
+            for (let x of [.12, .53]) {
+              context.fillStyle = '#536473'; context.fillRect(width * x, height * .33, width * .025, height * .3);
+              context.strokeStyle = '#70828a'; context.lineWidth = 1.5;
+              for (let index = 0; index < 9; index += 1) {
+                context.beginPath(); context.moveTo(width * (x + .012), height * .33);
+                context.lineTo(width * (.04 + index * .072), bridgeY); context.stroke();
+              }
+            }
+            const tram = ((time * .02) % .73) * width - width * .08;
+            context.fillStyle = '#d29359'; context.fillRect(tram, bridgeY - Math.max(7, height * .035), width * .07, Math.max(7, height * .035));
+            context.fillStyle = '#dbe6dd'; context.fillRect(tram + width * .008, bridgeY - Math.max(6, height * .03), width * .052, Math.max(3, height * .017));
+            const boatX = ((time * .016 + .2) % 1.3 - .15) * width, boatY = height * .79 + Math.sin(time * .9) * height * .008;
+            context.save(); context.translate(boatX, boatY);
+            const boatWidth = Math.max(35, Math.min(width * .2, 150)), boatHeight = boatWidth * .24;
+            context.fillStyle = '#eeeee6'; context.beginPath(); context.moveTo(-boatWidth / 2, 0); context.lineTo(boatWidth / 2, 0);
+            context.lineTo(boatWidth * .32, boatHeight * .6); context.lineTo(-boatWidth * .38, boatHeight * .6); context.closePath(); context.fill();
+            context.fillStyle = '#b87646'; context.fillRect(-boatWidth * .2, -boatHeight * .65, boatWidth * .48, boatHeight * .65);
+            context.fillStyle = '#95c8d9'; context.fillRect(-boatWidth * .13, -boatHeight * .52, boatWidth * .3, boatHeight * .34);
+            context.strokeStyle = '#ffffff55'; context.lineWidth = 2;
+            context.beginPath(); context.moveTo(-boatWidth * .55, boatHeight); context.lineTo(-boatWidth * .9, boatHeight); context.stroke();
+            context.restore();
+            context.fillStyle = blend([43, 66, 78], [15, 25, 38]); context.fillRect(0, height * .94, width, height * .06);
+            for (let index = 0; index < 7; index += 1) {
+              const x = (index + .5) / 7 * width;
+              context.fillStyle = '#78868b'; context.fillRect(x, height * .85, 2, height * .09);
+              context.fillStyle = blend([213, 221, 215], [255, 215, 130]);
+              context.fillRect(x - 3, height * .85, 8, 4);
+            }
+            context.globalAlpha = 1;
+          },
+          tap() { targetNight = targetNight ? 0 : 1; },
+          dispose() {}
+        };
+      }
+
+      function threeColor(Three, value) {
+        const color = new Three.Color(value);
+        if (Number(Three.REVISION) < 152) color.convertSRGBToLinear();
+        return color;
+      }
+
+      function threeMaterialColors(Three, settings) {
+        const converted = { ...settings };
+        for (const key of ['color', 'emissive']) if (key in converted) converted[key] = threeColor(Three, converted[key]);
+        return converted;
+      }
+
+      function configureThreeRenderer(Three, renderer) {
+        if ('outputColorSpace' in renderer) renderer.outputColorSpace = Three.SRGBColorSpace;
+        else { renderer.outputEncoding = Three.sRGBEncoding; renderer.physicallyCorrectLights = true; }
+        renderer.toneMapping = Three.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
+      }
+
+      function threeShowcase(Three) {
+        const renderer = new Three.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(ratio, 1.5));
+        renderer.setSize(width, height);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = Three.PCFSoftShadowMap;
+        configureThreeRenderer(Three, renderer);
+        host.append(renderer.domElement);
+        const scene = new Three.Scene();
+        scene.background = threeColor(Three, 0x0d192b);
+        scene.fog = new Three.FogExp2(threeColor(Three, 0x0d192b), .038);
+        const camera = new Three.PerspectiveCamera(42, width / height, .1, 80);
+        const geometries = new Set(), materials = new Set(), textures = new Set();
+        const skyFaces = Array.from({ length: 6 }, () => {
+          const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
+          const ctx = canvas.getContext('2d');
+          const gradient = ctx.createLinearGradient(0, 0, 0, 128);
+          gradient.addColorStop(0, '#8ab1d0'); gradient.addColorStop(.45, '#243952'); gradient.addColorStop(1, '#101b29');
+          ctx.fillStyle = gradient; ctx.fillRect(0, 0, 128, 128);
+          ctx.fillStyle = '#d6e7ff'; ctx.fillRect(20, 10, 12, 65); ctx.fillStyle = '#ffba70'; ctx.fillRect(100, 30, 16, 46);
+          return canvas;
+        });
+        const environment = new Three.CubeTexture(skyFaces);
+        environment.needsUpdate = true;
+        if ('colorSpace' in environment) environment.colorSpace = Three.SRGBColorSpace;
+        else environment.encoding = Three.sRGBEncoding;
+        textures.add(environment);
+        const material = settings => {
+          const mat = new Three.MeshStandardMaterial({ envMap: environment, envMapIntensity: .6, ...threeMaterialColors(Three, settings) });
+          materials.add(mat); return mat;
+        };
+        const paint = material({ color: 0xd57b36, metalness: .55, roughness: .32 });
+        const metal = material({ color: 0xaebbc9, metalness: .88, roughness: .25 });
+        const dark = material({ color: 0x202b3b, metalness: .7, roughness: .38 });
+        const rubber = material({ color: 0x18202c, roughness: .9 });
+        const solar = material({ color: 0x244aa4, metalness: .55, roughness: .17 });
+        const glow = material({ color: 0x8aedff, emissive: 0x3ea9d3, emissiveIntensity: 2, roughness: .25 });
+        const glass = new Three.MeshPhysicalMaterial({ ...threeMaterialColors(Three, { color: 0x75c5e5 }), metalness: .12, roughness: .08,
+          transparent: true, opacity: .52, clearcoat: 1, envMap: environment });
+        materials.add(glass);
+        const geometry = value => { geometries.add(value); return value; };
+        const unitBox = geometry(new Three.BoxGeometry(1, 1, 1));
+        const jointGeometry = geometry(new Three.SphereGeometry(.11, 12, 8));
+        const mesh = (parent, geo, mat, x = 0, y = 0, z = 0, casts = true) => {
+          const item = new Three.Mesh(geo, mat); item.position.set(x, y, z);
+          item.castShadow = casts; item.receiveShadow = true; parent.add(item); return item;
+        };
+        const box = (parent, mat, sx, sy, sz, x, y, z, casts = true) => {
+          const item = mesh(parent, unitBox, mat, x, y, z, casts); item.scale.set(sx, sy, sz); return item;
+        };
+        const cylinder = (parent, mat, radius, length, x, y, z) => mesh(parent,
+          geometry(new Three.CylinderGeometry(radius, radius, length, 16)), mat, x, y, z);
+        scene.add(new Three.HemisphereLight(threeColor(Three, 0x89bbff), threeColor(Three, 0x6a453b), .8));
+        const sun = new Three.DirectionalLight(threeColor(Three, 0xffd3a0), 3);
+        sun.position.set(5, 8, 4); sun.castShadow = true;
+        sun.shadow.mapSize.set(width < 700 ? 1024 : 2048, width < 700 ? 1024 : 2048);
+        Object.assign(sun.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6, near: .5, far: 24 });
+        sun.shadow.bias = -.0003; sun.shadow.normalBias = .035; scene.add(sun);
+        const spotlight = new Three.SpotLight(threeColor(Three, 0x68bcff), 10, 25, Math.PI / 5, .5, 1);
+        spotlight.position.set(-5, 6, -4); spotlight.target.position.set(0, 1, 0);
+        spotlight.castShadow = true; spotlight.shadow.mapSize.set(512, 512); spotlight.shadow.bias = -.0003;
+        scene.add(spotlight, spotlight.target);
+        const ground = material({ color: 0x55443e, roughness: .95 });
+        const floor = mesh(scene, geometry(new Three.PlaneGeometry(50, 50)), ground, 0, -.2, 0, false);
+        floor.rotation.x = -Math.PI / 2;
+        const platform = cylinder(scene, dark, 3.4, .2, 0, -.08, 0);
+        const rim = mesh(scene, geometry(new Three.TorusGeometry(3.25, .024, 8, 96)), glow, 0, .03, 0, false);
+        rim.rotation.x = Math.PI / 2;
+        for (let index = 0; index < 28; index += 1) {
+          const angle = index / 28 * Math.PI * 2;
+          const mark = box(scene, metal, .025, .012, .22, Math.sin(angle) * 3, .025, Math.cos(angle) * 3, false);
+          mark.rotation.y = angle;
+        }
+        const rover = new Three.Group(); scene.add(rover);
+        box(rover, dark, 2.1, .35, 3.1, 0, 1, 0);
+        box(rover, paint, 1.85, .45, 2.6, 0, 1.4, 0);
+        box(rover, metal, 1.95, .06, 2.7, 0, 1.67, 0);
+        const dome = mesh(rover, geometry(new Three.SphereGeometry(.55, 28, 18, 0, Math.PI * 2, 0, Math.PI / 2)), glass, 0, 1.7, -.55, false);
+        dome.scale.set(1, .72, 1.15);
+        mesh(rover, geometry(new Three.TorusGeometry(.54, .035, 8, 32)), metal, 0, 1.7, -.55).rotation.x = Math.PI / 2;
+        for (let side of [-1, 1]) {
+          for (let index = 0; index < 14; index += 1) {
+            box(rover, dark, .045, .26, .06, side * .94, 1.4, -1.1 + index * .16, false);
+            mesh(rover, jointGeometry, metal, side * .93, 1.67, -1.18 + index * .18, false).scale.setScalar(.25);
+          }
+          box(rover, glow, .32, .12, .05, side * .64, 1.37, -1.34, false);
+        }
+        const wheels = [];
+        const tireGeometry = geometry(new Three.TorusGeometry(.39, .13, 12, 36));
+        const hubGeometry = geometry(new Three.CylinderGeometry(.28, .28, .3, 24));
+        for (let side of [-1, 1]) for (let z of [-1.25, 0, 1.25]) {
+          const wheel = new Three.Group(); wheel.position.set(side * 1.4, .54, z); rover.add(wheel); wheels.push(wheel);
+          mesh(wheel, tireGeometry, rubber).rotation.y = Math.PI / 2;
+          mesh(wheel, hubGeometry, metal).rotation.z = Math.PI / 2;
+          for (let index = 0; index < 24; index += 1) {
+            const angle = index / 24 * Math.PI * 2;
+            const tread = box(wheel, rubber, .34, .065, .13, 0, Math.cos(angle) * .5, Math.sin(angle) * .5);
+            tread.rotation.x = angle;
+          }
+          for (let index = 0; index < 8; index += 1) {
+            const spoke = box(wheel, paint, .32, .038, .48, 0, 0, 0, false); spoke.rotation.x = index / 8 * Math.PI;
+          }
+          const suspension = box(rover, metal, .62, .11, .1, side * 1.06, .86, z); suspension.rotation.z = side * -.45;
+          const shock = cylinder(rover, dark, .08, .6, side * 1.15, .9, z); shock.rotation.z = side * .35;
+        }
+        const wings = [];
+        for (let side of [-1, 1]) {
+          const panel = new Three.Group(); panel.position.set(side * 1.72, 1.8, .4); rover.add(panel); wings.push(panel);
+          box(panel, dark, 1.15, .08, 2.25, 0, 0, 0);
+          for (let x = 0; x < 5; x += 1) for (let z = 0; z < 9; z += 1) {
+            box(panel, solar, .2, .018, .21, (x - 2) * .22, .054, (z - 4) * .24, false);
+          }
+          for (let x of [-.58, .58]) box(panel, metal, .028, .035, 2.3, x, .04, 0, false);
+          for (let z of [-1.14, 1.14]) box(panel, metal, 1.2, .035, .03, 0, .04, z, false);
+        }
+        const mast = new Three.Group(); mast.position.set(0, 1.7, .9); rover.add(mast);
+        cylinder(mast, metal, .055, 1.05, 0, .52, 0);
+        const scanner = new Three.Group(); scanner.position.y = 1.03; mast.add(scanner);
+        box(scanner, paint, .6, .28, .3, 0, 0, 0);
+        for (let x of [-.17, .17]) mesh(scanner, jointGeometry, glow, x, 0, -.2, false);
+        const antenna = new Three.Group(); antenna.position.set(-.6, 1.75, .65); rover.add(antenna);
+        cylinder(antenna, metal, .045, .6, 0, .3, 0);
+        const dishPoints = Array.from({ length: 16 }, (_, index) => {
+          const r = index / 15 * .42; return new Three.Vector2(r, r * r * 1.2);
+        });
+        const dish = mesh(antenna, geometry(new Three.LatheGeometry(dishPoints, 32)), metal, 0, .62, 0);
+        dish.material = material({ color: 0xd1dae5, metalness: .5, roughness: .28, side: Three.DoubleSide });
+        dish.rotation.z = -.5;
+        cylinder(antenna, glow, .018, .45, 0, .72, 0);
+        const arm = new Three.Group(); arm.position.set(.75, 1.6, -1.1); rover.add(arm);
+        mesh(arm, jointGeometry, metal);
+        box(arm, paint, .14, .85, .14, 0, .42, 0);
+        const elbow = new Three.Group(); elbow.position.y = .85; arm.add(elbow);
+        mesh(elbow, jointGeometry, metal); box(elbow, metal, .1, .7, .1, 0, .35, 0);
+        const claw = new Three.Group(); claw.position.y = .72; elbow.add(claw);
+        for (let side of [-1, 1]) {
+          box(claw, dark, .065, .26, .065, side * .11, .12, 0).rotation.z = side * .25;
+          box(claw, metal, .12, .05, .065, side * .07, .25, 0);
+        }
+        const rockGeometry = geometry(new Three.DodecahedronGeometry(1, 0));
+        const rockMaterial = material({ color: 0x806252, roughness: .93 });
+        for (let index = 0; index < 55; index += 1) {
+          const angle = index * 2.399, radius = 4.1 + (index % 8) * .55;
+          const rock = mesh(scene, rockGeometry, rockMaterial, Math.sin(angle) * radius, -.1, Math.cos(angle) * radius);
+          rock.scale.set(.15 + index % 3 * .13, .16 + index % 4 * .1, .2 + index % 5 * .07); rock.rotation.set(index, index * .7, index * .3);
+        }
+        const dustPositions = new Float32Array(180 * 3);
+        for (let index = 0; index < dustPositions.length; index += 3) {
+          dustPositions[index] = (Math.random() - .5) * 14; dustPositions[index + 1] = Math.random() * 5; dustPositions[index + 2] = (Math.random() - .5) * 14;
+        }
+        const dustGeometry = geometry(new Three.BufferGeometry());
+        dustGeometry.setAttribute('position', new Three.Float32BufferAttribute(dustPositions, 3));
+        const dustMaterial = new Three.PointsMaterial({ color: threeColor(Three, 0xdcb48c), size: .026, transparent: true, opacity: .42, depthWrite: false });
+        materials.add(dustMaterial);
+        const dust = new Three.Points(dustGeometry, dustMaterial); scene.add(dust);
+        let time = 0, angle = .65, elevation = .45, targetAngle = angle, targetElevation = elevation, controlledUntil = 0;
+        const orbit = (x, y) => { targetAngle = x / width * Math.PI * 2; targetElevation = .18 + (1 - y / height) * .7; controlledUntil = time + 8; };
+        return {
+          tick(delta) {
+            const seconds = delta / 1000; time += seconds;
+            if (time > controlledUntil) targetAngle += seconds * .11;
+            angle += (targetAngle - angle) * Math.min(1, seconds * 5); elevation += (targetElevation - elevation) * Math.min(1, seconds * 5);
+            const distance = 8 / Math.min(1, width / height);
+            camera.position.set(Math.sin(angle) * distance * Math.cos(elevation), 1.3 + Math.sin(elevation) * distance, Math.cos(angle) * distance * Math.cos(elevation));
+            camera.lookAt(0, 1.3, 0);
+            wheels.forEach(wheel => { wheel.rotation.x -= seconds * .45; });
+            wings.forEach((panel, index) => { panel.rotation.z = (index ? -1 : 1) * (.15 + Math.sin(time * .6) * .025); });
+            arm.rotation.x = -.6 + Math.sin(time * .7) * .3; elbow.rotation.x = -1.1 + Math.sin(time * .7 + 1) * .4;
+            scanner.rotation.y = Math.sin(time * .5) * .8; antenna.rotation.y = time * .12;
+            rover.position.y = Math.sin(time * 1.3) * .025; dust.rotation.y = time * .018;
+            renderer.render(scene, camera);
+          },
+          tap: orbit, drag: orbit,
+          dispose() { geometries.forEach(value => value.dispose()); materials.forEach(value => value.dispose()); textures.forEach(value => value.dispose()); renderer.dispose(); renderer.forceContextLoss(); }
+        };
+      }
+
+      function matterShowcase(Matter) {
+        const context = makeCanvas();
+        const engine = Matter.Engine.create({ enableSleeping: false });
+        const bodies = [], links = [];
+        const body = value => { bodies.push(value); return value; };
+        const link = value => { const constraint = Matter.Constraint.create(value); links.push(constraint); return constraint; };
+        body(Matter.Bodies.rectangle(width / 2, height + 12, width + 40, 24, { isStatic: true }));
+        for (let x of [-12, width + 12]) body(Matter.Bodies.rectangle(x, height / 2, 24, height * 2, { isStatic: true }));
+        const radius = Math.min(width * .029, height * .065), length = Math.min(height * .36, width * .22);
+        const cradle = [];
+        for (let index = 0; index < 5; index += 1) {
+          const x = width * .22 + index * radius * 2.04, y = height * .06;
+          const ball = body(Matter.Bodies.circle(x, y + length, radius, { restitution: .99, friction: 0, frictionAir: .0001, density: .02 }));
+          ball.testColor = '#e8bd78'; cradle.push(ball);
+          link({ pointA: { x, y }, bodyB: ball, length, stiffness: 1 });
+        }
+        Matter.Body.setPosition(cradle[0], { x: cradle[0].position.x - length * .7, y: height * .06 + length * .714 });
+        const deck = [];
+        for (let index = 0; index < 9; index += 1) {
+          const plank = body(Matter.Bodies.rectangle(width * .08 + index * width * .064, height * .7, width * .059, Math.max(4, height * .035), { density: .01, friction: .5 }));
+          plank.testColor = '#70b3ff'; deck.push(plank);
+          if (index) link({ bodyA: deck[index - 1], pointA: { x: width * .029, y: 0 }, bodyB: plank, pointB: { x: -width * .029, y: 0 }, stiffness: .85, damping: .12, length: width * .006 });
+        }
+        link({ pointA: { x: deck[0].position.x - width * .03, y: height * .7 }, bodyB: deck[0], pointB: { x: -width * .029, y: 0 }, stiffness: 1, length: 1 });
+        link({ pointA: { x: deck[8].position.x + width * .03, y: height * .7 }, bodyB: deck[8], pointB: { x: width * .029, y: 0 }, stiffness: 1, length: 1 });
+        for (let row = 0; row < 5; row += 1) for (let col = 0; col < 4; col += 1) {
+          const block = body(Matter.Bodies.rectangle(width * .74 + col * width * .049, height * .92 - row * height * .075,
+            width * .045, height * .068, { chamfer: { radius: 2 }, restitution: .15, friction: .55 }));
+          block.testColor = colors[(row + col) % colors.length];
+        }
+        for (let index = 0; index < 12; index += 1) {
+          const ball = body(Matter.Bodies.circle(width * .15 + index * width * .035, height * .5 - (index % 3) * radius * 2.2, radius * .65, { restitution: .65 }));
+          ball.testColor = '#7be0b0';
+        }
+        Matter.Composite.add(engine.world, [...bodies, ...links]);
+        let accumulator = 0, grip = null;
+        const release = () => { if (grip) Matter.Composite.remove(engine.world, grip); grip = null; };
+        return {
+          tick(delta) {
+            accumulator = Math.min(accumulator + delta, 50);
+            while (accumulator >= 1000 / 60) { Matter.Engine.update(engine, 1000 / 60); accumulator -= 1000 / 60; }
+            context.fillStyle = '#0b1929'; context.fillRect(0, 0, width, height);
+            context.strokeStyle = '#21334a'; context.lineWidth = 1;
+            for (let x = 0; x < width; x += 32) { context.beginPath(); context.moveTo(x, 0); context.lineTo(x, height); context.stroke(); }
+            for (const constraint of [...links, ...(grip ? [grip] : [])]) {
+              const a = constraint.bodyA ? Matter.Vector.add(constraint.bodyA.position, constraint.pointA) : constraint.pointA;
+              const b = constraint.bodyB ? Matter.Vector.add(constraint.bodyB.position, constraint.pointB) : constraint.pointB;
+              context.strokeStyle = grip === constraint ? '#ff9bcf' : '#88aacd'; context.lineWidth = 2;
+              context.beginPath(); context.moveTo(a.x, a.y); context.lineTo(b.x, b.y); context.stroke();
+            }
+            for (const item of bodies.filter(item => !item.isStatic)) {
+              context.fillStyle = item.testColor || '#7be0b0'; context.strokeStyle = '#ffffff80'; context.lineWidth = 1;
+              context.beginPath();
+              if (item.circleRadius) context.arc(item.position.x, item.position.y, item.circleRadius, 0, Math.PI * 2);
+              else { item.vertices.forEach((point, index) => index ? context.lineTo(point.x, point.y) : context.moveTo(point.x, point.y)); context.closePath(); }
+              context.fill(); context.stroke();
+            }
+          },
+          tap(x, y) {
+            release();
+            const selected = Matter.Query.point(bodies.filter(item => !item.isStatic), { x, y })[0];
+            if (selected) { grip = Matter.Constraint.create({ pointA: { x, y }, bodyB: selected,
+              pointB: { x: x - selected.position.x, y: y - selected.position.y }, stiffness: .15, damping: .1, length: 0 }); Matter.Composite.add(engine.world, grip); }
+            else bodies.filter(item => !item.isStatic).forEach(item => Matter.Body.applyForce(item, item.position,
+              { x: (item.position.x < x ? -.0015 : .0015) * item.mass, y: -.003 * item.mass }));
+          },
+          drag(x, y) { if (grip) grip.pointA = { x, y }; }, release,
+          dispose() { release(); Matter.Composite.clear(engine.world, false); Matter.Engine.clear(engine); }
+        };
+      }
+
+      function phaserShowcase(Phaser, sceneGeneration) {
+        const worldWidth = 3200, groundY = 480;
+        let compact = height < 190;
+        let zoom = Math.max(.16, Math.min(1.25, (height - (compact ? 20 : 90)) / 390));
+        const holes = [[700, 860], [1480, 1690], [2350, 2490]];
+        const held = new Map();
+        let game, current = null, demo = true, jumpQueued = false;
+        const hud = document.createElement('div'); hud.className = 'phaser-hud';
+        const totals = document.createElement('span'), area = document.createElement('span'); hud.append(totals, area);
+        const pad = document.createElement('div'); pad.className = 'phaser-pad';
+        for (const [action, label, title] of [['left', '←', 'Двигаться влево'], ['right', '→', 'Двигаться вправо'], ['demo', 'Демо', 'Автоматическое прохождение'], ['jump', '↑ Прыжок', 'Прыжок; повторное нажатие — двойной прыжок']]) {
+          const button = document.createElement('button'); button.dataset.phaserAction = action;
+          button.textContent = label; button.setAttribute('aria-label', title); button.setAttribute('aria-pressed', String(action === 'demo'));
+          // Pointer input is handled by the shared test field, including multitouch metrics.
+          button.addEventListener('click', event => { if (event.detail === 0 && !paused && !infoOpen) act(action, 'keyboard-button'); });
+          button.addEventListener('keyup', () => held.delete('keyboard-button'));
+          button.addEventListener('blur', () => held.delete('keyboard-button'));
+          pad.append(button);
+        }
+        const result = document.createElement('div'); result.className = 'phaser-result'; result.hidden = true;
+        const expand = document.createElement('button'); expand.id = 'phaser-expand';
+        const svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+        const updateExpand = () => {
+          const label = phaserExpanded ? 'Вернуть панель теста' : 'Развернуть игровую сцену';
+          expand.setAttribute('aria-label', label); expand.title = label; expand.setAttribute('aria-pressed', String(phaserExpanded));
+          expand.innerHTML = svg + (phaserExpanded ? '<path d="M3 9h6V3m6 0v6h6M3 15h6v6m6 0v-6h6"/>' : '<path d="M9 3H3v6m12-6h6v6M3 15v6h6m6 0h6v-6"/>') + '</svg>';
+        };
+        const toggleExpand = () => { phaserExpanded = !phaserExpanded; document.querySelector('.app').classList.toggle('phaser-expanded', phaserExpanded); updateExpand(); };
+        expand.addEventListener('click', toggleExpand); updateExpand(); document.querySelector('.controls').append(expand);
+        host.tabIndex = 0;
+        host.classList.toggle('phaser-compact', compact); host.append(hud, pad, result);
+        const setDemo = value => { demo = value; held.clear(); jumpQueued = false; pad.querySelector('[data-phaser-action="demo"]').setAttribute('aria-pressed', String(value)); };
+        const act = (action, id) => {
+          if (!current || sceneGeneration !== generation) return;
+          if (current.finished) { current.scene.restart(); return; }
+          if (action === 'demo') { setDemo(!demo); return; }
+          if (demo) setDemo(false);
+          if (action === 'left' || action === 'right') held.set(id, action);
+          else jumpQueued = true;
+        };
+        const keyAction = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'jump', KeyW: 'jump', Space: 'jump' };
+        const keyDown = event => {
+          if (event.code === 'Escape' && phaserExpanded) { toggleExpand(); return; }
+          if (!keyAction[event.code] || paused || infoOpen || document.hidden || event.target.closest('button, select, input') || sceneGeneration !== generation) return;
+          event.preventDefault();
+          if (!event.repeat) act(keyAction[event.code], event.code);
+        };
+        const keyUp = event => { held.delete(event.code); };
+        document.addEventListener('keydown', keyDown); document.addEventListener('keyup', keyUp);
+        const release = id => { if (id === undefined) { held.clear(); jumpQueued = false; } else held.delete(id); };
+        const blur = () => release(); window.addEventListener('blur', blur);
+        const scene = {
+          create() {
+            if (sceneGeneration !== generation) return;
+            current = this; release(); result.hidden = true;
+            $('scene-name').textContent = compact ? 'Лесная станция · касание: прыжок' : showcaseLabels.phaser;
+            if (!paused && !infoOpen && !document.hidden) host.focus({ preventScroll: true });
+            this.score = 0; this.collected = 0; this.health = 3; this.checkpoint = 110;
+            this.jumps = 0; this.lastGrounded = -1000; this.immuneUntil = 0; this.finished = false; this.lastTrail = 0;
+            const texture = (name, w, h, draw, frames) => {
+              if (this.textures.exists(name)) return;
+              const canvas = document.createElement('canvas'); canvas.width = w * (frames || 1); canvas.height = h;
+              const ctx = canvas.getContext('2d');
+              for (let f = 0; f < (frames || 1); f += 1) { ctx.save(); ctx.translate(w * f, 0); draw(ctx, f); ctx.restore(); }
+              if (frames) this.textures.addSpriteSheet(name, canvas, { frameWidth: w, frameHeight: h }); else this.textures.addCanvas(name, canvas);
+            };
+            texture('forest-sky', 64, 560, ctx => {
+              const gradient = ctx.createLinearGradient(0, 0, 0, 560); gradient.addColorStop(0, '#143d58'); gradient.addColorStop(.6, '#577f8b'); gradient.addColorStop(1, '#b2b9a1');
+              ctx.fillStyle = gradient; ctx.fillRect(0, 0, 64, 560);
+            });
+            texture('robot', 48, 56, (ctx, frame) => {
+              const step = [0, 4, 0, -4][frame];
+              ctx.fillStyle = '#182e40'; ctx.fillRect(13, 41 + step, 9, 12 - step); ctx.fillRect(28, 41 - step, 9, 12 + step);
+              ctx.fillStyle = '#76cfb8'; ctx.fillRect(9, 48 + step, 14, 6); ctx.fillRect(27, 48 - step, 14, 6);
+              ctx.fillStyle = '#25394e'; ctx.fillRect(5, 26 - step / 2, 6, 17); ctx.fillRect(38, 26 + step / 2, 6, 17);
+              ctx.fillStyle = '#a0e5cf'; ctx.fillRect(10, 23, 28, 21); ctx.fillRect(8, 7, 33, 19);
+              ctx.fillStyle = '#e2fff4'; ctx.fillRect(10, 7, 29, 4); ctx.fillRect(14, 25, 18, 4);
+              ctx.fillStyle = '#183b51'; ctx.fillRect(13, 13, 26, 9); ctx.fillStyle = '#9eeeff'; ctx.fillRect(27, 15, 8, 4);
+              ctx.fillStyle = '#ffc777'; ctx.fillRect(23, 32, 8, 5); ctx.fillRect(23, 2, 3, 6); ctx.fillRect(20, 1, 9, 3);
+            }, 4);
+            texture('crawler', 48, 34, (ctx, frame) => {
+              ctx.fillStyle = '#273c52'; for (let i = 0; i < 4; i += 1) ctx.fillRect(5 + i * 10, 22 + (i % 2 === frame % 2 ? 2 : 0), 5, 9);
+              ctx.fillStyle = '#c36563'; ctx.fillRect(4, 9, 39, 16); ctx.fillStyle = '#f1a087'; ctx.fillRect(9, 5, 29, 8);
+              ctx.fillStyle = '#3d263b'; ctx.fillRect(28, 10, 12, 8); ctx.fillStyle = '#ffe094'; ctx.fillRect(33, 11, 6, 4);
+            }, 4);
+            texture('forest-ground', 64, 80, ctx => {
+              ctx.fillStyle = '#264b49'; ctx.fillRect(0, 0, 64, 80); ctx.fillStyle = '#3c6860';
+              for (let i = 0; i < 12; i += 1) ctx.fillRect((i * 23) % 58, 15 + (i * 17) % 62, 8, 3);
+              ctx.fillStyle = '#55a27d'; ctx.fillRect(0, 0, 64, 10); ctx.fillStyle = '#b0dbc0'; ctx.fillRect(0, 0, 64, 3);
+              ctx.fillStyle = '#78b090'; for (let i = 0; i < 8; i += 1) ctx.fillRect(i * 8, 4, 4, 12 - i % 3 * 3);
+            });
+            texture('forest-platform', 64, 24, ctx => {
+              ctx.fillStyle = '#264458'; ctx.fillRect(0, 3, 64, 21); ctx.fillStyle = '#7bd1bd'; ctx.fillRect(0, 0, 64, 5);
+              ctx.fillStyle = '#426777'; for (let i = 0; i < 4; i += 1) ctx.fillRect(i * 16 + 2, 9, 12, 10);
+              ctx.fillStyle = '#d3f5d6'; ctx.fillRect(0, 0, 64, 2);
+            });
+            texture('forest-gem', 26, 30, ctx => {
+              ctx.fillStyle = '#ffce75'; ctx.beginPath(); ctx.moveTo(13, 1); ctx.lineTo(25, 13); ctx.lineTo(13, 29); ctx.lineTo(1, 13); ctx.closePath(); ctx.fill();
+              ctx.fillStyle = '#fff3b3'; ctx.beginPath(); ctx.moveTo(13, 1); ctx.lineTo(13, 29); ctx.lineTo(1, 13); ctx.closePath(); ctx.fill();
+              ctx.strokeStyle = '#d99a46'; ctx.stroke();
+            });
+            texture('forest-spark', 12, 12, ctx => { ctx.fillStyle = '#e7ffe2'; ctx.beginPath(); ctx.arc(6, 6, 5, 0, Math.PI * 2); ctx.fill(); });
+            this.add.image(worldWidth / 2, 280, 'forest-sky').setDisplaySize(worldWidth, 560);
+            this.add.circle(420, 175, 70, 0xf6e6b5, .08).setScrollFactor(.2, 1);
+            this.add.circle(420, 175, 43, 0xf6e6b5, .65).setScrollFactor(.2, 1);
+            for (const [factor, tint, base] of [[.2, 0x355e70, 360], [.45, 0x2d6470, 425]]) {
+              const mountains = this.add.graphics().setScrollFactor(factor, 1); mountains.fillStyle(tint, 1);
+              for (let x = -200; x < worldWidth + 700; x += 210) mountains.fillTriangle(x, 560, x + 160, base - (x / 210 % 3) * 28, x + 390, 560);
+            }
+            const forest = this.add.graphics().setScrollFactor(.7, 1);
+            for (let x = 40; x < worldWidth + 400; x += 85) {
+              const y = 290 + x % 73; forest.fillStyle(0x245459, .8); forest.fillRect(x - 4, y, 8, 190);
+              forest.fillTriangle(x - 46, y + 50, x, y - 25, x + 46, y + 50); forest.fillTriangle(x - 60, y + 98, x, y + 18, x + 60, y + 98);
+            }
+            const water = this.add.graphics(); water.fillStyle(0x173f5e, 1); water.fillRect(0, groundY + 8, worldWidth, 80);
+            water.lineStyle(2, 0x8ed9d7, .35); for (let x = 0; x < worldWidth; x += 38) water.lineBetween(x, 510 + x % 29, x + 21, 510 + x % 29);
+            this.ground = this.physics.add.staticGroup();
+            const platform = (x, top, w, h, ground = false) => {
+              const tile = this.add.tileSprite(x + w / 2, top + h / 2, w, h, ground ? 'forest-ground' : 'forest-platform').setDepth(3);
+              this.physics.add.existing(tile, true); this.ground.add(tile); return tile;
+            };
+            for (const [start, end] of [[0, 700], [860, 1480], [1690, 2350], [2490, worldWidth]]) platform(start, groundY, end - start, 80, true);
+            for (const [x, y, w] of [[300, 383, 140], [480, 330, 130], [1010, 385, 160], [1200, 330, 130], [1800, 417, 110], [1950, 356, 120], [2120, 414, 100], [2810, 365, 160]]) platform(x, y, w, 24);
+            this.platforms = this.physics.add.group({ allowGravity: false, immovable: true });
+            for (const [x, y, axis, range, speed] of [[780, 436, 'x', 48, 1050], [1585, 445, 'y', 66, 1450], [2420, 425, 'x', 42, 1200]]) {
+              const lift = this.platforms.create(x, y, 'forest-platform').setDisplaySize(160, 24).setDepth(4);
+              lift.body.setSize(64, 24); lift.body.setFriction(1, 1); lift.path = { x, y, axis, range, speed };
+              lift.engine = this.add.circle(x, y + 16, 7, 0xffcc83).setDepth(3);
+              this.add.rectangle(x, y + 48, 8, 85, 0x305f62).setDepth(1);
+            }
+            for (const [x, title] of [[185, 'ЛЕС'], [1110, 'ПЕРЕПРАВА'], [2560, 'СТАНЦИЯ']]) {
+              this.add.rectangle(x, 398, 5, 84, 0x547c75).setOrigin(.5, 0);
+              this.add.rectangle(x, 395, 146, 38, 0x183e4b).setStrokeStyle(2, 0x91c4af);
+              this.add.text(x, 395, title, { fontFamily: 'system-ui', fontSize: '15px', color: '#d6f6e4' }).setOrigin(.5);
+            }
+            for (let x = 60; x < worldWidth; x += 137) {
+              if (holes.some(([a, b]) => x > a && x < b)) continue;
+              const reeds = this.add.graphics().setDepth(4); reeds.lineStyle(2, 0x8ac390, .8);
+              for (let i = 0; i < 4; i += 1) reeds.lineBetween(x + i * 5, groundY, x + i * 6 - 7, groundY - 18 - i * 3);
+              const glow = this.add.circle(x + 18, 364 - x % 53, 3, 0xd8f5b4, .7);
+              this.tweens.add({ targets: glow, y: glow.y - 16, alpha: .2, duration: 1300 + x % 900, yoyo: true, repeat: -1 });
+            }
+            if (!this.anims.exists('robot-run')) this.anims.create({ key: 'robot-run', frames: this.anims.generateFrameNumbers('robot', { start: 0, end: 3 }), frameRate: 10, repeat: -1 });
+            if (!this.anims.exists('crawler-walk')) this.anims.create({ key: 'crawler-walk', frames: this.anims.generateFrameNumbers('crawler', { start: 0, end: 3 }), frameRate: 8, repeat: -1 });
+            this.physics.world.setBounds(0, -200, worldWidth, 1000); this.physics.world.setBoundsCollision(true, true, false, false);
+            this.player = this.physics.add.sprite(110, 430, 'robot').setDepth(6).setCollideWorldBounds(true);
+            this.player.body.setSize(28, 48).setOffset(10, 7); this.player.setMaxVelocity(250, 640);
+            this.physics.add.collider(this.player, this.ground); this.physics.add.collider(this.player, this.platforms);
+            this.coins = this.physics.add.group({ allowGravity: false, immovable: true });
+            for (const [x, y] of [[250, 428], [335, 344], [410, 344], [510, 289], [580, 289], [650, 415], [780, 377], [940, 428], [1060, 342], [1130, 342], [1230, 288], [1290, 288], [1380, 420], [1570, 338], [1640, 338], [1750, 428], [1850, 374], [1990, 314], [2160, 371], [2270, 425], [2420, 360], [2580, 428], [2850, 322], [2930, 322], [3030, 425]]) {
+              const gem = this.coins.create(x, y, 'forest-gem').setDepth(5); gem.body.setSize(22, 28);
+              this.tweens.add({ targets: gem, y: y - 6, duration: 650 + x % 350, yoyo: true, repeat: -1 });
+            }
+            this.particles = this.add.particles(0, 0, 'forest-spark', { lifespan: 500, speed: { min: 40, max: 135 }, gravityY: 170,
+              scale: { start: .65, end: 0 }, alpha: { start: 1, end: 0 }, tint: [0xffce75, 0x9aead0], emitting: false, maxParticles: 160 }).setDepth(7);
+            this.physics.add.overlap(this.player, this.coins, (_robot, gem) => {
+              if (!gem.active || this.finished) return;
+              this.particles.explode(12, gem.x, gem.y); this.floatPoints(gem.x, gem.y, '+10');
+              this.tweens.killTweensOf(gem); gem.disableBody(true, true); this.score += 10; this.collected += 1;
+            });
+            this.enemies = this.physics.add.group();
+            for (const [x, left, right] of [[585, 470, 640], [1010, 900, 1140], [1830, 1740, 1920], [2230, 2180, 2290], [2640, 2530, 2660]]) {
+              const enemy = this.enemies.create(x, 455, 'crawler').setDepth(5).play('crawler-walk');
+              enemy.body.setSize(39, 25).setOffset(4, 7); enemy.patrol = { left, right }; enemy.setVelocityX(-55);
+            }
+            this.physics.add.collider(this.enemies, this.ground);
+            this.physics.add.overlap(this.player, this.enemies, (_robot, enemy) => {
+              if (!enemy.active || this.finished) return;
+              if (this.player.body.velocity.y > 70 && this.player.body.bottom < enemy.body.top + 22) {
+                this.particles.explode(22, enemy.x, enemy.y); this.floatPoints(enemy.x, enemy.y, '+50');
+                enemy.disableBody(true, true); this.player.setVelocityY(-330); this.score += 50; this.jumps = 1;
+              } else this.hurt(false);
+            });
+            this.flag = this.add.rectangle(1320, 391, 44, 28, 0xe9b469).setOrigin(0, .5);
+            this.add.rectangle(1320, 430, 5, 100, 0xbed8c2);
+            const checkpoint = this.add.zone(1320, 426, 80, 108); this.physics.add.existing(checkpoint, true);
+            this.physics.add.overlap(this.player, checkpoint, () => {
+              if (this.checkpoint > 110) return;
+              this.checkpoint = 1280; this.health = 3; this.flag.setFillStyle(0x9ae9c2); this.particles.explode(28, 1320, 395);
+              this.floatPoints(1320, 380, 'Контрольная точка');
+            });
+            this.laser = this.add.rectangle(2730, 425, 12, 108, 0xff7d82, .75).setDepth(4);
+            this.physics.add.existing(this.laser, true); this.laserOn = true;
+            for (const y of [366, 481]) this.add.rectangle(2730, y, 38, 12, 0x9be7d1).setDepth(5);
+            this.time.addEvent({ delay: 1400, loop: true, callback: () => {
+              this.laserOn = !this.laserOn; this.laser.setAlpha(this.laserOn ? .75 : .12); this.laser.body.enable = this.laserOn;
+            } });
+            this.physics.add.overlap(this.player, this.laser, () => this.hurt(false));
+            this.add.rectangle(3080, 421, 112, 118, 0x244657).setStrokeStyle(3, 0x99dac3).setDepth(2);
+            this.add.rectangle(3080, 468, 148, 24, 0x739c95).setDepth(3);
+            for (let i = 0; i < 5; i += 1) {
+              const beam = this.add.rectangle(3080, 382 + i * 15, 73, 7, 0x88f3cc, .6).setDepth(3);
+              this.tweens.add({ targets: beam, alpha: .15, duration: 650, delay: i * 130, yoyo: true, repeat: -1 });
+            }
+            this.add.text(3080, 345, 'ВЫХОД', { fontFamily: 'system-ui', fontSize: '18px', color: '#daf9e7' }).setOrigin(.5);
+            const goal = this.add.zone(3080, 416, 76, 112); this.physics.add.existing(goal, true);
+            this.physics.add.overlap(this.player, goal, () => {
+              if (this.finished) return;
+              this.finished = true; this.player.setVelocity(0, 0); this.player.anims.stop(); this.player.body.enable = false;
+              this.particles.explode(90, 3080, 407); this.cameras.main.flash(250, 150, 235, 205);
+              const title = document.createElement('b'); title.textContent = 'Станция запущена!';
+              const points = document.createElement('span'); points.textContent = `Очки: ${this.score} · кристаллы: ${this.collected}/25`;
+              const hint = document.createElement('span'); hint.textContent = 'Коснитесь сцены — пройти снова';
+              result.replaceChildren(title, points, hint); result.hidden = false;
+              if (demo) this.time.delayedCall(3200, () => this.scene.restart());
+            });
+            this.cameras.main.setBounds(0, 0, worldWidth, 560).setZoom(zoom);
+            this.cameras.main.centerOn(this.player.x + width * .15 / zoom, groundY - (height / 2 - (compact ? 12 : 66)) / zoom);
+            this.cameras.main.roundPixels = true;
+            this.syncHud();
+          },
+          extend: {
+            floatPoints(x, y, text) {
+              const label = this.add.text(x, y - 22, text, { fontFamily: 'system-ui', fontSize: '18px', color: '#fff2bb', stroke: '#163b49', strokeThickness: 3 }).setOrigin(.5).setDepth(8);
+              this.tweens.add({ targets: label, y: y - 65, alpha: 0, duration: 850, onComplete: () => label.destroy() });
+            },
+            hurt(fallen) {
+              if (this.finished || (!fallen && this.time.now < this.immuneUntil)) return;
+              this.health -= 1; this.immuneUntil = this.time.now + 1500; this.cameras.main.shake(140, .004);
+              this.particles.explode(16, this.player.x, this.player.y);
+              if (fallen || this.health <= 0) {
+                if (this.health <= 0) this.health = 3;
+                this.player.body.reset(this.checkpoint, 422); this.player.setVelocity(0, 0); this.jumps = 0;
+              } else this.player.setVelocityY(-270);
+              this.syncHud();
+            },
+            jump() {
+              if (this.finished) return;
+              if (this.jumps === 0 && this.time.now - this.lastGrounded >= 110) this.jumps = 1;
+              if (this.jumps >= 2) return;
+              this.jumps += 1; this.player.setVelocityY(this.jumps === 1 ? -430 : -380);
+              this.particles.explode(this.jumps === 1 ? 6 : 16, this.player.x, this.player.y + 23);
+            },
+            syncHud() {
+              totals.textContent = `◇ ${this.collected}/25 · ${'♥'.repeat(this.health)} · ${this.score}`;
+              const sector = this.player.x < 1050 ? 'Лес' : this.player.x < 2490 ? 'Переправа' : 'Станция';
+              area.textContent = `${demo ? 'Демо' : compact ? 'Бег' : 'Игра'} · ${sector}`;
+            },
+          },
+          update(time) {
+            if (paused || infoOpen || document.hidden || sceneGeneration !== generation || !this.player) return;
+            for (const lift of this.platforms.getChildren()) {
+              const p = lift.path, target = p[p.axis] + Math.sin(time / p.speed) * p.range;
+              lift.setVelocity(p.axis === 'x' ? (target - lift.x) * 9 : 0, p.axis === 'y' ? (target - lift.y) * 9 : 0);
+              lift.engine.setPosition(lift.x, lift.y + 16).setAlpha(.55 + Math.sin(time / 180) * .3);
+            }
+            for (const enemy of this.enemies.getChildren()) {
+              if (!enemy.active) continue;
+              if (enemy.x < enemy.patrol.left) enemy.setVelocityX(55);
+              if (enemy.x > enemy.patrol.right) enemy.setVelocityX(-55);
+              enemy.setFlipX(enemy.body.velocity.x < 0);
+            }
+            if (!this.finished) {
+              const player = this.player, grounded = player.body.blocked.down || player.body.touching.down;
+              if (grounded && player.body.velocity.y >= 0) { this.jumps = 0; this.lastGrounded = this.time.now; }
+              const directions = [...held.values()];
+              const direction = directions.includes('left') ? -1 : directions.includes('right') || demo || compact ? 1 : 0;
+              player.setVelocityX(direction * (demo ? 170 : 225));
+              if (direction) player.setFlipX(direction < 0);
+              if (grounded && direction) player.anims.play('robot-run', true); else { player.anims.stop(); player.setFrame(0); }
+              if (demo) {
+                const nearHole = holes.some(([a, b]) => player.x > a - 105 && player.x < b - 15);
+                const nearEnemy = this.enemies.getChildren().some(enemy => enemy.active && enemy.x > player.x && enemy.x - player.x < 108 && Math.abs(enemy.y - player.y) < 75);
+                const nearLaser = this.laserOn && player.x > 2600 && player.x < 2740;
+                if (grounded && (nearHole || nearEnemy || nearLaser || player.body.blocked.right)) this.jump();
+                else if (!grounded && this.jumps === 1 && player.body.velocity.y > 30 && nearHole) this.jump();
+              }
+              if (jumpQueued) { jumpQueued = false; this.jump(); }
+              if (player.y > 570) this.hurt(true);
+              player.setAlpha(this.time.now < this.immuneUntil && Math.floor(time / 100) % 2 ? .45 : 1);
+              if (grounded && direction && time - this.lastTrail > 95) { this.lastTrail = time; this.particles.explode(2, player.x - direction * 16, player.y + 24); }
+            }
+            const camera = this.cameras.main, targetX = this.player.x + width * .15 / zoom;
+            camera.centerOn(Phaser.Math.Linear(camera.midPoint.x, targetX, .09), groundY - (height / 2 - (compact ? 12 : 66)) / zoom);
+            this.syncHud();
+          }
+        };
+        game = new Phaser.Game({ type: Phaser.CANVAS, width, height, parent: host, backgroundColor: '#091321', banner: false,
+          audio: { noAudio: true }, input: { mouse: false, touch: false, keyboard: false },
+          physics: { default: 'arcade', arcade: { gravity: { y: 900 }, debug: false } }, fps: { target: 60, smoothStep: false }, scene,
+          callbacks: { postBoot(booted) { booted.events.on('postrender', () => { if (!paused && !infoOpen && !document.hidden && sceneGeneration === generation) frameRendered(performance.now()); }); } }
+        });
+        return { ownLoop: true, tap(_x, _y, id, action) { host.focus({ preventScroll: true }); act(action || 'jump', id); }, release,
+          pause(value) { if (value) { release(); game.loop.sleep(); } else game.loop.wake(); },
+          resize() {
+            release(); compact = height < 190; zoom = Math.max(.16, Math.min(1.25, (height - (compact ? 20 : 90)) / 390));
+            host.classList.toggle('phaser-compact', compact); game.scale.resize(width, height);
+            current?.cameras.main.setZoom(zoom);
+            $('scene-name').textContent = compact ? 'Лесная станция · касание: прыжок' : showcaseLabels.phaser;
+            if (!paused && !infoOpen) host.focus({ preventScroll: true });
+          },
+          dispose() {
+            current = null; release(); document.removeEventListener('keydown', keyDown); document.removeEventListener('keyup', keyUp); window.removeEventListener('blur', blur);
+            hud.remove(); pad.remove(); result.remove(); expand.remove(); host.removeAttribute('tabindex'); host.classList.remove('phaser-compact'); game.destroy(true); game.loop.wake();
+          }
+        };
+      }
+
+      function updateInfo() {
+        $('info-title').textContent = document.querySelector(`[data-mode="${mode}"] b`).textContent;
+        const paragraphs = explanations[mode].map(text => { const paragraph = document.createElement('p'); paragraph.textContent = text; return paragraph; });
+        const common = document.createElement('p');
+        common.textContent = '«Возможности» показывает отдельную сцену под назначение движка. «Сравнение» использует одинаковые начальные положения шара и 12 блоков, чтобы показать разные подходы к графике и движению. «Нагрузка» проверяет FPS при большом числе объектов. Одинаковое число объектов в разных движках означает разный объём работы.';
+        $('info-body').replaceChildren(...paragraphs, common);
+      }
+
+      function showInfo(value) {
+        infoOpen = value;
+        document.querySelector('.app').classList.toggle('info-open', value);
+        $('library-info').hidden = !value; $('info-toggle').setAttribute('aria-expanded', String(value));
+        pointers.clear(); activeScene?.release?.(); $('finger-count').textContent = `0 / ${peakPointers}`;
+        activeScene?.pause?.(paused || infoOpen || document.hidden); pendingInput = null; resetFps();
+        (value ? $('info-close') : $('info-toggle')).focus();
+      }
+
       function startScene(nextMode = mode) {
+        if (nextMode !== 'phaser' || scenario !== 'showcase') {
+          phaserExpanded = false; document.querySelector('.app').classList.remove('phaser-expanded');
+        }
         generation += 1;
         activeScene?.dispose();
         activeScene = null;
@@ -375,7 +1350,19 @@
         mode = nextMode;
         $('message').textContent = '';
         try {
-          if (mode === 'canvas') activeScene = canvasScene();
+          if (scenario === 'compare') {
+            if (mode === 'canvas') activeScene = canvasComparison();
+            else if (mode.startsWith('three')) activeScene = threeComparison(libraries[mode]);
+            else if (mode === 'matter') activeScene = matterComparison(libraries.matter);
+            else activeScene = phaserComparison(libraries.phaser, generation);
+          }
+          else if (scenario === 'showcase') {
+            if (mode === 'canvas') activeScene = canvasShowcase();
+            else if (mode.startsWith('three')) activeScene = threeShowcase(libraries[mode]);
+            else if (mode === 'matter') activeScene = matterShowcase(libraries.matter);
+            else activeScene = phaserShowcase(libraries.phaser, generation);
+          }
+          else if (mode === 'canvas') activeScene = canvasScene();
           else if (mode.startsWith('three')) activeScene = threeScene(libraries[mode]);
           else if (mode === 'matter') activeScene = matterScene(libraries.matter);
           else activeScene = phaserScene(libraries.phaser, generation);
@@ -383,26 +1370,36 @@
           const failedMode = mode;
           mode = 'canvas';
           host.replaceChildren();
-          activeScene = canvasScene();
+          activeScene = scenario === 'compare' ? canvasComparison() : scenario === 'showcase' ? canvasShowcase() : canvasScene();
           $('message').textContent = `${failedMode}: ${error.message}. Продолжаем в Canvas 2D.`;
         }
-        activeScene.pause?.(paused || document.hidden);
-        $('scene-name').textContent = labels[mode];
+        activeScene.pause?.(paused || infoOpen || document.hidden);
+        $('scene-name').textContent = scenario === 'compare' ? 'Шар и башня · коснитесь цели для выстрела' : scenario === 'showcase' ? showcaseLabels[mode] : labels[mode];
+        $('library-description').textContent = descriptions[mode];
+        $('scene-stats').hidden = scenario !== 'compare';
+        if (scenario === 'compare') $('scene-stats').textContent = 'Сдвинуто: 0/12 · Выстрелов: 0';
+        updateInfo();
+        document.querySelector('.load').hidden = scenario !== 'load';
         document.querySelectorAll('.mode').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mode === mode)));
         resetFps();
       }
 
       function resize() {
+        if (infoOpen) return;
         const bounds = stage.getBoundingClientRect();
-        width = Math.max(1, Math.round(bounds.width));
-        height = Math.max(1, Math.round(bounds.height));
-        ratio = Math.min(devicePixelRatio || 1, 2);
+        const nextWidth = Math.max(1, Math.round(bounds.width));
+        const nextHeight = Math.max(1, Math.round(bounds.height));
+        const nextRatio = Math.min(devicePixelRatio || 1, 2);
+        if (nextWidth === width && nextHeight === height && nextRatio === ratio) return;
+        width = nextWidth;
+        height = nextHeight;
+        ratio = nextRatio;
         overlay.width = Math.round(width * ratio);
         overlay.height = Math.round(height * ratio);
         touchContext.setTransform(ratio, 0, 0, ratio, 0, 0);
         pointers.clear();
         $('finger-count').textContent = `0 / ${peakPointers}`;
-        startScene();
+        if (activeScene?.resize) activeScene.resize(); else startScene();
       }
 
       function showLibrarySize(button, bytes) {
@@ -410,7 +1407,7 @@
         const known = Number.isFinite(bytes) && bytes > 0;
         const size = bytes < 1024 ? `${sizeFormat.format(bytes)} Б` : `${sizeFormat.format(bytes / 1024)} КБ`;
         field.textContent = known ? `Размер: ${size}` : 'Размер: (нет данных)';
-        field.title = known ? `${sizeFormat.format(bytes)} байт кода; без лицензии и сетевого сжатия` : '';
+        field.title = known ? `${bytes} байт JS-кода; без сетевого сжатия` : 'Браузер не сообщил размер загруженного JS-файла';
       }
 
       if ('PerformanceObserver' in window) {
@@ -432,7 +1429,8 @@
         button.dataset.state = library ? 'ready' : 'failed';
         const libraryScript = document.currentScript?.previousElementSibling;
         const embedded = libraryScript?.tagName === 'SCRIPT' && !libraryScript.hasAttribute('src');
-        button.querySelector('small').textContent = library ? (embedded ? 'Встроена в HTML' : 'Загружена с CDN') : 'Не загружена';
+        const remote = /^(?:https?:)?\/\//i.test(libraryScript?.getAttribute('src') || '');
+        button.querySelector('small').textContent = library ? (embedded ? 'Встроена в HTML' : remote ? 'Загружена с CDN' : 'Загружена из файла') : 'Не загружена';
         if (library && embedded) {
           showLibrarySize(button, new TextEncoder().encode(libraryScript.textContent).byteLength);
         } else if (library && libraryScript?.src) {
@@ -443,6 +1441,7 @@
       };
 
       stage.addEventListener('pointerdown', event => {
+        if (infoOpen) return;
         event.preventDefault();
         const bounds = stage.getBoundingClientRect();
         const point = { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
@@ -456,21 +1455,27 @@
         $('tap-count').textContent = String(tapCount);
         $('finger-count').textContent = `${pointers.size} / ${peakPointers}`;
         $('coordinates').textContent = `Координаты: ${Math.round(point.x)}, ${Math.round(point.y)}`;
-        if (!paused) activeScene?.tap(point.x, point.y);
+        if (!paused) activeScene?.tap(point.x, point.y, event.pointerId, event.target.closest('[data-phaser-action]')?.dataset.phaserAction);
         drawTouches(performance.now());
       });
       stage.addEventListener('pointermove', event => {
         if (!pointers.has(event.pointerId)) return;
         const bounds = stage.getBoundingClientRect();
         pointers.set(event.pointerId, { x: event.clientX - bounds.left, y: event.clientY - bounds.top });
+        if (!paused) activeScene?.drag?.(event.clientX - bounds.left, event.clientY - bounds.top);
         drawTouches(performance.now());
       });
       for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) stage.addEventListener(name, event => {
         pointers.delete(event.pointerId);
+        activeScene?.release?.(event.pointerId);
         $('finger-count').textContent = `${pointers.size} / ${peakPointers}`;
         drawTouches(performance.now());
       });
       document.querySelectorAll('.mode').forEach(button => button.addEventListener('click', () => startScene(button.dataset.mode)));
+      $('info-toggle').addEventListener('click', () => showInfo(!infoOpen));
+      $('info-close').addEventListener('click', () => showInfo(false));
+      document.addEventListener('keydown', event => { if (event.key === 'Escape' && infoOpen) showInfo(false); });
+      $('scenario').addEventListener('change', event => { scenario = event.target.value; startScene(); });
       $('load').addEventListener('input', event => { $('load-value').textContent = event.target.value; });
       $('load').addEventListener('change', event => { objectCount = Number(event.target.value); startScene(); });
       $('pause').addEventListener('click', () => {
@@ -478,7 +1483,7 @@
         $('pause').textContent = paused ? 'Продолжить' : 'Пауза';
         $('pause').setAttribute('aria-pressed', String(paused));
         $('paused').hidden = !paused;
-        activeScene.pause?.(paused);
+        activeScene.pause?.(paused || infoOpen || document.hidden);
         pendingInput = null;
         resetFps();
       });
@@ -492,15 +1497,19 @@
       });
       document.addEventListener('visibilitychange', () => {
         pointers.clear();
+        activeScene?.release?.();
         $('finger-count').textContent = `0 / ${peakPointers}`;
-        activeScene.pause?.(paused || document.hidden);
+        activeScene.pause?.(paused || infoOpen || document.hidden);
         resetFps();
       });
-      new ResizeObserver(resize).observe(stage);
+      new ResizeObserver(() => {
+        if (resizeRequest !== null) return;
+        resizeRequest = requestAnimationFrame(() => { resizeRequest = null; resize(); });
+      }).observe(stage);
       resize();
       function animate(time) {
         requestAnimationFrame(animate);
-        if (paused || document.hidden || activeScene?.ownLoop) return;
+        if (paused || infoOpen || document.hidden || activeScene?.ownLoop) return;
         const delta = lastFrame === null ? 1000 / 60 : Math.min(40, time - lastFrame);
         lastFrame = time;
         activeScene?.tick(delta);

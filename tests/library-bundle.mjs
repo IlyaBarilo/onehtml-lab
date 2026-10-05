@@ -404,3 +404,4 @@ try {
   await rm(scratch, { recursive: true, force: true });
 }
 await import('./library-extract-browser.mjs');
+await import('./performance-example.mjs');

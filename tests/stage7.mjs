@@ -117,7 +117,8 @@ for (const [name, engine] of engines) {
       if (index === 0) {
         await page.locator('#network-toggle').click();
         await page.locator('#run').click();
-        await page.waitForFunction(() => document.querySelector('#local-access-status').textContent.includes('виртуальный localStorage'));
+        await page.locator('#library-skip').click();
+        await page.waitForFunction(() => ['#local-access-status', '#runtime-error-message'].some(selector => document.querySelector(selector).textContent.includes('виртуальный localStorage')));
         assert.doesNotMatch(await page.locator('#runtime-error-message').innerText(), /SecurityError|Failed to read the 'localStorage'/);
         await page.locator('#run').click();
         await page.locator('#network-toggle').click();

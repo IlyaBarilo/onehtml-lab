@@ -387,7 +387,7 @@ const gamePrompts = {
 function renderExamples() {
   exampleList.replaceChildren();
   for (const example of examples.filter(item => (item.category || 'games') === selectedExampleCategory &&
-    (selectedExampleCategory === 'fix' || item.platform === selectedPlatform))) {
+    (selectedExampleCategory !== 'games' || item.platform === selectedPlatform))) {
     const card = document.createElement('div');
     card.className = 'example-card';
     const title = document.createElement('strong');
@@ -406,6 +406,7 @@ function renderExamples() {
       replaceCode(example.code, true);
       inform(example.category === 'fix'
         ? `Игра «${example.title}» открыта. Запустите её и попробуйте исправить ошибки.`
+        : example.category === 'tests' ? `Тест «${example.title}» открыт. Запустите его для проверки библиотек, FPS и касаний.`
         : `Пример «${example.title}» открыт. Измените код и сохраните свою версию.`);
     });
     card.append(title, description, button);
@@ -414,14 +415,15 @@ function renderExamples() {
 }
 
 function setExampleCategory(category) {
-  if (!['games', 'fix'].includes(category)) return;
+  if (!['games', 'fix', 'tests'].includes(category)) return;
   selectedExampleCategory = category;
   for (const tab of document.querySelectorAll('.example-category')) {
     tab.setAttribute('aria-selected', String(tab.dataset.exampleCategory === category));
   }
-  document.querySelector('#example-platform-tabs').hidden = category === 'fix';
+  document.querySelector('#example-platform-tabs').hidden = category !== 'games';
   document.querySelector('#example-guide').textContent = category === 'fix'
     ? 'Это исходные игры ИИ с ошибками. Откройте копию, запустите и попробуйте исправить её. При первом запуске загрузите Three.js; сохранённая копия работает без интернета игры.'
+    : category === 'tests' ? 'Тест работы библиотек на телефоне и компьютере: FPS, касания и нагрузка. При первом запуске можно скачать библиотеки и проверить их встраивание при сохранении.'
     : 'Откройте копию примера, измените код и сохраните свою версию.';
   renderExamples();
 }
