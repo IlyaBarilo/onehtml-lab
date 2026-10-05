@@ -321,7 +321,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   .history-action svg { width: 21px; height: 21px; }
   .runtime-error { align-items: flex-start; flex-direction: column; }
 }
-@media (max-width: 560px) {
+@media (max-width: 700px) {
   :root { --toolbar-height: 96px; }
   .toolbar { flex-direction: column; justify-content: center; gap: 0; padding: env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); }
   .brand { gap: 6px; min-height: 38px; }
@@ -351,6 +351,19 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 @media (max-height: 480px) and (min-width: 381px) { :root { --toolbar-height: 54px; } }
 
 /* Shared workspace screens. The code and running frame keep their geometry. */
+.help-button { flex-shrink: 0; }
+.help-button[aria-expanded="true"] { color: #2059bf; background: #dceaff; }
+.help-content { max-width: 780px; margin-inline: auto; font-size: 16px; line-height: 1.55; }
+.help-intro { margin: 0 0 20px; color: #526b8c; }
+.help-steps { margin: 0; padding-left: 28px; }
+.help-steps li { padding: 0 0 17px 5px; }
+.help-steps li::marker { color: #2d6cdf; font-weight: 700; }
+.help-steps strong { font-size: 17px; }
+.help-steps p { margin: 5px 0 0; }
+.help-details { border-top: 1px solid #dbe5f3; }
+.help-details summary { display: list-item; padding: 12px 0; min-height: 48px; color: #285b9e; font-weight: 600; cursor: pointer; }
+.help-details p { margin: 0 0 14px; }
+.help-note { margin: 18px 0 0; color: #526b8c; }
 .work-panel { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; min-height: 0; background: #fcfdff; color: #253d5a; }
 .workspace.has-panel > #code, .workspace.has-panel > #preview { visibility: hidden; }
 .panel-heading { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 58px; padding: 5px max(14px, env(safe-area-inset-right)) 5px max(14px, env(safe-area-inset-left)); border-bottom: 1px solid #dbe5f3; }

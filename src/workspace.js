@@ -5,6 +5,8 @@ const expandButton = document.querySelector('#preview-expand');
 const activityToggle = document.querySelector('#activity-toggle');
 const activitySummary = document.querySelector('#activity-summary');
 const activityPanel = document.querySelector('#activity-panel');
+const helpButton = document.querySelector('#help-open');
+const helpPanel = document.querySelector('#help-panel');
 const workspacePanels = [];
 let previewExpanded = false;
 let editorPosition = null;
@@ -28,9 +30,11 @@ function currentPanel() { return workspacePanels.at(-1)?.panel; }
 function showWorkspacePanel(panel, nested = false) {
   if (currentPanel() === panel) { closeWorkspacePanel(); return; }
   rememberEditorPosition();
-  closeLibraryExtraction();
-  closeHistory();
-  closeComparison();
+  if (panel !== helpPanel) {
+    closeLibraryExtraction();
+    closeHistory();
+    closeComparison();
+  }
   const trigger = document.activeElement;
   if (!nested) closeWorkspacePanels(false);
   else if (currentPanel()) currentPanel().hidden = true;
@@ -83,6 +87,8 @@ function setPreviewExpanded(value) {
 }
 
 function updateWorkspaceUI() {
+  helpButton.disabled = modeBusy || readingClipboard || extractionOpen;
+  helpButton.setAttribute('aria-expanded', String(currentPanel() === helpPanel));
   expertTools.hidden = !expertMode;
   expandButton.hidden = !running;
   pasteButton.hidden = running;
@@ -118,6 +124,8 @@ function updateWorkspaceViewport() {
 }
 
 function initWorkspaceUI() {
+  helpButton.addEventListener('click', () => showWorkspacePanel(helpPanel, Boolean(currentPanel())));
+  document.querySelector('#help-close').addEventListener('click', () => closeWorkspacePanel());
   expandButton.addEventListener('click', () => setPreviewExpanded(!previewExpanded));
   activityToggle.addEventListener('click', () => { if (currentPanel() === activityPanel) closeWorkspacePanel(); else openDiagnostics(); });
   document.querySelector('#activity-close').addEventListener('click', () => closeWorkspacePanel());

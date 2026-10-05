@@ -50,7 +50,7 @@ for (const [engineName, engine] of engines) {
         const editorState = () => page.locator('#code').evaluate(el => ({ start: el.selectionStart, end: el.selectionEnd, top: el.scrollTop }));
         const savedState = await editorState();
 
-        for (const [open, panel, close] of [['#ai-open', '#ai-dialog', '#ai-close'], ['#examples-open', '#examples-dialog', '#examples-close'], ['#save', '#save-dialog', '#save-close'], ['#history-open', '#history-view', '#history-close'], ['#compare', '#comparison', '#comparison-close']]) {
+        for (const [open, panel, close] of [['#help-open', '#help-panel', '#help-close'], ['#ai-open', '#ai-dialog', '#ai-close'], ['#examples-open', '#examples-dialog', '#examples-close'], ['#save', '#save-dialog', '#save-close'], ['#history-open', '#history-view', '#history-close'], ['#compare', '#comparison', '#comparison-close']]) {
           await page.locator(open).click();
           assert(await page.locator('#code').isHidden());
           const bounds = await page.locator(panel).boundingBox();
@@ -62,6 +62,11 @@ for (const [engineName, engine] of engines) {
           assert(Math.abs(bounds.height - work.height) < 1);
           assert(await page.locator(close).isVisible());
           if (panel === '#examples-dialog') await page.screenshot({ path: join(output, `${engineName}-${viewport.width}-examples.png`) });
+          if (panel !== '#help-panel' && viewport.height > 480) {
+            await page.locator('#help-open').click();
+            await page.locator('#help-close').click();
+            assert(await page.locator(panel).isVisible(), `Help returns to ${panel}`);
+          }
           await page.locator(close).click();
           assert(await page.locator('#code').isVisible());
           assert.deepEqual(await editorState(), savedState, `${panel} restores selection and scroll`);

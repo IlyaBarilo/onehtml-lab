@@ -359,7 +359,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   .history-action svg { width: 21px; height: 21px; }
   .runtime-error { align-items: flex-start; flex-direction: column; }
 }
-@media (max-width: 560px) {
+@media (max-width: 700px) {
   :root { --toolbar-height: 96px; }
   .toolbar { flex-direction: column; justify-content: center; gap: 0; padding: env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); }
   .brand { gap: 6px; min-height: 38px; }
@@ -389,6 +389,19 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 @media (max-height: 480px) and (min-width: 381px) { :root { --toolbar-height: 54px; } }
 
 /* Shared workspace screens. The code and running frame keep their geometry. */
+.help-button { flex-shrink: 0; }
+.help-button[aria-expanded="true"] { color: #2059bf; background: #dceaff; }
+.help-content { max-width: 780px; margin-inline: auto; font-size: 16px; line-height: 1.55; }
+.help-intro { margin: 0 0 20px; color: #526b8c; }
+.help-steps { margin: 0; padding-left: 28px; }
+.help-steps li { padding: 0 0 17px 5px; }
+.help-steps li::marker { color: #2d6cdf; font-weight: 700; }
+.help-steps strong { font-size: 17px; }
+.help-steps p { margin: 5px 0 0; }
+.help-details { border-top: 1px solid #dbe5f3; }
+.help-details summary { display: list-item; padding: 12px 0; min-height: 48px; color: #285b9e; font-weight: 600; cursor: pointer; }
+.help-details p { margin: 0 0 14px; }
+.help-note { margin: 18px 0 0; color: #526b8c; }
 .work-panel { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; min-height: 0; background: #fcfdff; color: #253d5a; }
 .workspace.has-panel > #code, .workspace.has-panel > #preview { visibility: hidden; }
 .panel-heading { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 58px; padding: 5px max(14px, env(safe-area-inset-right)) 5px max(14px, env(safe-area-inset-left)); border-bottom: 1px solid #dbe5f3; }
@@ -576,6 +589,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
       <div class="brand">
         <svg class="app-mark" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true" focusable="false"><rect width="32" height="32" rx="8" fill="#2D6CDF"/><path d="M10 6h8l6 6v12a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" fill="#FFFFFF"/><path d="M18 6v5a1 1 0 0 0 1 1h5" fill="#BFD6FF"/><path d="m13.5 15.5-2.5 2.5 2.5 2.5m5-5 2.5 2.5-2.5 2.5" stroke="#2D6CDF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <h1>OneHTML <span>Lab</span></h1>
+        <button id="help-open" class="icon-button help-button" type="button" aria-label="Как пользоваться" aria-expanded="false" aria-controls="help-panel" title="Как пользоваться"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 8.5a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4M12 16h.01"/></svg></button>
       </div>
       <div class="actions" role="group" aria-label="Действия с HTML">
         <button id="paste" class="icon-button" type="button" aria-label="Вставить" title="Вставить — заменить весь код">
@@ -624,6 +638,25 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
     </div>
     <button id="activity-toggle" class="activity-toggle" type="button" aria-label="Открыть сообщения" aria-expanded="false" aria-controls="activity-panel" hidden><span id="activity-summary" role="status" aria-live="polite"></span><span aria-hidden="true">›</span></button>
     <section class="workspace" aria-label="Рабочая область">
+      <section id="help-panel" class="work-panel" aria-labelledby="help-title" hidden>
+        <div class="panel-heading"><h2 id="help-title">Как пользоваться</h2><button id="help-close" type="button" aria-label="Закрыть памятку">✕</button></div>
+        <div class="panel-body help-body">
+          <div class="help-content">
+            <p class="help-intro">От идеи до своей игры — на телефоне или компьютере.</p>
+            <ol class="help-steps">
+              <li><strong>Получите код у ИИ</strong><p>Попросите сделать игру одним HTML-файлом. В экспертном режиме (шестерёнка) откройте «ИИ и запросы»: выберите основное устройство, опишите идею и скопируйте запрос в ИИ-бота.</p></li>
+              <li><strong>Вставьте HTML целиком</strong><p>Скопируйте код из ответа без пояснений и ограждений из трёх обратных кавычек. Кнопка «Вставить» заменяет весь текст. Если она недоступна, удерживайте палец в поле и выберите «Вставить»; для замены сначала выделите всё.</p></li>
+              <li><strong>Запустите и попробуйте</strong><p>Нажмите треугольник «Запустить». Проверьте управление и правила. Квадрат «Стоп» вернёт код.</p></li>
+              <li><strong>Исправьте или улучшите</strong><p>В «ИИ и запросы» выберите «Изменить» или «Исправить», опишите задачу и отправьте запрос боту. Вставьте полный новый HTML. В экспертной «Истории версий» можно сравнить результат и вернуть прошлый код.</p></li>
+              <li><strong>Сохраните свою игру</strong><p>Нажмите «Сохранить» и подтвердите имя game.html или задайте своё. Для подготовленных библиотек выберите встраивание «Внутри HTML», чтобы получить один файл. Откройте скачанную игру отдельно и проверьте её.</p></li>
+              <li><strong>Поделитесь результатом</strong><p>Кнопка «Поделиться» открывает меню отправки файла. Если браузер его не поддерживает, отправьте сохранённый HTML через файловый менеджер.</p></li>
+            </ol>
+            <details class="help-details"><summary>Без интернета</summary><p>Заранее скачайте onehtml-lab.html и откройте его в браузере. В экспертном режиме выберите «Примеры игр» → «Готовые игры»: они уже внутри редактора и не требуют сети.</p><p>Начните с «Поймай круг» на вкладке «Телефон»: измените заголовок игры в коде, запустите и сохраните результат. ИИ-боту потребуется отдельное подключение к интернету.</p><p>Библиотеки не входят в редактор. Игры с ними подготовьте заранее: загрузите нужные копии, сохраните с встраиванием и проверьте скачанный HTML без сети. Картинки, звук и другие внешние ресурсы автоматически не встраиваются.</p></details>
+            <details class="help-details"><summary>Если не получается</summary><p><strong>Вставился только кусок:</strong> скопируйте весь HTML, выделите всё в поле и вставьте заново. Обычная вставка работает в позиции курсора.</p><p><strong>Ошибка или пустой экран:</strong> откройте строку сообщений. В экспертном режиме доступна «Диагностика и библиотеки»: скопируйте отчёт для ИИ. Если ошибок нет, опишите боту, что видите и что ожидали.</p><p><strong>Нужна библиотека:</strong> подключитесь к сети и подтвердите её загрузку в сообщениях. Для занятия без сети выберите готовый пример без библиотек.</p><p><strong>Не найти файл:</strong> проверьте загрузки браузера или папку «Загрузки». Если скачалось несколько файлов, соберите HTML и JS в одной папке с исходными именами.</p></details>
+            <p class="help-note">Перед завершением сохраните HTML-файл. Черновик в браузере помогает продолжить работу, но не заменяет отдельную копию.</p>
+          </div>
+        </div>
+      </section>
       <textarea id="code" aria-label="HTML-код" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Вставьте HTML-код…"></textarea>
       <div id="code-lines" aria-hidden="true" hidden></div>
       <div id="code-measure" aria-hidden="true"></div>
@@ -1805,6 +1838,8 @@ const expandButton = document.querySelector('#preview-expand');
 const activityToggle = document.querySelector('#activity-toggle');
 const activitySummary = document.querySelector('#activity-summary');
 const activityPanel = document.querySelector('#activity-panel');
+const helpButton = document.querySelector('#help-open');
+const helpPanel = document.querySelector('#help-panel');
 const workspacePanels = [];
 let previewExpanded = false;
 let editorPosition = null;
@@ -1828,9 +1863,11 @@ function currentPanel() { return workspacePanels.at(-1)?.panel; }
 function showWorkspacePanel(panel, nested = false) {
   if (currentPanel() === panel) { closeWorkspacePanel(); return; }
   rememberEditorPosition();
-  closeLibraryExtraction();
-  closeHistory();
-  closeComparison();
+  if (panel !== helpPanel) {
+    closeLibraryExtraction();
+    closeHistory();
+    closeComparison();
+  }
   const trigger = document.activeElement;
   if (!nested) closeWorkspacePanels(false);
   else if (currentPanel()) currentPanel().hidden = true;
@@ -1883,6 +1920,8 @@ function setPreviewExpanded(value) {
 }
 
 function updateWorkspaceUI() {
+  helpButton.disabled = modeBusy || readingClipboard || extractionOpen;
+  helpButton.setAttribute('aria-expanded', String(currentPanel() === helpPanel));
   expertTools.hidden = !expertMode;
   expandButton.hidden = !running;
   pasteButton.hidden = running;
@@ -1918,6 +1957,8 @@ function updateWorkspaceViewport() {
 }
 
 function initWorkspaceUI() {
+  helpButton.addEventListener('click', () => showWorkspacePanel(helpPanel, Boolean(currentPanel())));
+  document.querySelector('#help-close').addEventListener('click', () => closeWorkspacePanel());
   expandButton.addEventListener('click', () => setPreviewExpanded(!previewExpanded));
   activityToggle.addEventListener('click', () => { if (currentPanel() === activityPanel) closeWorkspacePanel(); else openDiagnostics(); });
   document.querySelector('#activity-close').addEventListener('click', () => closeWorkspacePanel());
