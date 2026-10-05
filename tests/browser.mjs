@@ -266,13 +266,13 @@ async function runCase(browser, engine, url, mode) {
       assert.equal(layout.work.left, 0, 'Workspace has no outside side margin');
       assert.equal(layout.work.right, layout.width);
       assert.equal(layout.work.top, layout.header.bottom, 'No gap below toolbar');
-      // WebKit can round 100dvh by 1/64 CSS px. Treat subpixel rounding as
-      // equivalent while still detecting any visible outside gutter.
+      // Viewport units and fractional ch widths can round by 1/64 CSS px.
+      // Allow subpixel rounding while still rejecting gaps of 1 px or more.
       assert(Math.abs(layout.work.bottom - layout.height) < 1, 'Workspace fills remaining height');
       assert(layout.gutter.width > 0, 'Line numbers are enabled by default');
       assert.equal(layout.gutter.left, 0, 'Line numbers start at the workspace edge');
       assert.equal(layout.editor.left, layout.gutter.right, 'Code follows the line numbers without a gap');
-      assert.equal(layout.editor.right, layout.width, 'Code fills the remaining width');
+      assert(Math.abs(layout.editor.right - layout.width) < 1, 'Code fills the remaining width');
       assert(Math.abs(layout.editor.height - (layout.height - layout.header.bottom)) < 1);
       assert.equal(layout.background, 'rgb(252, 253, 255)');
       assert.equal(layout.buttons.length, 7);
