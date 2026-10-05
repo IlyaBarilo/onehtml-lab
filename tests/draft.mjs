@@ -94,7 +94,7 @@ try {
       });
       const blockedPage = await blockedContext.newPage();
       await blockedPage.goto(url);
-      await blockedPage.locator('#status').getByText('Автосохранение недоступно.', { exact: false }).waitFor();
+      await blockedPage.locator('#activity-summary').getByText('Автосохранение недоступно.', { exact: false }).waitFor();
       await blockedPage.locator('#code').fill('<h1>Без хранилища</h1>');
       assert(await blockedPage.locator('#save').isEnabled());
       await blockedPage.locator('#expert-toggle').click();

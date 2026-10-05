@@ -47,6 +47,7 @@
         <button id="expert-toggle" class="icon-button expert-button" type="button" aria-label="Экспертный режим" aria-pressed="false" title="Включить экспертный режим">
           <!-- ICON:expert -->
         </button>
+        <button id="preview-expand" class="icon-button" type="button" aria-label="Развернуть игру" aria-pressed="false" title="Развернуть игру" hidden><!-- ICON:expand --></button>
       </div>
     </header>
     <div id="expert-tools" class="expert-tools" hidden>
@@ -58,27 +59,13 @@
         <button id="library-extract-open" class="expert-icon-button" type="button" aria-label="Вынести библиотеки" aria-pressed="false" title="Вынести встроенные библиотеки в ссылки" disabled><!-- ICON:library-out --></button>
       </div>
       <div class="expert-resource-actions">
-        <button id="ai-open" class="import-button" type="button" title="ИИ-боты и готовые запросы">AI и запросы</button>
+        <button id="ai-open" class="import-button" type="button" title="ИИ-боты и готовые запросы">ИИ и запросы</button>
         <button id="examples-open" class="import-button" type="button" title="Открыть примеры игр">Примеры игр</button>
       </div>
       <span id="draft-status" class="draft-status" role="status" aria-live="polite"></span>
       <input id="import-file" type="file" accept=".html,.htm,text/html" hidden>
     </div>
-    <p id="status" class="notice" role="status" aria-live="polite" hidden></p>
-    <div id="library-request" class="library-request" role="group" aria-label="Загрузка библиотеки" hidden>
-      <span id="library-request-text"></span>
-      <div class="library-request-actions"><button id="library-download" type="button">Скачать</button><button id="library-files-button" type="button" hidden>Выбрать JS и лицензию</button><button id="library-skip" type="button">Без подмены</button></div>
-      <input id="library-files" type="file" multiple hidden aria-label="JS-файл библиотеки и её MIT-лицензия">
-    </div>
-    <div id="network-status" class="network-status" hidden>
-      <span id="network-message" role="status" aria-live="polite">Игра использует интернет</span>
-      <span id="network-metrics">Файлов: <span id="network-count">0</span> · учтено: <span id="network-kb">(нет данных)</span></span>
-    </div>
-    <div id="runtime-error" class="runtime-error" role="alert" hidden>
-      <span id="runtime-error-message"></span>
-      <button id="copy-error" type="button">Скопировать ошибку</button>
-    </div>
-    <p id="local-access-status" class="notice local-access-status" role="status" hidden></p>
+    <button id="activity-toggle" class="activity-toggle" type="button" aria-label="Открыть сообщения" aria-expanded="false" aria-controls="activity-panel" hidden><span id="activity-summary" role="status" aria-live="polite"></span><span aria-hidden="true">›</span></button>
     <section class="workspace" aria-label="Рабочая область">
       <textarea id="code" aria-label="HTML-код" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Вставьте HTML-код…"></textarea>
       <div id="comparison" class="comparison" role="region" aria-label="Сравнение с прошлым кодом" hidden>
@@ -103,11 +90,24 @@
         </div>
         <div class="library-extraction-footer"><p id="library-extraction-summary" role="status" aria-live="polite"></p><button id="library-extract-apply" type="button" disabled>Применить</button></div>
       </section>
-    </section>
-  </main>
-  <dialog id="save-dialog" aria-labelledby="save-title">
+      <section id="activity-panel" class="work-panel" aria-labelledby="activity-title" hidden>
+        <div class="panel-heading"><h2 id="activity-title">Сообщения</h2><button id="activity-close" type="button" aria-label="Закрыть сообщения">✕</button></div>
+        <div class="panel-body activity-body">
+          <p id="activity-empty" hidden>Сообщений пока нет.</p>
+          <div id="library-request" class="library-request" role="group" aria-label="Загрузка библиотеки" hidden>
+            <span id="library-request-text"></span>
+            <div class="library-request-actions"><button id="library-download" type="button">Скачать</button><button id="library-files-button" type="button" hidden>Выбрать JS и лицензию</button><button id="library-skip" type="button">Без подмены</button></div>
+            <input id="library-files" type="file" multiple hidden aria-label="JS-файл библиотеки и её MIT-лицензия">
+          </div>
+          <div id="runtime-error" class="runtime-error" hidden><span id="runtime-error-message"></span><button id="copy-error" type="button">Скопировать ошибку</button></div>
+          <p id="status" class="notice" hidden></p>
+          <div id="network-status" class="network-status" hidden><span id="network-message">Игра использует интернет</span><span id="network-metrics">Файлов: <span id="network-count">0</span> · учтено: <span id="network-kb">(нет данных)</span></span></div>
+          <p id="local-access-status" class="notice local-access-status" hidden></p>
+        </div>
+      </section>
+  <section id="save-dialog" class="work-panel" aria-labelledby="save-title" hidden>
     <form id="save-form">
-      <h2 id="save-title">Сохранить HTML</h2>
+      <div class="panel-heading"><h2 id="save-title">Сохранить HTML</h2><button id="save-close" type="button" aria-label="Закрыть сохранение">✕</button></div>
       <div class="save-content">
         <div id="save-options">
           <label for="filename">Имя HTML-файла</label>
@@ -123,7 +123,7 @@
       </div>
       <div class="dialog-actions"><button id="cancel-save" type="button">Отмена</button><button id="confirm-save" class="primary" type="submit">ОК</button></div>
     </form>
-  </dialog>
+  </section>
   <dialog id="clear-dialog" aria-labelledby="clear-title">
     <form id="clear-form">
       <h2 id="clear-title">Очистить код?</h2>
@@ -138,8 +138,9 @@
       <div class="dialog-actions"><button value="cancel" type="submit">Отмена</button><button class="primary" value="replace" type="submit">Заменить</button></div>
     </form>
   </dialog>
-  <dialog id="ai-dialog" class="guide-dialog" aria-labelledby="ai-title">
-    <div class="guide-heading"><h2 id="ai-title">AI и запросы</h2><button id="ai-close" type="button" aria-label="Закрыть AI и запросы">✕</button></div>
+  <section id="ai-dialog" class="work-panel guide-panel" aria-labelledby="ai-title" hidden>
+    <div class="panel-heading"><h2 id="ai-title">ИИ и запросы</h2><button id="ai-close" type="button" aria-label="Закрыть ИИ и запросы">✕</button></div>
+    <div class="panel-body">
     <p>Выберите запрос для нужного экрана. После копирования замените [тема игры] на свою идею. Полученный HTML-код вставьте в редактор, запустите и сохраните.</p>
     <div class="platform-tabs" role="tablist" aria-label="Устройство для запроса">
       <button class="platform-tab" type="button" role="tab" data-platform="mobile" aria-selected="true">Телефон</button>
@@ -156,9 +157,11 @@
       <li><strong>DeepSeek</strong><span class="service-links"><a href="https://chat.deepseek.com/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=com.deepseek.chat" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/deepseek-ai-%D0%B0%D1%81%D1%81%D0%B8%D1%81%D1%82%D0%B5%D0%BD%D1%82/id6737597349" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
       <li><strong>Qwen Studio</strong><span class="service-links"><a href="https://qwen.ai/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=ai.qwenlm.chat.android" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/qwen-studio/id6743778442" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
     </ul>
-  </dialog>
-  <dialog id="examples-dialog" class="guide-dialog" aria-labelledby="examples-title">
-    <div class="guide-heading"><h2 id="examples-title">Примеры игр</h2><button id="examples-close" type="button" aria-label="Закрыть примеры">✕</button></div>
+    </div>
+  </section>
+  <section id="examples-dialog" class="work-panel guide-panel" aria-labelledby="examples-title" hidden>
+    <div class="panel-heading"><h2 id="examples-title">Примеры игр</h2><button id="examples-close" type="button" aria-label="Закрыть примеры">✕</button></div>
+    <div class="panel-body">
     <div class="example-categories" role="tablist" aria-label="Раздел примеров">
       <button class="example-category" type="button" role="tab" data-example-category="games" aria-selected="true">Готовые игры</button>
       <button class="example-category" type="button" role="tab" data-example-category="fix" aria-selected="false">Исправление ошибок</button>
@@ -170,13 +173,17 @@
       <button class="platform-tab" type="button" role="tab" data-platform="desktop" aria-selected="false">Компьютер</button>
     </div>
     <div id="example-list" class="example-list"></div>
-  </dialog>
-  <dialog id="copy-dialog" aria-labelledby="copy-title">
-    <h2 id="copy-title">Скопируйте текст</h2>
+    </div>
+  </section>
+  <section id="copy-dialog" class="work-panel" aria-labelledby="copy-title" hidden>
+    <div class="panel-heading"><h2 id="copy-title">Скопируйте текст</h2><button id="copy-close" type="button" aria-label="Закрыть копирование">✕</button></div>
+    <div class="panel-body copy-body">
     <p class="dialog-copy">Браузер не разрешил автоматическое копирование. Выделенный текст можно скопировать через меню поля.</p>
     <textarea id="copy-text" readonly aria-label="Текст для копирования"></textarea>
-    <div class="dialog-actions"><button id="copy-close" type="button">Закрыть</button></div>
-  </dialog>
+    </div>
+  </section>
+    </section>
+  </main>
   <script>/* APP_SCRIPT */</script>
 </body>
 </html>

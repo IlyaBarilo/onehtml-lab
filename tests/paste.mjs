@@ -29,6 +29,9 @@ async function createApp(clipboard) {
     document: { querySelector: element, querySelectorAll: () => [] },
     window: { addEventListener() {} },
     navigator: { clipboard },
+    // Clipboard unit tests isolate layout; workspace transitions have browser coverage.
+    initWorkspaceUI() {}, updateWorkspaceUI() {}, rememberEditorPosition() {}, restoreEditorPosition() {},
+    closeWorkspacePanels() {}, setPreviewExpanded() {}, currentPanel: () => null, activityPanel: {},
     setTimeout(fn, ms) { timers.push({ fn, ms }); return timers.length; },
     clearTimeout: () => {},
     makePreview: () => ({}),

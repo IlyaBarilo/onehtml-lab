@@ -55,6 +55,8 @@ try {
           await page.locator('#expert-toggle').click();
           assert(await page.locator('#storage-toggle').isHidden());
           await page.locator('#run').click();
+          await page.locator('#activity-summary').getByText(/Ошибка игры/).waitFor();
+          await page.locator('#activity-toggle').click();
           await page.locator('#runtime-error').waitFor({ state: 'visible' });
           await page.waitForFunction(() => document.querySelector('#runtime-error-message').textContent.includes('localStorage'));
           await page.locator('#run').click();

@@ -234,6 +234,7 @@ function hideLibraryRequest() {
   libraryDownloadButton.disabled = false;
   librarySkipButton.disabled = false;
   libraryFilesButton.disabled = false;
+  if (currentPanel() === activityPanel) closeWorkspacePanel();
 }
 
 function requestLibraries(prepared, action) {
@@ -251,6 +252,7 @@ function requestLibraries(prepared, action) {
   libraryFilesButton.hidden = !local.length;
   libraryFilesButton.textContent = 'Выбрать JS и лицензию';
   libraryRequest.hidden = false;
+  if (currentPanel() !== activityPanel) showWorkspacePanel(activityPanel);
   return true;
 }
 
@@ -367,7 +369,7 @@ async function copyOrSelect(text, successMessage) {
     inform(successMessage);
   } catch {
     copyTextField.value = text;
-    copyDialog.showModal();
+    showWorkspacePanel(copyDialog, true);
     copyTextField.focus();
     copyTextField.select();
   }
@@ -398,7 +400,7 @@ function renderExamples() {
     button.type = 'button';
     button.textContent = 'Открыть копию';
     button.addEventListener('click', async () => {
-      examplesDialog.close();
+      closeWorkspacePanels();
       if (!await confirmReplacement(example.code)) return;
       if (running) stopPreview();
       selectGameStorage(`example:${example.id}`);
@@ -444,11 +446,11 @@ for (const tab of document.querySelectorAll('.example-category')) {
   tab.addEventListener('click', () => setExampleCategory(tab.dataset.exampleCategory));
 }
 renderExamples();
-aiButton.addEventListener('click', () => { if (expertMode && !modeBusy) aiDialog.showModal(); });
-examplesButton.addEventListener('click', () => { if (expertMode && !modeBusy) examplesDialog.showModal(); });
-document.querySelector('#ai-close').addEventListener('click', () => aiDialog.close());
-document.querySelector('#examples-close').addEventListener('click', () => examplesDialog.close());
-document.querySelector('#copy-close').addEventListener('click', () => copyDialog.close());
+aiButton.addEventListener('click', () => { if (expertMode && !modeBusy) showWorkspacePanel(aiDialog); });
+examplesButton.addEventListener('click', () => { if (expertMode && !modeBusy) showWorkspacePanel(examplesDialog); });
+document.querySelector('#ai-close').addEventListener('click', () => closeWorkspacePanel());
+document.querySelector('#examples-close').addEventListener('click', () => closeWorkspacePanel());
+document.querySelector('#copy-close').addEventListener('click', () => closeWorkspacePanel());
 document.querySelector('#prompt-create').addEventListener('click', () => void copyOrSelect(gamePrompts[selectedPlatform].create, 'Запрос для новой игры скопирован.'));
 document.querySelector('#prompt-change').addEventListener('click', () => {
   if (codeField.value.trim()) void copyOrSelect(gamePrompts[selectedPlatform].change + codeField.value, 'Запрос с текущим кодом скопирован.');
@@ -608,6 +610,7 @@ function closeLibraryExtraction() {
   extractionPanel.hidden = true;
   extractionList.replaceChildren();
   if (!running && !comparisonOpen && !historyOpen) codeField.hidden = false;
+  restoreEditorPosition();
   updateControls();
 }
 
@@ -658,6 +661,8 @@ async function refreshLibraryExtraction() {
 function openLibraryExtraction() {
   if (!expertMode || running || modeBusy || readingClipboard) return;
   if (extractionOpen) { closeLibraryExtraction(); return; }
+  rememberEditorPosition();
+  closeWorkspacePanels(false);
   closeHistory();
   closeComparison();
   hideLibraryRequest();
@@ -710,11 +715,14 @@ function closeHistory() {
   historyOpen = false;
   historyView.hidden = true;
   if (!running && !comparisonOpen && !extractionOpen) codeField.hidden = false;
+  restoreEditorPosition();
   updateControls();
 }
 
 function openHistory() {
   if (historyOpen || running || modeBusy || !expertMode) return;
+  rememberEditorPosition();
+  closeWorkspacePanels(false);
   closeLibraryExtraction();
   closeComparison();
   renderHistory();
@@ -804,11 +812,14 @@ function closeComparison() {
   comparisonRemoved.textContent = formatSymbolCount(0);
   diffContent.replaceChildren();
   if (!running && !historyOpen && !extractionOpen) codeField.hidden = false;
+  restoreEditorPosition();
   updateControls();
 }
 
 function openComparison(baseline = latestHistory()) {
   if (!baseline || running) return;
+  rememberEditorPosition();
+  closeWorkspacePanels(false);
   closeLibraryExtraction();
   const versionDate = formatVersionDate(baseline.createdAt);
   comparisonSource.textContent = `Текущий код и версия ${versionDate.date} ${versionDate.time}`;
@@ -936,6 +947,7 @@ async function confirmReplacement(nextCode) {
 }
 
 function replaceCode(code, archive = false) {
+  closeWorkspacePanels(false);
   closeLibraryExtraction();
   closeHistory();
   if (archive) archiveCode(codeField.value, code);
@@ -953,6 +965,7 @@ function replaceCode(code, archive = false) {
 }
 
 function offerManualPaste() {
+  closeWorkspacePanels(false);
   replaceOnNextPaste = true;
   codeField.focus();
   codeField.select();
@@ -975,13 +988,12 @@ async function readClipboardWithTimeout() {
 
 function updateControls() {
   const empty = !codeField.value.trim();
-  pasteButton.disabled = running || readingClipboard || modeBusy || extractionOpen;
-  clearButton.disabled = !codeField.value || running || readingClipboard || modeBusy || extractionOpen;
+  pasteButton.disabled = running || readingClipboard || modeBusy || extractionOpen || Boolean(currentPanel());
+  clearButton.disabled = !codeField.value || running || readingClipboard || modeBusy || extractionOpen || Boolean(currentPanel());
   saveButton.disabled = empty || extractionOpen;
   shareButton.disabled = empty || extractionOpen;
   runButton.disabled = modeBusy || extractionOpen || (!running && (empty || readingClipboard));
   expertButton.disabled = modeBusy;
-  expertTools.hidden = !expertMode;
   importButton.disabled = modeBusy || extractionOpen;
   aiButton.disabled = modeBusy || extractionOpen;
   examplesButton.disabled = modeBusy || extractionOpen;
@@ -1020,6 +1032,7 @@ function updateControls() {
   document.querySelector('#storage-on-icon').hidden = !gameStorageAllowed;
   document.querySelector('#storage-off-icon').hidden = gameStorageAllowed;
   storageButton.classList.toggle('is-off', !gameStorageAllowed);
+  updateWorkspaceUI();
 }
 
 codeField.addEventListener('input', () => {
@@ -1099,6 +1112,7 @@ pasteButton.addEventListener('click', async () => {
 });
 
 function stopPreview() {
+  closeWorkspacePanels(false);
   previewRequest += 1;
   // Removing the document tears down its timers, media and event handlers.
   activeFrame = null;
@@ -1106,12 +1120,16 @@ function stopPreview() {
   preview.hidden = true;
   codeField.hidden = false;
   running = false;
+  setPreviewExpanded(false);
+  restoreEditorPosition();
   resetNetworkStatus();
   activeBundledLibraries = [];
   updateLocalAccessHint();
 }
 
 async function startPreview(replaceLibraries = true) {
+  rememberEditorPosition();
+  closeWorkspacePanels(false);
   const request = ++previewRequest;
   const code = codeField.value;
   try {
@@ -1152,6 +1170,7 @@ runButton.addEventListener('click', async () => {
 
 expertButton.addEventListener('click', () => {
   if (modeBusy) return;
+  closeWorkspacePanels(false);
   closeLibraryExtraction();
   previewRequest += 1;
   const wasRunning = running;
@@ -1298,16 +1317,8 @@ function updateSaveLibrariesDescription() {
 saveLibrariesField.addEventListener('change', updateSaveLibrariesDescription);
 saveLibrariesMode.addEventListener('change', updateSaveLibrariesDescription);
 
-function updateSaveViewport() {
-  const viewport = window.visualViewport;
-  saveDialog.style.setProperty('--save-viewport-height', `${viewport?.height || window.innerHeight}px`);
-  saveDialog.style.setProperty('--save-viewport-top', `${viewport?.offsetTop || 0}px`);
-}
-window.visualViewport?.addEventListener('resize', updateSaveViewport);
-window.visualViewport?.addEventListener('scroll', updateSaveViewport);
-window.addEventListener('resize', updateSaveViewport);
-
 saveButton.addEventListener('click', async () => {
+  if (currentPanel() === saveDialog) { closeWorkspacePanel(); return; }
   const code = codeField.value;
   const prepared = await prepareGameHtml(code);
   if (code !== codeField.value) return;
@@ -1327,8 +1338,7 @@ saveButton.addEventListener('click', async () => {
     addedBytes: Math.max(0, new Blob([prepared.html]).size - new Blob([code]).size) };
   updateSaveLibrariesDescription();
   filenameField.value = 'game.html';
-  updateSaveViewport();
-  saveDialog.showModal();
+  showWorkspacePanel(saveDialog);
   filenameField.focus();
   filenameField.select();
 });
@@ -1364,8 +1374,7 @@ shareButton.addEventListener('click', async () => {
     inform('Не удалось отправить HTML-файл. Сохраните его и отправьте через приложение «Файлы».', true);
   }
 });
-cancelSaveButton.addEventListener('click', () => saveDialog.close());
-saveDialog.addEventListener('close', () => saveFileList.replaceChildren());
+cancelSaveButton.addEventListener('click', () => closeWorkspacePanel());
 function showSaveFiles(files) {
   saveOptions.hidden = true;
   saveFilesPanel.hidden = false;
@@ -1398,7 +1407,7 @@ document.querySelector('#save-form').addEventListener('submit', async event => {
     const withLibraries = !saveLibrariesField.disabled && saveLibrariesField.checked;
     const separate = withLibraries && saveLibrariesMode.value === 'files';
     const prepared = separate ? await prepareGameFiles(code, filename) : await prepareGameHtml(code, withLibraries);
-    if (code !== codeField.value || !saveDialog.open) return;
+    if (code !== codeField.value || currentPanel() !== saveDialog) return;
     hideLibraryRequest();
     if (separate) {
       showSaveFiles(prepared.files);
@@ -1407,15 +1416,16 @@ document.querySelector('#save-form').addEventListener('submit', async event => {
     } else {
       downloadHtml(prepared.html, filename);
       currentFilename = filename;
-      saveDialog.close();
+      closeWorkspacePanel();
       inform('Файл передан браузеру для сохранения.');
     }
   } catch {
-    if (saveFilesPanel.hidden) saveDialog.close();
+    if (saveFilesPanel.hidden && currentPanel() === saveDialog) closeWorkspacePanel();
     inform('Не удалось передать все файлы браузеру. Код остался в поле.', true);
   } finally {
     confirmSaveButton.disabled = false;
   }
 });
+initWorkspaceUI();
 updateControls();
 void restoreStartupDraft();

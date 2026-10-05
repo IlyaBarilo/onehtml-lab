@@ -149,7 +149,9 @@ async function runCase(browser, engine, url, mode) {
     assert.equal(await page.locator('#filename').inputValue(), 'game.html');
     const dialogBounds = await page.locator('#save-dialog').boundingBox();
     const okBounds = await page.getByRole('button', { name: 'ОК', exact: true }).boundingBox();
-    assert(dialogBounds.y < 50, 'Save dialog opens near the top of the screen');
+    const workspaceBounds = await page.locator('.workspace').boundingBox();
+    assert.equal(dialogBounds.y, workspaceBounds.y, 'Save screen starts at the workspace edge');
+    assert.equal(dialogBounds.width, workspaceBounds.width, 'Save screen uses the workspace width');
     assert(okBounds.y + okBounds.height <= viewport.height, 'Save action is visible in the viewport');
     if (url.startsWith('file:')) await page.screenshot({ path: join(output, `${engine}-file-${mode}-save-dialog.png`) });
     let downloadPromise = page.waitForEvent('download');
@@ -157,7 +159,7 @@ async function runCase(browser, engine, url, mode) {
     let download = await downloadPromise;
     assert.equal(download.suggestedFilename(), 'game.html');
     assert.equal(await readFile(await download.path(), 'utf8'), sample);
-    check('Top-aligned save dialog downloads unchanged source as game.html while running');
+    check('Workspace save screen downloads unchanged source as game.html while running');
 
     await page.locator('#save').click();
     await page.locator('#filename').fill('Кот');

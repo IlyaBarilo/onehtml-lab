@@ -74,6 +74,8 @@ try {
       await page.locator('#code').fill('<img src="https://assets.onehtml.test/picture.svg">');
       await page.locator('#run').click();
       await page.waitForFunction(() => Number(document.querySelector('#network-count').textContent) >= 1);
+      assert.match(await page.locator('#activity-summary').innerText(), /Сеть:.*\(нет данных\)/);
+      await page.locator('#activity-toggle').click();
       assert(await page.locator('#network-status').isVisible());
       assert.equal(await page.locator('#network-kb').innerText(), '(нет данных)');
       await page.locator('#run').click();
@@ -84,6 +86,7 @@ try {
       await page.frameLocator('iframe').locator('#data').getByText('ready').waitFor();
       assert.equal(await page.frameLocator('iframe').locator('#library').innerText(), 'loaded');
       await page.waitForFunction(() => Number(document.querySelector('#network-count').textContent) >= 4);
+      await page.locator('#activity-toggle').click();
       assert(await page.locator('#network-status').isVisible());
       assert.equal(await page.locator('#network-message').innerText(), 'Игра использует интернет');
       assert(await page.locator('#network-metrics').isVisible());
@@ -91,12 +94,13 @@ try {
       const measuredKb = await page.locator('#network-kb').innerText();
       if (engine === 'chromium') assert.match(measuredKb, /КБ$/);
       else assert(measuredKb === '(нет данных)' || measuredKb.endsWith(' КБ'));
+      await page.locator('#activity-close').click();
       const layout = await page.evaluate(() => ({
         screen: innerWidth,
         content: document.documentElement.scrollWidth,
         headerBottom: document.querySelector('.toolbar').getBoundingClientRect().bottom,
-        networkTop: document.querySelector('#network-status').getBoundingClientRect().top,
-        networkBottom: document.querySelector('#network-status').getBoundingClientRect().bottom,
+        networkTop: document.querySelector('#activity-toggle').getBoundingClientRect().top,
+        networkBottom: document.querySelector('#activity-toggle').getBoundingClientRect().bottom,
         previewTop: document.querySelector('#preview').getBoundingClientRect().top
       }));
       assert(layout.content <= layout.screen, 'Network indicator must fit the mobile screen');

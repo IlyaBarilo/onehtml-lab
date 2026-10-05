@@ -127,12 +127,16 @@ for (const [name, engine] of engines) {
 
     await code.fill('<script>try { localStorage.getItem("game") } catch {}</script>');
     await page.locator('#run').click();
+    await page.locator('#activity-summary').getByText(/localStorage/).waitFor();
+    await page.locator('#activity-toggle').click();
     await page.locator('#local-access-status').waitFor({ state: 'visible' });
     assert.match(await page.locator('#local-access-status').innerText(), /виртуальный localStorage/);
     assert(await page.locator('#runtime-error').isHidden());
     await page.locator('#run').click();
     await code.fill('<script>sessionStorage.getItem("game")</script>');
     await page.locator('#run').click();
+    await page.locator('#activity-summary').getByText(/Ошибка игры/).waitFor();
+    await page.locator('#activity-toggle').click();
     await page.locator('#runtime-error').waitFor({ state: 'visible' });
     await page.waitForFunction(() => document.querySelector('#runtime-error-message').textContent.includes('sessionStorage'));
     assert(await page.locator('#local-access-status').isHidden());
@@ -143,6 +147,8 @@ for (const [name, engine] of engines) {
 
     await code.fill('<script>throw new Error("Проверка диагностики")</script>');
     await page.locator('#run').click();
+    await page.locator('#activity-summary').getByText(/Ошибка игры/).waitFor();
+    await page.locator('#activity-toggle').click();
     await page.locator('#runtime-error').waitFor({ state: 'visible' });
     assert.match(await page.locator('#runtime-error-message').innerText(), /Проверка диагностики|браузер не сообщил подробности/);
     await page.locator('#copy-error').click();
