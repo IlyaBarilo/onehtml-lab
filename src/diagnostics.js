@@ -21,10 +21,11 @@ function diagnosticCounts() {
   return { errors, warnings };
 }
 
-function beginDiagnosticRun(code, origin) {
+function beginDiagnosticRun(code, origin, preparedCode = code) {
   diagnosticEntries.length = 0;
   diagnosticSelected = null;
   diagnosticRun = { code, origin, network: previewNetworkAllowed(), storage: gameStorageAllowed, time: Date.now() };
+  beginReadinessRun(preparedCode);
   updateDiagnostics();
 }
 
@@ -207,9 +208,8 @@ async function deleteDiagnosticCache() {
 }
 
 function setDiagnosticTab(tab) {
-  diagnosticTab = tab === 'libraries' && expertMode ? 'libraries' : 'errors';
-  document.querySelector('#diagnostic-errors').hidden = diagnosticTab !== 'errors';
-  document.querySelector('#diagnostic-libraries').hidden = diagnosticTab !== 'libraries';
+  diagnosticTab = expertMode && ['libraries', 'resources', 'speed'].includes(tab) ? tab : 'errors';
+  for (const name of ['errors', 'libraries', 'resources', 'speed']) document.querySelector(`#diagnostic-${name}`).hidden = diagnosticTab !== name;
   for (const button of document.querySelectorAll('[data-diagnostic-tab]')) button.setAttribute('aria-pressed', String(button.dataset.diagnosticTab === diagnosticTab));
 }
 
@@ -232,7 +232,7 @@ function diagnosticReport() {
   lines.push('Библиотеки текущего кода:');
   for (const row of diagnosticLibraries) lines.push(`${row.title}: ${row.state}${row.bytes != null ? `, ${diagnosticSize(row.bytes)}` : ''}${row.path ? `\n${row.path}` : ''}${row.note ? `\n${row.note}` : ''}`);
   if (!diagnosticLibraries.length) lines.push('Подключения в HTML не найдены.');
-  return lines.join('\n');
+  return [...lines, ...readinessReport()].join('\n');
 }
 
 function diagnosticAiContext() {
@@ -242,6 +242,7 @@ function diagnosticAiContext() {
 
 function updateDiagnostics() {
   if (!diagnosticReady) return;
+  updateReadiness();
   document.querySelector('#diagnostic-open').disabled = modeBusy;
   document.querySelector('#diagnostic-open').setAttribute('aria-pressed', String(currentPanel() === activityPanel));
   document.querySelector('#diagnostic-tabs').hidden = !expertMode;
@@ -264,6 +265,7 @@ function updateDiagnostics() {
     if (revision !== diagnosticRevision || code !== codeField.value) return;
     diagnosticLibraries = rows; diagnosticReportReady = true;
     renderDiagnosticLibraries(rows);
+    renderResourceSource(code, rows);
     document.querySelector('#diagnostic-copy').disabled = false;
   }).catch(() => {
     if (revision !== diagnosticRevision) return;
@@ -274,6 +276,7 @@ function updateDiagnostics() {
 
 function initDiagnostics() {
   diagnosticReady = true;
+  initReadiness();
   document.querySelector('#diagnostic-open').addEventListener('click', () => {
     if (!expertMode || modeBusy) return;
     if (currentPanel() === activityPanel) closeWorkspacePanel(); else openDiagnostics();

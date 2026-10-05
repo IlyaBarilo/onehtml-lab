@@ -22,7 +22,7 @@ const trafficProbe = `<script>
     const observer = new PerformanceObserver(list => {
       for (const entry of list.getEntries()) {
         if (!entry.name.startsWith('https://')) continue;
-        parent.postMessage({ type: 'onehtml-lab:network-resource', bytes: entry.transferSize || 0 }, '*');
+        parent.postMessage({ type: 'onehtml-lab:network-resource', bytes: entry.transferSize || 0, url: entry.name.slice(0, 1000), kind: entry.initiatorType }, '*');
       }
     });
     observer.observe({ type: 'resource', buffered: true });
@@ -155,6 +155,67 @@ const localAccessProbe = `<script>
 })();
 </script>`;
 
+// The clock counts only intervals between consecutive foreground animation callbacks.
+function createFrameClock() {
+  let previous = null, active = false;
+  let frames = 0, elapsed = 0, max = 0, slow = 0;
+  return {
+    active(value) { if (active !== value) previous = null; active = value; },
+    reset() { previous = null; frames = elapsed = max = slow = 0; },
+    frame(now) {
+      if (!active || !Number.isFinite(now)) return;
+      if (previous !== null && now > previous) {
+        const interval = now - previous;
+        frames++; elapsed += interval; max = Math.max(max, interval);
+        if (interval > 100) slow++;
+      }
+      previous = now;
+    },
+    snapshot() { return { frames, elapsed, max, slow }; }
+  };
+}
+
+function previewReadiness(createClock) {
+  const clock = createClock();
+  const send = data => { try { parent.postMessage(data, '*'); } catch {} };
+  let enabled = false, paused = false, generation = -1, raf = 0, lastReport = 0;
+  const report = () => { send({ type: 'onehtml-lab:speed', generation, ...clock.snapshot() }); lastReport = performance.now(); };
+  const tick = now => {
+    raf = 0;
+    if (!enabled || paused || document.hidden) return;
+    clock.frame(now);
+    if (now - lastReport >= 1000) report();
+    raf = requestAnimationFrame(tick);
+  };
+  const sync = () => {
+    const active = enabled && !paused && !document.hidden;
+    clock.active(active);
+    if (active && !raf) raf = requestAnimationFrame(tick);
+    if (!active && raf) { cancelAnimationFrame(raf); raf = 0; report(); }
+  };
+  addEventListener('message', event => {
+    const data = event.data;
+    if (event.source !== parent || data?.type !== 'onehtml-lab:speed-control' || !Number.isSafeInteger(data.generation)) return;
+    if (generation !== data.generation) { clock.reset(); generation = data.generation; lastReport = performance.now(); }
+    enabled = data.enabled === true; paused = data.paused === true; sync();
+  });
+  document.addEventListener('visibilitychange', sync);
+  addEventListener('pagehide', () => { enabled = false; sync(); }, { once: true });
+  let reports = 0, since = Date.now();
+  const resource = (url, status, kind) => {
+    if (Date.now() - since >= 1000) { reports = 0; since = Date.now(); }
+    if (++reports > 100 || typeof url !== 'string' || !url || /^(?:data:|blob:|about:|inline$|eval$)/i.test(url)) return;
+    send({ type: 'onehtml-lab:resource-result', url: url.slice(0, 1000), status, kind });
+  };
+  addEventListener('securitypolicyviolation', event => resource(event.blockedURI, 'blocked', event.effectiveDirective));
+  addEventListener('error', event => {
+    if (event.target && event.target !== window) resource(event.target.currentSrc || event.target.src || event.target.href, 'error', event.target.localName);
+  }, true);
+  send({ type: 'onehtml-lab:readiness-ready' });
+}
+
+const readinessProbe = '<script>(' + previewReadiness.toString() + ')(' + createFrameClock.toString() + ');</script>';
+
 function makePreview(code, networkAllowed = true, storageEntries = null) {
   const frame = document.createElement('iframe');
   frame.title = 'Запущенная игра';
@@ -169,6 +230,7 @@ function makePreview(code, networkAllowed = true, storageEntries = null) {
     + errorProbe
     + (storageEntries ? virtualStorageProbe(storageEntries) : '')
     + localAccessProbe
+    + readinessProbe
     + (networkAllowed ? trafficProbe : '');
   frame.previewOffset = { lines: prefix.split('\n').length - 1, column: prefix.length - prefix.lastIndexOf('\n') - 1 };
   frame.srcdoc = prefix + code;

@@ -1163,7 +1163,7 @@ async function startPreview(replaceLibraries = true) {
     clearRuntimeError();
     const frame = makePreview(prepared.html, previewNetworkAllowed(), gameStorageAllowed ? gameStorageSnapshot() : null);
     errorSource = prepared.html === code ? { code, ...frame.previewOffset } : null;
-    beginDiagnosticRun(code, errorSource);
+    beginDiagnosticRun(code, errorSource, prepared.html);
     resetNetworkStatus();
     if (!isSplitWorkspace()) codeField.blur();
     codeField.hidden = !isSplitWorkspace();

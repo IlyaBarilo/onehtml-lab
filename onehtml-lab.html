@@ -502,7 +502,16 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 }
 
 /* Diagnostics use the same full workspace as the other tools. */
-.activity-body > #diagnostic-tabs, .activity-body > #diagnostic-errors, .activity-body > #diagnostic-libraries { padding: 0; border: 0; border-radius: 0; }
+.activity-body > #diagnostic-tabs, .activity-body > #diagnostic-errors, .activity-body > #diagnostic-libraries, .activity-body > #diagnostic-resources, .activity-body > #diagnostic-speed, .activity-body > .diagnostic-report-actions { padding: 0; border: 0; border-radius: 0; }
+#diagnostic-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+#diagnostic-tabs button { min-width: 0; padding-inline: 5px; font-size: 14px; }
+#diagnostic-tabs button[aria-pressed="true"] { background: #dceaff; border-color: #9dbfea; color: #2059bf; }
+.speed-option { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 16px; }
+.speed-option input { width: 22px; height: 22px; accent-color: #2d6cdf; }
+#speed-result { font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums; }
+#speed-strip { flex: 0 0 auto; margin: 0; padding: 5px 12px; background: #eaf3ff; color: #315c93; font-size: 13px; line-height: 1.4; font-variant-numeric: tabular-nums; }
+#diagnostic-resources h3, #diagnostic-speed h3 { margin: 12px 0; font-size: 17px; }
+@media (max-width: 380px) { #diagnostic-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 #diagnostic-tabs { position: sticky; top: -16px; z-index: 1; background: #fbfcff; padding-block: 6px; }
 #diagnostic-libraries h3 { margin: 8px 0; }
 #diagnostic-errors .runtime-error { flex-direction: row; flex-wrap: wrap; padding: 10px; margin: 8px 0; font-size: 14px; }
@@ -637,6 +646,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
       <input id="import-file" type="file" accept=".html,.htm,text/html" hidden>
     </div>
     <button id="activity-toggle" class="activity-toggle" type="button" aria-label="Открыть сообщения" aria-expanded="false" aria-controls="activity-panel" hidden><span id="activity-summary" role="status" aria-live="polite"></span><span aria-hidden="true">›</span></button>
+    <p id="speed-strip" hidden></p>
     <section class="workspace" aria-label="Рабочая область">
       <section id="help-panel" class="work-panel" aria-labelledby="help-title" hidden>
         <div class="panel-heading"><h2 id="help-title">Как пользоваться</h2><button id="help-close" type="button" aria-label="Закрыть памятку">✕</button></div>
@@ -725,9 +735,10 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
             <div class="library-request-actions"><button id="library-download" type="button">Скачать</button><button id="library-files-button" type="button" hidden>Выбрать JS и лицензию</button><button id="library-skip" type="button">Без подмены</button></div>
             <input id="library-files" type="file" multiple hidden aria-label="JS-файл библиотеки и её MIT-лицензия">
           </div>
-          <div id="diagnostic-tabs" class="platform-tabs" role="group" aria-label="Раздел диагностики"><button type="button" class="platform-tab" data-diagnostic-tab="errors" aria-pressed="true">Ошибки</button><button type="button" class="platform-tab" data-diagnostic-tab="libraries" aria-pressed="false">Библиотеки</button></div>
+          <div id="diagnostic-tabs" class="platform-tabs" role="group" aria-label="Раздел диагностики"><button type="button" class="platform-tab" data-diagnostic-tab="errors" aria-pressed="true">Ошибки</button><button type="button" class="platform-tab" data-diagnostic-tab="libraries" aria-pressed="false">Библиотеки</button><button type="button" class="platform-tab" data-diagnostic-tab="resources" aria-pressed="false">Ресурсы</button><button type="button" class="platform-tab" data-diagnostic-tab="speed" aria-pressed="false">Скорость</button></div>
+          <div class="diagnostic-actions diagnostic-report-actions"><button id="diagnostic-copy" type="button">Скопировать отчёт</button></div>
           <section id="diagnostic-errors">
-            <div class="diagnostic-actions"><button id="diagnostic-clear" type="button" disabled>Очистить</button><button id="diagnostic-copy" type="button">Скопировать отчёт</button></div>
+            <div class="diagnostic-actions"><button id="diagnostic-clear" type="button" disabled>Очистить</button></div>
             <p id="diagnostic-run-note" class="diagnostic-note">Игра ещё не запускалась.</p>
             <div id="runtime-error" class="runtime-error" hidden><span id="runtime-error-message"></span><button id="error-line" type="button" hidden>Перейти к строке</button><button id="error-ai" type="button" hidden>Исправить с ИИ</button><button id="copy-error" type="button">Скопировать ошибку</button></div>
             <ol id="diagnostic-error-list" class="diagnostic-list"></ol>
@@ -738,6 +749,16 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
             <p id="diagnostic-cache-size" class="diagnostic-note"></p><ul id="diagnostic-cache-list" class="diagnostic-list"></ul>
             <div id="diagnostic-confirm" class="diagnostic-confirm" hidden><p id="diagnostic-confirm-text"></p><div class="diagnostic-actions"><button id="diagnostic-delete-yes" type="button">Удалить</button><button id="diagnostic-delete-no" type="button">Отмена</button></div></div>
             <p id="diagnostic-cache-feedback" role="status" class="diagnostic-note"></p>
+          </section>
+          <section id="diagnostic-resources" hidden>
+            <h3>В текущем коде</h3><p id="resource-source-note" class="diagnostic-note"></p><ul id="resource-source-list" class="diagnostic-list"></ul>
+            <h3>Обращения при запуске</h3><p id="resources-run-note" class="diagnostic-note"></p><p id="resource-bundled" class="diagnostic-note"></p><p id="resource-observed-note" class="diagnostic-note"></p><ul id="resource-observed-list" class="diagnostic-list"></ul>
+            <p class="diagnostic-note">Для проверки выключите сеть кнопкой с глобусом и попробуйте разные действия в игре. Открытие первого экрана ещё не подтверждает автономность всей игры.</p>
+          </section>
+          <section id="diagnostic-speed" hidden>
+            <label class="speed-option"><input id="speed-toggle" type="checkbox">Измерять скорость игры</label>
+            <p id="speed-state" class="diagnostic-note"></p><p id="speed-run-note" class="diagnostic-note"></p><p id="speed-result"></p>
+            <p class="diagnostic-note">Средний FPS, самая длинная пауза между кадрами и число пауз больше 100 мс. Это частота кадров браузера; частота отрисовки самой игры может отличаться. Фоновые паузы и вспомогательные экраны исключены.</p>
           </section>
           <p id="status" class="notice" hidden></p>
           <div id="network-status" class="network-status" hidden><span id="network-message">Игра использует интернет</span><span id="network-metrics">Файлов: <span id="network-count">0</span> · учтено: <span id="network-kb">(нет данных)</span></span></div>
@@ -1309,7 +1330,7 @@ const trafficProbe = `<script>
     const observer = new PerformanceObserver(list => {
       for (const entry of list.getEntries()) {
         if (!entry.name.startsWith('https://')) continue;
-        parent.postMessage({ type: 'onehtml-lab:network-resource', bytes: entry.transferSize || 0 }, '*');
+        parent.postMessage({ type: 'onehtml-lab:network-resource', bytes: entry.transferSize || 0, url: entry.name.slice(0, 1000), kind: entry.initiatorType }, '*');
       }
     });
     observer.observe({ type: 'resource', buffered: true });
@@ -1442,6 +1463,67 @@ const localAccessProbe = `<script>
 })();
 <\/script>`;
 
+// The clock counts only intervals between consecutive foreground animation callbacks.
+function createFrameClock() {
+  let previous = null, active = false;
+  let frames = 0, elapsed = 0, max = 0, slow = 0;
+  return {
+    active(value) { if (active !== value) previous = null; active = value; },
+    reset() { previous = null; frames = elapsed = max = slow = 0; },
+    frame(now) {
+      if (!active || !Number.isFinite(now)) return;
+      if (previous !== null && now > previous) {
+        const interval = now - previous;
+        frames++; elapsed += interval; max = Math.max(max, interval);
+        if (interval > 100) slow++;
+      }
+      previous = now;
+    },
+    snapshot() { return { frames, elapsed, max, slow }; }
+  };
+}
+
+function previewReadiness(createClock) {
+  const clock = createClock();
+  const send = data => { try { parent.postMessage(data, '*'); } catch {} };
+  let enabled = false, paused = false, generation = -1, raf = 0, lastReport = 0;
+  const report = () => { send({ type: 'onehtml-lab:speed', generation, ...clock.snapshot() }); lastReport = performance.now(); };
+  const tick = now => {
+    raf = 0;
+    if (!enabled || paused || document.hidden) return;
+    clock.frame(now);
+    if (now - lastReport >= 1000) report();
+    raf = requestAnimationFrame(tick);
+  };
+  const sync = () => {
+    const active = enabled && !paused && !document.hidden;
+    clock.active(active);
+    if (active && !raf) raf = requestAnimationFrame(tick);
+    if (!active && raf) { cancelAnimationFrame(raf); raf = 0; report(); }
+  };
+  addEventListener('message', event => {
+    const data = event.data;
+    if (event.source !== parent || data?.type !== 'onehtml-lab:speed-control' || !Number.isSafeInteger(data.generation)) return;
+    if (generation !== data.generation) { clock.reset(); generation = data.generation; lastReport = performance.now(); }
+    enabled = data.enabled === true; paused = data.paused === true; sync();
+  });
+  document.addEventListener('visibilitychange', sync);
+  addEventListener('pagehide', () => { enabled = false; sync(); }, { once: true });
+  let reports = 0, since = Date.now();
+  const resource = (url, status, kind) => {
+    if (Date.now() - since >= 1000) { reports = 0; since = Date.now(); }
+    if (++reports > 100 || typeof url !== 'string' || !url || /^(?:data:|blob:|about:|inline$|eval$)/i.test(url)) return;
+    send({ type: 'onehtml-lab:resource-result', url: url.slice(0, 1000), status, kind });
+  };
+  addEventListener('securitypolicyviolation', event => resource(event.blockedURI, 'blocked', event.effectiveDirective));
+  addEventListener('error', event => {
+    if (event.target && event.target !== window) resource(event.target.currentSrc || event.target.src || event.target.href, 'error', event.target.localName);
+  }, true);
+  send({ type: 'onehtml-lab:readiness-ready' });
+}
+
+const readinessProbe = '<script>(' + previewReadiness.toString() + ')(' + createFrameClock.toString() + ');<\/script>';
+
 function makePreview(code, networkAllowed = true, storageEntries = null) {
   const frame = document.createElement('iframe');
   frame.title = 'Запущенная игра';
@@ -1456,6 +1538,7 @@ function makePreview(code, networkAllowed = true, storageEntries = null) {
     + errorProbe
     + (storageEntries ? virtualStorageProbe(storageEntries) : '')
     + localAccessProbe
+    + readinessProbe
     + (networkAllowed ? trafficProbe : '');
   frame.previewOffset = { lines: prefix.split('\n').length - 1, column: prefix.length - prefix.lastIndexOf('\n') - 1 };
   frame.srcdoc = prefix + code;
@@ -2533,6 +2616,210 @@ function initDesktopWorkspace() {
   updateDesktopUI();
 }
 
+// Source inspection is a text scan: no user markup is attached or parsed into a DOM.
+const resourceLimit = 200;
+let speedEnabled = false;
+let readinessReady = false;
+let readinessTimer = 0;
+let speedGeneration = 0;
+let speedControl = '';
+let resourceRows = [];
+let resourceOverflow = false;
+
+function resourceAddress(value) {
+  const url = String(value || '').trim();
+  return url && !/^(?:#|data:|blob:|javascript:|mailto:|tel:|about:)/i.test(url) ? url.slice(0, 1000) : '';
+}
+
+function inspectResources(code, libraries = []) {
+  const rows = new Map();
+  let overflow = false;
+  function add(value, kind, index = -1) {
+    const path = resourceAddress(value);
+    if (!path) return;
+    if (kind === 'Ресурс CSS') {
+      if (/\.(?:woff2?|ttf|otf|eot)(?:[?#]|$)/i.test(path)) kind = 'Шрифт';
+      else if (/\.css(?:[?#]|$)/i.test(path)) kind = 'CSS';
+    }
+    const copy = kind === 'Скрипт' && libraries.find(row => row.reference?.index === index && row.usedKey);
+    const state = copy ? 'Копия доступна для подмены' : /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(path) ? 'Внешний адрес' : 'Относительный или локальный путь';
+    const key = JSON.stringify([kind, path, state]);
+    if (rows.has(key)) { rows.get(key).count++; return; }
+    if (rows.size >= resourceLimit) { overflow = true; return; }
+    rows.set(key, { kind, path, state, count: 1 });
+  }
+  function css(text) {
+    const unescape = text => text.replace(/\\([\da-f]{1,6}\s?|[^\r\n])/gi, (_, value) => /^[\da-f]/i.test(value)
+      ? String.fromCodePoint(Math.min(0x10ffff, parseInt(value.trim(), 16)) || 0xfffd) : value);
+    const tokens = /\/\*[\s\S]*?\*\/|url\(\s*(?:"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)'|([^)]*))\s*\)|@import\s+(?:"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)')|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/gi;
+    for (const match of text.matchAll(tokens)) {
+      const url = match.slice(1).find(value => value !== undefined);
+      if (url !== undefined) add(unescape(url.trim()), /^@import/i.test(match[0]) ? 'CSS' : 'Ресурс CSS');
+    }
+  }
+  function srcset(text) {
+    // Read URL tokens before optional density/width descriptors; keep data URLs intact.
+    let rest = text;
+    while (rest) {
+      rest = rest.replace(/^[\s,]+/, '');
+      const token = /^\S+/.exec(rest)?.[0];
+      if (!token) break;
+      rest = rest.slice(token.length);
+      if (!/^data:/i.test(token)) for (const url of token.replace(/,+$/, '').split(',')) add(url, 'Изображение');
+      if (!token.endsWith(',')) rest = rest.replace(/^[^,]*(?:,|$)/, '');
+    }
+  }
+  const tokens = /<!--[\s\S]*?-->|<(script|style|textarea|title|xmp|iframe|noembed|noframes)\b((?:[^"'<>]|"[^"]*"|'[^']*')*)>([\s\S]*?)<\/\1\s*>|<([a-z][\w:-]*)\b((?:[^"'<>]|"[^"]*"|'[^']*')*)>/gi;
+  for (const match of code.matchAll(tokens)) {
+    const tag = (match[1] || match[4] || '').toLowerCase();
+    if (!tag) continue;
+    const attributes = scriptAttributes(match[2] ?? match[5]);
+    const attr = name => decodeScriptUrl(attributes.get(name)?.value || '');
+    if (tag === 'script') add(attr('src'), 'Скрипт', match.index);
+    if (tag === 'style') css(match[3] || '');
+    if (tag === 'link' && /(?:^|\s)(?:stylesheet|preload|modulepreload|icon)(?:\s|$)/i.test(attr('rel'))) {
+      add(attr('href'), /stylesheet/i.test(attr('rel')) ? 'CSS' : attr('as') === 'font' ? 'Шрифт' : 'Ресурс link');
+    }
+    if (['img', 'input'].includes(tag)) add(attr('src'), 'Изображение');
+    if (['audio', 'video', 'source', 'track'].includes(tag)) add(attr('src'), 'Медиа');
+    if (['img', 'source'].includes(tag)) srcset(attr('srcset'));
+    if (tag === 'video') add(attr('poster'), 'Изображение');
+    if (tag === 'iframe') add(attr('src'), 'Вложенная страница');
+    if (tag === 'object') add(attr('data'), 'Объект');
+    if (tag === 'embed') add(attr('src'), 'Объект');
+    if (attributes.has('style')) css(attr('style'));
+  }
+  for (const row of libraries.filter(item => item.state === 'Встроена в HTML')) {
+    if (rows.size >= resourceLimit) { overflow = true; break; }
+    rows.set(`embedded:${rows.size}`, { kind: row.title, path: row.path, state: 'Встроена в HTML', count: 1 });
+  }
+  return { rows: [...rows.values()], overflow };
+}
+
+function beginReadinessRun(preparedCode) {
+  if (!diagnosticRun) return;
+  diagnosticRun.resources = new Map();
+  diagnosticRun.resourcesOverflow = false;
+  diagnosticRun.speed = null;
+  diagnosticRun.bundled = [...preparedCode.matchAll(/data-onehtml-filename="([^"]+)"/g)].map(match => decodeScriptUrl(match[1]));
+  speedGeneration++;
+  speedControl = '';
+}
+
+function readinessRunLabel() {
+  if (!diagnosticRun) return 'Игра ещё не запускалась.';
+  return `${running ? 'Текущий' : 'Последний'} запуск · ${new Date(diagnosticRun.time).toLocaleTimeString('ru-RU')}.`
+    + (diagnosticRun.code !== codeField.value ? ' Код изменён: данные относятся к прежней версии.' : '');
+}
+
+function recordResource(data) {
+  if (!diagnosticRun?.resources) return;
+  const path = resourceAddress(typeof data.url === 'string' ? data.url : '');
+  if (!path || !['timing', 'blocked', 'error'].includes(data.status)) return;
+  const map = diagnosticRun.resources;
+  if (!map.has(path)) {
+    if (map.size >= resourceLimit) { diagnosticRun.resourcesOverflow = true; scheduleReadiness(); return; }
+    map.set(path, { path, count: 0, bytes: 0, blocked: false, error: false, kind: '' });
+  }
+  const row = map.get(path);
+  if (data.status === 'timing') {
+    row.count = Math.min(1e6, row.count + 1);
+    row.bytes = Math.min(Number.MAX_SAFE_INTEGER, row.bytes + (Number.isFinite(data.bytes) && data.bytes > 0 ? Math.floor(data.bytes) : 0));
+  } else row[data.status] = true;
+  if (typeof data.kind === 'string') row.kind = data.kind.slice(0, 50);
+  scheduleReadiness();
+}
+
+function speedText() {
+  const stats = diagnosticRun?.speed;
+  return stats?.frames ? `FPS ${Math.round(stats.frames * 1000 / stats.elapsed)} · макс. пауза ${Math.round(stats.max)} мс · >100 мс: ${stats.slow}` : 'Нет измерений.';
+}
+
+function resourceText(row) {
+  return `${row.blocked ? 'Заблокировано политикой' : row.error ? 'Ошибка загрузки' : 'Загрузка замечена'}${row.blocked && row.error ? ' · ошибка загрузки' : ''}`
+    + `${row.count ? ` · ${row.count} загрузок · ${row.bytes ? diagnosticSize(row.bytes) : '(нет данных)'}` : ''}`;
+}
+
+function renderReadiness() {
+  if (!readinessReady) return;
+  const strip = document.querySelector('#speed-strip');
+  strip.hidden = !running || !speedEnabled || Boolean(currentPanel()) || historyOpen || comparisonOpen || extractionOpen;
+  strip.textContent = speedText();
+  if (currentPanel() !== activityPanel) return;
+  document.querySelector('#resources-run-note').textContent = readinessRunLabel();
+  document.querySelector('#speed-run-note').textContent = readinessRunLabel();
+  document.querySelector('#speed-result').textContent = speedText();
+  document.querySelector('#speed-toggle').checked = speedEnabled;
+  document.querySelector('#speed-state').textContent = speedEnabled ? (running ? 'Измерение продолжается после возврата к игре.' : 'Измерение начнётся при запуске игры.') : 'Измерение выключено. Последний результат сохранён до нового запуска.';
+  document.querySelector('#resource-observed-note').textContent = `${diagnosticRun?.resources?.size ? 'Замеченные обращения; повторные загрузки объединены.' : 'Обращений пока не зарегистрировано.'}${diagnosticRun?.resourcesOverflow ? ' Показаны первые 200 адресов.' : ''}`;
+  document.querySelector('#resource-observed-list').replaceChildren(...[...(diagnosticRun?.resources?.values() || [])].map(row => diagnosticRow(row.path, resourceText(row))));
+  document.querySelector('#resource-bundled').textContent = diagnosticRun?.bundled?.length ? `Подставлены или уже встроены при запуске: ${[...new Set(diagnosticRun.bundled)].join(', ')}` : '';
+}
+
+function renderResourceSource(code, libraries) {
+  const result = inspectResources(code, libraries);
+  resourceRows = result.rows; resourceOverflow = result.overflow;
+  document.querySelector('#resource-source-note').textContent = `${resourceRows.length ? 'Ссылки в HTML и встроенных стилях; наличие ссылки не означает загрузку.' : 'Внешних ссылок в HTML и встроенных стилях не найдено.'} Импорты и адреса внутри JavaScript и внешнего CSS здесь не разбираются.${resourceOverflow ? ' Показаны первые 200 записей.' : ''}`;
+  document.querySelector('#resource-source-list').replaceChildren(...resourceRows.map(row => diagnosticRow(row.kind, `${row.state}${row.count > 1 ? ` · ${row.count} подключений` : ''}\n${row.path}`)));
+}
+
+function scheduleReadiness() {
+  if (!readinessReady || readinessTimer) return;
+  readinessTimer = setTimeout(() => { readinessTimer = 0; renderReadiness(); }, 1000);
+}
+
+function updateReadiness() {
+  if (!readinessReady) return;
+  const paused = document.hidden || Boolean(currentPanel()) || historyOpen || comparisonOpen || extractionOpen;
+  const key = `${speedGeneration}:${speedEnabled}:${paused}`;
+  if (running && activeFrame && key !== speedControl) {
+    speedControl = key;
+    activeFrame.contentWindow.postMessage({ type: 'onehtml-lab:speed-control', enabled: speedEnabled, paused, generation: speedGeneration }, '*');
+  }
+  renderReadiness();
+}
+
+function readinessReport() {
+  const lines = ['Ресурсы текущего кода:', ...resourceRows.map(row => `${row.kind}: ${row.state} · ${row.path}`)];
+  if (!resourceRows.length) lines.push('Внешних ссылок в HTML и встроенных стилях не найдено.');
+  lines.push('Импорты и адреса в JavaScript и внешнем CSS статически не разбираются.');
+  if (resourceOverflow) lines.push('Показаны первые 200 записей.');
+  lines.push(readinessRunLabel(), 'Обращения при запуске:');
+  for (const row of diagnosticRun?.resources?.values() || []) lines.push(`${row.path}: ${resourceText(row)}`);
+  if (!diagnosticRun?.resources?.size) lines.push('Не зарегистрированы.');
+  if (diagnosticRun?.resourcesOverflow) lines.push('Показаны первые 200 адресов.');
+  if (diagnosticRun?.bundled?.length) lines.push(`Подставлены или уже встроены при запуске: ${[...new Set(diagnosticRun.bundled)].join(', ')}`);
+  lines.push('Частота кадров браузера:', speedText(), 'Фоновые паузы и вспомогательные экраны исключены. Частота отрисовки самой игры может отличаться.');
+  return lines;
+}
+
+function initReadiness() {
+  try { speedEnabled = localStorage.getItem('onehtml-lab-speed') === 'true'; } catch {}
+  readinessReady = true;
+  document.querySelector('#speed-toggle').addEventListener('change', event => {
+    if (!expertMode) return;
+    speedEnabled = event.target.checked;
+    speedGeneration++; speedControl = '';
+    if (speedEnabled && diagnosticRun) diagnosticRun.speed = null;
+    try { localStorage.setItem('onehtml-lab-speed', String(speedEnabled)); }
+    catch { inform('Настройка измерения действует только сейчас.', true); }
+    updateReadiness();
+  });
+  document.addEventListener('visibilitychange', () => { speedControl = ''; updateReadiness(); });
+  window.addEventListener('message', event => {
+    if (!running || !activeFrame || event.source !== activeFrame.contentWindow) return;
+    const data = event.data;
+    if (data?.type === 'onehtml-lab:readiness-ready') { speedControl = ''; updateReadiness(); }
+    if (data?.type === 'onehtml-lab:network-resource') recordResource({ ...data, status: 'timing' });
+    if (data?.type === 'onehtml-lab:resource-result') recordResource(data);
+    if (data?.type !== 'onehtml-lab:speed' || !speedEnabled || data.generation !== speedGeneration || !diagnosticRun) return;
+    if (![data.frames, data.elapsed, data.max, data.slow].every(n => Number.isFinite(n) && n >= 0) || data.elapsed > 1e12 || data.frames > 1e12 || data.max > data.elapsed || data.slow > data.frames || (data.frames && !data.elapsed)) return;
+    diagnosticRun.speed = { frames: data.frames, elapsed: data.elapsed, max: data.max, slow: data.slow };
+    scheduleReadiness();
+  });
+  updateReadiness();
+}
+
 // Diagnostics read source as text; they never execute it in the editor.
 const diagnosticEntries = [];
 let diagnosticRun = null;
@@ -2556,10 +2843,11 @@ function diagnosticCounts() {
   return { errors, warnings };
 }
 
-function beginDiagnosticRun(code, origin) {
+function beginDiagnosticRun(code, origin, preparedCode = code) {
   diagnosticEntries.length = 0;
   diagnosticSelected = null;
   diagnosticRun = { code, origin, network: previewNetworkAllowed(), storage: gameStorageAllowed, time: Date.now() };
+  beginReadinessRun(preparedCode);
   updateDiagnostics();
 }
 
@@ -2742,9 +3030,8 @@ async function deleteDiagnosticCache() {
 }
 
 function setDiagnosticTab(tab) {
-  diagnosticTab = tab === 'libraries' && expertMode ? 'libraries' : 'errors';
-  document.querySelector('#diagnostic-errors').hidden = diagnosticTab !== 'errors';
-  document.querySelector('#diagnostic-libraries').hidden = diagnosticTab !== 'libraries';
+  diagnosticTab = expertMode && ['libraries', 'resources', 'speed'].includes(tab) ? tab : 'errors';
+  for (const name of ['errors', 'libraries', 'resources', 'speed']) document.querySelector(`#diagnostic-${name}`).hidden = diagnosticTab !== name;
   for (const button of document.querySelectorAll('[data-diagnostic-tab]')) button.setAttribute('aria-pressed', String(button.dataset.diagnosticTab === diagnosticTab));
 }
 
@@ -2767,7 +3054,7 @@ function diagnosticReport() {
   lines.push('Библиотеки текущего кода:');
   for (const row of diagnosticLibraries) lines.push(`${row.title}: ${row.state}${row.bytes != null ? `, ${diagnosticSize(row.bytes)}` : ''}${row.path ? `\n${row.path}` : ''}${row.note ? `\n${row.note}` : ''}`);
   if (!diagnosticLibraries.length) lines.push('Подключения в HTML не найдены.');
-  return lines.join('\n');
+  return [...lines, ...readinessReport()].join('\n');
 }
 
 function diagnosticAiContext() {
@@ -2777,6 +3064,7 @@ function diagnosticAiContext() {
 
 function updateDiagnostics() {
   if (!diagnosticReady) return;
+  updateReadiness();
   document.querySelector('#diagnostic-open').disabled = modeBusy;
   document.querySelector('#diagnostic-open').setAttribute('aria-pressed', String(currentPanel() === activityPanel));
   document.querySelector('#diagnostic-tabs').hidden = !expertMode;
@@ -2799,6 +3087,7 @@ function updateDiagnostics() {
     if (revision !== diagnosticRevision || code !== codeField.value) return;
     diagnosticLibraries = rows; diagnosticReportReady = true;
     renderDiagnosticLibraries(rows);
+    renderResourceSource(code, rows);
     document.querySelector('#diagnostic-copy').disabled = false;
   }).catch(() => {
     if (revision !== diagnosticRevision) return;
@@ -2809,6 +3098,7 @@ function updateDiagnostics() {
 
 function initDiagnostics() {
   diagnosticReady = true;
+  initReadiness();
   document.querySelector('#diagnostic-open').addEventListener('click', () => {
     if (!expertMode || modeBusy) return;
     if (currentPanel() === activityPanel) closeWorkspacePanel(); else openDiagnostics();
@@ -4164,7 +4454,7 @@ async function startPreview(replaceLibraries = true) {
     clearRuntimeError();
     const frame = makePreview(prepared.html, previewNetworkAllowed(), gameStorageAllowed ? gameStorageSnapshot() : null);
     errorSource = prepared.html === code ? { code, ...frame.previewOffset } : null;
-    beginDiagnosticRun(code, errorSource);
+    beginDiagnosticRun(code, errorSource, prepared.html);
     resetNetworkStatus();
     if (!isSplitWorkspace()) codeField.blur();
     codeField.hidden = !isSplitWorkspace();

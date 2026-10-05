@@ -464,7 +464,16 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 }
 
 /* Diagnostics use the same full workspace as the other tools. */
-.activity-body > #diagnostic-tabs, .activity-body > #diagnostic-errors, .activity-body > #diagnostic-libraries { padding: 0; border: 0; border-radius: 0; }
+.activity-body > #diagnostic-tabs, .activity-body > #diagnostic-errors, .activity-body > #diagnostic-libraries, .activity-body > #diagnostic-resources, .activity-body > #diagnostic-speed, .activity-body > .diagnostic-report-actions { padding: 0; border: 0; border-radius: 0; }
+#diagnostic-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+#diagnostic-tabs button { min-width: 0; padding-inline: 5px; font-size: 14px; }
+#diagnostic-tabs button[aria-pressed="true"] { background: #dceaff; border-color: #9dbfea; color: #2059bf; }
+.speed-option { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 16px; }
+.speed-option input { width: 22px; height: 22px; accent-color: #2d6cdf; }
+#speed-result { font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums; }
+#speed-strip { flex: 0 0 auto; margin: 0; padding: 5px 12px; background: #eaf3ff; color: #315c93; font-size: 13px; line-height: 1.4; font-variant-numeric: tabular-nums; }
+#diagnostic-resources h3, #diagnostic-speed h3 { margin: 12px 0; font-size: 17px; }
+@media (max-width: 380px) { #diagnostic-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 #diagnostic-tabs { position: sticky; top: -16px; z-index: 1; background: #fbfcff; padding-block: 6px; }
 #diagnostic-libraries h3 { margin: 8px 0; }
 #diagnostic-errors .runtime-error { flex-direction: row; flex-wrap: wrap; padding: 10px; margin: 8px 0; font-size: 14px; }

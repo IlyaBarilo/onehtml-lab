@@ -20,7 +20,8 @@
     "test:ai": "node tests/ai-prompts.mjs",
     "test:desktop": "node tests/desktop.mjs",
     "test:diagnostics": "node tests/diagnostics.mjs",
-    "test:workshop": "node tests/workshop.mjs"
+    "test:workshop": "node tests/workshop.mjs",
+    "test:readiness": "node tests/readiness.mjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

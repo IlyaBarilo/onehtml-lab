@@ -70,6 +70,7 @@
       <input id="import-file" type="file" accept=".html,.htm,text/html" hidden>
     </div>
     <button id="activity-toggle" class="activity-toggle" type="button" aria-label="Открыть сообщения" aria-expanded="false" aria-controls="activity-panel" hidden><span id="activity-summary" role="status" aria-live="polite"></span><span aria-hidden="true">›</span></button>
+    <p id="speed-strip" hidden></p>
     <section class="workspace" aria-label="Рабочая область">
       <section id="help-panel" class="work-panel" aria-labelledby="help-title" hidden>
         <div class="panel-heading"><h2 id="help-title">Как пользоваться</h2><button id="help-close" type="button" aria-label="Закрыть памятку">✕</button></div>
@@ -158,9 +159,10 @@
             <div class="library-request-actions"><button id="library-download" type="button">Скачать</button><button id="library-files-button" type="button" hidden>Выбрать JS и лицензию</button><button id="library-skip" type="button">Без подмены</button></div>
             <input id="library-files" type="file" multiple hidden aria-label="JS-файл библиотеки и её MIT-лицензия">
           </div>
-          <div id="diagnostic-tabs" class="platform-tabs" role="group" aria-label="Раздел диагностики"><button type="button" class="platform-tab" data-diagnostic-tab="errors" aria-pressed="true">Ошибки</button><button type="button" class="platform-tab" data-diagnostic-tab="libraries" aria-pressed="false">Библиотеки</button></div>
+          <div id="diagnostic-tabs" class="platform-tabs" role="group" aria-label="Раздел диагностики"><button type="button" class="platform-tab" data-diagnostic-tab="errors" aria-pressed="true">Ошибки</button><button type="button" class="platform-tab" data-diagnostic-tab="libraries" aria-pressed="false">Библиотеки</button><button type="button" class="platform-tab" data-diagnostic-tab="resources" aria-pressed="false">Ресурсы</button><button type="button" class="platform-tab" data-diagnostic-tab="speed" aria-pressed="false">Скорость</button></div>
+          <div class="diagnostic-actions diagnostic-report-actions"><button id="diagnostic-copy" type="button">Скопировать отчёт</button></div>
           <section id="diagnostic-errors">
-            <div class="diagnostic-actions"><button id="diagnostic-clear" type="button" disabled>Очистить</button><button id="diagnostic-copy" type="button">Скопировать отчёт</button></div>
+            <div class="diagnostic-actions"><button id="diagnostic-clear" type="button" disabled>Очистить</button></div>
             <p id="diagnostic-run-note" class="diagnostic-note">Игра ещё не запускалась.</p>
             <div id="runtime-error" class="runtime-error" hidden><span id="runtime-error-message"></span><button id="error-line" type="button" hidden>Перейти к строке</button><button id="error-ai" type="button" hidden>Исправить с ИИ</button><button id="copy-error" type="button">Скопировать ошибку</button></div>
             <ol id="diagnostic-error-list" class="diagnostic-list"></ol>
@@ -171,6 +173,16 @@
             <p id="diagnostic-cache-size" class="diagnostic-note"></p><ul id="diagnostic-cache-list" class="diagnostic-list"></ul>
             <div id="diagnostic-confirm" class="diagnostic-confirm" hidden><p id="diagnostic-confirm-text"></p><div class="diagnostic-actions"><button id="diagnostic-delete-yes" type="button">Удалить</button><button id="diagnostic-delete-no" type="button">Отмена</button></div></div>
             <p id="diagnostic-cache-feedback" role="status" class="diagnostic-note"></p>
+          </section>
+          <section id="diagnostic-resources" hidden>
+            <h3>В текущем коде</h3><p id="resource-source-note" class="diagnostic-note"></p><ul id="resource-source-list" class="diagnostic-list"></ul>
+            <h3>Обращения при запуске</h3><p id="resources-run-note" class="diagnostic-note"></p><p id="resource-bundled" class="diagnostic-note"></p><p id="resource-observed-note" class="diagnostic-note"></p><ul id="resource-observed-list" class="diagnostic-list"></ul>
+            <p class="diagnostic-note">Для проверки выключите сеть кнопкой с глобусом и попробуйте разные действия в игре. Открытие первого экрана ещё не подтверждает автономность всей игры.</p>
+          </section>
+          <section id="diagnostic-speed" hidden>
+            <label class="speed-option"><input id="speed-toggle" type="checkbox">Измерять скорость игры</label>
+            <p id="speed-state" class="diagnostic-note"></p><p id="speed-run-note" class="diagnostic-note"></p><p id="speed-result"></p>
+            <p class="diagnostic-note">Средний FPS, самая длинная пауза между кадрами и число пауз больше 100 мс. Это частота кадров браузера; частота отрисовки самой игры может отличаться. Фоновые паузы и вспомогательные экраны исключены.</p>
           </section>
           <p id="status" class="notice" hidden></p>
           <div id="network-status" class="network-status" hidden><span id="network-message">Игра использует интернет</span><span id="network-metrics">Файлов: <span id="network-count">0</span> · учтено: <span id="network-kb">(нет данных)</span></span></div>
