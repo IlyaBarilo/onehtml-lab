@@ -588,6 +588,35 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .editing-active.compact-viewport .brand, .editing-active.compact-viewport .expert-tools { display: none; }
 .editing-active.compact-viewport .toolbar { min-height: 50px; }
 
+/* The native textarea owns editing and selection; this inert layer only paints. */
+#code-colors { position: absolute; overflow: hidden; pointer-events: none; color: #263b53; background: #fcfdff; }
+#code.has-colors { background: transparent; color: transparent; caret-color: #173c72; }
+#code.has-colors::selection { color: transparent; background: #9ac5ff66; }
+#code.has-colors:disabled { background: #eef2f7; color: #617086; }
+.syntax-line { position: absolute; box-sizing: border-box; margin: 0; padding-block: 0; }
+.syntax-tag { color: #235ba5; }
+.syntax-attribute, .syntax-property { color: #875218; }
+.syntax-keyword { color: #7953a0; }
+.syntax-string { color: #337447; }
+.syntax-number { color: #98600c; }
+.syntax-comment { color: #687989; }
+.syntax-function { color: #276785; }
+.syntax-text { color: #263b53; }
+.has-accents .syntax-text { color: #236a70; }
+.syntax-accent { text-decoration: underline; text-decoration-color: #839abc; text-underline-offset: 3px; }
+.syntax-color {
+  color: var(--sample-ink); text-decoration: none;
+  background-color: #fff;
+  background-image: linear-gradient(var(--sample-color), var(--sample-color)), conic-gradient(#e4e8ee 25%, #fff 0 50%, #e4e8ee 0 75%, #fff 0);
+  background-size: auto, 8px 8px;
+  box-shadow: inset 0 0 0 1px #73829866; border-radius: 2px;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+#syntax-caption { position: absolute; bottom: 0; left: 0; width: 100%; margin: 0; padding: 4px 10px; font-size: 12px; line-height: 18px; color: #456383; background: #edf3fa; border-top: 1px solid #d4dfed; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.split-workspace #syntax-caption { width: var(--code-width); }
+#edit-quick { bottom: var(--syntax-caption-height, 0px); }
+#edit-colors { width: min(230px, 65%); font-size: 15px; }
+
 /* Prompt preparation and its preview share one workspace screen. */
 .ai-compose { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 22px; }
 .ai-task-section, .ai-services { min-width: 0; }
@@ -693,7 +722,9 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
           </div>
         </div>
       </section>
+      <div id="code-colors" aria-hidden="true" hidden></div>
       <textarea id="code" aria-label="HTML-код" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Вставьте HTML-код…"></textarea>
+      <p id="syntax-caption" hidden></p>
       <div id="code-lines" aria-hidden="true" hidden></div>
       <div id="edit-highlight" aria-hidden="true" hidden></div>
       <div id="code-measure" aria-hidden="true"></div>
@@ -725,6 +756,8 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
             <label class="edit-check"><input id="edit-wrap" type="checkbox" checked>Перенос длинных строк</label>
             <label class="edit-check"><input id="edit-numbers" type="checkbox" checked>Номера строк</label>
             <p id="edit-view-feedback" class="edit-note" role="status"></p>
+            <label class="edit-font-row" for="edit-colors">Подсветка<select id="edit-colors"><option value="off">Без подсветки</option><option value="syntax">Синтаксис</option><option value="accents" selected>Синтаксис и акценты</option></select></label>
+            <p id="edit-colors-note" class="edit-note">Подсветка не меняет код. Большие файлы автоматически показываются обычным текстом.</p>
           </section>
         </div>
       </section>
@@ -2095,6 +2128,198 @@ function initWorkspaceUI() {
   updateWorkspaceUI();
 }
 
+// A bounded, forgiving lexer for display only. User code never enters innerHTML.
+const syntaxLimit = 1_000_000;
+const syntaxTokenLimit = 60000;
+function scanCodeColors(code) {
+  const tokens = [], accents = [];
+  if (code.length > syntaxLimit) return { tokens, accents, limited: true };
+  let limited = false;
+  const add = (start, end, kind) => {
+    if (tokens.length >= syntaxTokenLimit) { limited = true; return; }
+    start = Math.max(start, tokens.at(-1)?.end || 0);
+    if (end > start) tokens.push({ start, end, kind });
+  };
+  const accent = (start, end, label, color = '') => { if (accents.length < 1000) accents.push({ start, end, label, color }); };
+  const keywords = new Set('async await break case catch class const continue debugger default delete do else export extends false finally for from function get if import in instanceof let new null of return set static super switch this throw true try typeof undefined var void while with yield'.split(' '));
+  function language(text, offset, css = false, accentsOnly = false) {
+    let depth = accentsOnly ? 1 : 0, valueMode = false;
+    const pattern = css
+      ? /\/\*[\s\S]*?(?:\*\/|$)|url\(\s*(?:"[^"]*"|'[^']*'|[^)]*)\s*\)|"(?:\\[\s\S]|[^"\\])*"?|'(?:\\[\s\S]|[^'\\])*'?|#[\da-fA-F]{3,8}\b|(?:rgba?|hsla?)\([^)]*\)|\b(?:red|blue|green|white|black|gray|grey|orange|purple|yellow|transparent)\b|[\w-]+(?=\s*:)|@[-\w]+|\b\d+(?:\.\d+)?(?:[a-z%]+)?|[{}:;(),]/gi
+      : /\/\/[^\n]*|\/\*[\s\S]*?(?:\*\/|$)|"(?:\\[\s\S]|[^"\\\n])*"?|'(?:\\[\s\S]|[^'\\\n])*'?|`(?:\\[\s\S]|[^`\\])*`?|\b(?:0[xX][\da-fA-F]+|0[bB][01]+|\d+(?:\.\d+)?(?:e[+-]?\d+)?)\b|[\p{L}_$][\p{L}\p{N}_$]*|[{}()[\];.,?:=+*%!<>|&~-]/gu;
+    for (const match of text.matchAll(pattern)) {
+      if (limited) break;
+      const value = match[0], start = offset + match.index, end = start + value.length;
+      if (css) {
+        if (value === '{') { depth++; valueMode = false; }
+        if (value === '}') { depth--; valueMode = false; }
+        if (value === ':' && depth > 0) valueMode = true;
+        if (value === ';') valueMode = false;
+      }
+      let kind = '';
+      if (value.startsWith('/*') || (!css && value.startsWith('//'))) kind = 'comment';
+      else if (/^["'`]/.test(value)) kind = 'string';
+      else if (/^\d/.test(value)) kind = 'number';
+      else if (css && /^url\(/i.test(value)) { kind = 'string'; accent(start, end, `Ресурс CSS · ${value.slice(0,160)}`); }
+      else if (css && /^(?:#|rgba?\(|hsla?\(|red$|blue$|green$|white$|black$|gr[ae]y$|orange$|purple$|yellow$|transparent$)/i.test(value)) {
+        kind = 'number';
+        if (valueMode) accent(start, end, `Цвет: ${value}`, value);
+      } else if (css && /^[\w@-]/.test(value)) kind = 'property';
+      else if (!css && keywords.has(value)) kind = 'keyword';
+      else if (!css && /^\s*\(/.test(text.slice(match.index + value.length, match.index + value.length + 30))) kind = 'function';
+      if (kind && !accentsOnly) add(start, end, kind);
+    }
+  }
+  const html = /<!--[\s\S]*?(?:-->|$)|<![^>]*>|<\/?[a-zA-Z](?:[^"'<>]|"[^"]*"|'[^']*')*>/g;
+  let cursor = 0, match;
+  while ((match = html.exec(code)) && !limited) {
+    if (match.index > cursor) add(cursor, match.index, 'text');
+    const tag = match[0], start = match.index, end = start + tag.length;
+    if (tag.startsWith('<!--')) add(start, end, 'comment');
+    else {
+      const name = /^<\/?([\w:-]+)/.exec(tag)?.[1]?.toLowerCase();
+      const prefix = /^<\/?[^\s/>]+/.exec(tag)?.[0] || tag;
+      add(start, start + prefix.length, 'tag');
+      const attrs = /([^\s"'<>/=]+)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s>]+))?/g;
+      attrs.lastIndex = prefix.length;
+      const parsed = scriptAttributes(tag.slice(prefix.length, -1));
+      let attribute;
+      while ((attribute = attrs.exec(tag)) && attribute.index < tag.length - 1) {
+        const at = start + attribute.index, key = attribute[1].toLowerCase(), value = attribute[2];
+        add(at, at + attribute[1].length, 'attribute');
+        if (!value) continue;
+        const valueAt = at + attribute[0].lastIndexOf(value);
+        add(valueAt, valueAt + value.length, 'string');
+        const quoted = /^["']/.test(value), raw = quoted ? value.slice(1, -1) : value;
+        const path = decodeScriptUrl(raw);
+        if (['src', 'href', 'poster', 'data'].includes(key) && ['script', 'link', 'img', 'audio', 'video', 'source', 'iframe', 'object', 'track'].includes(name)) {
+          let label = name === 'script' ? 'Скрипт' : name === 'link' ? 'Ресурс link' : ['img','video'].includes(name) && key === 'poster' || name === 'img' ? 'Изображение' : 'Ресурс';
+          const ref = name === 'script' && (libraryReference(path.split(/[?#]/)[0]) || localLibraryReference(path));
+          if (ref?.title && ref.title !== ref.filename) label = `Библиотека: ${ref.title}`;
+          accent(valueAt, valueAt + value.length, `${label} · ${path.slice(0, 160)}`);
+        }
+        if (key === 'style') {
+          // Attribute remains a string; color chips are metadata only.
+          language(raw, valueAt + (quoted ? 1 : 0), true, true);
+        }
+      }
+      add(end - (tag.endsWith('/>') ? 2 : 1), end, 'tag');
+      if (!tag.startsWith('</') && ['script', 'style', 'textarea', 'title'].includes(name)) {
+        const close = new RegExp(`<\\/${name}\\s*>`, 'gi'); close.lastIndex = end;
+        const closing = close.exec(code), bodyEnd = closing ? closing.index : code.length;
+        const body = code.slice(end, bodyEnd);
+        if (name === 'style') language(body, end, true);
+        else if (name === 'script') {
+          const type = parsed.get('type')?.value || '';
+          if (!type || /^(?:module|(?:text|application)\/(?:javascript|ecmascript|json|ld\+json))$/i.test(type)) language(body, end);
+          const bundled = parsed.get('data-onehtml-filename')?.value;
+          if (bundled) accent(start, end, `Встроенная библиотека: ${decodeScriptUrl(bundled).slice(0, 160)}`);
+        } else add(end, bodyEnd, 'text');
+        cursor = bodyEnd; html.lastIndex = bodyEnd; continue;
+      }
+    }
+    cursor = end;
+  }
+  if (!limited && cursor < code.length) add(cursor, code.length, 'text');
+  return { tokens, accents, limited };
+}
+
+let syntaxSnapshot = null;
+let syntaxComposing = false;
+let syntaxColorContext;
+const syntaxColorInks = new Map();
+function syntaxColorInk(value) {
+  if (syntaxColorInks.has(value)) return syntaxColorInks.get(value);
+  syntaxColorContext ||= document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  if (!syntaxColorContext) return '#000';
+  syntaxColorContext.clearRect(0, 0, 1, 1);
+  syntaxColorContext.fillStyle = value;
+  syntaxColorContext.fillRect(0, 0, 1, 1);
+  const rgba = syntaxColorContext.getImageData(0, 0, 1, 1).data, alpha = rgba[3] / 255;
+  // Match both checkerboard squares, including the actual alpha of the sample.
+  const luminances = [[255,255,255], [228,232,238]].map(background => {
+    const rgb = background.map((channel, i) => (rgba[i] * alpha + channel * (1-alpha)) / 255)
+      .map(channel => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+    return rgb[0]*0.2126 + rgb[1]*0.7152 + rgb[2]*0.0722;
+  });
+  const black = Math.min(...luminances.map(light => (light + 0.05) / 0.05));
+  const white = Math.min(...luminances.map(light => 1.05 / (light + 0.05)));
+  const ink = black >= white ? '#000' : '#fff';
+  if (syntaxColorInks.size >= 1000) syntaxColorInks.clear();
+  syntaxColorInks.set(value, ink);
+  return ink;
+}
+const syntaxLayer = document.querySelector('#code-colors');
+const syntaxCaption = document.querySelector('#syntax-caption');
+function clearCodeColors() {
+  const hadCaption = !syntaxCaption.hidden;
+  codeField.classList.remove('has-colors'); syntaxLayer.hidden = true; syntaxCaption.hidden = true;
+  if (hadCaption) updateInlineGeometry();
+}
+
+function drawCodeColors() {
+  if (editView.colors === 'off' || syntaxComposing || codeField.hidden || currentPanel() || codeField.disabled) { clearCodeColors(); return; }
+  const code = codeField.value;
+  if (syntaxSnapshot?.code !== code) syntaxSnapshot = { code, longLine: code.split('\n').some(line => line.length > 12000), ...scanCodeColors(code) };
+  const note = document.querySelector('#edit-colors-note');
+  const limited = syntaxSnapshot.limited || syntaxSnapshot.longLine;
+  note.textContent = limited ? 'Для этого большого файла или длинной строки используется обычный текст, чтобы сохранить отзывчивость.' : 'Оформление не меняет код. Подключения подчёркнуты, пояснение появляется при выборе строки. Большие файлы автоматически показываются обычным текстом.';
+  if (limited || !code) { clearCodeColors(); return; }
+  const style = getComputedStyle(codeField), box = codeField.getBoundingClientRect(), origin = workspaceElement.getBoundingClientRect();
+  Object.assign(syntaxLayer.style, { top: `${box.top-origin.top}px`, left: `${box.left-origin.left}px`, width: `${codeField.clientWidth}px`, height: `${codeField.clientHeight}px` });
+  const accents = editView.colors === 'accents' ? syntaxSnapshot.accents : [];
+  syntaxLayer.classList.toggle('has-accents', editView.colors === 'accents');
+  const starts = editMeasured.starts;
+  let low = 0, high = starts.length;
+  while (low + 1 < high) { const mid = (low + high) >>> 1; if (codePointRect(starts[mid]).top < codeField.scrollTop) low = mid; else high = mid; }
+  const rows = [];
+  let tokenIndex = 0;
+  while (tokenIndex < syntaxSnapshot.tokens.length && syntaxSnapshot.tokens[tokenIndex].end <= starts[low]) tokenIndex++;
+  for (let i = low; i < starts.length; i++) {
+    const top = editMirror.children[i].offsetTop - codeField.scrollTop;
+    if (top > codeField.clientHeight) break;
+    const start = starts[i], end = i + 1 < starts.length ? starts[i + 1] - 1 : code.length;
+    const row = document.createElement('div'); row.className = 'syntax-line';
+    row.dataset.line = String(i + 1);
+    for (const key of ['fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','tabSize','paddingLeft','paddingRight']) row.style[key] = style[key];
+    Object.assign(row.style, { top: `${top}px`, left: `${-codeField.scrollLeft}px`, width: `${codeField.clientWidth}px`, whiteSpace: editView.wrap ? 'pre-wrap' : 'pre', overflowWrap: editView.wrap ? 'break-word' : 'normal' });
+    const lineTokens = [];
+    for (let j = tokenIndex; j < syntaxSnapshot.tokens.length && syntaxSnapshot.tokens[j].start < end; j++) {
+      const token = syntaxSnapshot.tokens[j];
+      if (token.end > start) lineTokens.push(token);
+      if (token.end <= end) tokenIndex = j + 1;
+    }
+    const lineAccents = accents.filter(item => item.start < end && item.end > start);
+    const cuts = [...new Set([start, end, ...lineTokens.flatMap(t => [Math.max(start,t.start),Math.min(end,t.end)]), ...lineAccents.flatMap(t => [Math.max(start,t.start),Math.min(end,t.end)])])].sort((a,b)=>a-b);
+    let tokenCursor = 0;
+    for (let j = 0; j + 1 < cuts.length; j++) {
+      const a = cuts[j], b = cuts[j+1];
+      while (tokenCursor < lineTokens.length && lineTokens[tokenCursor].end <= a) tokenCursor++;
+      const token = lineTokens[tokenCursor], mark = lineAccents.find(item => item.start <= a && item.end >= b);
+      const span = document.createElement('span'); span.textContent = code.slice(a,b);
+      if (token && token.start <= a) span.className = `syntax-${token.kind}`;
+      if (mark) {
+        span.classList.add('syntax-accent');
+        if (mark.color && CSS.supports('color',mark.color)) {
+          span.classList.add('syntax-color');
+          span.style.setProperty('--sample-color',mark.color);
+          span.style.setProperty('--sample-ink',syntaxColorInk(mark.color));
+        }
+      }
+      row.append(span);
+    }
+    row.append('\u200b'); rows.push(row);
+  }
+  syntaxLayer.replaceChildren(...rows); syntaxLayer.hidden = false; codeField.classList.add('has-colors');
+  const caret = codeField.selectionStart, from = caret ? code.lastIndexOf('\n',caret-1)+1 : 0;
+  const nextLine = code.indexOf('\n',caret), to = nextLine < 0 ? code.length : nextLine;
+  const labels = [...new Set(accents.filter(item=>item.start<=to && item.end>from).map(item=>item.label))];
+  const hadCaption = !syntaxCaption.hidden;
+  syntaxCaption.textContent = labels.slice(0,2).join(' · ');
+  syntaxCaption.hidden = !labels.length;
+  if (hadCaption !== !syntaxCaption.hidden) updateInlineGeometry();
+}
+
 // Native textarea editing, with a separate in-memory undo chain of text patches.
 const editPanel = document.querySelector('#edit-panel');
 const editButton = document.querySelector('#edit-open');
@@ -2105,7 +2330,7 @@ const editResult = document.querySelector('#edit-result');
 const editGutter = document.querySelector('#code-lines');
 const editMirror = document.querySelector('#code-measure');
 let editReady = false;
-let editView = { size: 16, wrap: true, numbers: true };
+let editView = { size: 16, wrap: true, numbers: true, colors: 'accents' };
 let editBaseline = '';
 let editBefore = null;
 let editUndo = [];
@@ -2283,8 +2508,10 @@ function inlineEditorAvailable() {
 }
 
 function updateInlineGeometry() {
+  const captionHeight = syntaxCaption.hidden ? 0 : syntaxCaption.offsetHeight;
+  workspaceElement.style.setProperty('--syntax-caption-height', `${captionHeight}px`);
   for (const [name, element] of [['--edit-top', editInline], ['--edit-bottom', editQuick]]) {
-    const size = `${element.hidden ? 0 : element.offsetHeight}px`;
+    const size = `${(element.hidden ? 0 : element.offsetHeight) + (name === '--edit-bottom' ? captionHeight : 0)}px`;
     if (workspaceElement.style.getPropertyValue(name) !== size) workspaceElement.style.setProperty(name, size);
   }
   scheduleCodeLayout();
@@ -2377,6 +2604,7 @@ function applyCodeView() {
   document.querySelector('#edit-font').value = String(editView.size);
   document.querySelector('#edit-wrap').checked = editView.wrap;
   document.querySelector('#edit-numbers').checked = editView.numbers;
+  document.querySelector('#edit-colors').value = editView.colors;
   editMeasured = null;
   scheduleCodeLayout();
 }
@@ -2427,9 +2655,10 @@ function codePointRect(offset) {
 function drawCodeLines() {
   editLayoutFrame = 0;
   editGutter.hidden = !editView.numbers || codeField.hidden || Boolean(currentPanel());
-  if (codeField.hidden || currentPanel()) { document.querySelector('#edit-highlight').hidden = true; return; }
-  if (editGutter.hidden && editInline.hidden) { document.querySelector('#edit-highlight').hidden = true; return; }
+  if (codeField.hidden || currentPanel()) { document.querySelector('#edit-highlight').hidden = true; clearCodeColors(); return; }
+  if (editGutter.hidden && editInline.hidden && editView.colors === 'off') { document.querySelector('#edit-highlight').hidden = true; clearCodeColors(); return; }
   const { starts, lineHeight } = measureCode();
+  drawCodeColors();
   drawSearchHighlight();
   if (editGutter.hidden) return;
   const digits = String(starts.length).length;
@@ -2536,10 +2765,15 @@ function initCodeEditor() {
     if ([14, 16, 18, 20, 22].includes(saved?.size)) editView.size = saved.size;
     editView.wrap = saved?.wrap !== false;
     editView.numbers = saved?.numbers !== false;
+    if (['off','syntax','accents'].includes(saved?.colors)) editView.colors = saved.colors;
   } catch {}
   editReady = true;
   applyCodeView();
   editButton.addEventListener('click', openCodeTools);
+  codeField.addEventListener('compositionstart', () => { syntaxComposing = true; clearCodeColors(); });
+  codeField.addEventListener('compositionend', () => { syntaxComposing = false; scheduleCodeLayout(); });
+  document.addEventListener('selectionchange', () => { if (document.activeElement === codeField) scheduleCodeLayout(); });
+  for (const event of ['focus', 'select', 'keyup', 'click']) codeField.addEventListener(event, scheduleCodeLayout);
   document.querySelector('#edit-panel-find').addEventListener('click', () => openInlineSearch());
   document.querySelector('#edit-find').addEventListener('click', () => editFindOpen ? closeInlineSearch() : openInlineSearch());
   document.querySelector('#edit-find-close').addEventListener('click', closeInlineSearch);
@@ -2617,8 +2851,8 @@ function initCodeEditor() {
     event.preventDefault();
     if (!goToCodeLine(Number(document.querySelector('#edit-line').value))) document.querySelector('#edit-line-feedback').textContent = `Введите номер от 1 до ${measureCode().starts.length}.`;
   });
-  for (const id of ['edit-font', 'edit-wrap', 'edit-numbers']) document.getElementById(id).addEventListener('change', () => {
-    editView = { size: Number(document.querySelector('#edit-font').value), wrap: document.querySelector('#edit-wrap').checked, numbers: document.querySelector('#edit-numbers').checked };
+  for (const id of ['edit-font', 'edit-wrap', 'edit-numbers', 'edit-colors']) document.getElementById(id).addEventListener('change', () => {
+    editView = { size: Number(document.querySelector('#edit-font').value), wrap: document.querySelector('#edit-wrap').checked, numbers: document.querySelector('#edit-numbers').checked, colors: document.querySelector('#edit-colors').value };
     applyCodeView();
     try { localStorage.setItem('onehtml-lab-editor-view', JSON.stringify(editView)); }
     catch { document.querySelector('#edit-view-feedback').textContent = 'Настройки действуют сейчас, но браузер не сохранил их.'; }

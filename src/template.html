@@ -91,7 +91,9 @@
           </div>
         </div>
       </section>
+      <div id="code-colors" aria-hidden="true" hidden></div>
       <textarea id="code" aria-label="HTML-код" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Вставьте HTML-код…"></textarea>
+      <p id="syntax-caption" hidden></p>
       <div id="code-lines" aria-hidden="true" hidden></div>
       <div id="edit-highlight" aria-hidden="true" hidden></div>
       <div id="code-measure" aria-hidden="true"></div>
@@ -123,6 +125,8 @@
             <label class="edit-check"><input id="edit-wrap" type="checkbox" checked>Перенос длинных строк</label>
             <label class="edit-check"><input id="edit-numbers" type="checkbox" checked>Номера строк</label>
             <p id="edit-view-feedback" class="edit-note" role="status"></p>
+            <label class="edit-font-row" for="edit-colors">Подсветка<select id="edit-colors"><option value="off">Без подсветки</option><option value="syntax">Синтаксис</option><option value="accents" selected>Синтаксис и акценты</option></select></label>
+            <p id="edit-colors-note" class="edit-note">Подсветка не меняет код. Большие файлы автоматически показываются обычным текстом.</p>
           </section>
         </div>
       </section>

@@ -4,3 +4,4 @@ await import('./compare.mjs');
 await import('./library-package.mjs');
 await import('./library-extract.mjs');
 await import('./readiness-unit.mjs');
+await import('./syntax-unit.mjs');

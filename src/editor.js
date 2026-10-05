@@ -8,7 +8,7 @@ const editResult = document.querySelector('#edit-result');
 const editGutter = document.querySelector('#code-lines');
 const editMirror = document.querySelector('#code-measure');
 let editReady = false;
-let editView = { size: 16, wrap: true, numbers: true };
+let editView = { size: 16, wrap: true, numbers: true, colors: 'accents' };
 let editBaseline = '';
 let editBefore = null;
 let editUndo = [];
@@ -186,8 +186,10 @@ function inlineEditorAvailable() {
 }
 
 function updateInlineGeometry() {
+  const captionHeight = syntaxCaption.hidden ? 0 : syntaxCaption.offsetHeight;
+  workspaceElement.style.setProperty('--syntax-caption-height', `${captionHeight}px`);
   for (const [name, element] of [['--edit-top', editInline], ['--edit-bottom', editQuick]]) {
-    const size = `${element.hidden ? 0 : element.offsetHeight}px`;
+    const size = `${(element.hidden ? 0 : element.offsetHeight) + (name === '--edit-bottom' ? captionHeight : 0)}px`;
     if (workspaceElement.style.getPropertyValue(name) !== size) workspaceElement.style.setProperty(name, size);
   }
   scheduleCodeLayout();
@@ -280,6 +282,7 @@ function applyCodeView() {
   document.querySelector('#edit-font').value = String(editView.size);
   document.querySelector('#edit-wrap').checked = editView.wrap;
   document.querySelector('#edit-numbers').checked = editView.numbers;
+  document.querySelector('#edit-colors').value = editView.colors;
   editMeasured = null;
   scheduleCodeLayout();
 }
@@ -330,9 +333,10 @@ function codePointRect(offset) {
 function drawCodeLines() {
   editLayoutFrame = 0;
   editGutter.hidden = !editView.numbers || codeField.hidden || Boolean(currentPanel());
-  if (codeField.hidden || currentPanel()) { document.querySelector('#edit-highlight').hidden = true; return; }
-  if (editGutter.hidden && editInline.hidden) { document.querySelector('#edit-highlight').hidden = true; return; }
+  if (codeField.hidden || currentPanel()) { document.querySelector('#edit-highlight').hidden = true; clearCodeColors(); return; }
+  if (editGutter.hidden && editInline.hidden && editView.colors === 'off') { document.querySelector('#edit-highlight').hidden = true; clearCodeColors(); return; }
   const { starts, lineHeight } = measureCode();
+  drawCodeColors();
   drawSearchHighlight();
   if (editGutter.hidden) return;
   const digits = String(starts.length).length;
@@ -439,10 +443,15 @@ function initCodeEditor() {
     if ([14, 16, 18, 20, 22].includes(saved?.size)) editView.size = saved.size;
     editView.wrap = saved?.wrap !== false;
     editView.numbers = saved?.numbers !== false;
+    if (['off','syntax','accents'].includes(saved?.colors)) editView.colors = saved.colors;
   } catch {}
   editReady = true;
   applyCodeView();
   editButton.addEventListener('click', openCodeTools);
+  codeField.addEventListener('compositionstart', () => { syntaxComposing = true; clearCodeColors(); });
+  codeField.addEventListener('compositionend', () => { syntaxComposing = false; scheduleCodeLayout(); });
+  document.addEventListener('selectionchange', () => { if (document.activeElement === codeField) scheduleCodeLayout(); });
+  for (const event of ['focus', 'select', 'keyup', 'click']) codeField.addEventListener(event, scheduleCodeLayout);
   document.querySelector('#edit-panel-find').addEventListener('click', () => openInlineSearch());
   document.querySelector('#edit-find').addEventListener('click', () => editFindOpen ? closeInlineSearch() : openInlineSearch());
   document.querySelector('#edit-find-close').addEventListener('click', closeInlineSearch);
@@ -520,8 +529,8 @@ function initCodeEditor() {
     event.preventDefault();
     if (!goToCodeLine(Number(document.querySelector('#edit-line').value))) document.querySelector('#edit-line-feedback').textContent = `Введите номер от 1 до ${measureCode().starts.length}.`;
   });
-  for (const id of ['edit-font', 'edit-wrap', 'edit-numbers']) document.getElementById(id).addEventListener('change', () => {
-    editView = { size: Number(document.querySelector('#edit-font').value), wrap: document.querySelector('#edit-wrap').checked, numbers: document.querySelector('#edit-numbers').checked };
+  for (const id of ['edit-font', 'edit-wrap', 'edit-numbers', 'edit-colors']) document.getElementById(id).addEventListener('change', () => {
+    editView = { size: Number(document.querySelector('#edit-font').value), wrap: document.querySelector('#edit-wrap').checked, numbers: document.querySelector('#edit-numbers').checked, colors: document.querySelector('#edit-colors').value };
     applyCodeView();
     try { localStorage.setItem('onehtml-lab-editor-view', JSON.stringify(editView)); }
     catch { document.querySelector('#edit-view-feedback').textContent = 'Настройки действуют сейчас, но браузер не сохранил их.'; }
