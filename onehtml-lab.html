@@ -275,9 +275,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .example-categories { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 14px; }
 .platform-tab, .example-category { min-height: 44px; padding: 9px 15px; border: 1px solid #c9d9ee; border-radius: 7px; background: #f4f8fd; color: #526b8c; font-weight: 600; }
 .platform-tab[aria-selected="true"], .example-category[aria-selected="true"] { background: #dceaff; border-color: #9dbfea; color: #2059bf; }
-.guide-prompts { display: flex; flex-wrap: wrap; gap: 8px; }
-.guide-prompts button, .example-card button { min-height: 42px; border: 1px solid #b7cff0; border-radius: 7px; background: #e9f1fc; color: #28588f; padding: 7px 11px; font-size: 13px; font-weight: 600; }
-.guide-prompts button:disabled { opacity: .4; }
+.example-card button { min-height: 42px; border: 1px solid #b7cff0; border-radius: 7px; background: #e9f1fc; color: #28588f; padding: 7px 11px; font-size: 13px; font-weight: 600; }
 .service-list { padding: 0; margin: 0; list-style: none; }
 .service-list li { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: center; gap: 8px; padding: 3px 0; border-bottom: 1px solid #e0e8f4; font-size: 13px; }
 .service-list li:last-child { border-bottom: 0; }
@@ -412,7 +410,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .activity-body .library-request, .activity-body .runtime-error, .activity-body .network-status { align-items: flex-start; flex-direction: column; }
 .activity-body button { min-height: 44px; font-size: 15px; }
 .activity-body .runtime-error { border-color: #e6b4ad; }
-.guide-prompts button, .example-card button { min-height: 44px; font-size: 15px; }
+.example-card button { min-height: 44px; font-size: 15px; }
 .service-list li { grid-template-columns: 108px minmax(0, 1fr); padding: 8px 0; font-size: 15px; }
 .service-links { gap: 0 16px; }
 .service-links a { min-height: 44px; }
@@ -436,7 +434,6 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   .example-list { grid-template-columns: 1fr; }
   .example-categories { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .example-category { padding: 8px 4px; font-size: 14px; }
-  .guide-prompts { display: grid; }
 }
 @media (max-width: 360px) {
   .service-list li { grid-template-columns: 1fr; gap: 0; }
@@ -489,6 +486,35 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   .expert-actions { grid-area: tools; }
   .expert-resource-actions { grid-area: resources; }
   .draft-status { grid-area: draft; }
+}
+
+/* Prompt preparation and its preview share one workspace screen. */
+.ai-compose { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 22px; }
+.ai-task-section, .ai-services { min-width: 0; }
+.ai-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 14px; }
+.ai-modes button, .ai-footer button { min-height: 44px; padding: 9px 10px; border: 1px solid #b7cff0; border-radius: 7px; background: #edf4ff; color: #315c93; font: inherit; font-size: 15px; }
+.ai-modes button[aria-pressed="true"] { color: #2059bf; background: #dceaff; border-color: #8cb5ef; }
+.ai-modes button:disabled, .ai-footer button:disabled { opacity: .35; cursor: default; }
+#ai-task-label { display: block; margin: 14px 0 8px; font-size: 16px; }
+#ai-task { height: 100px; min-height: 88px; padding: 10px 12px; border: 1px solid #b9cbe3; border-radius: 7px; background: #fff; font: 16px/1.5 system-ui, sans-serif; }
+#ai-task:focus { outline: 2px solid #2d6cdf; outline-offset: 1px; }
+#ai-dialog .ai-shorten-label { display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 8px 0 0; font-size: 16px; }
+.ai-shorten-label input { width: 20px; height: 20px; flex: 0 0 20px; margin: 0; accent-color: #2d6cdf; }
+#ai-dialog #ai-libraries, #ai-dialog #ai-error { margin: 8px 0 0; font-size: 14px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+#ai-error-context { margin-top: 14px; padding: 10px 12px; border-left: 3px solid #cf6b61; border-radius: 5px; background: #fff3f0; font-size: 15px; }
+#ai-dialog .ai-services h3 { margin: 0 0 6px; font-size: 17px; }
+#ai-dialog .ai-instruction { margin: 14px 0 0; font-size: 14px; }
+.ai-preview-body { flex: 1; min-height: 0; }
+#ai-output { height: 100%; padding: 14px; background: #f3f6fa; font-size: 16px; }
+.ai-footer { flex: 0 0 auto; padding: 8px 16px max(10px, env(safe-area-inset-bottom)); border-top: 1px solid #dbe5f3; background: #f5f8fd; }
+#ai-dialog #ai-summary { margin: 0 0 8px; color: #526b8c; font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
+.ai-footer-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ai-footer #ai-copy { color: #fff; background: #2d6cdf; border-color: #2d6cdf; }
+@media (min-width: 900px) {
+  .ai-compose { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 32px; }
+  .ai-footer { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+  #ai-dialog #ai-summary { margin: 0; }
+  .ai-footer-actions { flex: 0 0 300px; }
 }
 </style>
 </head>
@@ -607,7 +633,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
             <div class="library-request-actions"><button id="library-download" type="button">Скачать</button><button id="library-files-button" type="button" hidden>Выбрать JS и лицензию</button><button id="library-skip" type="button">Без подмены</button></div>
             <input id="library-files" type="file" multiple hidden aria-label="JS-файл библиотеки и её MIT-лицензия">
           </div>
-          <div id="runtime-error" class="runtime-error" hidden><span id="runtime-error-message"></span><button id="error-line" type="button" hidden>Перейти к строке</button><button id="copy-error" type="button">Скопировать ошибку</button></div>
+          <div id="runtime-error" class="runtime-error" hidden><span id="runtime-error-message"></span><button id="error-line" type="button" hidden>Перейти к строке</button><button id="error-ai" type="button" hidden>Исправить с ИИ</button><button id="copy-error" type="button">Скопировать ошибку</button></div>
           <p id="status" class="notice" hidden></p>
           <div id="network-status" class="network-status" hidden><span id="network-message">Игра использует интернет</span><span id="network-metrics">Файлов: <span id="network-count">0</span> · учтено: <span id="network-kb">(нет данных)</span></span></div>
           <p id="local-access-status" class="notice local-access-status" hidden></p>
@@ -648,16 +674,26 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   </dialog>
   <section id="ai-dialog" class="work-panel guide-panel" aria-labelledby="ai-title" hidden>
     <div class="panel-heading"><h2 id="ai-title">ИИ и запросы</h2><button id="ai-close" type="button" aria-label="Закрыть ИИ и запросы">✕</button></div>
-    <div class="panel-body">
-    <p>Выберите запрос для нужного экрана. После копирования замените [тема игры] на свою идею. Полученный HTML-код вставьте в редактор, запустите и сохраните.</p>
+    <div id="ai-compose" class="panel-body ai-compose">
+    <div class="ai-task-section">
+    <div class="ai-modes" role="group" aria-label="Задача для ИИ">
+      <button id="prompt-create" type="button" data-ai-mode="create" aria-pressed="true">Новая игра</button>
+      <button id="prompt-change" type="button" data-ai-mode="change" aria-pressed="false">Изменить</button>
+      <button id="prompt-fix" type="button" data-ai-mode="fix" aria-pressed="false">Исправить</button>
+    </div>
     <div class="platform-tabs" role="tablist" aria-label="Устройство для запроса">
       <button class="platform-tab" type="button" role="tab" data-platform="mobile" aria-selected="true">Телефон</button>
       <button class="platform-tab" type="button" role="tab" data-platform="desktop" aria-selected="false">Компьютер</button>
     </div>
-    <div class="guide-prompts">
-      <button id="prompt-create" type="button">Копировать запрос для новой игры</button>
-      <button id="prompt-change" type="button">Копировать запрос для изменения кода</button>
+    <label id="ai-task-label" for="ai-task">Тема игры и пожелания</label>
+    <textarea id="ai-task" rows="3" aria-describedby="ai-summary" placeholder="Например: игра про космос, собирать звёзды и избегать метеоритов"></textarea>
+    <div id="ai-error-context" hidden><strong>Ошибка игры</strong><p id="ai-error"></p></div>
+    <div id="ai-source-options" hidden>
+      <label class="ai-shorten-label"><input id="ai-shorten" type="checkbox" checked>Сократить код библиотек</label>
+      <p id="ai-libraries" hidden></p>
     </div>
+    </div>
+    <div class="ai-services">
     <h3>ИИ-боты</h3>
     <ul class="service-list">
       <li><strong>Алиса AI</strong><span class="service-links"><a href="https://alice.yandex.ru/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=com.yandex.aliceapp" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/id6621272550" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
@@ -665,7 +701,11 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
       <li><strong>DeepSeek</strong><span class="service-links"><a href="https://chat.deepseek.com/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=com.deepseek.chat" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/deepseek-ai-%D0%B0%D1%81%D1%81%D0%B8%D1%81%D1%82%D0%B5%D0%BD%D1%82/id6737597349" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
       <li><strong>Qwen Studio</strong><span class="service-links"><a href="https://qwen.ai/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=ai.qwenlm.chat.android" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/qwen-studio/id6743778442" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
     </ul>
+    <p class="ai-instruction">Скопируйте запрос и вставьте его в ИИ-бота. Полученный HTML-код вставьте в редактор.</p>
     </div>
+    </div>
+    <div id="ai-preview-body" class="ai-preview-body" hidden><textarea id="ai-output" readonly spellcheck="false" aria-label="Готовый запрос для ИИ"></textarea></div>
+    <div class="ai-footer"><p id="ai-summary" role="status" aria-live="polite"></p><div class="ai-footer-actions"><button id="ai-view" type="button" aria-pressed="false" disabled>Просмотр</button><button id="ai-copy" type="button" disabled>Копировать</button></div></div>
   </section>
   <section id="examples-dialog" class="work-panel guide-panel" aria-labelledby="examples-title" hidden>
     <div class="panel-heading"><h2 id="examples-title">Примеры игр</h2><button id="examples-close" type="button" aria-label="Закрыть примеры">✕</button></div>
@@ -2146,6 +2186,172 @@ function initCodeEditor() {
   new ResizeObserver(scheduleCodeLayout).observe(codeField);
 }
 
+// Preparing a prompt is read-only: no editor, history, cache or network writes.
+const aiTask = document.querySelector('#ai-task');
+const aiShorten = document.querySelector('#ai-shorten');
+const aiOutput = document.querySelector('#ai-output');
+const aiSummary = document.querySelector('#ai-summary');
+const aiLibraries = document.querySelector('#ai-libraries');
+const aiCopy = document.querySelector('#ai-copy');
+const aiView = document.querySelector('#ai-view');
+const aiTasks = { create: '', change: '', fix: '' };
+let aiMode = 'create';
+let aiShowingPreview = false;
+let aiReady = false;
+let aiRevision = 0;
+let aiTimer;
+let aiSnapshot = null;
+let aiResult = null;
+let aiSourcePlan = null;
+
+function aiPromptSnapshot() {
+  return { mode: aiMode, platform: selectedPlatform, task: aiTask.value.trim(), shorten: aiShorten.checked,
+    code: aiMode === 'create' ? '' : codeField.value, error: aiMode === 'fix' ? runtimeErrorReport : '' };
+}
+
+function sameAiSnapshot(a, b) {
+  return a && b && Object.keys(b).every(key => a[key] === b[key]);
+}
+
+function aiPromptText(snapshot, code, shortened) {
+  const mobile = snapshot.platform === 'mobile';
+  const screen = mobile ? 'телефона' : 'компьютера';
+  const controls = mobile ? 'касанием' : 'мышью или клавиатурой';
+  if (snapshot.mode === 'create') {
+    return `Сделай игру про ${snapshot.task || '[тема игры]'} для ${screen}. Сделай одним файлом HTML со встроенными CSS и JavaScript. Игра должна занимать ${mobile ? 'весь экран' : 'всё окно браузера'}, управляться ${controls} и позволять сыграть ещё раз. Верни только полный HTML-код.`;
+  }
+  const parts = [snapshot.mode === 'fix' ? 'Исправь ошибку в игре ниже.' : 'Измени игру ниже по моему описанию.',
+    `Верни полный HTML-файл, чтобы я мог целиком заменить прежний код. Сохрани полноэкранный вид ${mobile ? 'на телефоне' : 'в браузере компьютера'} и управление ${controls}.`];
+  if (snapshot.task) parts.push(`${snapshot.mode === 'fix' ? 'Что не работает' : 'Что изменить'}:\n${snapshot.task}`);
+  else if (snapshot.mode === 'change') parts.push('Если задача изменения ещё не указана, сначала спроси, что именно поменять.');
+  if (snapshot.error) parts.push(`Сообщение об ошибке:\n${snapshot.error}`);
+  if (shortened.length) parts.push(`Встроенные библиотеки заменены CDN-ссылками: ${shortened.join(', ')}. Сохрани эти ссылки и точные версии, не вставляй код библиотек в ответ.`);
+  parts.push('Текущий код:\n' + code);
+  return parts.join('\n\n');
+}
+
+function setAiPreview(value) {
+  aiShowingPreview = value;
+  document.querySelector('#ai-compose').hidden = value;
+  document.querySelector('#ai-preview-body').hidden = !value;
+  document.querySelector('#ai-title').textContent = value ? 'Готовый запрос' : 'ИИ и запросы';
+  aiView.textContent = value ? 'К задаче' : 'Просмотр';
+  aiView.setAttribute('aria-pressed', String(value));
+  if (value) aiOutput.scrollTop = 0;
+}
+
+function setAiMode(mode) {
+  if (!Object.hasOwn(aiTasks, mode)) return;
+  aiTasks[aiMode] = aiTask.value;
+  aiMode = mode;
+  aiTask.value = aiTasks[mode];
+  const labels = { create: 'Тема игры и пожелания', change: 'Что изменить?', fix: 'Что не работает?' };
+  const placeholders = { create: 'Например: игра про космос, собирать звёзды и избегать метеоритов',
+    change: 'Например: добавить уровни и кнопку паузы', fix: 'Например: после поворота змейка движется не в ту сторону' };
+  document.querySelector('#ai-task-label').textContent = labels[mode];
+  aiTask.placeholder = placeholders[mode];
+  document.querySelector('#ai-source-options').hidden = mode === 'create';
+  for (const button of document.querySelectorAll('[data-ai-mode]')) button.setAttribute('aria-pressed', String(button.dataset.aiMode === mode));
+  setAiPreview(false);
+  updateAiControls();
+}
+
+function openAiPrompts(mode) {
+  if (!expertMode || modeBusy) return;
+  if (mode) setAiMode(mode);
+  setAiPreview(false);
+  aiSourcePlan = null;
+  aiSnapshot = null;
+  showWorkspacePanel(aiDialog, mode === 'fix' && currentPanel() === activityPanel);
+}
+
+function updateAiControls() {
+  if (!aiReady) return;
+  const empty = !codeField.value.trim();
+  document.querySelector('#prompt-change').disabled = empty;
+  document.querySelector('#prompt-fix').disabled = empty;
+  const errorAction = document.querySelector('#error-ai');
+  errorAction.hidden = !expertMode;
+  errorAction.disabled = empty || modeBusy;
+  if (currentPanel() !== aiDialog) {
+    clearTimeout(aiTimer);
+    aiRevision++;
+    aiSnapshot = null;
+    return;
+  }
+  const snapshot = aiPromptSnapshot();
+  if (sameAiSnapshot(aiSnapshot, snapshot)) return;
+  aiSnapshot = snapshot;
+  aiResult = null;
+  aiCopy.disabled = true;
+  aiView.disabled = !aiShowingPreview;
+  aiOutput.value = '';
+  aiLibraries.textContent = '';
+  aiLibraries.hidden = true;
+  const error = document.querySelector('#ai-error');
+  error.textContent = snapshot.error;
+  document.querySelector('#ai-error-context').hidden = !snapshot.error;
+  const revision = ++aiRevision;
+  clearTimeout(aiTimer);
+  if (snapshot.mode !== 'create' && !snapshot.code.trim()) {
+    aiSummary.textContent = 'Сначала вставьте или откройте HTML-код.';
+    return;
+  }
+  if (snapshot.mode === 'fix' && !snapshot.task && !snapshot.error) {
+    aiSummary.textContent = 'Опишите, что не работает.';
+    return;
+  }
+  aiSummary.textContent = 'Подготовка запроса…';
+  aiTimer = setTimeout(() => void prepareAiPrompt(snapshot, revision), 120);
+}
+
+async function prepareAiPrompt(snapshot, revision) {
+  let code = snapshot.code;
+  const shortened = [];
+  let notes = [];
+  if (snapshot.mode !== 'create' && snapshot.shorten && /data-onehtml-library\s*=/i.test(code)) {
+    try {
+      if (aiSourcePlan?.code !== code) aiSourcePlan = { code, promise: planLibraryExtraction(code, 'cdn') };
+      const plan = await aiSourcePlan.promise;
+      code = plan.html;
+      for (const row of plan.rows) {
+        if (row.removable) { if (!shortened.includes(row.title)) shortened.push(row.title); }
+        else notes.push(`${row.title}: ${row.cdn ? row.note : row.reason || 'нет точной CDN-ссылки'} Оставлена в коде.`);
+      }
+      if (shortened.length) notes.unshift('В копии для ИИ заменены ссылками: ' + shortened.join(', ') + '.');
+    } catch {
+      code = snapshot.code;
+      shortened.length = 0;
+      notes = ['Не удалось проверить библиотеки. Код включён без сокращения.'];
+    }
+  }
+  if (revision !== aiRevision || currentPanel() !== aiDialog || !sameAiSnapshot(snapshot, aiPromptSnapshot())) return;
+  const text = aiPromptText(snapshot, code, shortened);
+  const saved = Math.max(0, symbolCount(snapshot.code) - symbolCount(code));
+  aiOutput.value = text;
+  aiSummary.textContent = `В запросе: ${formatSymbolCount(symbolCount(text))}` + (saved ? ` · убрано из кода: ${formatSymbolCount(saved)}` : '');
+  aiLibraries.textContent = notes.join('\n');
+  aiLibraries.hidden = !notes.length;
+  aiResult = { snapshot, text };
+  aiCopy.disabled = false;
+  aiView.disabled = false;
+}
+
+function initAiPrompts() {
+  aiReady = true;
+  setAiMode('create');
+  for (const button of document.querySelectorAll('[data-ai-mode]')) button.addEventListener('click', () => setAiMode(button.dataset.aiMode));
+  aiTask.addEventListener('input', () => { aiTasks[aiMode] = aiTask.value; updateAiControls(); });
+  aiShorten.addEventListener('change', updateAiControls);
+  aiView.addEventListener('click', () => setAiPreview(!aiShowingPreview));
+  aiCopy.addEventListener('click', () => {
+    if (!aiResult || !sameAiSnapshot(aiResult.snapshot, aiPromptSnapshot())) { updateAiControls(); return; }
+    // Compilation finished before this click, preserving clipboard user activation.
+    void copyOrSelect(aiResult.text, 'Запрос скопирован. Вставьте его в выбранного ИИ-бота.');
+  });
+  document.querySelector('#error-ai').addEventListener('click', () => openAiPrompts('fix'));
+}
+
 const codeField = document.querySelector('#code');
 const preview = document.querySelector('#preview');
 const pasteButton = document.querySelector('#paste');
@@ -2356,6 +2562,7 @@ function updateLocalAccessHint() {
     runtimeErrorMessage.textContent = `${runtimeErrorMessageBase}${hint ? ` ${hint}` : ''}`;
     runtimeErrorReport = `${runtimeErrorReportBase}${hint ? `\n${hint}` : ''}`;
   }
+  updateAiControls();
 }
 
 function clearRuntimeError() {
@@ -2530,17 +2737,6 @@ async function copyOrSelect(text, successMessage) {
   }
 }
 
-const gamePrompts = {
-  mobile: {
-    create: 'Сделай игру про [тема игры] для телефона. Сделай одним файлом HTML со встроенными CSS и JavaScript. Игра должна занимать весь экран, управляться касанием и позволять сыграть ещё раз. Верни только полный HTML-код.',
-    change: 'Измени игру ниже по моему описанию. Верни полный HTML-файл, чтобы я мог целиком заменить прежний код. Сохрани полноэкранный вид на телефоне и управление касанием. Если задача изменения ещё не указана, сначала спроси, что именно поменять.\n\nТекущий код:\n'
-  },
-  desktop: {
-    create: 'Сделай игру про [тема игры] для компьютера. Сделай одним файлом HTML со встроенными CSS и JavaScript. Игра должна занимать всё окно браузера, управляться мышью или клавиатурой и позволять сыграть ещё раз. Верни только полный HTML-код.',
-    change: 'Измени игру ниже по моему описанию. Верни полный HTML-файл, чтобы я мог целиком заменить прежний код. Сохрани полноэкранный вид в браузере компьютера и управление мышью или клавиатурой. Если задача изменения ещё не указана, сначала спроси, что именно поменять.\n\nТекущий код:\n'
-  }
-};
-
 function renderExamples() {
   exampleList.replaceChildren();
   for (const example of examples.filter(item => (item.category || 'games') === selectedExampleCategory &&
@@ -2592,6 +2788,7 @@ function setPlatform(platform) {
     tab.setAttribute('aria-selected', String(tab.dataset.platform === platform));
   }
   renderExamples();
+  updateAiControls();
 }
 
 for (const tab of document.querySelectorAll('.platform-tab')) {
@@ -2601,15 +2798,11 @@ for (const tab of document.querySelectorAll('.example-category')) {
   tab.addEventListener('click', () => setExampleCategory(tab.dataset.exampleCategory));
 }
 renderExamples();
-aiButton.addEventListener('click', () => { if (expertMode && !modeBusy) showWorkspacePanel(aiDialog); });
+aiButton.addEventListener('click', () => openAiPrompts());
 examplesButton.addEventListener('click', () => { if (expertMode && !modeBusy) showWorkspacePanel(examplesDialog); });
 document.querySelector('#ai-close').addEventListener('click', () => closeWorkspacePanel());
 document.querySelector('#examples-close').addEventListener('click', () => closeWorkspacePanel());
 document.querySelector('#copy-close').addEventListener('click', () => closeWorkspacePanel());
-document.querySelector('#prompt-create').addEventListener('click', () => void copyOrSelect(gamePrompts[selectedPlatform].create, 'Запрос для новой игры скопирован.'));
-document.querySelector('#prompt-change').addEventListener('click', () => {
-  if (codeField.value.trim()) void copyOrSelect(gamePrompts[selectedPlatform].change + codeField.value, 'Запрос с текущим кодом скопирован.');
-});
 document.querySelector('#copy-error').addEventListener('click', () => {
   if (runtimeErrorReport) void copyOrSelect(runtimeErrorReport, 'Ошибка игры скопирована.');
 });
@@ -3156,7 +3349,6 @@ function updateControls() {
   extractionButton.disabled = !expertMode || running || modeBusy || readingClipboard || (!extractionOpen && !/data-onehtml-library\s*=/i.test(codeField.value));
   extractionButton.setAttribute('aria-pressed', String(extractionOpen));
   extractionButton.title = extractionOpen ? 'Вернуться к редактору' : 'Вынести встроенные библиотеки в ссылки';
-  document.querySelector('#prompt-change').disabled = empty;
   const baseline = latestHistory();
   compareButton.disabled = !expertMode || running || modeBusy || (!comparisonOpen && (!baseline || baseline.code === codeField.value));
   historyButton.disabled = !expertMode || running || modeBusy;
@@ -3190,6 +3382,7 @@ function updateControls() {
   storageButton.classList.toggle('is-off', !gameStorageAllowed);
   updateWorkspaceUI();
   updateCodeTools();
+  updateAiControls();
 }
 
 codeField.addEventListener('input', event => {
@@ -3586,6 +3779,7 @@ document.querySelector('#save-form').addEventListener('submit', async event => {
     confirmSaveButton.disabled = false;
   }
 });
+initAiPrompts();
 initCodeEditor();
 initWorkspaceUI();
 updateControls();

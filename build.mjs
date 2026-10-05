@@ -17,7 +17,7 @@ for (const name of ['app', 'paste', 'clear', 'save', 'share', 'play', 'stop', 'e
   template = template.replace(`<!-- ICON:${name} -->`, () => icon.trim());
 }
 const css = await readFile(join(root, 'src/styles.css'), 'utf8');
-const files = ['game-storage.js', 'library-bundle.js', 'sandbox.js', 'exporter.js', 'library-extract.js', 'draft.js', 'compare.js', 'workspace.js', 'editor.js', 'app.js'];
+const files = ['game-storage.js', 'library-bundle.js', 'sandbox.js', 'exporter.js', 'library-extract.js', 'draft.js', 'compare.js', 'workspace.js', 'editor.js', 'ai-prompts.js', 'app.js'];
 const exampleFiles = [
   { id: 'catch-circle', platform: 'mobile', title: 'Поймай круг', description: 'Касайтесь цели на всём экране.' },
   { id: 'memory', platform: 'mobile', title: 'Найди пару', description: 'Открывайте пары касанием карточек.' },

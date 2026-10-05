@@ -68,7 +68,7 @@ for (const [engineName, engine] of engines) {
         }
 
         await page.locator('#ai-open').click();
-        await page.locator('#prompt-create').click();
+        await page.locator('#ai-copy').click();
         assert(await page.locator('#copy-dialog').isVisible());
         assert(await page.locator('#ai-dialog').isHidden());
         assert.match(await page.locator('#copy-text').inputValue(), /Сделай игру/);

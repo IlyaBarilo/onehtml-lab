@@ -16,7 +16,8 @@
     "test:libraries": "node tests/library-bundle.mjs",
     "test:e2e": "node tests/browser.mjs",
     "test:workspace": "node tests/workspace.mjs",
-    "test:editor": "node tests/editor.mjs"
+    "test:editor": "node tests/editor.mjs",
+    "test:ai": "node tests/ai-prompts.mjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

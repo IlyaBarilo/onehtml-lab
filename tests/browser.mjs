@@ -254,11 +254,12 @@ async function runCase(browser, engine, url, mode) {
         const header = document.querySelector('.toolbar').getBoundingClientRect();
         const work = document.querySelector('.workspace').getBoundingClientRect();
         const editor = document.querySelector('#code').getBoundingClientRect();
+        const gutter = document.querySelector('#code-lines').getBoundingClientRect();
         const buttons = [...document.querySelectorAll('.actions button')].filter(el => !el.hidden).map(el => {
           const rect = el.getBoundingClientRect();
           return { width: rect.width, height: rect.height, top: rect.top, bottom: rect.bottom, right: rect.right, name: el.getAttribute('aria-label'), svg: el.querySelectorAll('svg').length };
         });
-        return { width: innerWidth, height: innerHeight, scrollWidth: document.documentElement.scrollWidth, header: { top: header.top, bottom: header.bottom }, work: { left: work.left, right: work.right, top: work.top, bottom: work.bottom }, editor: { width: editor.width, height: editor.height }, buttons, background: getComputedStyle(document.querySelector('#code')).backgroundColor };
+        return { width: innerWidth, height: innerHeight, scrollWidth: document.documentElement.scrollWidth, header: { top: header.top, bottom: header.bottom }, work: { left: work.left, right: work.right, top: work.top, bottom: work.bottom }, editor: { left: editor.left, right: editor.right, height: editor.height }, gutter: { left: gutter.left, right: gutter.right, width: gutter.width }, buttons, background: getComputedStyle(document.querySelector('#code')).backgroundColor };
       });
       assert(layout.scrollWidth <= layout.width, 'No horizontal overflow');
       assert.equal(layout.header.top, 0, 'Toolbar touches viewport top');
@@ -268,7 +269,10 @@ async function runCase(browser, engine, url, mode) {
       // WebKit can round 100dvh by 1/64 CSS px. Treat subpixel rounding as
       // equivalent while still detecting any visible outside gutter.
       assert(Math.abs(layout.work.bottom - layout.height) < 1, 'Workspace fills remaining height');
-      assert.equal(layout.editor.width, layout.width);
+      assert(layout.gutter.width > 0, 'Line numbers are enabled by default');
+      assert.equal(layout.gutter.left, 0, 'Line numbers start at the workspace edge');
+      assert.equal(layout.editor.left, layout.gutter.right, 'Code follows the line numbers without a gap');
+      assert.equal(layout.editor.right, layout.width, 'Code fills the remaining width');
       assert(Math.abs(layout.editor.height - (layout.height - layout.header.bottom)) < 1);
       assert.equal(layout.background, 'rgb(252, 253, 255)');
       assert.equal(layout.buttons.length, 7);

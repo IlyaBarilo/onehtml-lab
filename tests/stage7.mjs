@@ -24,14 +24,14 @@ for (const [name, engine] of engines) {
     await page.locator('#ai-open').click();
     assert.equal(await page.locator('.service-list li').count(), 4);
     assert.equal(await page.locator('.service-list li').nth(1).locator('a').count(), 1);
-    await page.locator('#prompt-create').click();
+    await page.locator('#ai-copy').click();
     assert(await page.locator('#copy-dialog').isVisible());
     assert.match(await page.locator('#copy-text').inputValue(), /Сделай игру про \[тема игры\] для телефона\. Сделай одним файлом HTML/);
     assert.doesNotMatch(await page.locator('#copy-text').inputValue(), /без сервера/);
     assert.doesNotMatch(await page.locator('#copy-text').inputValue(), /вырез экрана/);
     await page.locator('#copy-close').click();
     await page.locator('#ai-dialog .platform-tab[data-platform="desktop"]').click();
-    await page.locator('#prompt-create').click();
+    await page.locator('#ai-copy').click();
     assert.match(await page.locator('#copy-text').inputValue(), /Сделай игру про \[тема игры\] для компьютера\. Сделай одним файлом HTML/);
     await page.locator('#copy-close').click();
     await page.locator('#ai-close').click();

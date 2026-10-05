@@ -208,6 +208,7 @@ function updateLocalAccessHint() {
     runtimeErrorMessage.textContent = `${runtimeErrorMessageBase}${hint ? ` ${hint}` : ''}`;
     runtimeErrorReport = `${runtimeErrorReportBase}${hint ? `\n${hint}` : ''}`;
   }
+  updateAiControls();
 }
 
 function clearRuntimeError() {
@@ -382,17 +383,6 @@ async function copyOrSelect(text, successMessage) {
   }
 }
 
-const gamePrompts = {
-  mobile: {
-    create: 'Сделай игру про [тема игры] для телефона. Сделай одним файлом HTML со встроенными CSS и JavaScript. Игра должна занимать весь экран, управляться касанием и позволять сыграть ещё раз. Верни только полный HTML-код.',
-    change: 'Измени игру ниже по моему описанию. Верни полный HTML-файл, чтобы я мог целиком заменить прежний код. Сохрани полноэкранный вид на телефоне и управление касанием. Если задача изменения ещё не указана, сначала спроси, что именно поменять.\n\nТекущий код:\n'
-  },
-  desktop: {
-    create: 'Сделай игру про [тема игры] для компьютера. Сделай одним файлом HTML со встроенными CSS и JavaScript. Игра должна занимать всё окно браузера, управляться мышью или клавиатурой и позволять сыграть ещё раз. Верни только полный HTML-код.',
-    change: 'Измени игру ниже по моему описанию. Верни полный HTML-файл, чтобы я мог целиком заменить прежний код. Сохрани полноэкранный вид в браузере компьютера и управление мышью или клавиатурой. Если задача изменения ещё не указана, сначала спроси, что именно поменять.\n\nТекущий код:\n'
-  }
-};
-
 function renderExamples() {
   exampleList.replaceChildren();
   for (const example of examples.filter(item => (item.category || 'games') === selectedExampleCategory &&
@@ -444,6 +434,7 @@ function setPlatform(platform) {
     tab.setAttribute('aria-selected', String(tab.dataset.platform === platform));
   }
   renderExamples();
+  updateAiControls();
 }
 
 for (const tab of document.querySelectorAll('.platform-tab')) {
@@ -453,15 +444,11 @@ for (const tab of document.querySelectorAll('.example-category')) {
   tab.addEventListener('click', () => setExampleCategory(tab.dataset.exampleCategory));
 }
 renderExamples();
-aiButton.addEventListener('click', () => { if (expertMode && !modeBusy) showWorkspacePanel(aiDialog); });
+aiButton.addEventListener('click', () => openAiPrompts());
 examplesButton.addEventListener('click', () => { if (expertMode && !modeBusy) showWorkspacePanel(examplesDialog); });
 document.querySelector('#ai-close').addEventListener('click', () => closeWorkspacePanel());
 document.querySelector('#examples-close').addEventListener('click', () => closeWorkspacePanel());
 document.querySelector('#copy-close').addEventListener('click', () => closeWorkspacePanel());
-document.querySelector('#prompt-create').addEventListener('click', () => void copyOrSelect(gamePrompts[selectedPlatform].create, 'Запрос для новой игры скопирован.'));
-document.querySelector('#prompt-change').addEventListener('click', () => {
-  if (codeField.value.trim()) void copyOrSelect(gamePrompts[selectedPlatform].change + codeField.value, 'Запрос с текущим кодом скопирован.');
-});
 document.querySelector('#copy-error').addEventListener('click', () => {
   if (runtimeErrorReport) void copyOrSelect(runtimeErrorReport, 'Ошибка игры скопирована.');
 });
@@ -1008,7 +995,6 @@ function updateControls() {
   extractionButton.disabled = !expertMode || running || modeBusy || readingClipboard || (!extractionOpen && !/data-onehtml-library\s*=/i.test(codeField.value));
   extractionButton.setAttribute('aria-pressed', String(extractionOpen));
   extractionButton.title = extractionOpen ? 'Вернуться к редактору' : 'Вынести встроенные библиотеки в ссылки';
-  document.querySelector('#prompt-change').disabled = empty;
   const baseline = latestHistory();
   compareButton.disabled = !expertMode || running || modeBusy || (!comparisonOpen && (!baseline || baseline.code === codeField.value));
   historyButton.disabled = !expertMode || running || modeBusy;
@@ -1042,6 +1028,7 @@ function updateControls() {
   storageButton.classList.toggle('is-off', !gameStorageAllowed);
   updateWorkspaceUI();
   updateCodeTools();
+  updateAiControls();
 }
 
 codeField.addEventListener('input', event => {
@@ -1438,6 +1425,7 @@ document.querySelector('#save-form').addEventListener('submit', async event => {
     confirmSaveButton.disabled = false;
   }
 });
+initAiPrompts();
 initCodeEditor();
 initWorkspaceUI();
 updateControls();
