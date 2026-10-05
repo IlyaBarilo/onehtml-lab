@@ -448,6 +448,48 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   .panel-open .toolbar { min-height: 50px; }
   .panel-heading { min-height: 50px; padding-top: 3px; padding-bottom: 3px; }
 }
+
+/* Editor tools use the existing work area; only one button joins the expert row. */
+.edit-body { display: flex; flex-direction: column; gap: 18px; }
+.edit-section { margin: 0; padding: 0; border: 0; }
+.edit-section + .edit-section { border-top: 1px solid #dbe5f3; padding-top: 18px; }
+.edit-section h3 { margin: 0 0 14px; font-size: 17px; }
+.edit-section label { display: block; margin-bottom: 7px; font-size: 16px; }
+.edit-body input:not([type="checkbox"]), .edit-body select { width: 100%; min-width: 0; min-height: 44px; padding: 9px 11px; border: 1px solid #b9cbe3; border-radius: 7px; background: #fff; color: #253d5a; font: inherit; font-size: 16px; }
+.edit-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.edit-body button { min-height: 44px; padding: 9px 14px; border: 1px solid #b9cbe3; border-radius: 7px; background: #e9f1fc; color: #28588f; font: inherit; font-size: 16px; }
+.edit-body button:hover:not(:disabled) { background: #dceaff; }
+.edit-body button:disabled { opacity: .35; }
+.edit-section .edit-actions { margin-top: 10px; }
+.edit-navigation button:first-child, .edit-navigation button:nth-child(2) { min-width: 44px; }
+.edit-search-options { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.edit-section .edit-check { display: flex; align-items: center; gap: 9px; min-height: 44px; margin: 0; }
+.edit-check input { width: 20px; height: 20px; margin: 0; accent-color: #2d6cdf; }
+#edit-result, .edit-note { color: #526b8c; font-size: 15px; }
+.edit-note { margin: 0; }
+.edit-note:empty { display: none; }
+#edit-location { margin-top: 12px; }
+#edit-snippet { margin: 6px 0 14px; padding: 10px; background: #eef3fa; border-radius: 7px; white-space: pre-wrap; overflow-wrap: anywhere; font: 15px/1.5 ui-monospace, Consolas, monospace; }
+#edit-snippet mark { background: #cde2ff; color: #173c72; }
+.edit-line-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.edit-line-row + p { margin-top: 8px; }
+.edit-section .edit-font-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.edit-font-row select { width: 90px; }
+#code-measure { position: absolute; top: 0; left: 0; height: auto; visibility: hidden; pointer-events: none; box-sizing: border-box; border: 0; }
+#code-lines { position: absolute; top: 0; bottom: 0; left: 0; width: var(--line-width, 3ch); overflow: hidden; border-right: 1px solid #dbe5f3; background: #f0f4fa; color: #637895; pointer-events: none; font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; }
+#code-lines span { position: absolute; right: 6px; font-variant-numeric: tabular-nums; line-height: 1; }
+.workspace.code-numbered { font-size: 16px; }
+.workspace.code-numbered #code { margin-left: var(--line-width, 3ch); width: calc(100% - var(--line-width, 3ch)); }
+@media (max-width: 700px) {
+  .expert-actions #import { width: 44px; min-width: 44px; padding: 0; }
+  .expert-actions #import span { display: none; }
+}
+@media (min-width: 601px) and (max-width: 800px) {
+  .expert-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "tools tools" "resources draft"; gap: 4px 8px; }
+  .expert-actions { grid-area: tools; }
+  .expert-resource-actions { grid-area: resources; }
+  .draft-status { grid-area: draft; }
+}
 </style>
 </head>
 <body>
@@ -487,6 +529,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
     <div id="expert-tools" class="expert-tools" hidden>
       <div class="expert-actions">
         <button id="import" class="import-button" type="button" aria-label="Открыть HTML-файл с устройства" title="Открыть HTML-файл с устройства"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v2H3z"/><path d="M3 11h18l-2 8H5z"/></svg> <span>Открыть HTML</span></button>
+        <button id="edit-open" class="expert-icon-button" type="button" aria-label="Редактирование" aria-pressed="false" title="Редактирование кода"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 4 5 5M4 20l5-1L21 7a2.1 2.1 0 0 0-5-3L4 16v4ZM4 4h6M4 8h3"/></svg></button>
         <button id="compare" class="expert-icon-button" type="button" aria-label="Сравнить с последней прошлой версией" aria-pressed="false" title="Сравнить с последней прошлой версией" disabled><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5h6M4 9h6M14 5h6M14 9h6M4 15h6m-3-3v6M14 15h6"/></svg></button>
         <button id="history-open" class="expert-icon-button" type="button" aria-label="История версий" title="История версий"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 8V4m0 4h4M4 8a8 8 0 1 1-1 6"/><path d="M12 7v5l3 2"/></svg></button>
         <button id="storage-toggle" class="expert-icon-button storage-button" type="button" aria-label="Виртуальное хранилище игры" aria-pressed="true" title="Хранилище игры включено — нажмите, чтобы выключить"><span id="storage-on-icon"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="12" cy="5" rx="7" ry="2.5"/><path d="M5 5v13c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V5M5 11.5c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/></svg></span><span id="storage-off-icon" hidden><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="12" cy="5" rx="7" ry="2.5"/><path d="M5 5v13c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V5M5 11.5c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5M3 21 21 3"/></svg></span></button>
@@ -502,6 +545,37 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
     <button id="activity-toggle" class="activity-toggle" type="button" aria-label="Открыть сообщения" aria-expanded="false" aria-controls="activity-panel" hidden><span id="activity-summary" role="status" aria-live="polite"></span><span aria-hidden="true">›</span></button>
     <section class="workspace" aria-label="Рабочая область">
       <textarea id="code" aria-label="HTML-код" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Вставьте HTML-код…"></textarea>
+      <div id="code-lines" aria-hidden="true" hidden></div>
+      <div id="code-measure" aria-hidden="true"></div>
+      <section id="edit-panel" class="work-panel" aria-labelledby="edit-title" hidden>
+        <div class="panel-heading"><h2 id="edit-title">Редактирование</h2><button id="edit-close" type="button" aria-label="Закрыть редактирование">✕</button></div>
+        <div class="panel-body edit-body">
+          <div class="edit-actions"><button id="edit-undo" type="button" disabled>↶ Отменить</button><button id="edit-redo" type="button" disabled>↷ Повторить</button></div>
+          <section class="edit-section" aria-labelledby="edit-search-title">
+            <h3 id="edit-search-title">Поиск и замена</h3>
+            <label for="edit-query">Найти текст</label>
+            <input id="edit-query" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <div class="edit-search-options"><label class="edit-check"><input id="edit-case" type="checkbox">Учитывать регистр</label><output id="edit-result" aria-live="polite">Введите текст для поиска.</output></div>
+            <div class="edit-actions edit-navigation"><button id="edit-prev" type="button" aria-label="Предыдущее совпадение" disabled>↑</button><button id="edit-next" type="button" aria-label="Следующее совпадение" disabled>↓</button><button id="edit-show" type="button" disabled>Перейти к коду</button></div>
+            <div id="edit-location" class="edit-note"></div><pre id="edit-snippet" hidden></pre>
+            <label for="edit-replacement">Заменить на</label>
+            <input id="edit-replacement" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <div class="edit-actions"><button id="edit-replace" type="button" disabled>Заменить</button><button id="edit-replace-all" type="button" disabled>Заменить все</button></div>
+          </section>
+          <p id="edit-feedback" class="edit-note" role="status" aria-live="polite"></p>
+          <form id="edit-line-form" class="edit-section">
+            <label for="edit-line">Перейти к строке</label>
+            <div class="edit-line-row"><input id="edit-line" type="text" inputmode="numeric" pattern="[0-9]+" required autocomplete="off" placeholder="Номер строки"><button type="submit">Перейти</button></div>
+            <p id="edit-line-feedback" class="edit-note" role="status"></p>
+          </form>
+          <section class="edit-section" aria-labelledby="edit-view-title">
+            <h3 id="edit-view-title">Вид текста</h3>
+            <label class="edit-font-row" for="edit-font">Размер текста<select id="edit-font"><option value="14">14</option><option value="16" selected>16</option><option value="18">18</option><option value="20">20</option><option value="22">22</option></select></label>
+            <label class="edit-check"><input id="edit-wrap" type="checkbox" checked>Перенос длинных строк</label>
+            <label class="edit-check"><input id="edit-numbers" type="checkbox" checked>Номера строк</label>
+          </section>
+        </div>
+      </section>
       <div id="comparison" class="comparison" role="region" aria-label="Сравнение с прошлым кодом" hidden>
         <div class="comparison-heading"><strong id="comparison-source"></strong><button id="comparison-close" type="button" aria-label="Закрыть сравнение и вернуться к редактору" title="Вернуться к редактору">✕</button></div>
         <div class="comparison-legend"><span class="legend-added">Добавлено: <b id="comparison-added">0 символов</b></span><span class="legend-removed">Удалено: <b id="comparison-removed">0 символов</b></span></div>
@@ -533,7 +607,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
             <div class="library-request-actions"><button id="library-download" type="button">Скачать</button><button id="library-files-button" type="button" hidden>Выбрать JS и лицензию</button><button id="library-skip" type="button">Без подмены</button></div>
             <input id="library-files" type="file" multiple hidden aria-label="JS-файл библиотеки и её MIT-лицензия">
           </div>
-          <div id="runtime-error" class="runtime-error" hidden><span id="runtime-error-message"></span><button id="copy-error" type="button">Скопировать ошибку</button></div>
+          <div id="runtime-error" class="runtime-error" hidden><span id="runtime-error-message"></span><button id="error-line" type="button" hidden>Перейти к строке</button><button id="copy-error" type="button">Скопировать ошибку</button></div>
           <p id="status" class="notice" hidden></p>
           <div id="network-status" class="network-status" hidden><span id="network-message">Игра использует интернет</span><span id="network-metrics">Файлов: <span id="network-count">0</span> · учтено: <span id="network-kb">(нет данных)</span></span></div>
           <p id="local-access-status" class="notice local-access-status" hidden></p>
@@ -1186,13 +1260,14 @@ function makePreview(code, networkAllowed = true, storageEntries = null) {
   // Policy is parsed before any user markup. The original source is never
   // assigned to the host DOM and remains unchanged in the editor and export.
   // The host's frame-src policy additionally restricts frame self-navigation.
-  frame.srcdoc = '<!doctype html><meta charset="utf-8">'
+  const prefix = '<!doctype html><meta charset="utf-8">'
     + '<meta http-equiv="Content-Security-Policy" content="' + previewPolicy(networkAllowed) + '">'
     + errorProbe
     + (storageEntries ? virtualStorageProbe(storageEntries) : '')
     + localAccessProbe
-    + (networkAllowed ? trafficProbe : '')
-    + code;
+    + (networkAllowed ? trafficProbe : '');
+  frame.previewOffset = { lines: prefix.split('\n').length - 1, column: prefix.length - prefix.lastIndexOf('\n') - 1 };
+  frame.srcdoc = prefix + code;
   return frame;
 }
 
@@ -1706,6 +1781,371 @@ function initWorkspaceUI() {
   updateWorkspaceUI();
 }
 
+// Native textarea editing, with a separate in-memory undo chain of text patches.
+const editPanel = document.querySelector('#edit-panel');
+const editButton = document.querySelector('#edit-open');
+const editQuery = document.querySelector('#edit-query');
+const editReplacement = document.querySelector('#edit-replacement');
+const editCase = document.querySelector('#edit-case');
+const editResult = document.querySelector('#edit-result');
+const editGutter = document.querySelector('#code-lines');
+const editMirror = document.querySelector('#code-measure');
+let editReady = false;
+let editView = { size: 16, wrap: true, numbers: true };
+let editBaseline = '';
+let editBefore = null;
+let editUndo = [];
+let editRedo = [];
+let editApplying = false;
+let editGroup = null;
+let editSearch = { code: null, query: null, sensitive: false, count: 0, index: -1, range: null };
+let editLayoutFrame = 0;
+let editMeasured = null;
+let errorSource = null;
+let errorTarget = null;
+
+function editSelection() {
+  return { start: codeField.selectionStart, end: codeField.selectionEnd, direction: codeField.selectionDirection };
+}
+
+function editPatch(before, after) {
+  let start = 0;
+  while (start < before.length && start < after.length && before[start] === after[start]) start++;
+  let endBefore = before.length, endAfter = after.length;
+  while (endBefore > start && endAfter > start && before[endBefore - 1] === after[endAfter - 1]) { endBefore--; endAfter--; }
+  return { start, removed: before.slice(start, endBefore), added: after.slice(start, endAfter) };
+}
+
+function trimEditUndo() {
+  let size = 0;
+  for (let i = editUndo.length - 1; i >= 0; i--) {
+    size += editUndo[i].removed.length + editUndo[i].added.length;
+    if ((size > 8_000_000 || editUndo.length - i > 100) && i < editUndo.length - 1) {
+      editUndo.splice(0, i + 1);
+      break;
+    }
+  }
+}
+
+function resetCodeEdits() {
+  editBaseline = codeField.value;
+  editUndo = [];
+  editRedo = [];
+  editBefore = null;
+  editGroup = null;
+  editSearch.code = null;
+  scheduleCodeLayout();
+}
+
+function recordCodeEdit(event) {
+  if (!editReady || editApplying) return;
+  const after = codeField.value;
+  if (after === editBaseline) return;
+  const beforeSelection = editBefore || { start: 0, end: 0, direction: 'none' };
+  const type = event?.inputType || '';
+  const now = performance.now();
+  const groupable = ['insertText', 'deleteContentBackward', 'deleteContentForward', 'insertCompositionText'].includes(type);
+  const last = editUndo.at(-1);
+  const merge = groupable && editGroup?.type === type && now - editGroup.time < 800 && last
+    && beforeSelection.start === last.after.start && beforeSelection.end === last.after.end;
+  if (merge) {
+    // Reconstruct only the previous edit's starting text, not a chain of full copies.
+    const original = editBaseline.slice(0, last.start) + last.removed + editBaseline.slice(last.start + last.added.length);
+    Object.assign(last, editPatch(original, after), { after: editSelection() });
+  } else {
+    editUndo.push({ ...editPatch(editBaseline, after), before: beforeSelection, after: editSelection() });
+  }
+  editBaseline = after;
+  editBefore = null;
+  editRedo = [];
+  editGroup = groupable ? { type, time: now } : null;
+  trimEditUndo();
+  editSearch.code = null;
+  scheduleCodeLayout();
+}
+
+function changeCodeFromEditor(next, selection) {
+  if (next === codeField.value) return;
+  editBefore = editSelection();
+  codeField.value = next;
+  codeField.setSelectionRange(selection.start, selection.end);
+  codeField.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function undoCodeEdit(redo = false) {
+  if (running || modeBusy) return;
+  const source = redo ? editRedo : editUndo;
+  const target = redo ? editUndo : editRedo;
+  const patch = source.pop();
+  if (!patch) return;
+  const remove = redo ? patch.removed : patch.added;
+  const insert = redo ? patch.added : patch.removed;
+  const selection = redo ? patch.after : patch.before;
+  editApplying = true;
+  codeField.value = codeField.value.slice(0, patch.start) + insert + codeField.value.slice(patch.start + remove.length);
+  codeField.setSelectionRange(selection.start, selection.end, selection.direction);
+  editBaseline = codeField.value;
+  target.push(patch);
+  editBefore = null;
+  editGroup = null;
+  editSearch.code = null;
+  try { codeField.dispatchEvent(new Event('input', { bubbles: true })); }
+  finally { editApplying = false; }
+  revealCodeRange(selection.start, selection.end, selection.direction);
+}
+
+function editSearchPattern(query, sensitive) {
+  // Both search text and replacement text are literal.
+  return new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), sensitive ? 'gu' : 'giu');
+}
+
+function selectEditMatch(index) {
+  const regex = editSearchPattern(editSearch.query, editSearch.sensitive);
+  let match, current = 0;
+  while ((match = regex.exec(editSearch.code))) {
+    if (current++ !== index) continue;
+    editSearch.index = index;
+    editSearch.range = [match.index, match.index + match[0].length];
+    break;
+  }
+}
+
+function refreshEditSearch(reset = false) {
+  const code = codeField.value, query = editQuery.value, sensitive = editCase.checked;
+  if (reset || editSearch.code !== code || editSearch.query !== query || editSearch.sensitive !== sensitive) {
+    let count = 0, index = -1, range = null;
+    if (query) {
+      const regex = editSearchPattern(query, sensitive);
+      let match;
+      // Keep only the active range: common characters in large libraries can
+      // have millions of matches and must not allocate millions of arrays.
+      while ((match = regex.exec(code))) {
+        const start = match.index, end = start + match[0].length;
+        if (!count || (start === codeField.selectionStart && end === codeField.selectionEnd)) {
+          range = [start, end]; index = count;
+        }
+        count++;
+      }
+    }
+    editSearch = { code, query, sensitive, count, index, range };
+  }
+  const count = editSearch.count;
+  editResult.textContent = !query ? 'Введите текст для поиска.' : count ? `${editSearch.index + 1} из ${count}` : 'Совпадений нет.';
+  for (const id of ['edit-prev', 'edit-next', 'edit-show', 'edit-replace', 'edit-replace-all']) document.getElementById(id).disabled = !count;
+  const range = editSearch.range;
+  const snippet = document.querySelector('#edit-snippet');
+  snippet.replaceChildren();
+  if (range) {
+    const [start, end] = range;
+    const mark = document.createElement('mark');
+    mark.textContent = code.slice(start, Math.min(end, start + 200)) + (end - start > 200 ? '…' : '');
+    snippet.append(code.slice(Math.max(0, start - 65), start), mark, code.slice(end, end + 100));
+    document.querySelector('#edit-location').textContent = `Строка ${code.slice(0, start).split('\n').length}`;
+  } else document.querySelector('#edit-location').textContent = '';
+  snippet.hidden = !range;
+}
+
+function replaceEditMatch(all = false) {
+  refreshEditSearch();
+  if (!editSearch.count) return;
+  const count = all ? editSearch.count : 1;
+  const source = codeField.value, replacement = editReplacement.value;
+  if (all) selectEditMatch(0);
+  const [start, end] = editSearch.range;
+  const next = all ? source.replace(editSearchPattern(editSearch.query, editSearch.sensitive), () => replacement)
+    : source.slice(0, start) + replacement + source.slice(end);
+  changeCodeFromEditor(next, { start, end: start + replacement.length });
+  refreshEditSearch(true);
+  document.querySelector('#edit-feedback').textContent = next === source ? 'Текст не изменился.' : `Заменено: ${count}. Можно отменить.`;
+}
+
+function updateCodeTools() {
+  editButton.disabled = !expertMode || running || modeBusy || readingClipboard || extractionOpen;
+  editButton.setAttribute('aria-pressed', String(currentPanel() === editPanel));
+  document.querySelector('#edit-undo').disabled = !editUndo.length || running || modeBusy;
+  document.querySelector('#edit-redo').disabled = !editRedo.length || running || modeBusy;
+  scheduleCodeLayout();
+}
+
+function openCodeTools() {
+  if (editButton.disabled) return;
+  editGroup = null;
+  document.querySelector('#edit-feedback').textContent = '';
+  document.querySelector('#edit-line-feedback').textContent = '';
+  refreshEditSearch();
+  showWorkspacePanel(editPanel);
+}
+
+function applyCodeView() {
+  codeField.style.fontSize = `${editView.size}px`;
+  codeField.wrap = editView.wrap ? 'soft' : 'off';
+  workspaceElement.classList.toggle('code-numbered', editView.numbers);
+  document.querySelector('#edit-font').value = String(editView.size);
+  document.querySelector('#edit-wrap').checked = editView.wrap;
+  document.querySelector('#edit-numbers').checked = editView.numbers;
+  editMeasured = null;
+  scheduleCodeLayout();
+}
+
+function measureCode() {
+  const style = getComputedStyle(codeField);
+  const signature = [codeField.value, codeField.clientWidth, style.fontSize, editView.wrap, style.paddingTop, style.paddingLeft];
+  if (editMeasured && signature.every((value, i) => value === editMeasured.signature[i])) return editMeasured;
+  for (const key of ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'tabSize', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft']) editMirror.style[key] = style[key];
+  editMirror.style.width = `${codeField.clientWidth}px`;
+  editMirror.style.whiteSpace = editView.wrap ? 'pre-wrap' : 'pre';
+  editMirror.style.overflowWrap = editView.wrap ? 'break-word' : 'normal';
+  editMirror.textContent = codeField.value + '\u200b';
+  const starts = [0];
+  let at = -1;
+  while ((at = codeField.value.indexOf('\n', at + 1)) >= 0) starts.push(at + 1);
+  editMeasured = { signature, starts, lineHeight: parseFloat(style.lineHeight) };
+  return editMeasured;
+}
+
+function codePointRect(offset) {
+  const range = document.createRange();
+  const node = editMirror.firstChild;
+  const position = Math.max(0, Math.min(offset, codeField.value.length));
+  range.setStart(node, position);
+  range.setEnd(node, position + 1);
+  const rect = range.getBoundingClientRect(), origin = editMirror.getBoundingClientRect();
+  return { top: rect.top - origin.top, left: rect.left - origin.left, height: rect.height };
+}
+
+function drawCodeLines() {
+  editLayoutFrame = 0;
+  editGutter.hidden = !editView.numbers || codeField.hidden || Boolean(currentPanel());
+  if (editGutter.hidden) return;
+  const { starts, lineHeight } = measureCode();
+  const digits = String(starts.length).length;
+  const width = `${Math.max(3, digits + 1)}ch`;
+  if (workspaceElement.style.getPropertyValue('--line-width') !== width) {
+    workspaceElement.style.setProperty('--line-width', width);
+    measureCode();
+  }
+  let low = 0, high = starts.length;
+  while (low < high) {
+    const mid = (low + high) >>> 1;
+    if (codePointRect(starts[mid]).top < codeField.scrollTop) low = mid + 1;
+    else high = mid;
+  }
+  const nodes = [];
+  for (let i = Math.max(0, low - 1); i < starts.length; i++) {
+    const top = codePointRect(starts[i]).top - codeField.scrollTop;
+    if (top > codeField.clientHeight) break;
+    const number = document.createElement('span');
+    number.textContent = String(i + 1);
+    number.style.top = `${top}px`;
+    number.style.height = `${lineHeight}px`;
+    nodes.push(number);
+  }
+  editGutter.style.fontSize = `${editView.size}px`;
+  editGutter.replaceChildren(...nodes);
+}
+
+function scheduleCodeLayout() {
+  if (editReady && !editLayoutFrame) editLayoutFrame = requestAnimationFrame(drawCodeLines);
+}
+
+function revealCodeRange(start, end = start, direction = 'none') {
+  if (running) stopPreview();
+  closeWorkspacePanels(false);
+  closeHistory();
+  closeComparison();
+  closeLibraryExtraction();
+  updateControls();
+  codeField.focus({ preventScroll: true });
+  codeField.setSelectionRange(start, end, direction);
+  const position = () => {
+    measureCode();
+    const rect = codePointRect(start);
+    codeField.scrollTop = Math.max(0, rect.top - codeField.clientHeight / 3);
+    codeField.scrollLeft = editView.wrap ? 0 : Math.max(0, rect.left - codeField.clientWidth / 3);
+    rememberEditorPosition();
+    scheduleCodeLayout();
+  };
+  position();
+  requestAnimationFrame(position);
+}
+
+function goToCodeLine(line, column = 1) {
+  const { starts } = measureCode();
+  if (!Number.isInteger(line) || line < 1 || line > starts.length) return false;
+  const start = starts[line - 1], end = line < starts.length ? starts[line] - 1 : codeField.value.length;
+  const at = Math.min(end, start + Math.max(0, column - 1));
+  revealCodeRange(at, column > 1 ? Math.min(end, at + 1) : end);
+  return true;
+}
+
+function locateRuntimeError(detail) {
+  errorTarget = null;
+  if (!errorSource || errorSource.code !== codeField.value || !Number.isInteger(detail.line) || !['about:srcdoc', 'about:blank'].includes(detail.filename)) return;
+  const line = detail.line - errorSource.lines;
+  const column = Math.max(1, (Number.isInteger(detail.column) ? detail.column : 1) - (line === 1 ? errorSource.column : 0));
+  if (Number.isInteger(line) && line > 0 && line <= codeField.value.split('\n').length) errorTarget = { line, column };
+}
+
+function initCodeEditor() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('onehtml-lab-editor-view'));
+    if ([14, 16, 18, 20, 22].includes(saved?.size)) editView.size = saved.size;
+    editView.wrap = saved?.wrap !== false;
+    editView.numbers = saved?.numbers !== false;
+  } catch {}
+  editReady = true;
+  applyCodeView();
+  editButton.addEventListener('click', openCodeTools);
+  document.querySelector('#edit-close').addEventListener('click', () => closeWorkspacePanel());
+  codeField.addEventListener('beforeinput', event => {
+    if (event.inputType === 'historyUndo' || event.inputType === 'historyRedo') {
+      if (event.cancelable) { event.preventDefault(); undoCodeEdit(event.inputType === 'historyRedo'); }
+      return;
+    }
+    editBefore = editSelection();
+  });
+  codeField.addEventListener('pointerdown', () => { editGroup = null; });
+  codeField.addEventListener('blur', () => { editGroup = null; });
+  codeField.addEventListener('scroll', scheduleCodeLayout);
+  codeField.addEventListener('keydown', event => {
+    if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+    const key = event.key.toLowerCase();
+    if (key === 'z' || key === 'y') { event.preventDefault(); undoCodeEdit(key === 'y' || event.shiftKey); }
+    else if (expertMode && ['f', 'h', 'g'].includes(key)) {
+      event.preventDefault(); openCodeTools();
+      document.querySelector(key === 'g' ? '#edit-line' : '#edit-query').focus();
+    }
+  });
+  document.querySelector('#edit-undo').addEventListener('click', () => undoCodeEdit());
+  document.querySelector('#edit-redo').addEventListener('click', () => undoCodeEdit(true));
+  editQuery.addEventListener('input', () => refreshEditSearch(true));
+  editCase.addEventListener('change', () => refreshEditSearch(true));
+  for (const [id, step] of [['edit-prev', -1], ['edit-next', 1]]) document.getElementById(id).addEventListener('click', () => {
+    refreshEditSearch();
+    if (editSearch.count) selectEditMatch((editSearch.index + step + editSearch.count) % editSearch.count);
+    refreshEditSearch();
+  });
+  document.querySelector('#edit-show').addEventListener('click', () => {
+    refreshEditSearch();
+    const range = editSearch.range;
+    if (range) revealCodeRange(...range);
+  });
+  document.querySelector('#edit-replace').addEventListener('click', () => replaceEditMatch());
+  document.querySelector('#edit-replace-all').addEventListener('click', () => replaceEditMatch(true));
+  document.querySelector('#edit-line-form').addEventListener('submit', event => {
+    event.preventDefault();
+    if (!goToCodeLine(Number(document.querySelector('#edit-line').value))) document.querySelector('#edit-line-feedback').textContent = `Введите номер от 1 до ${measureCode().starts.length}.`;
+  });
+  for (const id of ['edit-font', 'edit-wrap', 'edit-numbers']) document.getElementById(id).addEventListener('change', () => {
+    editView = { size: Number(document.querySelector('#edit-font').value), wrap: document.querySelector('#edit-wrap').checked, numbers: document.querySelector('#edit-numbers').checked };
+    applyCodeView();
+    try { localStorage.setItem('onehtml-lab-editor-view', JSON.stringify(editView)); }
+    catch { document.querySelector('#edit-feedback').textContent = 'Настройки действуют сейчас, но браузер не сохранил их.'; }
+  });
+  document.querySelector('#error-line').addEventListener('click', () => { if (errorTarget) goToCodeLine(errorTarget.line, errorTarget.column); });
+  new ResizeObserver(scheduleCodeLayout).observe(codeField);
+}
+
 const codeField = document.querySelector('#code');
 const preview = document.querySelector('#preview');
 const pasteButton = document.querySelector('#paste');
@@ -1872,8 +2312,12 @@ window.addEventListener('message', event => {
     const message = detail.message === 'Script error.'
       ? 'Ошибка JavaScript (браузер не сообщил подробности)'
       : detail.message.slice(0, 500);
-    const place = Number.isInteger(detail.line) && detail.line > 0
-      ? ` (строка документа ${detail.line}${Number.isInteger(detail.column) && detail.column > 0 ? `, столбец ${detail.column}` : ''})`
+    locateRuntimeError(detail);
+    document.querySelector('#error-line').hidden = !errorTarget;
+    const line = errorTarget?.line || detail.line;
+    const column = errorTarget?.column || detail.column;
+    const place = Number.isInteger(line) && line > 0
+      ? ` (строка ${errorTarget ? 'кода' : typeof detail.filename === 'string' && detail.filename && !detail.filename.startsWith('about:') ? 'скрипта' : 'предпросмотра'} ${line}${Number.isInteger(column) && column > 0 ? `, столбец ${column}` : ''})`
       : '';
     runtimeErrorCount += 1;
     runtimeErrorReportBase = `${detail.kind === 'rejection' ? 'Необработанный Promise' : 'Ошибка JavaScript'}: ${message}${place}`;
@@ -1915,6 +2359,9 @@ function updateLocalAccessHint() {
 }
 
 function clearRuntimeError() {
+  errorTarget = null;
+  errorSource = null;
+  document.querySelector('#error-line').hidden = true;
   runtimeErrorReport = '';
   runtimeErrorReportBase = '';
   runtimeErrorMessageBase = '';
@@ -2666,6 +3113,7 @@ function replaceCode(code, archive = false) {
   closeComparison();
   clearRuntimeError();
   codeField.value = code;
+  resetCodeEdits();
   codeField.scrollTop = 0;
   codeField.scrollLeft = 0;
   scheduleDraftSave();
@@ -2741,9 +3189,11 @@ function updateControls() {
   document.querySelector('#storage-off-icon').hidden = gameStorageAllowed;
   storageButton.classList.toggle('is-off', !gameStorageAllowed);
   updateWorkspaceUI();
+  updateCodeTools();
 }
 
-codeField.addEventListener('input', () => {
+codeField.addEventListener('input', event => {
+  recordCodeEdit(event);
   closeLibraryExtraction();
   hideLibraryRequest();
   if (pendingNativePaste !== null) {
@@ -2849,6 +3299,7 @@ async function startPreview(replaceLibraries = true) {
     closeComparison();
     clearRuntimeError();
     const frame = makePreview(prepared.html, previewNetworkAllowed(), gameStorageAllowed ? gameStorageSnapshot() : null);
+    errorSource = prepared.html === code ? { code, ...frame.previewOffset } : null;
     resetNetworkStatus();
     codeField.blur();
     codeField.hidden = true;
@@ -2955,6 +3406,7 @@ async function restoreStartupDraft() {
     await loadLibraryCache();
     modeBusy = false;
     codeField.disabled = false;
+    resetCodeEdits();
     updateControls();
   }
 }
@@ -3134,6 +3586,7 @@ document.querySelector('#save-form').addEventListener('submit', async event => {
     confirmSaveButton.disabled = false;
   }
 });
+initCodeEditor();
 initWorkspaceUI();
 updateControls();
 void restoreStartupDraft();

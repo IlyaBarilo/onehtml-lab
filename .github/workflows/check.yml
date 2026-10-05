@@ -25,6 +25,7 @@ jobs:
       - run: node tests/browser.mjs --engines=chromium
       - run: node tests/stage7.mjs --engines=chromium
       - run: node tests/workspace.mjs --engines=chromium
+      - run: node tests/editor.mjs --engines=chromium
       - run: npm run test:network
       - run: npm run test:libraries -- --engines=chromium
       - run: npm run test:draft

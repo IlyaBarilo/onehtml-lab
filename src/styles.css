@@ -410,3 +410,45 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   .panel-open .toolbar { min-height: 50px; }
   .panel-heading { min-height: 50px; padding-top: 3px; padding-bottom: 3px; }
 }
+
+/* Editor tools use the existing work area; only one button joins the expert row. */
+.edit-body { display: flex; flex-direction: column; gap: 18px; }
+.edit-section { margin: 0; padding: 0; border: 0; }
+.edit-section + .edit-section { border-top: 1px solid #dbe5f3; padding-top: 18px; }
+.edit-section h3 { margin: 0 0 14px; font-size: 17px; }
+.edit-section label { display: block; margin-bottom: 7px; font-size: 16px; }
+.edit-body input:not([type="checkbox"]), .edit-body select { width: 100%; min-width: 0; min-height: 44px; padding: 9px 11px; border: 1px solid #b9cbe3; border-radius: 7px; background: #fff; color: #253d5a; font: inherit; font-size: 16px; }
+.edit-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.edit-body button { min-height: 44px; padding: 9px 14px; border: 1px solid #b9cbe3; border-radius: 7px; background: #e9f1fc; color: #28588f; font: inherit; font-size: 16px; }
+.edit-body button:hover:not(:disabled) { background: #dceaff; }
+.edit-body button:disabled { opacity: .35; }
+.edit-section .edit-actions { margin-top: 10px; }
+.edit-navigation button:first-child, .edit-navigation button:nth-child(2) { min-width: 44px; }
+.edit-search-options { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.edit-section .edit-check { display: flex; align-items: center; gap: 9px; min-height: 44px; margin: 0; }
+.edit-check input { width: 20px; height: 20px; margin: 0; accent-color: #2d6cdf; }
+#edit-result, .edit-note { color: #526b8c; font-size: 15px; }
+.edit-note { margin: 0; }
+.edit-note:empty { display: none; }
+#edit-location { margin-top: 12px; }
+#edit-snippet { margin: 6px 0 14px; padding: 10px; background: #eef3fa; border-radius: 7px; white-space: pre-wrap; overflow-wrap: anywhere; font: 15px/1.5 ui-monospace, Consolas, monospace; }
+#edit-snippet mark { background: #cde2ff; color: #173c72; }
+.edit-line-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.edit-line-row + p { margin-top: 8px; }
+.edit-section .edit-font-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.edit-font-row select { width: 90px; }
+#code-measure { position: absolute; top: 0; left: 0; height: auto; visibility: hidden; pointer-events: none; box-sizing: border-box; border: 0; }
+#code-lines { position: absolute; top: 0; bottom: 0; left: 0; width: var(--line-width, 3ch); overflow: hidden; border-right: 1px solid #dbe5f3; background: #f0f4fa; color: #637895; pointer-events: none; font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; }
+#code-lines span { position: absolute; right: 6px; font-variant-numeric: tabular-nums; line-height: 1; }
+.workspace.code-numbered { font-size: 16px; }
+.workspace.code-numbered #code { margin-left: var(--line-width, 3ch); width: calc(100% - var(--line-width, 3ch)); }
+@media (max-width: 700px) {
+  .expert-actions #import { width: 44px; min-width: 44px; padding: 0; }
+  .expert-actions #import span { display: none; }
+}
+@media (min-width: 601px) and (max-width: 800px) {
+  .expert-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "tools tools" "resources draft"; gap: 4px 8px; }
+  .expert-actions { grid-area: tools; }
+  .expert-resource-actions { grid-area: resources; }
+  .draft-status { grid-area: draft; }
+}

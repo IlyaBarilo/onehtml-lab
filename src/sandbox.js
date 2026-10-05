@@ -142,12 +142,13 @@ function makePreview(code, networkAllowed = true, storageEntries = null) {
   // Policy is parsed before any user markup. The original source is never
   // assigned to the host DOM and remains unchanged in the editor and export.
   // The host's frame-src policy additionally restricts frame self-navigation.
-  frame.srcdoc = '<!doctype html><meta charset="utf-8">'
+  const prefix = '<!doctype html><meta charset="utf-8">'
     + '<meta http-equiv="Content-Security-Policy" content="' + previewPolicy(networkAllowed) + '">'
     + errorProbe
     + (storageEntries ? virtualStorageProbe(storageEntries) : '')
     + localAccessProbe
-    + (networkAllowed ? trafficProbe : '')
-    + code;
+    + (networkAllowed ? trafficProbe : '');
+  frame.previewOffset = { lines: prefix.split('\n').length - 1, column: prefix.length - prefix.lastIndexOf('\n') - 1 };
+  frame.srcdoc = prefix + code;
   return frame;
 }

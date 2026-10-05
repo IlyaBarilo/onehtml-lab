@@ -15,7 +15,8 @@
     "test:game-storage": "node tests/game-storage.mjs",
     "test:libraries": "node tests/library-bundle.mjs",
     "test:e2e": "node tests/browser.mjs",
-    "test:workspace": "node tests/workspace.mjs"
+    "test:workspace": "node tests/workspace.mjs",
+    "test:editor": "node tests/editor.mjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

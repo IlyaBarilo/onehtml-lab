@@ -31,6 +31,8 @@ async function createApp(clipboard) {
     navigator: { clipboard },
     // Clipboard unit tests isolate layout; workspace transitions have browser coverage.
     initWorkspaceUI() {}, updateWorkspaceUI() {}, rememberEditorPosition() {}, restoreEditorPosition() {},
+    initCodeEditor() {}, updateCodeTools() {}, resetCodeEdits() {}, recordCodeEdit() {},
+    errorTarget: null, errorSource: null,
     closeWorkspacePanels() {}, setPreviewExpanded() {}, currentPanel: () => null, activityPanel: {},
     setTimeout(fn, ms) { timers.push({ fn, ms }); return timers.length; },
     clearTimeout: () => {},

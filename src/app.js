@@ -164,8 +164,12 @@ window.addEventListener('message', event => {
     const message = detail.message === 'Script error.'
       ? 'Ошибка JavaScript (браузер не сообщил подробности)'
       : detail.message.slice(0, 500);
-    const place = Number.isInteger(detail.line) && detail.line > 0
-      ? ` (строка документа ${detail.line}${Number.isInteger(detail.column) && detail.column > 0 ? `, столбец ${detail.column}` : ''})`
+    locateRuntimeError(detail);
+    document.querySelector('#error-line').hidden = !errorTarget;
+    const line = errorTarget?.line || detail.line;
+    const column = errorTarget?.column || detail.column;
+    const place = Number.isInteger(line) && line > 0
+      ? ` (строка ${errorTarget ? 'кода' : typeof detail.filename === 'string' && detail.filename && !detail.filename.startsWith('about:') ? 'скрипта' : 'предпросмотра'} ${line}${Number.isInteger(column) && column > 0 ? `, столбец ${column}` : ''})`
       : '';
     runtimeErrorCount += 1;
     runtimeErrorReportBase = `${detail.kind === 'rejection' ? 'Необработанный Promise' : 'Ошибка JavaScript'}: ${message}${place}`;
@@ -207,6 +211,9 @@ function updateLocalAccessHint() {
 }
 
 function clearRuntimeError() {
+  errorTarget = null;
+  errorSource = null;
+  document.querySelector('#error-line').hidden = true;
   runtimeErrorReport = '';
   runtimeErrorReportBase = '';
   runtimeErrorMessageBase = '';
@@ -958,6 +965,7 @@ function replaceCode(code, archive = false) {
   closeComparison();
   clearRuntimeError();
   codeField.value = code;
+  resetCodeEdits();
   codeField.scrollTop = 0;
   codeField.scrollLeft = 0;
   scheduleDraftSave();
@@ -1033,9 +1041,11 @@ function updateControls() {
   document.querySelector('#storage-off-icon').hidden = gameStorageAllowed;
   storageButton.classList.toggle('is-off', !gameStorageAllowed);
   updateWorkspaceUI();
+  updateCodeTools();
 }
 
-codeField.addEventListener('input', () => {
+codeField.addEventListener('input', event => {
+  recordCodeEdit(event);
   closeLibraryExtraction();
   hideLibraryRequest();
   if (pendingNativePaste !== null) {
@@ -1141,6 +1151,7 @@ async function startPreview(replaceLibraries = true) {
     closeComparison();
     clearRuntimeError();
     const frame = makePreview(prepared.html, previewNetworkAllowed(), gameStorageAllowed ? gameStorageSnapshot() : null);
+    errorSource = prepared.html === code ? { code, ...frame.previewOffset } : null;
     resetNetworkStatus();
     codeField.blur();
     codeField.hidden = true;
@@ -1247,6 +1258,7 @@ async function restoreStartupDraft() {
     await loadLibraryCache();
     modeBusy = false;
     codeField.disabled = false;
+    resetCodeEdits();
     updateControls();
   }
 }
@@ -1426,6 +1438,7 @@ document.querySelector('#save-form').addEventListener('submit', async event => {
     confirmSaveButton.disabled = false;
   }
 });
+initCodeEditor();
 initWorkspaceUI();
 updateControls();
 void restoreStartupDraft();

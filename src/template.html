@@ -53,6 +53,7 @@
     <div id="expert-tools" class="expert-tools" hidden>
       <div class="expert-actions">
         <button id="import" class="import-button" type="button" aria-label="Открыть HTML-файл с устройства" title="Открыть HTML-файл с устройства"><!-- ICON:import --> <span>Открыть HTML</span></button>
+        <button id="edit-open" class="expert-icon-button" type="button" aria-label="Редактирование" aria-pressed="false" title="Редактирование кода"><!-- ICON:edit --></button>
         <button id="compare" class="expert-icon-button" type="button" aria-label="Сравнить с последней прошлой версией" aria-pressed="false" title="Сравнить с последней прошлой версией" disabled><!-- ICON:compare --></button>
         <button id="history-open" class="expert-icon-button" type="button" aria-label="История версий" title="История версий"><!-- ICON:restore --></button>
         <button id="storage-toggle" class="expert-icon-button storage-button" type="button" aria-label="Виртуальное хранилище игры" aria-pressed="true" title="Хранилище игры включено — нажмите, чтобы выключить"><span id="storage-on-icon"><!-- ICON:storage-on --></span><span id="storage-off-icon" hidden><!-- ICON:storage-off --></span></button>
@@ -68,6 +69,37 @@
     <button id="activity-toggle" class="activity-toggle" type="button" aria-label="Открыть сообщения" aria-expanded="false" aria-controls="activity-panel" hidden><span id="activity-summary" role="status" aria-live="polite"></span><span aria-hidden="true">›</span></button>
     <section class="workspace" aria-label="Рабочая область">
       <textarea id="code" aria-label="HTML-код" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Вставьте HTML-код…"></textarea>
+      <div id="code-lines" aria-hidden="true" hidden></div>
+      <div id="code-measure" aria-hidden="true"></div>
+      <section id="edit-panel" class="work-panel" aria-labelledby="edit-title" hidden>
+        <div class="panel-heading"><h2 id="edit-title">Редактирование</h2><button id="edit-close" type="button" aria-label="Закрыть редактирование">✕</button></div>
+        <div class="panel-body edit-body">
+          <div class="edit-actions"><button id="edit-undo" type="button" disabled>↶ Отменить</button><button id="edit-redo" type="button" disabled>↷ Повторить</button></div>
+          <section class="edit-section" aria-labelledby="edit-search-title">
+            <h3 id="edit-search-title">Поиск и замена</h3>
+            <label for="edit-query">Найти текст</label>
+            <input id="edit-query" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <div class="edit-search-options"><label class="edit-check"><input id="edit-case" type="checkbox">Учитывать регистр</label><output id="edit-result" aria-live="polite">Введите текст для поиска.</output></div>
+            <div class="edit-actions edit-navigation"><button id="edit-prev" type="button" aria-label="Предыдущее совпадение" disabled>↑</button><button id="edit-next" type="button" aria-label="Следующее совпадение" disabled>↓</button><button id="edit-show" type="button" disabled>Перейти к коду</button></div>
+            <div id="edit-location" class="edit-note"></div><pre id="edit-snippet" hidden></pre>
+            <label for="edit-replacement">Заменить на</label>
+            <input id="edit-replacement" type="text" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <div class="edit-actions"><button id="edit-replace" type="button" disabled>Заменить</button><button id="edit-replace-all" type="button" disabled>Заменить все</button></div>
+          </section>
+          <p id="edit-feedback" class="edit-note" role="status" aria-live="polite"></p>
+          <form id="edit-line-form" class="edit-section">
+            <label for="edit-line">Перейти к строке</label>
+            <div class="edit-line-row"><input id="edit-line" type="text" inputmode="numeric" pattern="[0-9]+" required autocomplete="off" placeholder="Номер строки"><button type="submit">Перейти</button></div>
+            <p id="edit-line-feedback" class="edit-note" role="status"></p>
+          </form>
+          <section class="edit-section" aria-labelledby="edit-view-title">
+            <h3 id="edit-view-title">Вид текста</h3>
+            <label class="edit-font-row" for="edit-font">Размер текста<select id="edit-font"><option value="14">14</option><option value="16" selected>16</option><option value="18">18</option><option value="20">20</option><option value="22">22</option></select></label>
+            <label class="edit-check"><input id="edit-wrap" type="checkbox" checked>Перенос длинных строк</label>
+            <label class="edit-check"><input id="edit-numbers" type="checkbox" checked>Номера строк</label>
+          </section>
+        </div>
+      </section>
       <div id="comparison" class="comparison" role="region" aria-label="Сравнение с прошлым кодом" hidden>
         <div class="comparison-heading"><strong id="comparison-source"></strong><button id="comparison-close" type="button" aria-label="Закрыть сравнение и вернуться к редактору" title="Вернуться к редактору">✕</button></div>
         <div class="comparison-legend"><span class="legend-added">Добавлено: <b id="comparison-added">0 символов</b></span><span class="legend-removed">Удалено: <b id="comparison-removed">0 символов</b></span></div>
@@ -99,7 +131,7 @@
             <div class="library-request-actions"><button id="library-download" type="button">Скачать</button><button id="library-files-button" type="button" hidden>Выбрать JS и лицензию</button><button id="library-skip" type="button">Без подмены</button></div>
             <input id="library-files" type="file" multiple hidden aria-label="JS-файл библиотеки и её MIT-лицензия">
           </div>
-          <div id="runtime-error" class="runtime-error" hidden><span id="runtime-error-message"></span><button id="copy-error" type="button">Скопировать ошибку</button></div>
+          <div id="runtime-error" class="runtime-error" hidden><span id="runtime-error-message"></span><button id="error-line" type="button" hidden>Перейти к строке</button><button id="copy-error" type="button">Скопировать ошибку</button></div>
           <p id="status" class="notice" hidden></p>
           <div id="network-status" class="network-status" hidden><span id="network-message">Игра использует интернет</span><span id="network-metrics">Файлов: <span id="network-count">0</span> · учтено: <span id="network-kb">(нет данных)</span></span></div>
           <p id="local-access-status" class="notice local-access-status" hidden></p>
