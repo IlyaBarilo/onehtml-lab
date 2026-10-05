@@ -488,6 +488,28 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   .draft-status { grid-area: draft; }
 }
 
+/* Wide layouts keep the code and iframe in their original DOM positions. */
+.split-workspace { --code-width: calc((100% - 10px) * var(--code-ratio, .5)); }
+.split-workspace #code { position: absolute; top: 0; left: 0; width: var(--code-width); height: 100%; }
+.split-workspace.code-numbered #code { width: calc(var(--code-width) - var(--line-width, 3ch)); }
+.split-workspace #preview { position: absolute; left: calc(var(--code-width) + 10px); top: var(--preview-tools-height, 60px); width: calc(100% - var(--code-width) - 10px); height: calc(100% - var(--preview-tools-height, 60px)); overflow: hidden; }
+#preview.phone-preview { background: #e9eff7; }
+.phone-preview > iframe { border-radius: 6px; box-shadow: 0 2px 12px #243d5e24; }
+#split-divider { position: absolute; left: var(--code-width); top: 0; bottom: 0; width: 10px; z-index: 2; cursor: col-resize; touch-action: none; background: #e5edf8; border-inline: 1px solid #cfdaeb; }
+#split-divider::after { content: ''; position: absolute; left: 3px; top: calc(50% - 22px); height: 44px; width: 2px; border-radius: 2px; background: #8199ba; }
+#split-divider:hover, #split-divider:focus-visible { background: #caddfa; }
+.resizing-split { user-select: none; cursor: col-resize; }
+.resizing-split #preview, .resizing-split #code { pointer-events: none; }
+#preview-tools { position: absolute; left: calc(var(--code-width) + 10px); top: 0; right: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; padding: 8px 10px; background: #f5f8fd; border-bottom: 1px solid #dbe5f3; }
+#preview-settings { display: flex; align-items: center; gap: 6px; flex: 1 1 190px; min-width: 0; }
+#preview-device { min-height: 44px; min-width: 0; width: 100%; padding: 8px; border: 1px solid #b9cbe3; border-radius: 6px; background: #fff; color: #315c93; font: inherit; font-size: 14px; }
+#preview-rotate { flex-shrink: 0; }
+#preview-restart { min-height: 44px; padding: 8px 12px; border: 1px solid #b7cff0; border-radius: 6px; background: #e1edff; color: #2059bf; font: inherit; font-size: 14px; }
+#preview-restart:disabled { opacity: .35; }
+#preview-changes { color: #8b591a; font-size: 13px; }
+#preview-empty { position: absolute; left: calc(var(--code-width) + 10px); right: 0; top: var(--preview-tools-height, 60px); bottom: 0; display: grid; place-content: center; padding: 24px; color: #69809e; font-size: 16px; text-align: center; background: #f5f8fc; }
+.workspace.has-panel #code-lines { visibility: hidden; }
+
 /* Prompt preparation and its preview share one workspace screen. */
 .ai-compose { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 22px; }
 .ai-task-section, .ai-services { min-width: 0; }
@@ -556,6 +578,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
       <div class="expert-actions">
         <button id="import" class="import-button" type="button" aria-label="Открыть HTML-файл с устройства" title="Открыть HTML-файл с устройства"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v2H3z"/><path d="M3 11h18l-2 8H5z"/></svg> <span>Открыть HTML</span></button>
         <button id="edit-open" class="expert-icon-button" type="button" aria-label="Редактирование" aria-pressed="false" title="Редактирование кода"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 4 5 5M4 20l5-1L21 7a2.1 2.1 0 0 0-5-3L4 16v4ZM4 4h6M4 8h3"/></svg></button>
+        <button id="split-toggle" class="expert-icon-button" type="button" aria-label="Код и игра рядом" aria-pressed="false" title="Код и игра рядом" hidden><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16M6 8h3M6 12h3M6 16h3m6-7 4 3-4 3z"/></svg></button>
         <button id="compare" class="expert-icon-button" type="button" aria-label="Сравнить с последней прошлой версией" aria-pressed="false" title="Сравнить с последней прошлой версией" disabled><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 5h6M4 9h6M14 5h6M14 9h6M4 15h6m-3-3v6M14 15h6"/></svg></button>
         <button id="history-open" class="expert-icon-button" type="button" aria-label="История версий" title="История версий"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 8V4m0 4h4M4 8a8 8 0 1 1-1 6"/><path d="M12 7v5l3 2"/></svg></button>
         <button id="storage-toggle" class="expert-icon-button storage-button" type="button" aria-label="Виртуальное хранилище игры" aria-pressed="true" title="Хранилище игры включено — нажмите, чтобы выключить"><span id="storage-on-icon"><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="12" cy="5" rx="7" ry="2.5"/><path d="M5 5v13c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V5M5 11.5c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/></svg></span><span id="storage-off-icon" hidden><svg class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><ellipse cx="12" cy="5" rx="7" ry="2.5"/><path d="M5 5v13c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V5M5 11.5c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5M3 21 21 3"/></svg></span></button>
@@ -615,6 +638,12 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
         <ol id="history-list" class="history-list"></ol>
       </section>
       <div id="preview" hidden></div>
+      <div id="split-divider" role="separator" aria-label="Ширина редактора" aria-orientation="vertical" aria-valuemin="30" aria-valuemax="70" aria-valuenow="50" tabindex="0" hidden></div>
+      <div id="preview-tools" hidden>
+        <div id="preview-settings"><select id="preview-device" aria-label="Размер предпросмотра"><option value="free">По размеру области</option><option value="phone">Телефон · 390 × 844</option></select><button id="preview-rotate" class="icon-button" type="button" aria-label="Повернуть экран телефона" aria-pressed="false" title="Повернуть горизонтально" hidden><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="5" width="8" height="14" rx="2"/><path d="M3 10a9 9 0 0 1 16-4m0-4v4h-4M21 14a9 9 0 0 1-16 4m0 4v-4h4"/></svg></button></div>
+        <span id="preview-changes" role="status" hidden>Есть изменения</span><button id="preview-restart" type="button" title="Запустить актуальный код · Ctrl+Enter" disabled>Запустить</button>
+      </div>
+      <div id="preview-empty" hidden>Нажмите «Запустить», чтобы проверить игру.</div>
       <section id="library-extraction" class="library-extraction" aria-labelledby="library-extraction-title" hidden>
         <div class="history-heading library-extraction-heading"><h2 id="library-extraction-title">Вынести библиотеки</h2><button id="library-extract-close" type="button" aria-label="Закрыть вынос библиотек" title="Вернуться к редактору">✕</button></div>
         <div class="library-extraction-body">
@@ -1771,6 +1800,7 @@ function updateWorkspaceUI() {
   clearButton.hidden = running;
   activityToggle.setAttribute('aria-expanded', String(currentPanel() === activityPanel));
   updateWorkspaceViewport();
+  updateDesktopUI();
 }
 
 function updateActivitySummary() {
@@ -1913,7 +1943,7 @@ function changeCodeFromEditor(next, selection) {
 }
 
 function undoCodeEdit(redo = false) {
-  if (running || modeBusy) return;
+  if ((running && !isSplitWorkspace()) || modeBusy || codeField.readOnly) return;
   const source = redo ? editRedo : editUndo;
   const target = redo ? editUndo : editRedo;
   const patch = source.pop();
@@ -1986,6 +2016,7 @@ function refreshEditSearch(reset = false) {
 }
 
 function replaceEditMatch(all = false) {
+  if (modeBusy || codeField.readOnly || (running && !isSplitWorkspace())) return;
   refreshEditSearch();
   if (!editSearch.count) return;
   const count = all ? editSearch.count : 1;
@@ -2000,10 +2031,11 @@ function replaceEditMatch(all = false) {
 }
 
 function updateCodeTools() {
-  editButton.disabled = !expertMode || running || modeBusy || readingClipboard || extractionOpen;
+  const blocked = (running && !isSplitWorkspace()) || modeBusy;
+  editButton.disabled = !expertMode || blocked || readingClipboard || extractionOpen;
   editButton.setAttribute('aria-pressed', String(currentPanel() === editPanel));
-  document.querySelector('#edit-undo').disabled = !editUndo.length || running || modeBusy;
-  document.querySelector('#edit-redo').disabled = !editRedo.length || running || modeBusy;
+  document.querySelector('#edit-undo').disabled = !editUndo.length || blocked || codeField.readOnly;
+  document.querySelector('#edit-redo').disabled = !editRedo.length || blocked || codeField.readOnly;
   scheduleCodeLayout();
 }
 
@@ -2029,24 +2061,41 @@ function applyCodeView() {
 
 function measureCode() {
   const style = getComputedStyle(codeField);
-  const signature = [codeField.value, codeField.clientWidth, style.fontSize, editView.wrap, style.paddingTop, style.paddingLeft];
+  const code = codeField.value;
+  const signature = [code, codeField.clientWidth, style.fontSize, editView.wrap, style.paddingTop, style.paddingLeft];
   if (editMeasured && signature.every((value, i) => value === editMeasured.signature[i])) return editMeasured;
   for (const key of ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'tabSize', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft']) editMirror.style[key] = style[key];
   editMirror.style.width = `${codeField.clientWidth}px`;
   editMirror.style.whiteSpace = editView.wrap ? 'pre-wrap' : 'pre';
   editMirror.style.overflowWrap = editView.wrap ? 'break-word' : 'normal';
-  editMirror.textContent = codeField.value + '\u200b';
   const starts = [0];
   let at = -1;
-  while ((at = codeField.value.indexOf('\n', at + 1)) >= 0) starts.push(at + 1);
+  while ((at = code.indexOf('\n', at + 1)) >= 0) starts.push(at + 1);
+  // Separate formatting blocks avoid laying out an entire large document as
+  // one wrapped paragraph. Text stays inert and source offsets stay unchanged.
+  const lines = starts.map((start, index) => {
+    const line = document.createElement('div');
+    const end = index + 1 < starts.length ? starts[index + 1] - 1 : code.length;
+    line.textContent = code.slice(start, end) + '\u200b';
+    return line;
+  });
+  editMirror.replaceChildren(...lines);
   editMeasured = { signature, starts, lineHeight: parseFloat(style.lineHeight) };
   return editMeasured;
 }
 
 function codePointRect(offset) {
   const range = document.createRange();
-  const node = editMirror.firstChild;
-  const position = Math.max(0, Math.min(offset, codeField.value.length));
+  const { starts, signature } = editMeasured;
+  const absolute = Math.max(0, Math.min(offset, signature[0].length));
+  let low = 0, high = starts.length;
+  while (low + 1 < high) {
+    const mid = (low + high) >>> 1;
+    if (starts[mid] <= absolute) low = mid;
+    else high = mid;
+  }
+  const node = editMirror.children[low].firstChild;
+  const position = absolute - starts[low];
   range.setStart(node, position);
   range.setEnd(node, position + 1);
   const rect = range.getBoundingClientRect(), origin = editMirror.getBoundingClientRect();
@@ -2089,7 +2138,7 @@ function scheduleCodeLayout() {
 }
 
 function revealCodeRange(start, end = start, direction = 'none') {
-  if (running) stopPreview();
+  if (running && !isSplitWorkspace()) stopPreview();
   closeWorkspacePanels(false);
   closeHistory();
   closeComparison();
@@ -2182,8 +2231,174 @@ function initCodeEditor() {
     try { localStorage.setItem('onehtml-lab-editor-view', JSON.stringify(editView)); }
     catch { document.querySelector('#edit-feedback').textContent = 'Настройки действуют сейчас, но браузер не сохранил их.'; }
   });
-  document.querySelector('#error-line').addEventListener('click', () => { if (errorTarget) goToCodeLine(errorTarget.line, errorTarget.column); });
+  document.querySelector('#error-line').addEventListener('click', () => { if (errorTarget && errorSource?.code === codeField.value) goToCodeLine(errorTarget.line, errorTarget.column); });
   new ResizeObserver(scheduleCodeLayout).observe(codeField);
+}
+
+// Layout changes resize the existing frame; only an explicit run replaces it.
+const splitButton = document.querySelector('#split-toggle');
+const splitDivider = document.querySelector('#split-divider');
+const previewTools = document.querySelector('#preview-tools');
+const previewDevice = document.querySelector('#preview-device');
+const previewRotate = document.querySelector('#preview-rotate');
+const previewRestart = document.querySelector('#preview-restart');
+const previewChanges = document.querySelector('#preview-changes');
+const previewEmpty = document.querySelector('#preview-empty');
+const desktopKey = 'onehtml-lab-desktop-view';
+let desktopView = { split: false, ratio: .5, device: 'free', landscape: false };
+let desktopReady = false;
+let desktopStarting = false;
+let desktopFrame = 0;
+
+function wideWorkspace() { return document.documentElement.clientWidth >= 1000; }
+function isSplitWorkspace() { return desktopReady && desktopView.split && wideWorkspace() && !previewExpanded; }
+
+function saveDesktopView() {
+  try { localStorage.setItem(desktopKey, JSON.stringify(desktopView)); }
+  catch { inform('Расположение действует сейчас, но браузер не сохранил его.', true); }
+}
+
+function schedulePreviewSize() {
+  if (!desktopReady || desktopFrame) return;
+  desktopFrame = requestAnimationFrame(() => {
+    desktopFrame = 0;
+    if (!previewTools.hidden) {
+      const height = `${previewTools.offsetHeight}px`;
+      if (workspaceElement.style.getPropertyValue('--preview-tools-height') !== height) {
+        workspaceElement.style.setProperty('--preview-tools-height', height);
+      }
+    }
+    sizeDesktopPreview();
+  });
+}
+
+function sizeDesktopPreview() {
+  if (!activeFrame) return;
+  const phone = isSplitWorkspace() && desktopView.device === 'phone';
+  preview.classList.toggle('phone-preview', phone);
+  if (!phone) {
+    for (const name of ['width', 'height', 'transform', 'transform-origin', 'position', 'left', 'top']) activeFrame.style.removeProperty(name);
+    return;
+  }
+  const width = desktopView.landscape ? 844 : 390;
+  const height = desktopView.landscape ? 390 : 844;
+  const availableWidth = Math.max(1, preview.clientWidth - 24);
+  const availableHeight = Math.max(1, preview.clientHeight - 24);
+  const scale = Math.min(1, availableWidth / width, availableHeight / height);
+  Object.assign(activeFrame.style, { width: `${width}px`, height: `${height}px`, position: 'absolute',
+    transformOrigin: '0 0', transform: `scale(${scale})`,
+    left: `${(preview.clientWidth - width * scale) / 2}px`, top: `${(preview.clientHeight - height * scale) / 2}px` });
+}
+
+function updateDesktopUI() {
+  if (!desktopReady) return;
+  const split = isSplitWorkspace();
+  const overlay = Boolean(currentPanel()) || historyOpen || comparisonOpen || extractionOpen;
+  workspaceElement.classList.toggle('split-workspace', split);
+  workspaceElement.classList.toggle('desktop-overlay', overlay);
+  workspaceElement.style.setProperty('--code-ratio', String(desktopView.ratio));
+  splitButton.hidden = !wideWorkspace();
+  splitButton.disabled = modeBusy;
+  splitButton.setAttribute('aria-pressed', String(desktopView.split));
+  splitButton.title = desktopView.split ? 'Вернуть одну область' : 'Код и игра рядом';
+  splitDivider.hidden = !split || overlay;
+  splitDivider.setAttribute('aria-valuenow', String(Math.round(desktopView.ratio * 100)));
+  previewTools.hidden = !split || overlay;
+  previewEmpty.hidden = !split || running || overlay;
+  codeField.hidden = (running && !split) || historyOpen || comparisonOpen || extractionOpen;
+  preview.hidden = !running;
+  previewRestart.disabled = modeBusy || desktopStarting || readingClipboard || !codeField.value.trim();
+  previewRestart.textContent = running ? 'Перезапустить' : 'Запустить';
+  previewChanges.hidden = !running || previewCode === codeField.value;
+  document.querySelector('#preview-settings').hidden = !expertMode;
+  previewDevice.value = desktopView.device;
+  previewDevice.querySelector('[value="phone"]').textContent = desktopView.landscape ? 'Телефон · 844 × 390' : 'Телефон · 390 × 844';
+  previewRotate.hidden = desktopView.device !== 'phone';
+  previewRotate.setAttribute('aria-pressed', String(desktopView.landscape));
+  previewRotate.title = desktopView.landscape ? 'Повернуть вертикально' : 'Повернуть горизонтально';
+  schedulePreviewSize();
+  scheduleCodeLayout();
+}
+
+async function restartDesktopPreview() {
+  if (!isSplitWorkspace() || modeBusy || desktopStarting || readingClipboard || !codeField.value.trim()) return;
+  desktopStarting = true;
+  inform();
+  updateDesktopUI();
+  try { await startPreview(); }
+  finally { desktopStarting = false; updateControls(); }
+}
+
+function setSplitRatio(ratio) {
+  desktopView.ratio = Math.max(.3, Math.min(.7, ratio));
+  updateDesktopUI();
+}
+
+function initDesktopWorkspace() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(desktopKey));
+    desktopView.split = saved?.split === true;
+    if (Number.isFinite(saved?.ratio)) desktopView.ratio = Math.max(.3, Math.min(.7, saved.ratio));
+    desktopView.device = saved?.device === 'phone' ? 'phone' : 'free';
+    desktopView.landscape = saved?.landscape === true;
+  } catch {}
+  desktopReady = true;
+  splitButton.addEventListener('click', () => {
+    if (!expertMode || modeBusy) return;
+    rememberEditorPosition();
+    desktopView.split = !desktopView.split;
+    saveDesktopView();
+    updateControls();
+    restoreEditorPosition();
+  });
+  previewDevice.addEventListener('change', () => {
+    if (!expertMode) return;
+    desktopView.device = previewDevice.value === 'phone' ? 'phone' : 'free';
+    saveDesktopView(); updateDesktopUI();
+  });
+  previewRotate.addEventListener('click', () => {
+    if (!expertMode) return;
+    desktopView.landscape = !desktopView.landscape;
+    saveDesktopView(); updateDesktopUI();
+  });
+  previewRestart.addEventListener('click', () => void restartDesktopPreview());
+  codeField.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key === 'Enter' && isSplitWorkspace()) {
+      event.preventDefault(); void restartDesktopPreview();
+    }
+  });
+  splitDivider.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    splitDivider.focus();
+    splitDivider.setPointerCapture(event.pointerId);
+    workspaceElement.classList.add('resizing-split');
+    const move = pointer => {
+      const rect = workspaceElement.getBoundingClientRect();
+      setSplitRatio((pointer.clientX - rect.left) / Math.max(1, rect.width - 10));
+    };
+    const stop = () => {
+      workspaceElement.classList.remove('resizing-split');
+      splitDivider.removeEventListener('pointermove', move);
+      splitDivider.removeEventListener('pointerup', stop);
+      splitDivider.removeEventListener('pointercancel', stop);
+      splitDivider.removeEventListener('lostpointercapture', stop);
+      saveDesktopView();
+    };
+    splitDivider.addEventListener('pointermove', move);
+    splitDivider.addEventListener('pointerup', stop);
+    splitDivider.addEventListener('pointercancel', stop);
+    splitDivider.addEventListener('lostpointercapture', stop);
+  });
+  splitDivider.addEventListener('keydown', event => {
+    const ratios = { ArrowLeft: desktopView.ratio - .02, ArrowRight: desktopView.ratio + .02, Home: .3, End: .7 };
+    if (!(event.key in ratios)) return;
+    event.preventDefault(); setSplitRatio(ratios[event.key]); saveDesktopView();
+  });
+  window.addEventListener('resize', () => { rememberEditorPosition(); updateControls(); restoreEditorPosition(); });
+  new ResizeObserver(schedulePreviewSize).observe(preview);
+  new ResizeObserver(schedulePreviewSize).observe(previewTools);
+  updateDesktopUI();
 }
 
 // Preparing a prompt is read-only: no editor, history, cache or network writes.
@@ -2206,7 +2421,8 @@ let aiSourcePlan = null;
 
 function aiPromptSnapshot() {
   return { mode: aiMode, platform: selectedPlatform, task: aiTask.value.trim(), shorten: aiShorten.checked,
-    code: aiMode === 'create' ? '' : codeField.value, error: aiMode === 'fix' ? runtimeErrorReport : '' };
+    code: aiMode === 'create' ? '' : codeField.value,
+    error: aiMode === 'fix' && runtimeErrorCode === codeField.value ? runtimeErrorReport : '' };
 }
 
 function sameAiSnapshot(a, b) {
@@ -2274,7 +2490,7 @@ function updateAiControls() {
   document.querySelector('#prompt-fix').disabled = empty;
   const errorAction = document.querySelector('#error-ai');
   errorAction.hidden = !expertMode;
-  errorAction.disabled = empty || modeBusy;
+  errorAction.disabled = empty || modeBusy || runtimeErrorCode !== codeField.value;
   if (currentPanel() !== aiDialog) {
     clearTimeout(aiTimer);
     aiRevision++;
@@ -2422,6 +2638,8 @@ const saveLibrariesLabel = document.querySelector('#save-libraries-label');
 const saveLibrariesMode = document.querySelector('#save-libraries-mode');
 let saveLibrariesDescription = null;
 let running = false;
+let previewCode = null;
+let runtimeErrorCode = null;
 let readingClipboard = false;
 let replaceOnNextPaste = false;
 let currentFilename = 'game.html';
@@ -2517,6 +2735,7 @@ window.addEventListener('message', event => {
   if (event.data?.type === 'onehtml-lab:runtime-error') {
     const detail = event.data;
     if (!['error', 'rejection'].includes(detail.kind) || typeof detail.message !== 'string') return;
+    runtimeErrorCode = previewCode;
     const message = detail.message === 'Script error.'
       ? 'Ошибка JavaScript (браузер не сообщил подробности)'
       : detail.message.slice(0, 500);
@@ -2561,13 +2780,17 @@ function updateLocalAccessHint() {
   localAccessStatus.textContent = statusHint;
   localAccessStatus.hidden = !statusHint;
   if (!runtimeError.hidden) {
-    runtimeErrorMessage.textContent = `${runtimeErrorMessageBase}${hint ? ` ${hint}` : ''}`;
-    runtimeErrorReport = `${runtimeErrorReportBase}${hint ? `\n${hint}` : ''}`;
+    const stale = runtimeErrorCode !== null && runtimeErrorCode !== codeField.value
+      ? ' Ошибка относится к запущенной версии. Код в редакторе уже изменён.' : '';
+    runtimeErrorMessage.textContent = `${runtimeErrorMessageBase}${hint ? ` ${hint}` : ''}${stale}`;
+    runtimeErrorReport = `${runtimeErrorReportBase}${hint ? `\n${hint}` : ''}${stale}`;
+    document.querySelector('#error-line').hidden = !errorTarget || Boolean(stale);
   }
   updateAiControls();
 }
 
 function clearRuntimeError() {
+  runtimeErrorCode = null;
   errorTarget = null;
   errorSource = null;
   document.querySelector('#error-line').hidden = true;
@@ -3400,7 +3623,11 @@ codeField.addEventListener('input', event => {
   }
   replaceOnNextPaste = false;
   inform();
-  clearRuntimeError();
+  if (running) {
+    errorTarget = null;
+    document.querySelector('#error-line').hidden = true;
+    updateLocalAccessHint();
+  } else clearRuntimeError();
   scheduleDraftSave();
   updateControls();
 });
@@ -3465,6 +3692,7 @@ pasteButton.addEventListener('click', async () => {
 });
 
 function stopPreview() {
+  rememberEditorPosition();
   closeWorkspacePanels(false);
   previewRequest += 1;
   // Removing the document tears down its timers, media and event handlers.
@@ -3473,6 +3701,7 @@ function stopPreview() {
   preview.hidden = true;
   codeField.hidden = false;
   running = false;
+  previewCode = null;
   setPreviewExpanded(false);
   restoreEditorPosition();
   resetNetworkStatus();
@@ -3496,14 +3725,15 @@ async function startPreview(replaceLibraries = true) {
     const frame = makePreview(prepared.html, previewNetworkAllowed(), gameStorageAllowed ? gameStorageSnapshot() : null);
     errorSource = prepared.html === code ? { code, ...frame.previewOffset } : null;
     resetNetworkStatus();
-    codeField.blur();
-    codeField.hidden = true;
+    if (!isSplitWorkspace()) codeField.blur();
+    codeField.hidden = !isSplitWorkspace();
     preview.hidden = false;
-    activeFrame = null;
-    preview.replaceChildren(frame);
     activeFrame = frame;
+    sizeDesktopPreview();
+    preview.replaceChildren(frame);
     if (gameStorageAllowed) registerGameStorageFrame(frame);
     running = true;
+    previewCode = code;
     activeBundledLibraries = [...new Set(prepared.bundledLibraries || [])];
     updateLocalAccessHint();
   } catch {
@@ -3784,6 +4014,7 @@ document.querySelector('#save-form').addEventListener('submit', async event => {
 initAiPrompts();
 initCodeEditor();
 initWorkspaceUI();
+initDesktopWorkspace();
 updateControls();
 void restoreStartupDraft();
 

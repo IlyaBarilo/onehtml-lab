@@ -33,6 +33,7 @@ async function createApp(clipboard) {
     initWorkspaceUI() {}, updateWorkspaceUI() {}, rememberEditorPosition() {}, restoreEditorPosition() {},
     initCodeEditor() {}, updateCodeTools() {}, resetCodeEdits() {}, recordCodeEdit() {},
     initAiPrompts() {}, updateAiControls() {}, openAiPrompts() {},
+    initDesktopWorkspace() {}, sizeDesktopPreview() {}, isSplitWorkspace: () => false,
     errorTarget: null, errorSource: null,
     closeWorkspacePanels() {}, setPreviewExpanded() {}, currentPanel: () => null, activityPanel: {},
     setTimeout(fn, ms) { timers.push({ fn, ms }); return timers.length; },

@@ -90,7 +90,7 @@ function changeCodeFromEditor(next, selection) {
 }
 
 function undoCodeEdit(redo = false) {
-  if (running || modeBusy) return;
+  if ((running && !isSplitWorkspace()) || modeBusy || codeField.readOnly) return;
   const source = redo ? editRedo : editUndo;
   const target = redo ? editUndo : editRedo;
   const patch = source.pop();
@@ -163,6 +163,7 @@ function refreshEditSearch(reset = false) {
 }
 
 function replaceEditMatch(all = false) {
+  if (modeBusy || codeField.readOnly || (running && !isSplitWorkspace())) return;
   refreshEditSearch();
   if (!editSearch.count) return;
   const count = all ? editSearch.count : 1;
@@ -177,10 +178,11 @@ function replaceEditMatch(all = false) {
 }
 
 function updateCodeTools() {
-  editButton.disabled = !expertMode || running || modeBusy || readingClipboard || extractionOpen;
+  const blocked = (running && !isSplitWorkspace()) || modeBusy;
+  editButton.disabled = !expertMode || blocked || readingClipboard || extractionOpen;
   editButton.setAttribute('aria-pressed', String(currentPanel() === editPanel));
-  document.querySelector('#edit-undo').disabled = !editUndo.length || running || modeBusy;
-  document.querySelector('#edit-redo').disabled = !editRedo.length || running || modeBusy;
+  document.querySelector('#edit-undo').disabled = !editUndo.length || blocked || codeField.readOnly;
+  document.querySelector('#edit-redo').disabled = !editRedo.length || blocked || codeField.readOnly;
   scheduleCodeLayout();
 }
 
@@ -206,24 +208,41 @@ function applyCodeView() {
 
 function measureCode() {
   const style = getComputedStyle(codeField);
-  const signature = [codeField.value, codeField.clientWidth, style.fontSize, editView.wrap, style.paddingTop, style.paddingLeft];
+  const code = codeField.value;
+  const signature = [code, codeField.clientWidth, style.fontSize, editView.wrap, style.paddingTop, style.paddingLeft];
   if (editMeasured && signature.every((value, i) => value === editMeasured.signature[i])) return editMeasured;
   for (const key of ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'tabSize', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft']) editMirror.style[key] = style[key];
   editMirror.style.width = `${codeField.clientWidth}px`;
   editMirror.style.whiteSpace = editView.wrap ? 'pre-wrap' : 'pre';
   editMirror.style.overflowWrap = editView.wrap ? 'break-word' : 'normal';
-  editMirror.textContent = codeField.value + '\u200b';
   const starts = [0];
   let at = -1;
-  while ((at = codeField.value.indexOf('\n', at + 1)) >= 0) starts.push(at + 1);
+  while ((at = code.indexOf('\n', at + 1)) >= 0) starts.push(at + 1);
+  // Separate formatting blocks avoid laying out an entire large document as
+  // one wrapped paragraph. Text stays inert and source offsets stay unchanged.
+  const lines = starts.map((start, index) => {
+    const line = document.createElement('div');
+    const end = index + 1 < starts.length ? starts[index + 1] - 1 : code.length;
+    line.textContent = code.slice(start, end) + '\u200b';
+    return line;
+  });
+  editMirror.replaceChildren(...lines);
   editMeasured = { signature, starts, lineHeight: parseFloat(style.lineHeight) };
   return editMeasured;
 }
 
 function codePointRect(offset) {
   const range = document.createRange();
-  const node = editMirror.firstChild;
-  const position = Math.max(0, Math.min(offset, codeField.value.length));
+  const { starts, signature } = editMeasured;
+  const absolute = Math.max(0, Math.min(offset, signature[0].length));
+  let low = 0, high = starts.length;
+  while (low + 1 < high) {
+    const mid = (low + high) >>> 1;
+    if (starts[mid] <= absolute) low = mid;
+    else high = mid;
+  }
+  const node = editMirror.children[low].firstChild;
+  const position = absolute - starts[low];
   range.setStart(node, position);
   range.setEnd(node, position + 1);
   const rect = range.getBoundingClientRect(), origin = editMirror.getBoundingClientRect();
@@ -266,7 +285,7 @@ function scheduleCodeLayout() {
 }
 
 function revealCodeRange(start, end = start, direction = 'none') {
-  if (running) stopPreview();
+  if (running && !isSplitWorkspace()) stopPreview();
   closeWorkspacePanels(false);
   closeHistory();
   closeComparison();
@@ -359,6 +378,6 @@ function initCodeEditor() {
     try { localStorage.setItem('onehtml-lab-editor-view', JSON.stringify(editView)); }
     catch { document.querySelector('#edit-feedback').textContent = 'Настройки действуют сейчас, но браузер не сохранил их.'; }
   });
-  document.querySelector('#error-line').addEventListener('click', () => { if (errorTarget) goToCodeLine(errorTarget.line, errorTarget.column); });
+  document.querySelector('#error-line').addEventListener('click', () => { if (errorTarget && errorSource?.code === codeField.value) goToCodeLine(errorTarget.line, errorTarget.column); });
   new ResizeObserver(scheduleCodeLayout).observe(codeField);
 }

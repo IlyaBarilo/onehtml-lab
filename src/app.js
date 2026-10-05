@@ -66,6 +66,8 @@ const saveLibrariesLabel = document.querySelector('#save-libraries-label');
 const saveLibrariesMode = document.querySelector('#save-libraries-mode');
 let saveLibrariesDescription = null;
 let running = false;
+let previewCode = null;
+let runtimeErrorCode = null;
 let readingClipboard = false;
 let replaceOnNextPaste = false;
 let currentFilename = 'game.html';
@@ -161,6 +163,7 @@ window.addEventListener('message', event => {
   if (event.data?.type === 'onehtml-lab:runtime-error') {
     const detail = event.data;
     if (!['error', 'rejection'].includes(detail.kind) || typeof detail.message !== 'string') return;
+    runtimeErrorCode = previewCode;
     const message = detail.message === 'Script error.'
       ? 'Ошибка JavaScript (браузер не сообщил подробности)'
       : detail.message.slice(0, 500);
@@ -205,13 +208,17 @@ function updateLocalAccessHint() {
   localAccessStatus.textContent = statusHint;
   localAccessStatus.hidden = !statusHint;
   if (!runtimeError.hidden) {
-    runtimeErrorMessage.textContent = `${runtimeErrorMessageBase}${hint ? ` ${hint}` : ''}`;
-    runtimeErrorReport = `${runtimeErrorReportBase}${hint ? `\n${hint}` : ''}`;
+    const stale = runtimeErrorCode !== null && runtimeErrorCode !== codeField.value
+      ? ' Ошибка относится к запущенной версии. Код в редакторе уже изменён.' : '';
+    runtimeErrorMessage.textContent = `${runtimeErrorMessageBase}${hint ? ` ${hint}` : ''}${stale}`;
+    runtimeErrorReport = `${runtimeErrorReportBase}${hint ? `\n${hint}` : ''}${stale}`;
+    document.querySelector('#error-line').hidden = !errorTarget || Boolean(stale);
   }
   updateAiControls();
 }
 
 function clearRuntimeError() {
+  runtimeErrorCode = null;
   errorTarget = null;
   errorSource = null;
   document.querySelector('#error-line').hidden = true;
@@ -1044,7 +1051,11 @@ codeField.addEventListener('input', event => {
   }
   replaceOnNextPaste = false;
   inform();
-  clearRuntimeError();
+  if (running) {
+    errorTarget = null;
+    document.querySelector('#error-line').hidden = true;
+    updateLocalAccessHint();
+  } else clearRuntimeError();
   scheduleDraftSave();
   updateControls();
 });
@@ -1109,6 +1120,7 @@ pasteButton.addEventListener('click', async () => {
 });
 
 function stopPreview() {
+  rememberEditorPosition();
   closeWorkspacePanels(false);
   previewRequest += 1;
   // Removing the document tears down its timers, media and event handlers.
@@ -1117,6 +1129,7 @@ function stopPreview() {
   preview.hidden = true;
   codeField.hidden = false;
   running = false;
+  previewCode = null;
   setPreviewExpanded(false);
   restoreEditorPosition();
   resetNetworkStatus();
@@ -1140,14 +1153,15 @@ async function startPreview(replaceLibraries = true) {
     const frame = makePreview(prepared.html, previewNetworkAllowed(), gameStorageAllowed ? gameStorageSnapshot() : null);
     errorSource = prepared.html === code ? { code, ...frame.previewOffset } : null;
     resetNetworkStatus();
-    codeField.blur();
-    codeField.hidden = true;
+    if (!isSplitWorkspace()) codeField.blur();
+    codeField.hidden = !isSplitWorkspace();
     preview.hidden = false;
-    activeFrame = null;
-    preview.replaceChildren(frame);
     activeFrame = frame;
+    sizeDesktopPreview();
+    preview.replaceChildren(frame);
     if (gameStorageAllowed) registerGameStorageFrame(frame);
     running = true;
+    previewCode = code;
     activeBundledLibraries = [...new Set(prepared.bundledLibraries || [])];
     updateLocalAccessHint();
   } catch {
@@ -1428,5 +1442,6 @@ document.querySelector('#save-form').addEventListener('submit', async event => {
 initAiPrompts();
 initCodeEditor();
 initWorkspaceUI();
+initDesktopWorkspace();
 updateControls();
 void restoreStartupDraft();

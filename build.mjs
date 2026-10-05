@@ -12,12 +12,12 @@ template = template.replace(/^([ \t]*)<!-- APP_VERSION -->\r?\n/m, (_, indent) =
   releaseTag ? `${indent}<span class="app-version" aria-label="Версия ${releaseTag}">${releaseTag}</span>\n` : '');
 const appIcon = await readFile(join(root, 'src/icons/app.svg'), 'utf8');
 template = template.replace('<!-- APP_FAVICON -->', `data:image/svg+xml,${encodeURIComponent(appIcon)}`);
-for (const name of ['app', 'paste', 'clear', 'save', 'share', 'play', 'stop', 'expert', 'network-on', 'network-off', 'storage-on', 'storage-off', 'import', 'compare', 'restore', 'library-out', 'expand', 'edit']) {
+for (const name of ['app', 'paste', 'clear', 'save', 'share', 'play', 'stop', 'expert', 'network-on', 'network-off', 'storage-on', 'storage-off', 'import', 'compare', 'restore', 'library-out', 'expand', 'edit', 'split']) {
   const icon = await readFile(join(root, 'src/icons', name + '.svg'), 'utf8');
   template = template.replace(`<!-- ICON:${name} -->`, () => icon.trim());
 }
 const css = await readFile(join(root, 'src/styles.css'), 'utf8');
-const files = ['game-storage.js', 'library-bundle.js', 'sandbox.js', 'exporter.js', 'library-extract.js', 'draft.js', 'compare.js', 'workspace.js', 'editor.js', 'ai-prompts.js', 'app.js'];
+const files = ['game-storage.js', 'library-bundle.js', 'sandbox.js', 'exporter.js', 'library-extract.js', 'draft.js', 'compare.js', 'workspace.js', 'editor.js', 'desktop.js', 'ai-prompts.js', 'app.js'];
 const exampleFiles = [
   { id: 'catch-circle', platform: 'mobile', title: 'Поймай круг', description: 'Касайтесь цели на всём экране.' },
   { id: 'memory', platform: 'mobile', title: 'Найди пару', description: 'Открывайте пары касанием карточек.' },

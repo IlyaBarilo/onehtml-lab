@@ -450,6 +450,28 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   .draft-status { grid-area: draft; }
 }
 
+/* Wide layouts keep the code and iframe in their original DOM positions. */
+.split-workspace { --code-width: calc((100% - 10px) * var(--code-ratio, .5)); }
+.split-workspace #code { position: absolute; top: 0; left: 0; width: var(--code-width); height: 100%; }
+.split-workspace.code-numbered #code { width: calc(var(--code-width) - var(--line-width, 3ch)); }
+.split-workspace #preview { position: absolute; left: calc(var(--code-width) + 10px); top: var(--preview-tools-height, 60px); width: calc(100% - var(--code-width) - 10px); height: calc(100% - var(--preview-tools-height, 60px)); overflow: hidden; }
+#preview.phone-preview { background: #e9eff7; }
+.phone-preview > iframe { border-radius: 6px; box-shadow: 0 2px 12px #243d5e24; }
+#split-divider { position: absolute; left: var(--code-width); top: 0; bottom: 0; width: 10px; z-index: 2; cursor: col-resize; touch-action: none; background: #e5edf8; border-inline: 1px solid #cfdaeb; }
+#split-divider::after { content: ''; position: absolute; left: 3px; top: calc(50% - 22px); height: 44px; width: 2px; border-radius: 2px; background: #8199ba; }
+#split-divider:hover, #split-divider:focus-visible { background: #caddfa; }
+.resizing-split { user-select: none; cursor: col-resize; }
+.resizing-split #preview, .resizing-split #code { pointer-events: none; }
+#preview-tools { position: absolute; left: calc(var(--code-width) + 10px); top: 0; right: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; padding: 8px 10px; background: #f5f8fd; border-bottom: 1px solid #dbe5f3; }
+#preview-settings { display: flex; align-items: center; gap: 6px; flex: 1 1 190px; min-width: 0; }
+#preview-device { min-height: 44px; min-width: 0; width: 100%; padding: 8px; border: 1px solid #b9cbe3; border-radius: 6px; background: #fff; color: #315c93; font: inherit; font-size: 14px; }
+#preview-rotate { flex-shrink: 0; }
+#preview-restart { min-height: 44px; padding: 8px 12px; border: 1px solid #b7cff0; border-radius: 6px; background: #e1edff; color: #2059bf; font: inherit; font-size: 14px; }
+#preview-restart:disabled { opacity: .35; }
+#preview-changes { color: #8b591a; font-size: 13px; }
+#preview-empty { position: absolute; left: calc(var(--code-width) + 10px); right: 0; top: var(--preview-tools-height, 60px); bottom: 0; display: grid; place-content: center; padding: 24px; color: #69809e; font-size: 16px; text-align: center; background: #f5f8fc; }
+.workspace.has-panel #code-lines { visibility: hidden; }
+
 /* Prompt preparation and its preview share one workspace screen. */
 .ai-compose { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 22px; }
 .ai-task-section, .ai-services { min-width: 0; }

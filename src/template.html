@@ -54,6 +54,7 @@
       <div class="expert-actions">
         <button id="import" class="import-button" type="button" aria-label="Открыть HTML-файл с устройства" title="Открыть HTML-файл с устройства"><!-- ICON:import --> <span>Открыть HTML</span></button>
         <button id="edit-open" class="expert-icon-button" type="button" aria-label="Редактирование" aria-pressed="false" title="Редактирование кода"><!-- ICON:edit --></button>
+        <button id="split-toggle" class="expert-icon-button" type="button" aria-label="Код и игра рядом" aria-pressed="false" title="Код и игра рядом" hidden><!-- ICON:split --></button>
         <button id="compare" class="expert-icon-button" type="button" aria-label="Сравнить с последней прошлой версией" aria-pressed="false" title="Сравнить с последней прошлой версией" disabled><!-- ICON:compare --></button>
         <button id="history-open" class="expert-icon-button" type="button" aria-label="История версий" title="История версий"><!-- ICON:restore --></button>
         <button id="storage-toggle" class="expert-icon-button storage-button" type="button" aria-label="Виртуальное хранилище игры" aria-pressed="true" title="Хранилище игры включено — нажмите, чтобы выключить"><span id="storage-on-icon"><!-- ICON:storage-on --></span><span id="storage-off-icon" hidden><!-- ICON:storage-off --></span></button>
@@ -113,6 +114,12 @@
         <ol id="history-list" class="history-list"></ol>
       </section>
       <div id="preview" hidden></div>
+      <div id="split-divider" role="separator" aria-label="Ширина редактора" aria-orientation="vertical" aria-valuemin="30" aria-valuemax="70" aria-valuenow="50" tabindex="0" hidden></div>
+      <div id="preview-tools" hidden>
+        <div id="preview-settings"><select id="preview-device" aria-label="Размер предпросмотра"><option value="free">По размеру области</option><option value="phone">Телефон · 390 × 844</option></select><button id="preview-rotate" class="icon-button" type="button" aria-label="Повернуть экран телефона" aria-pressed="false" title="Повернуть горизонтально" hidden><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="5" width="8" height="14" rx="2"/><path d="M3 10a9 9 0 0 1 16-4m0-4v4h-4M21 14a9 9 0 0 1-16 4m0 4v-4h4"/></svg></button></div>
+        <span id="preview-changes" role="status" hidden>Есть изменения</span><button id="preview-restart" type="button" title="Запустить актуальный код · Ctrl+Enter" disabled>Запустить</button>
+      </div>
+      <div id="preview-empty" hidden>Нажмите «Запустить», чтобы проверить игру.</div>
       <section id="library-extraction" class="library-extraction" aria-labelledby="library-extraction-title" hidden>
         <div class="history-heading library-extraction-heading"><h2 id="library-extraction-title">Вынести библиотеки</h2><button id="library-extract-close" type="button" aria-label="Закрыть вынос библиотек" title="Вернуться к редактору">✕</button></div>
         <div class="library-extraction-body">

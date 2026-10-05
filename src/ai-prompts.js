@@ -18,7 +18,8 @@ let aiSourcePlan = null;
 
 function aiPromptSnapshot() {
   return { mode: aiMode, platform: selectedPlatform, task: aiTask.value.trim(), shorten: aiShorten.checked,
-    code: aiMode === 'create' ? '' : codeField.value, error: aiMode === 'fix' ? runtimeErrorReport : '' };
+    code: aiMode === 'create' ? '' : codeField.value,
+    error: aiMode === 'fix' && runtimeErrorCode === codeField.value ? runtimeErrorReport : '' };
 }
 
 function sameAiSnapshot(a, b) {
@@ -86,7 +87,7 @@ function updateAiControls() {
   document.querySelector('#prompt-fix').disabled = empty;
   const errorAction = document.querySelector('#error-ai');
   errorAction.hidden = !expertMode;
-  errorAction.disabled = empty || modeBusy;
+  errorAction.disabled = empty || modeBusy || runtimeErrorCode !== codeField.value;
   if (currentPanel() !== aiDialog) {
     clearTimeout(aiTimer);
     aiRevision++;

@@ -89,6 +89,7 @@ function updateWorkspaceUI() {
   clearButton.hidden = running;
   activityToggle.setAttribute('aria-expanded', String(currentPanel() === activityPanel));
   updateWorkspaceViewport();
+  updateDesktopUI();
 }
 
 function updateActivitySummary() {
