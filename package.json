@@ -18,7 +18,8 @@
     "test:workspace": "node tests/workspace.mjs",
     "test:editor": "node tests/editor.mjs",
     "test:ai": "node tests/ai-prompts.mjs",
-    "test:desktop": "node tests/desktop.mjs"
+    "test:desktop": "node tests/desktop.mjs",
+    "test:diagnostics": "node tests/diagnostics.mjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

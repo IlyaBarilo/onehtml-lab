@@ -1,6 +1,7 @@
 // Classic scripts can come from the versioned catalog or user-selected local files.
 // ES modules and scripts with dependencies need a separate resolver.
 const libraryCache = new Map();
+const persistedLibraries = new Map();
 let libraryCachePersistent = false;
 let libraryDatabasePromise;
 const libraryScriptTag = /<!--[\s\S]*?-->|<(style|textarea|title|xmp|iframe|noembed|noframes)\b(?:[^"'<>]|"[^"]*"|'[^']*')*>[\s\S]*?<\/\1\s*>|<script\b((?:[^"'<>]|"[^"]*"|'[^']*')*)>[\s\S]*?<\/script\s*>/gi;
@@ -162,7 +163,10 @@ async function loadLibraryCache() {
         && validLibraryAsset(entry.source, entry.license)
         && await librarySourceHash(entry.source + '\0' + entry.license) === entry.key.slice(6);
       if ((knownSource || localSource || extractedSource)
-        && validLibraryAsset(entry.source, entry.license)) libraryCache.set(entry.key, entry);
+        && validLibraryAsset(entry.source, entry.license)) {
+        libraryCache.set(entry.key, entry);
+        persistedLibraries.set(entry.key, entry);
+      }
     }
     libraryCachePersistent = true;
   } catch {
@@ -174,10 +178,30 @@ function saveLibraryToCache(entry) {
   return libraryDatabase().then(database => new Promise((resolve, reject) => {
     const transaction = database.transaction('libraries', 'readwrite');
     transaction.objectStore('libraries').put(entry);
-    transaction.oncomplete = () => resolve();
+    transaction.oncomplete = () => { persistedLibraries.set(entry.key, entry); resolve(); };
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);
   }));
+}
+
+async function removeLibraryCopies(entries) {
+  if (entries.some(entry => libraryCache.get(entry.key) !== entry)) throw new Error('Cache changed');
+  const saved = entries.filter(entry => persistedLibraries.has(entry.key));
+  if (saved.length) {
+    const database = await libraryDatabase();
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction('libraries', 'readwrite');
+      const store = transaction.objectStore('libraries');
+      try { for (const entry of saved) store.delete(entry.key); }
+      catch (error) { transaction.abort(); reject(error); }
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  }
+  for (const entry of entries) {
+    if (libraryCache.get(entry.key) === entry) { libraryCache.delete(entry.key); persistedLibraries.delete(entry.key); }
+  }
 }
 
 function libraryMatches(code) {

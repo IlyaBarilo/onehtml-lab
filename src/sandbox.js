@@ -33,8 +33,12 @@ const trafficProbe = `<script>
 
 const errorProbe = `<script>
 (() => {
+  let reports = 0, windowStart = Date.now();
   const report = (kind, message, filename, line, column) => {
     try {
+      if (Date.now() - windowStart >= 1000) { reports = 0; windowStart = Date.now(); }
+      if (++reports > 101) return;
+      if (reports === 101) { kind = 'warning'; message = 'Слишком много сообщений: часть пропущена.'; filename = ''; line = column = 0; }
       parent.postMessage({
         type: 'onehtml-lab:runtime-error',
         kind,
@@ -47,12 +51,30 @@ const errorProbe = `<script>
   };
   addEventListener('error', event => {
     if (typeof event.message === 'string') report('error', event.message, event.filename, event.lineno, event.colno);
-  });
+    else if (event.target && event.target !== window) {
+      const url = event.target.currentSrc || event.target.src || event.target.href;
+      if (url) report('resource', 'Не удалось загрузить ресурс: ' + String(url).slice(0, 300), url, 0, 0);
+    }
+  }, true);
   addEventListener('unhandledrejection', event => {
     let message = 'Необработанное отклонение Promise';
     try { message = event.reason?.message || String(event.reason); } catch {}
     report('rejection', message, '', 0, 0);
   });
+  for (const [method, kind] of [['warn', 'warning'], ['error', 'console-error']]) {
+    const original = console[method];
+    console[method] = function(...args) {
+      try {
+        const message = args.slice(0, 8).map(value => {
+          if (value instanceof Error) return value.message;
+          if (value && typeof value === 'object') return Object.prototype.toString.call(value);
+          return String(value).slice(0, 500);
+        }).join(' ');
+        report(kind, message, '', 0, 0);
+      } catch {}
+      return original.apply(this, args);
+    };
+  }
 })();
 </script>`;
 

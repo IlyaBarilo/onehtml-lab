@@ -488,6 +488,36 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   .draft-status { grid-area: draft; }
 }
 
+/* Diagnostics use the same full workspace as the other tools. */
+.activity-body > #diagnostic-tabs, .activity-body > #diagnostic-errors, .activity-body > #diagnostic-libraries { padding: 0; border: 0; border-radius: 0; }
+#diagnostic-tabs { position: sticky; top: -16px; z-index: 1; background: #fbfcff; padding-block: 6px; }
+#diagnostic-libraries h3 { margin: 8px 0; }
+#diagnostic-errors .runtime-error { flex-direction: row; flex-wrap: wrap; padding: 10px; margin: 8px 0; font-size: 14px; }
+#runtime-error-message { flex-basis: 100%; overflow-wrap: anywhere; }
+.diagnostic-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.diagnostic-actions button, #diagnostic-libraries button { min-height: 44px; padding: 8px 12px; font: inherit; font-size: 14px; color: #285b9e; border: 1px solid #c6d7ee; border-radius: 7px; background: #edf4ff; }
+.diagnostic-actions button:disabled, #diagnostic-libraries button:disabled { opacity: .35; }
+.diagnostic-note { margin: 10px 0; color: #566e8d; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.diagnostic-list { list-style: none; padding: 0; margin: 0; }
+.diagnostic-error-row { display: grid; gap: 4px; width: 100%; min-height: 60px; padding: 10px 12px; text-align: left; background: transparent; border: 0; border-bottom: 1px solid #d7e2f0; color: #8a3434; font: inherit; font-size: 16px; overflow-wrap: anywhere; }
+.diagnostic-error-row[aria-pressed="true"] { background: #e9f2ff; }
+.diagnostic-error-meta { font-size: 13px; color: #647791; }
+.diagnostic-error-row.is-warning { color: #855b16; }
+.runtime-error.is-warning { background: #fff8e8; border-color: #e5cf9d; color: #77511b; }
+.diagnostic-library-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #d7e2f0; }
+.diagnostic-library-row > div { min-width: 0; }
+.diagnostic-library-row strong { font-size: 16px; overflow-wrap: anywhere; }
+.diagnostic-library-row p { margin: 5px 0 0; white-space: pre-line; overflow-wrap: anywhere; font-size: 14px; color: #566e8d; line-height: 1.4; }
+.diagnostic-library-row button { flex: 0 0 auto; max-width: 110px; }
+.diagnostic-cache-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 24px; }
+#diagnostic-libraries h3 { font-size: 17px; }
+.diagnostic-confirm { position: sticky; bottom: 0; padding: 12px; background: #fff8e8; border: 1px solid #e5cf9d; border-radius: 8px; font-size: 15px; line-height: 1.4; }
+.diagnostic-confirm p { margin: 0; }
+@media (max-width: 380px) {
+  .expert-tools { grid-template-areas: "tools tools" "resources resources" "draft draft"; }
+  .draft-status { font-size: 11px; line-height: 1.1; }
+}
+
 /* Wide layouts keep the code and iframe in their original DOM positions. */
 .split-workspace { --code-width: calc((100% - 10px) * var(--code-ratio, .5)); }
 .split-workspace #code { position: absolute; top: 0; left: 0; width: var(--code-width); height: 100%; }
@@ -587,6 +617,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
       <div class="expert-resource-actions">
         <button id="ai-open" class="import-button" type="button" title="ИИ-боты и готовые запросы">ИИ и запросы</button>
         <button id="examples-open" class="import-button" type="button" title="Открыть примеры игр">Примеры игр</button>
+        <button id="diagnostic-open" class="expert-icon-button" type="button" title="Диагностика и библиотеки" aria-label="Диагностика и библиотеки" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h16v18H4zM8 7h8M8 17h8M7 12h2l1-2 3 4 1-2h3"/></svg></button>
       </div>
       <span id="draft-status" class="draft-status" role="status" aria-live="polite"></span>
       <input id="import-file" type="file" accept=".html,.htm,text/html" hidden>
@@ -654,15 +685,27 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
         <div class="library-extraction-footer"><p id="library-extraction-summary" role="status" aria-live="polite"></p><button id="library-extract-apply" type="button" disabled>Применить</button></div>
       </section>
       <section id="activity-panel" class="work-panel" aria-labelledby="activity-title" hidden>
-        <div class="panel-heading"><h2 id="activity-title">Сообщения</h2><button id="activity-close" type="button" aria-label="Закрыть сообщения">✕</button></div>
+        <div class="panel-heading"><h2 id="activity-title">Диагностика</h2><button id="activity-close" type="button" aria-label="Закрыть сообщения">✕</button></div>
         <div class="panel-body activity-body">
-          <p id="activity-empty" hidden>Сообщений пока нет.</p>
           <div id="library-request" class="library-request" role="group" aria-label="Загрузка библиотеки" hidden>
             <span id="library-request-text"></span>
             <div class="library-request-actions"><button id="library-download" type="button">Скачать</button><button id="library-files-button" type="button" hidden>Выбрать JS и лицензию</button><button id="library-skip" type="button">Без подмены</button></div>
             <input id="library-files" type="file" multiple hidden aria-label="JS-файл библиотеки и её MIT-лицензия">
           </div>
-          <div id="runtime-error" class="runtime-error" hidden><span id="runtime-error-message"></span><button id="error-line" type="button" hidden>Перейти к строке</button><button id="error-ai" type="button" hidden>Исправить с ИИ</button><button id="copy-error" type="button">Скопировать ошибку</button></div>
+          <div id="diagnostic-tabs" class="platform-tabs" role="group" aria-label="Раздел диагностики"><button type="button" class="platform-tab" data-diagnostic-tab="errors" aria-pressed="true">Ошибки</button><button type="button" class="platform-tab" data-diagnostic-tab="libraries" aria-pressed="false">Библиотеки</button></div>
+          <section id="diagnostic-errors">
+            <div class="diagnostic-actions"><button id="diagnostic-clear" type="button" disabled>Очистить</button><button id="diagnostic-copy" type="button">Скопировать отчёт</button></div>
+            <p id="diagnostic-run-note" class="diagnostic-note">Игра ещё не запускалась.</p>
+            <div id="runtime-error" class="runtime-error" hidden><span id="runtime-error-message"></span><button id="error-line" type="button" hidden>Перейти к строке</button><button id="error-ai" type="button" hidden>Исправить с ИИ</button><button id="copy-error" type="button">Скопировать ошибку</button></div>
+            <ol id="diagnostic-error-list" class="diagnostic-list"></ol>
+          </section>
+          <section id="diagnostic-libraries" hidden>
+            <h3>В текущем коде</h3><p id="diagnostic-library-note" class="diagnostic-note"></p><ul id="diagnostic-library-list" class="diagnostic-list"></ul>
+            <div class="diagnostic-cache-heading"><h3>Сохранённые копии</h3><button id="diagnostic-cache-clear" type="button" disabled>Удалить все</button></div>
+            <p id="diagnostic-cache-size" class="diagnostic-note"></p><ul id="diagnostic-cache-list" class="diagnostic-list"></ul>
+            <div id="diagnostic-confirm" class="diagnostic-confirm" hidden><p id="diagnostic-confirm-text"></p><div class="diagnostic-actions"><button id="diagnostic-delete-yes" type="button">Удалить</button><button id="diagnostic-delete-no" type="button">Отмена</button></div></div>
+            <p id="diagnostic-cache-feedback" role="status" class="diagnostic-note"></p>
+          </section>
           <p id="status" class="notice" hidden></p>
           <div id="network-status" class="network-status" hidden><span id="network-message">Игра использует интернет</span><span id="network-metrics">Файлов: <span id="network-count">0</span> · учтено: <span id="network-kb">(нет данных)</span></span></div>
           <p id="local-access-status" class="notice local-access-status" hidden></p>
@@ -859,6 +902,7 @@ function handleGameStorageMessage(event) {
 // Classic scripts can come from the versioned catalog or user-selected local files.
 // ES modules and scripts with dependencies need a separate resolver.
 const libraryCache = new Map();
+const persistedLibraries = new Map();
 let libraryCachePersistent = false;
 let libraryDatabasePromise;
 const libraryScriptTag = /<!--[\s\S]*?-->|<(style|textarea|title|xmp|iframe|noembed|noframes)\b(?:[^"'<>]|"[^"]*"|'[^']*')*>[\s\S]*?<\/\1\s*>|<script\b((?:[^"'<>]|"[^"]*"|'[^']*')*)>[\s\S]*?<\/script\s*>/gi;
@@ -1020,7 +1064,10 @@ async function loadLibraryCache() {
         && validLibraryAsset(entry.source, entry.license)
         && await librarySourceHash(entry.source + '\0' + entry.license) === entry.key.slice(6);
       if ((knownSource || localSource || extractedSource)
-        && validLibraryAsset(entry.source, entry.license)) libraryCache.set(entry.key, entry);
+        && validLibraryAsset(entry.source, entry.license)) {
+        libraryCache.set(entry.key, entry);
+        persistedLibraries.set(entry.key, entry);
+      }
     }
     libraryCachePersistent = true;
   } catch {
@@ -1032,10 +1079,30 @@ function saveLibraryToCache(entry) {
   return libraryDatabase().then(database => new Promise((resolve, reject) => {
     const transaction = database.transaction('libraries', 'readwrite');
     transaction.objectStore('libraries').put(entry);
-    transaction.oncomplete = () => resolve();
+    transaction.oncomplete = () => { persistedLibraries.set(entry.key, entry); resolve(); };
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);
   }));
+}
+
+async function removeLibraryCopies(entries) {
+  if (entries.some(entry => libraryCache.get(entry.key) !== entry)) throw new Error('Cache changed');
+  const saved = entries.filter(entry => persistedLibraries.has(entry.key));
+  if (saved.length) {
+    const database = await libraryDatabase();
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction('libraries', 'readwrite');
+      const store = transaction.objectStore('libraries');
+      try { for (const entry of saved) store.delete(entry.key); }
+      catch (error) { transaction.abort(); reject(error); }
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  }
+  for (const entry of entries) {
+    if (libraryCache.get(entry.key) === entry) { libraryCache.delete(entry.key); persistedLibraries.delete(entry.key); }
+  }
 }
 
 function libraryMatches(code) {
@@ -1220,8 +1287,12 @@ const trafficProbe = `<script>
 
 const errorProbe = `<script>
 (() => {
+  let reports = 0, windowStart = Date.now();
   const report = (kind, message, filename, line, column) => {
     try {
+      if (Date.now() - windowStart >= 1000) { reports = 0; windowStart = Date.now(); }
+      if (++reports > 101) return;
+      if (reports === 101) { kind = 'warning'; message = 'Слишком много сообщений: часть пропущена.'; filename = ''; line = column = 0; }
       parent.postMessage({
         type: 'onehtml-lab:runtime-error',
         kind,
@@ -1234,12 +1305,30 @@ const errorProbe = `<script>
   };
   addEventListener('error', event => {
     if (typeof event.message === 'string') report('error', event.message, event.filename, event.lineno, event.colno);
-  });
+    else if (event.target && event.target !== window) {
+      const url = event.target.currentSrc || event.target.src || event.target.href;
+      if (url) report('resource', 'Не удалось загрузить ресурс: ' + String(url).slice(0, 300), url, 0, 0);
+    }
+  }, true);
   addEventListener('unhandledrejection', event => {
     let message = 'Необработанное отклонение Promise';
     try { message = event.reason?.message || String(event.reason); } catch {}
     report('rejection', message, '', 0, 0);
   });
+  for (const [method, kind] of [['warn', 'warning'], ['error', 'console-error']]) {
+    const original = console[method];
+    console[method] = function(...args) {
+      try {
+        const message = args.slice(0, 8).map(value => {
+          if (value instanceof Error) return value.message;
+          if (value && typeof value === 'object') return Object.prototype.toString.call(value);
+          return String(value).slice(0, 500);
+        }).join(' ');
+        report(kind, message, '', 0, 0);
+      } catch {}
+      return original.apply(this, args);
+    };
+  }
 })();
 <\/script>`;
 
@@ -1805,7 +1894,10 @@ function updateWorkspaceUI() {
 
 function updateActivitySummary() {
   const parts = [];
-  if (!runtimeError.hidden) parts.push(`Ошибка игры${runtimeErrorCount > 1 ? ` (${runtimeErrorCount})` : ''}`);
+  const diagnostics = diagnosticCounts();
+  if (diagnostics.errors) parts.push(`Ошибка игры (${diagnostics.errors})`);
+  else if (!runtimeError.hidden && !runtimeError.classList.contains('is-warning')) parts.push(`Ошибка игры${runtimeErrorCount > 1 ? ` (${runtimeErrorCount})` : ''}`);
+  if (diagnostics.warnings) parts.push(`Предупреждения (${diagnostics.warnings})`);
   if (!libraryRequest.hidden) parts.push('Нужны библиотеки');
   if (!networkStatus.hidden) parts.push(`Сеть: ${networkCountField.textContent} файл. · ${networkKbField.textContent}`);
   if (activeBundledLibraries.length) parts.push(`Встроено: ${activeBundledLibraries.join(', ')}`);
@@ -1814,10 +1906,8 @@ function updateActivitySummary() {
   const message = parts.join(' · ');
   activityToggle.hidden = !message;
   activitySummary.textContent = message;
-  activityToggle.classList.toggle('has-error', !runtimeError.hidden || (!status.hidden && status.classList.contains('error')));
+  activityToggle.classList.toggle('has-error', diagnostics.errors > 0 || (!status.hidden && status.classList.contains('error')));
   activityToggle.setAttribute('aria-label', message ? `${message}. Открыть сообщения` : 'Открыть сообщения');
-  const empty = document.querySelector('#activity-empty');
-  if (empty.hidden !== Boolean(message)) empty.hidden = Boolean(message);
 }
 
 function updateWorkspaceViewport() {
@@ -1829,7 +1919,7 @@ function updateWorkspaceViewport() {
 
 function initWorkspaceUI() {
   expandButton.addEventListener('click', () => setPreviewExpanded(!previewExpanded));
-  activityToggle.addEventListener('click', () => showWorkspacePanel(activityPanel));
+  activityToggle.addEventListener('click', () => { if (currentPanel() === activityPanel) closeWorkspacePanel(); else openDiagnostics(); });
   document.querySelector('#activity-close').addEventListener('click', () => closeWorkspacePanel());
   document.querySelector('#save-close').addEventListener('click', () => closeWorkspacePanel());
   document.addEventListener('keydown', event => {
@@ -2401,6 +2491,303 @@ function initDesktopWorkspace() {
   updateDesktopUI();
 }
 
+// Diagnostics read source as text; they never execute it in the editor.
+const diagnosticEntries = [];
+let diagnosticRun = null;
+let diagnosticTab = 'errors';
+let diagnosticReady = false;
+let diagnosticTimer = 0;
+let diagnosticRevision = 0;
+let diagnosticSnapshot = null;
+let diagnosticLibraries = [];
+let diagnosticSelected = null;
+let diagnosticDelete = null;
+let diagnosticCacheBusy = false;
+let diagnosticReportReady = false;
+
+function diagnosticCounts() {
+  let errors = 0, warnings = 0;
+  for (const entry of diagnosticEntries) {
+    if (entry.kind === 'warning') warnings += entry.count;
+    else errors += entry.count;
+  }
+  return { errors, warnings };
+}
+
+function beginDiagnosticRun(code, origin) {
+  diagnosticEntries.length = 0;
+  diagnosticSelected = null;
+  diagnosticRun = { code, origin, network: previewNetworkAllowed(), storage: gameStorageAllowed, time: Date.now() };
+  updateDiagnostics();
+}
+
+function addDiagnosticEntry(detail, report) {
+  if (!diagnosticRun) return;
+  const filename = typeof detail.filename === 'string' ? detail.filename.slice(0, 500) : '';
+  const message = detail.message.slice(0, 500);
+  const key = JSON.stringify([detail.kind, message, filename, Number.isInteger(detail.line) ? detail.line : 0, Number.isInteger(detail.column) ? detail.column : 0]);
+  let entry = diagnosticEntries.find(item => item.key === key);
+  if (entry) diagnosticEntries.splice(diagnosticEntries.indexOf(entry), 1);
+  else entry = { key, kind: detail.kind, message, filename, report, count: 0, target: null };
+  const origin = diagnosticRun.origin;
+  if (origin && Number.isInteger(detail.line) && ['about:srcdoc', 'about:blank'].includes(filename)) {
+    const line = detail.line - origin.lines;
+    const column = Math.max(1, (Number.isInteger(detail.column) ? detail.column : 1) - (line === 1 ? origin.column : 0));
+    if (line > 0 && line <= diagnosticRun.code.split('\n').length) entry.target = { line, column };
+  }
+  entry.count = Math.min(Number.MAX_SAFE_INTEGER, entry.count + 1);
+  entry.time = Date.now();
+  diagnosticEntries.unshift(entry);
+  diagnosticEntries.length = Math.min(50, diagnosticEntries.length);
+  if (detail.kind !== 'warning') diagnosticSelected = entry;
+  scheduleDiagnosticRender();
+}
+
+function selectDiagnosticEntry(entry) {
+  if (!diagnosticEntries.includes(entry) || !diagnosticRun) return;
+  diagnosticSelected = entry;
+  runtimeErrorCode = diagnosticRun.code;
+  errorSource = diagnosticRun.origin;
+  errorTarget = diagnosticRun.code === codeField.value ? entry.target : null;
+  runtimeErrorReportBase = entry.report;
+  runtimeErrorMessageBase = entry.report;
+  runtimeError.hidden = false;
+  runtimeError.classList.toggle('is-warning', entry.kind === 'warning');
+  updateLocalAccessHint();
+  scheduleDiagnosticRender();
+}
+
+function scheduleDiagnosticRender() {
+  if (!diagnosticReady || diagnosticTimer) return;
+  diagnosticTimer = setTimeout(() => { diagnosticTimer = 0; renderDiagnosticErrors(); updateActivitySummary(); }, 100);
+}
+
+function renderDiagnosticErrors() {
+  const stale = diagnosticRun && diagnosticRun.code !== codeField.value;
+  document.querySelector('#diagnostic-run-note').textContent = diagnosticRun
+    ? `${running ? 'Текущий' : 'Последний'} запуск · ${new Date(diagnosticRun.time).toLocaleTimeString('ru-RU')}. `
+      + (stale ? 'Код уже изменён: сообщения относятся к прежней версии. ' : '')
+      + (diagnosticEntries.length ? 'Последние 50 сообщений; повторы объединены.' : 'Ошибок и предупреждений пока нет.')
+    : 'Игра ещё не запускалась.';
+  document.querySelector('#diagnostic-clear').disabled = !diagnosticEntries.length;
+  const list = document.querySelector('#diagnostic-error-list');
+  const nodes = diagnosticEntries.map(entry => {
+    const li = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'diagnostic-error-row';
+    button.setAttribute('aria-pressed', String(diagnosticSelected === entry));
+    const heading = document.createElement('span'); heading.className = 'diagnostic-error-meta';
+    heading.textContent = `${new Date(entry.time).toLocaleTimeString('ru-RU')} · ${entry.kind === 'warning' ? 'Предупреждение' : 'Ошибка'}${entry.count > 1 ? ` ×${entry.count}` : ''}`;
+    const text = document.createElement('span'); text.textContent = entry.message;
+    button.classList.toggle('is-warning', entry.kind === 'warning');
+    button.append(heading, text);
+    button.addEventListener('click', () => selectDiagnosticEntry(entry));
+    li.append(button); return li;
+  });
+  list.replaceChildren(...nodes);
+}
+
+function diagnosticBytes(source) { return new TextEncoder().encode(source || '').length; }
+function diagnosticSize(bytes) { return `${bytes.toLocaleString('ru-RU')} байт`; }
+
+async function inspectDiagnosticLibraries(code) {
+  const references = await resolvedLibraryMatches(code);
+  const supported = new Map(references.map(ref => [ref.index, ref]));
+  const embedded = await embeddedLibraryRows(code);
+  const rows = embedded.map(row => ({ title: row.title, path: row.originalUrl || row.filename,
+    state: 'Встроена в HTML', note: row.reason, bytes: diagnosticBytes(row.source),
+    usedKey: libraryCache.has(row.key) ? row.key : row.assetKey && libraryCache.has(row.assetKey) ? row.assetKey : null }));
+  for (const match of code.matchAll(libraryScriptTag)) {
+    if (match[2] === undefined) continue;
+    const attributes = scriptAttributes(match[2]);
+    const path = decodeScriptUrl(attributes.get('src')?.value || '');
+    if (!path) {
+      if (attributes.get('type')?.value === 'module') rows.push({ title: 'Модуль JavaScript', path: '', state: 'Подмена не поддерживается', note: 'Импорты внутри модулей не разбираются.' });
+      continue;
+    }
+    const ref = supported.get(match.index);
+    const cached = ref && cachedLibrary(ref);
+    rows.push({ title: ref?.title || path.split('/').pop() || 'Внешний скрипт', path,
+      state: cached ? 'Есть сохранённая копия' : ref ? (ref.url ? 'Нужно скачать' : 'Нужно выбрать файл') : 'Подмена не поддерживается',
+      bytes: cached ? diagnosticBytes(cached.source) : null, usedKey: cached?.key, reference: ref,
+      note: ref ? '' : 'Подключение остаётся как в коде. Версия автоматически не заменяется.' });
+  }
+  return rows;
+}
+
+function diagnosticRow(title, description) {
+  const row = document.createElement('li'); row.className = 'diagnostic-library-row';
+  const content = document.createElement('div');
+  const name = document.createElement('strong'); name.textContent = title;
+  const note = document.createElement('p'); note.textContent = description;
+  content.append(name, note); row.append(content); return row;
+}
+
+function diagnosticButton(text, action) {
+  const button = document.createElement('button'); button.type = 'button'; button.textContent = text;
+  button.addEventListener('click', action); return button;
+}
+
+function renderDiagnosticLibraries(rows) {
+  const inspectedCode = diagnosticSnapshot?.code;
+  const list = document.querySelector('#diagnostic-library-list');
+  document.querySelector('#diagnostic-library-note').textContent = rows.length
+    ? 'Подключения в текущем тексте редактора. Динамические загрузки из JavaScript не разбираются.'
+    : 'Подключений библиотек в HTML не найдено. Динамические загрузки из JavaScript не разбираются.';
+  list.replaceChildren(...rows.map(item => {
+    const row = diagnosticRow(item.title, `${item.state}${item.bytes != null ? ` · ${diagnosticSize(item.bytes)}` : ''}${item.path ? `\n${item.path}` : ''}${item.note ? `\n${item.note}` : ''}`);
+    if (item.reference && !item.usedKey) {
+      const ref = item.reference;
+      row.append(diagnosticButton(ref.url ? 'Загрузить…' : 'Выбрать файл…', () => {
+        if (diagnosticCacheBusy) return;
+        if (!diagnosticReportReady || inspectedCode !== codeField.value) { diagnosticSnapshot = null; updateDiagnostics(); return; }
+        requestLibraries({ missingLibraries: [ref] }, 'inspect');
+      }));
+    }
+    return row;
+  }));
+  renderDiagnosticCache();
+}
+
+function renderDiagnosticCache() {
+  const entries = [...libraryCache.values()];
+  const total = entries.reduce((sum, entry) => sum + diagnosticBytes(entry.source) + diagnosticBytes(entry.license), 0);
+  document.querySelector('#diagnostic-cache-size').textContent = entries.length
+    ? `${entries.length} копий · JS и лицензии: ${diagnosticSize(total)}` : 'Сохранённых копий нет.';
+  const blocked = diagnosticCacheBusy || Boolean(pendingLibraryAction) || !diagnosticReportReady;
+  document.querySelector('#diagnostic-cache-clear').disabled = !entries.length || blocked;
+  document.querySelector('#diagnostic-cache-list').replaceChildren(...entries.map(entry => {
+    const used = diagnosticLibraries.some(row => row.usedKey === entry.key);
+    const persisted = persistedLibraries.get(entry.key) === entry;
+    const row = diagnosticRow(entry.title || entry.filename || 'Библиотека',
+      `${diagnosticSize(diagnosticBytes(entry.source) + diagnosticBytes(entry.license))} · ${persisted ? 'В браузере' : 'Только этот сеанс'}${used ? ' · Нужна текущему коду' : ''}\n${entry.sourceUrl || entry.localPath || entry.originalUrl || entry.filename || ''}`);
+    const button = diagnosticButton('Удалить', () => confirmDiagnosticDelete([entry]));
+    button.disabled = blocked; row.append(button); return row;
+  }));
+}
+
+function confirmDiagnosticDelete(entries) {
+  if (diagnosticCacheBusy || pendingLibraryAction || !diagnosticReportReady || diagnosticSnapshot?.code !== codeField.value) return;
+  diagnosticDelete = entries;
+  const used = entries.some(entry => diagnosticLibraries.some(row => row.usedKey === entry.key));
+  document.querySelector('#diagnostic-confirm-text').textContent = `Удалить ${entries.length === 1 ? entries[0].title || 'копию' : `все копии (${entries.length})`}? `
+    + (used ? 'Есть копии для текущего кода. ' : '')
+    + 'Для следующих запусков и встраивания может понадобиться повторная загрузка или выбор JS и лицензии. Код, история и данные игры сохранятся.';
+  const box = document.querySelector('#diagnostic-confirm'); box.hidden = false;
+  box.scrollIntoView({ block: 'nearest' });
+  document.querySelector('#diagnostic-delete-no').focus({ preventScroll: true });
+}
+
+async function deleteDiagnosticCache() {
+  const entries = diagnosticDelete;
+  if (!entries || diagnosticCacheBusy || pendingLibraryAction || !diagnosticReportReady || diagnosticSnapshot?.code !== codeField.value) return;
+  diagnosticCacheBusy = true;
+  document.querySelector('#diagnostic-delete-yes').disabled = true;
+  document.querySelector('#diagnostic-delete-no').disabled = true;
+  renderDiagnosticCache();
+  try {
+    await removeLibraryCopies(entries);
+    document.querySelector('#diagnostic-cache-feedback').textContent = 'Копии удалены. Уже запущенная игра продолжает работать.';
+  } catch {
+    document.querySelector('#diagnostic-cache-feedback').textContent = 'Не удалось удалить копии из браузера. Список сохранён; попробуйте ещё раз.';
+  } finally {
+    diagnosticCacheBusy = false; diagnosticDelete = null; diagnosticSnapshot = null;
+    document.querySelector('#diagnostic-confirm').hidden = true;
+    document.querySelector('#diagnostic-delete-yes').disabled = false;
+    document.querySelector('#diagnostic-delete-no').disabled = false;
+    updateDiagnostics();
+  }
+}
+
+function setDiagnosticTab(tab) {
+  diagnosticTab = tab === 'libraries' && expertMode ? 'libraries' : 'errors';
+  document.querySelector('#diagnostic-errors').hidden = diagnosticTab !== 'errors';
+  document.querySelector('#diagnostic-libraries').hidden = diagnosticTab !== 'libraries';
+  for (const button of document.querySelectorAll('[data-diagnostic-tab]')) button.setAttribute('aria-pressed', String(button.dataset.diagnosticTab === diagnosticTab));
+}
+
+function openDiagnostics(tab = 'errors') {
+  if (!diagnosticCacheBusy) { diagnosticDelete = null; document.querySelector('#diagnostic-confirm').hidden = true; }
+  setDiagnosticTab(tab);
+  if (currentPanel() !== activityPanel) showWorkspacePanel(activityPanel);
+  diagnosticSnapshot = null;
+  updateDiagnostics();
+  renderDiagnosticErrors();
+}
+
+function diagnosticReport() {
+  const run = diagnosticRun;
+  const lines = ['OneHTML Lab — диагностика', run ? `Сеть при запуске: ${run.network ? 'включена' : 'выключена'}. Хранилище игры: ${run.storage ? 'включено' : 'выключено'}.` : 'Игра ещё не запускалась.'];
+  if (run && run.code !== codeField.value) lines.push('Код редактора изменён. Сообщения относятся к последнему запуску; библиотеки ниже — к текущему коду.');
+  lines.push('Ошибки и предупреждения:');
+  for (const entry of diagnosticEntries) lines.push(`${new Date(entry.time).toLocaleTimeString('ru-RU')} · ${entry.report}${entry.count > 1 ? ` (повторов: ${entry.count})` : ''}${entry.filename ? `\nИсточник: ${entry.filename}` : ''}`);
+  if (!diagnosticEntries.length) lines.push('Не зарегистрированы.');
+  lines.push('Библиотеки текущего кода:');
+  for (const row of diagnosticLibraries) lines.push(`${row.title}: ${row.state}${row.bytes != null ? `, ${diagnosticSize(row.bytes)}` : ''}${row.path ? `\n${row.path}` : ''}${row.note ? `\n${row.note}` : ''}`);
+  if (!diagnosticLibraries.length) lines.push('Подключения в HTML не найдены.');
+  return lines.join('\n');
+}
+
+function diagnosticAiContext() {
+  if (!diagnosticReportReady || !diagnosticRun || diagnosticRun.code !== codeField.value || diagnosticSnapshot?.code !== codeField.value) return '';
+  return diagnosticReport();
+}
+
+function updateDiagnostics() {
+  if (!diagnosticReady) return;
+  document.querySelector('#diagnostic-open').disabled = modeBusy;
+  document.querySelector('#diagnostic-open').setAttribute('aria-pressed', String(currentPanel() === activityPanel));
+  document.querySelector('#diagnostic-tabs').hidden = !expertMode;
+  if (!expertMode && diagnosticTab !== 'errors') setDiagnosticTab('errors');
+  scheduleDiagnosticRender();
+  if (currentPanel() !== activityPanel) return;
+  const code = codeField.value, entries = [...libraryCache.values()];
+  const previous = diagnosticSnapshot;
+  if (previous?.code === code && previous.entries.length === entries.length && entries.every((entry, i) => entry === previous.entries[i])) {
+    if (diagnosticTab === 'libraries') renderDiagnosticCache();
+    return;
+  }
+  diagnosticSnapshot = { code, entries };
+  diagnosticReportReady = false;
+  document.querySelector('#diagnostic-copy').disabled = true;
+  for (const button of document.querySelectorAll('#diagnostic-library-list button, #diagnostic-cache-list button, #diagnostic-cache-clear')) button.disabled = true;
+  const revision = ++diagnosticRevision;
+  document.querySelector('#diagnostic-library-note').textContent = 'Проверяю подключения…';
+  void inspectDiagnosticLibraries(code).then(rows => {
+    if (revision !== diagnosticRevision || code !== codeField.value) return;
+    diagnosticLibraries = rows; diagnosticReportReady = true;
+    renderDiagnosticLibraries(rows);
+    document.querySelector('#diagnostic-copy').disabled = false;
+  }).catch(() => {
+    if (revision !== diagnosticRevision) return;
+    diagnosticSnapshot = null;
+    document.querySelector('#diagnostic-library-note').textContent = 'Не удалось проверить подключения. Откройте экран ещё раз.';
+  });
+}
+
+function initDiagnostics() {
+  diagnosticReady = true;
+  document.querySelector('#diagnostic-open').addEventListener('click', () => {
+    if (!expertMode || modeBusy) return;
+    if (currentPanel() === activityPanel) closeWorkspacePanel(); else openDiagnostics();
+  });
+  for (const button of document.querySelectorAll('[data-diagnostic-tab]')) button.addEventListener('click', () => { setDiagnosticTab(button.dataset.diagnosticTab); updateDiagnostics(); });
+  document.querySelector('#diagnostic-clear').addEventListener('click', () => {
+    diagnosticEntries.length = 0; diagnosticSelected = null;
+    runtimeError.hidden = true; runtimeErrorMessage.textContent = ''; runtimeErrorReport = ''; runtimeErrorCode = null;
+    runtimeErrorCount = 0; errorTarget = null;
+    updateLocalAccessHint(); updateDiagnostics();
+  });
+  document.querySelector('#diagnostic-copy').addEventListener('click', () => {
+    if (!diagnosticReportReady || diagnosticSnapshot?.code !== codeField.value) { updateDiagnostics(); return; }
+    void copyOrSelect(diagnosticReport(), 'Отчёт скопирован.');
+  });
+  document.querySelector('#diagnostic-cache-clear').addEventListener('click', () => confirmDiagnosticDelete([...libraryCache.values()]));
+  document.querySelector('#diagnostic-delete-no').addEventListener('click', () => { diagnosticDelete = null; document.querySelector('#diagnostic-confirm').hidden = true; });
+  document.querySelector('#diagnostic-delete-yes').addEventListener('click', () => void deleteDiagnosticCache());
+  updateDiagnostics();
+}
+
 // Preparing a prompt is read-only: no editor, history, cache or network writes.
 const aiTask = document.querySelector('#ai-task');
 const aiShorten = document.querySelector('#ai-shorten');
@@ -2422,7 +2809,7 @@ let aiSourcePlan = null;
 function aiPromptSnapshot() {
   return { mode: aiMode, platform: selectedPlatform, task: aiTask.value.trim(), shorten: aiShorten.checked,
     code: aiMode === 'create' ? '' : codeField.value,
-    error: aiMode === 'fix' && runtimeErrorCode === codeField.value ? runtimeErrorReport : '' };
+    error: aiMode === 'fix' && runtimeErrorCode === codeField.value ? diagnosticAiContext() || runtimeErrorReport : '' };
 }
 
 function sameAiSnapshot(a, b) {
@@ -2734,7 +3121,11 @@ window.addEventListener('message', event => {
   }
   if (event.data?.type === 'onehtml-lab:runtime-error') {
     const detail = event.data;
-    if (!['error', 'rejection'].includes(detail.kind) || typeof detail.message !== 'string') return;
+    if (!['error', 'rejection', 'warning', 'console-error', 'resource'].includes(detail.kind) || typeof detail.message !== 'string') return;
+    if (detail.kind === 'warning') {
+      addDiagnosticEntry(detail, `Предупреждение: ${detail.message.slice(0, 500)}`);
+      return;
+    }
     runtimeErrorCode = previewCode;
     const message = detail.message === 'Script error.'
       ? 'Ошибка JavaScript (браузер не сообщил подробности)'
@@ -2747,8 +3138,11 @@ window.addEventListener('message', event => {
       ? ` (строка ${errorTarget ? 'кода' : typeof detail.filename === 'string' && detail.filename && !detail.filename.startsWith('about:') ? 'скрипта' : 'предпросмотра'} ${line}${Number.isInteger(column) && column > 0 ? `, столбец ${column}` : ''})`
       : '';
     runtimeErrorCount += 1;
-    runtimeErrorReportBase = `${detail.kind === 'rejection' ? 'Необработанный Promise' : 'Ошибка JavaScript'}: ${message}${place}`;
+    const errorLabel = { rejection: 'Необработанный Promise', resource: 'Ошибка загрузки', 'console-error': 'console.error' }[detail.kind] || 'Ошибка JavaScript';
+    runtimeErrorReportBase = `${errorLabel}: ${message}${place}`;
     runtimeErrorMessageBase = `Ошибка игры${runtimeErrorCount > 1 ? ` (${runtimeErrorCount})` : ''}: ${message}${place}`;
+    addDiagnosticEntry(detail, runtimeErrorReportBase);
+    runtimeError.classList.remove('is-warning');
     runtimeError.hidden = false;
     updateLocalAccessHint();
     return;
@@ -2834,11 +3228,12 @@ function requestLibraries(prepared, action) {
   libraryRequestText.textContent = `Для автономной игры нужны: ${titles}.`
     + (downloadable.length ? ` Скачать с ${hosts}; до 4 МБ на библиотеку.` : '')
     + (local.length ? ` Локальный файл: ${local[0].localPath}. Можно выбрать JS и полный текст MIT-лицензии.` : '')
-    + ' Код и лицензия войдут в сохраняемый HTML.';
+    + ' Копия будет доступна для предпросмотра и встраивания при сохранении.';
   libraryDownloadButton.hidden = !downloadable.length;
   libraryFilesButton.hidden = !local.length;
   libraryFilesButton.textContent = 'Выбрать JS и лицензию';
   libraryRequest.hidden = false;
+  setDiagnosticTab(action === 'inspect' ? 'libraries' : 'errors');
   if (currentPanel() !== activityPanel) showWorkspacePanel(activityPanel);
   return true;
 }
@@ -2859,6 +3254,7 @@ libraryDownloadButton.addEventListener('click', async () => {
     const prepared = await prepareGameHtml(pending.code);
     if (pending !== pendingLibraryAction || pending.code !== codeField.value) return;
     hideLibraryRequest();
+    if (pending.action === 'inspect') { openDiagnostics('libraries'); inform(persisted ? 'Копия сохранена в браузере.' : 'Копия доступна только в этом сеансе.', !persisted); return; }
     if (pending.code === codeField.value) requestLibraries(prepared, pending.action);
     inform(persisted
       ? 'Библиотеки сохранены в браузере. Повторите запуск, сохранение или отправку.'
@@ -2917,6 +3313,7 @@ libraryFiles.addEventListener('change', async () => {
     const prepared = await prepareGameHtml(pending.code);
     if (pending !== pendingLibraryAction || pending.code !== codeField.value) return;
     hideLibraryRequest();
+    if (pending.action === 'inspect') { openDiagnostics('libraries'); inform(persisted ? 'Копия сохранена в браузере.' : 'Копия доступна только в этом сеансе.', !persisted); return; }
     requestLibraries(prepared, pending.action);
     inform(persisted ? 'Библиотека и лицензия сохранены. Повторите запуск, сохранение или отправку.'
       : 'Библиотека доступна для этого сеанса. Повторите действие.', !persisted, !persisted);
@@ -3608,6 +4005,7 @@ function updateControls() {
   updateWorkspaceUI();
   updateCodeTools();
   updateAiControls();
+  updateDiagnostics();
 }
 
 codeField.addEventListener('input', event => {
@@ -3724,6 +4122,7 @@ async function startPreview(replaceLibraries = true) {
     clearRuntimeError();
     const frame = makePreview(prepared.html, previewNetworkAllowed(), gameStorageAllowed ? gameStorageSnapshot() : null);
     errorSource = prepared.html === code ? { code, ...frame.previewOffset } : null;
+    beginDiagnosticRun(code, errorSource);
     resetNetworkStatus();
     if (!isSplitWorkspace()) codeField.blur();
     codeField.hidden = !isSplitWorkspace();
@@ -4015,6 +4414,7 @@ initAiPrompts();
 initCodeEditor();
 initWorkspaceUI();
 initDesktopWorkspace();
+initDiagnostics();
 updateControls();
 void restoreStartupDraft();
 

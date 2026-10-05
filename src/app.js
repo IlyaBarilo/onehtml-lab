@@ -162,7 +162,11 @@ window.addEventListener('message', event => {
   }
   if (event.data?.type === 'onehtml-lab:runtime-error') {
     const detail = event.data;
-    if (!['error', 'rejection'].includes(detail.kind) || typeof detail.message !== 'string') return;
+    if (!['error', 'rejection', 'warning', 'console-error', 'resource'].includes(detail.kind) || typeof detail.message !== 'string') return;
+    if (detail.kind === 'warning') {
+      addDiagnosticEntry(detail, `Предупреждение: ${detail.message.slice(0, 500)}`);
+      return;
+    }
     runtimeErrorCode = previewCode;
     const message = detail.message === 'Script error.'
       ? 'Ошибка JavaScript (браузер не сообщил подробности)'
@@ -175,8 +179,11 @@ window.addEventListener('message', event => {
       ? ` (строка ${errorTarget ? 'кода' : typeof detail.filename === 'string' && detail.filename && !detail.filename.startsWith('about:') ? 'скрипта' : 'предпросмотра'} ${line}${Number.isInteger(column) && column > 0 ? `, столбец ${column}` : ''})`
       : '';
     runtimeErrorCount += 1;
-    runtimeErrorReportBase = `${detail.kind === 'rejection' ? 'Необработанный Promise' : 'Ошибка JavaScript'}: ${message}${place}`;
+    const errorLabel = { rejection: 'Необработанный Promise', resource: 'Ошибка загрузки', 'console-error': 'console.error' }[detail.kind] || 'Ошибка JavaScript';
+    runtimeErrorReportBase = `${errorLabel}: ${message}${place}`;
     runtimeErrorMessageBase = `Ошибка игры${runtimeErrorCount > 1 ? ` (${runtimeErrorCount})` : ''}: ${message}${place}`;
+    addDiagnosticEntry(detail, runtimeErrorReportBase);
+    runtimeError.classList.remove('is-warning');
     runtimeError.hidden = false;
     updateLocalAccessHint();
     return;
@@ -262,11 +269,12 @@ function requestLibraries(prepared, action) {
   libraryRequestText.textContent = `Для автономной игры нужны: ${titles}.`
     + (downloadable.length ? ` Скачать с ${hosts}; до 4 МБ на библиотеку.` : '')
     + (local.length ? ` Локальный файл: ${local[0].localPath}. Можно выбрать JS и полный текст MIT-лицензии.` : '')
-    + ' Код и лицензия войдут в сохраняемый HTML.';
+    + ' Копия будет доступна для предпросмотра и встраивания при сохранении.';
   libraryDownloadButton.hidden = !downloadable.length;
   libraryFilesButton.hidden = !local.length;
   libraryFilesButton.textContent = 'Выбрать JS и лицензию';
   libraryRequest.hidden = false;
+  setDiagnosticTab(action === 'inspect' ? 'libraries' : 'errors');
   if (currentPanel() !== activityPanel) showWorkspacePanel(activityPanel);
   return true;
 }
@@ -287,6 +295,7 @@ libraryDownloadButton.addEventListener('click', async () => {
     const prepared = await prepareGameHtml(pending.code);
     if (pending !== pendingLibraryAction || pending.code !== codeField.value) return;
     hideLibraryRequest();
+    if (pending.action === 'inspect') { openDiagnostics('libraries'); inform(persisted ? 'Копия сохранена в браузере.' : 'Копия доступна только в этом сеансе.', !persisted); return; }
     if (pending.code === codeField.value) requestLibraries(prepared, pending.action);
     inform(persisted
       ? 'Библиотеки сохранены в браузере. Повторите запуск, сохранение или отправку.'
@@ -345,6 +354,7 @@ libraryFiles.addEventListener('change', async () => {
     const prepared = await prepareGameHtml(pending.code);
     if (pending !== pendingLibraryAction || pending.code !== codeField.value) return;
     hideLibraryRequest();
+    if (pending.action === 'inspect') { openDiagnostics('libraries'); inform(persisted ? 'Копия сохранена в браузере.' : 'Копия доступна только в этом сеансе.', !persisted); return; }
     requestLibraries(prepared, pending.action);
     inform(persisted ? 'Библиотека и лицензия сохранены. Повторите запуск, сохранение или отправку.'
       : 'Библиотека доступна для этого сеанса. Повторите действие.', !persisted, !persisted);
@@ -1036,6 +1046,7 @@ function updateControls() {
   updateWorkspaceUI();
   updateCodeTools();
   updateAiControls();
+  updateDiagnostics();
 }
 
 codeField.addEventListener('input', event => {
@@ -1152,6 +1163,7 @@ async function startPreview(replaceLibraries = true) {
     clearRuntimeError();
     const frame = makePreview(prepared.html, previewNetworkAllowed(), gameStorageAllowed ? gameStorageSnapshot() : null);
     errorSource = prepared.html === code ? { code, ...frame.previewOffset } : null;
+    beginDiagnosticRun(code, errorSource);
     resetNetworkStatus();
     if (!isSplitWorkspace()) codeField.blur();
     codeField.hidden = !isSplitWorkspace();
@@ -1443,5 +1455,6 @@ initAiPrompts();
 initCodeEditor();
 initWorkspaceUI();
 initDesktopWorkspace();
+initDiagnostics();
 updateControls();
 void restoreStartupDraft();

@@ -94,7 +94,10 @@ function updateWorkspaceUI() {
 
 function updateActivitySummary() {
   const parts = [];
-  if (!runtimeError.hidden) parts.push(`Ошибка игры${runtimeErrorCount > 1 ? ` (${runtimeErrorCount})` : ''}`);
+  const diagnostics = diagnosticCounts();
+  if (diagnostics.errors) parts.push(`Ошибка игры (${diagnostics.errors})`);
+  else if (!runtimeError.hidden && !runtimeError.classList.contains('is-warning')) parts.push(`Ошибка игры${runtimeErrorCount > 1 ? ` (${runtimeErrorCount})` : ''}`);
+  if (diagnostics.warnings) parts.push(`Предупреждения (${diagnostics.warnings})`);
   if (!libraryRequest.hidden) parts.push('Нужны библиотеки');
   if (!networkStatus.hidden) parts.push(`Сеть: ${networkCountField.textContent} файл. · ${networkKbField.textContent}`);
   if (activeBundledLibraries.length) parts.push(`Встроено: ${activeBundledLibraries.join(', ')}`);
@@ -103,10 +106,8 @@ function updateActivitySummary() {
   const message = parts.join(' · ');
   activityToggle.hidden = !message;
   activitySummary.textContent = message;
-  activityToggle.classList.toggle('has-error', !runtimeError.hidden || (!status.hidden && status.classList.contains('error')));
+  activityToggle.classList.toggle('has-error', diagnostics.errors > 0 || (!status.hidden && status.classList.contains('error')));
   activityToggle.setAttribute('aria-label', message ? `${message}. Открыть сообщения` : 'Открыть сообщения');
-  const empty = document.querySelector('#activity-empty');
-  if (empty.hidden !== Boolean(message)) empty.hidden = Boolean(message);
 }
 
 function updateWorkspaceViewport() {
@@ -118,7 +119,7 @@ function updateWorkspaceViewport() {
 
 function initWorkspaceUI() {
   expandButton.addEventListener('click', () => setPreviewExpanded(!previewExpanded));
-  activityToggle.addEventListener('click', () => showWorkspacePanel(activityPanel));
+  activityToggle.addEventListener('click', () => { if (currentPanel() === activityPanel) closeWorkspacePanel(); else openDiagnostics(); });
   document.querySelector('#activity-close').addEventListener('click', () => closeWorkspacePanel());
   document.querySelector('#save-close').addEventListener('click', () => closeWorkspacePanel());
   document.addEventListener('keydown', event => {

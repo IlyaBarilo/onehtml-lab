@@ -450,6 +450,36 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   .draft-status { grid-area: draft; }
 }
 
+/* Diagnostics use the same full workspace as the other tools. */
+.activity-body > #diagnostic-tabs, .activity-body > #diagnostic-errors, .activity-body > #diagnostic-libraries { padding: 0; border: 0; border-radius: 0; }
+#diagnostic-tabs { position: sticky; top: -16px; z-index: 1; background: #fbfcff; padding-block: 6px; }
+#diagnostic-libraries h3 { margin: 8px 0; }
+#diagnostic-errors .runtime-error { flex-direction: row; flex-wrap: wrap; padding: 10px; margin: 8px 0; font-size: 14px; }
+#runtime-error-message { flex-basis: 100%; overflow-wrap: anywhere; }
+.diagnostic-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.diagnostic-actions button, #diagnostic-libraries button { min-height: 44px; padding: 8px 12px; font: inherit; font-size: 14px; color: #285b9e; border: 1px solid #c6d7ee; border-radius: 7px; background: #edf4ff; }
+.diagnostic-actions button:disabled, #diagnostic-libraries button:disabled { opacity: .35; }
+.diagnostic-note { margin: 10px 0; color: #566e8d; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.diagnostic-list { list-style: none; padding: 0; margin: 0; }
+.diagnostic-error-row { display: grid; gap: 4px; width: 100%; min-height: 60px; padding: 10px 12px; text-align: left; background: transparent; border: 0; border-bottom: 1px solid #d7e2f0; color: #8a3434; font: inherit; font-size: 16px; overflow-wrap: anywhere; }
+.diagnostic-error-row[aria-pressed="true"] { background: #e9f2ff; }
+.diagnostic-error-meta { font-size: 13px; color: #647791; }
+.diagnostic-error-row.is-warning { color: #855b16; }
+.runtime-error.is-warning { background: #fff8e8; border-color: #e5cf9d; color: #77511b; }
+.diagnostic-library-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #d7e2f0; }
+.diagnostic-library-row > div { min-width: 0; }
+.diagnostic-library-row strong { font-size: 16px; overflow-wrap: anywhere; }
+.diagnostic-library-row p { margin: 5px 0 0; white-space: pre-line; overflow-wrap: anywhere; font-size: 14px; color: #566e8d; line-height: 1.4; }
+.diagnostic-library-row button { flex: 0 0 auto; max-width: 110px; }
+.diagnostic-cache-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 24px; }
+#diagnostic-libraries h3 { font-size: 17px; }
+.diagnostic-confirm { position: sticky; bottom: 0; padding: 12px; background: #fff8e8; border: 1px solid #e5cf9d; border-radius: 8px; font-size: 15px; line-height: 1.4; }
+.diagnostic-confirm p { margin: 0; }
+@media (max-width: 380px) {
+  .expert-tools { grid-template-areas: "tools tools" "resources resources" "draft draft"; }
+  .draft-status { font-size: 11px; line-height: 1.1; }
+}
+
 /* Wide layouts keep the code and iframe in their original DOM positions. */
 .split-workspace { --code-width: calc((100% - 10px) * var(--code-ratio, .5)); }
 .split-workspace #code { position: absolute; top: 0; left: 0; width: var(--code-width); height: 100%; }

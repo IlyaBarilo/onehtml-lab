@@ -63,6 +63,7 @@
       <div class="expert-resource-actions">
         <button id="ai-open" class="import-button" type="button" title="ИИ-боты и готовые запросы">ИИ и запросы</button>
         <button id="examples-open" class="import-button" type="button" title="Открыть примеры игр">Примеры игр</button>
+        <button id="diagnostic-open" class="expert-icon-button" type="button" title="Диагностика и библиотеки" aria-label="Диагностика и библиотеки" aria-pressed="false"><!-- ICON:diagnostics --></button>
       </div>
       <span id="draft-status" class="draft-status" role="status" aria-live="polite"></span>
       <input id="import-file" type="file" accept=".html,.htm,text/html" hidden>
@@ -130,15 +131,27 @@
         <div class="library-extraction-footer"><p id="library-extraction-summary" role="status" aria-live="polite"></p><button id="library-extract-apply" type="button" disabled>Применить</button></div>
       </section>
       <section id="activity-panel" class="work-panel" aria-labelledby="activity-title" hidden>
-        <div class="panel-heading"><h2 id="activity-title">Сообщения</h2><button id="activity-close" type="button" aria-label="Закрыть сообщения">✕</button></div>
+        <div class="panel-heading"><h2 id="activity-title">Диагностика</h2><button id="activity-close" type="button" aria-label="Закрыть сообщения">✕</button></div>
         <div class="panel-body activity-body">
-          <p id="activity-empty" hidden>Сообщений пока нет.</p>
           <div id="library-request" class="library-request" role="group" aria-label="Загрузка библиотеки" hidden>
             <span id="library-request-text"></span>
             <div class="library-request-actions"><button id="library-download" type="button">Скачать</button><button id="library-files-button" type="button" hidden>Выбрать JS и лицензию</button><button id="library-skip" type="button">Без подмены</button></div>
             <input id="library-files" type="file" multiple hidden aria-label="JS-файл библиотеки и её MIT-лицензия">
           </div>
-          <div id="runtime-error" class="runtime-error" hidden><span id="runtime-error-message"></span><button id="error-line" type="button" hidden>Перейти к строке</button><button id="error-ai" type="button" hidden>Исправить с ИИ</button><button id="copy-error" type="button">Скопировать ошибку</button></div>
+          <div id="diagnostic-tabs" class="platform-tabs" role="group" aria-label="Раздел диагностики"><button type="button" class="platform-tab" data-diagnostic-tab="errors" aria-pressed="true">Ошибки</button><button type="button" class="platform-tab" data-diagnostic-tab="libraries" aria-pressed="false">Библиотеки</button></div>
+          <section id="diagnostic-errors">
+            <div class="diagnostic-actions"><button id="diagnostic-clear" type="button" disabled>Очистить</button><button id="diagnostic-copy" type="button">Скопировать отчёт</button></div>
+            <p id="diagnostic-run-note" class="diagnostic-note">Игра ещё не запускалась.</p>
+            <div id="runtime-error" class="runtime-error" hidden><span id="runtime-error-message"></span><button id="error-line" type="button" hidden>Перейти к строке</button><button id="error-ai" type="button" hidden>Исправить с ИИ</button><button id="copy-error" type="button">Скопировать ошибку</button></div>
+            <ol id="diagnostic-error-list" class="diagnostic-list"></ol>
+          </section>
+          <section id="diagnostic-libraries" hidden>
+            <h3>В текущем коде</h3><p id="diagnostic-library-note" class="diagnostic-note"></p><ul id="diagnostic-library-list" class="diagnostic-list"></ul>
+            <div class="diagnostic-cache-heading"><h3>Сохранённые копии</h3><button id="diagnostic-cache-clear" type="button" disabled>Удалить все</button></div>
+            <p id="diagnostic-cache-size" class="diagnostic-note"></p><ul id="diagnostic-cache-list" class="diagnostic-list"></ul>
+            <div id="diagnostic-confirm" class="diagnostic-confirm" hidden><p id="diagnostic-confirm-text"></p><div class="diagnostic-actions"><button id="diagnostic-delete-yes" type="button">Удалить</button><button id="diagnostic-delete-no" type="button">Отмена</button></div></div>
+            <p id="diagnostic-cache-feedback" role="status" class="diagnostic-note"></p>
+          </section>
           <p id="status" class="notice" hidden></p>
           <div id="network-status" class="network-status" hidden><span id="network-message">Игра использует интернет</span><span id="network-metrics">Файлов: <span id="network-count">0</span> · учтено: <span id="network-kb">(нет данных)</span></span></div>
           <p id="local-access-status" class="notice local-access-status" hidden></p>

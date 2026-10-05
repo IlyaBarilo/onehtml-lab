@@ -19,7 +19,7 @@ let aiSourcePlan = null;
 function aiPromptSnapshot() {
   return { mode: aiMode, platform: selectedPlatform, task: aiTask.value.trim(), shorten: aiShorten.checked,
     code: aiMode === 'create' ? '' : codeField.value,
-    error: aiMode === 'fix' && runtimeErrorCode === codeField.value ? runtimeErrorReport : '' };
+    error: aiMode === 'fix' && runtimeErrorCode === codeField.value ? diagnosticAiContext() || runtimeErrorReport : '' };
 }
 
 function sameAiSnapshot(a, b) {
