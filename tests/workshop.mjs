@@ -67,10 +67,12 @@ for (const [name, engine] of engines) {
         assert.equal(await frame.locator('#score').innerText(), '1', 'Help does not restart the game');
         await page.locator('#run').click();
         await page.locator('#edit-open').click();
+        await page.locator('#edit-panel-find').click();
         await page.locator('#edit-query').fill('Поймай круг');
+        await page.locator('#edit-replace-toggle').click();
         await page.locator('#edit-replacement').fill('Поймай звезду');
         await page.locator('#edit-replace-all').click();
-        await page.locator('#edit-close').click();
+        await page.locator('#edit-find-close').click();
         const improved = await page.locator('#code').inputValue();
         assert.equal(improved, original.replaceAll('Поймай круг', 'Поймай звезду'));
         async function paste(text) {

@@ -19,7 +19,8 @@ for (const [name, engine] of engines) {
       const page = await context.newPage();
       const errors = [];
       page.on('pageerror', error => { if (!error.message.includes('editor-location')) errors.push(error.message); });
-      const open = async () => { await page.locator('#edit-open').click(); await page.locator('#edit-panel').waitFor(); };
+      const settings = async () => { if (await page.locator('#edit-panel').isHidden()) await page.locator(await page.locator('#edit-open').isVisible() ? '#edit-open' : '#edit-quick-settings').click(); };
+      const open = async () => { if (await page.locator('#edit-panel').isVisible()) await page.locator('#edit-panel-find').click(); else if (await page.locator('#edit-inline').isHidden()) await page.locator('#edit-find').click(); if (await page.locator('#edit-replace-box').isHidden()) await page.locator('#edit-replace-toggle').click(); };
       const selection = () => page.locator('#code').evaluate(el => ({ start: el.selectionStart, end: el.selectionEnd, selected: el.value.slice(el.selectionStart, el.selectionEnd) }));
       try {
         await page.goto(url);
@@ -32,12 +33,12 @@ for (const [name, engine] of engines) {
           assert(bounds && bounds.x >= 0 && bounds.x + bounds.width <= viewport.width + 1, `${id} fits at ${viewport.width}`);
         }
         await open();
-        assert(await page.locator('#code').isHidden());
+        assert(await page.locator('#code').isVisible());
         await page.locator('#edit-query').fill('кот');
         assert.equal(await page.locator('#edit-result').innerText(), '1 из 3');
         await page.locator('#edit-next').click();
         assert.equal(await page.locator('#edit-result').innerText(), '2 из 3');
-        await page.locator('#edit-show').click();
+        await page.locator('#edit-find-close').click();
         assert.equal((await selection()).selected, 'кот');
         await open();
         assert.equal(await page.locator('#edit-result').innerText(), '2 из 3');
@@ -49,13 +50,13 @@ for (const [name, engine] of engines) {
         await page.locator('#edit-replacement').fill('$&😀');
         await page.locator('#edit-replace').click();
         assert((await page.locator('#code').inputValue()).includes('$&😀'), 'Replacement is literal');
-        await page.locator('#edit-undo').click();
+        await page.locator('#edit-quick-undo').click();
         assert.equal(await page.locator('#code').inputValue(), sample);
         await open();
-        await page.locator('#edit-redo').click();
+        await page.locator('#edit-quick-redo').click();
         assert((await page.locator('#code').inputValue()).includes('$&😀'));
         await open();
-        await page.locator('#edit-undo').click();
+        await page.locator('#edit-quick-undo').click();
         await open();
         await page.locator('#edit-query').fill('кот');
         await page.locator('#edit-case').uncheck();
@@ -63,12 +64,12 @@ for (const [name, engine] of engines) {
         await page.locator('#edit-replace-all').click();
         assert.equal(await page.locator('#code').inputValue(), sample.replace(/кот/gi, 'пёс'));
         assert.match(await page.locator('#edit-feedback').innerText(), /Заменено: 3/);
-        await page.locator('#edit-undo').click();
+        await page.locator('#edit-quick-undo').click();
         assert.equal(await page.locator('#code').inputValue(), sample, 'Replace all is one undo step');
         await page.keyboard.insertText('X');
         await open();
-        assert(await page.locator('#edit-redo').isDisabled(), 'New edit discards redo');
-        await page.locator('#edit-undo').click();
+        assert(await page.locator('#edit-quick-redo').isDisabled(), 'New edit discards redo');
+        await page.locator('#edit-quick-undo').click();
         assert.equal(await page.locator('#code').inputValue(), sample);
         await page.locator('#code').evaluate(el => el.setSelectionRange(el.value.length, el.value.length));
         await page.keyboard.type('abc');
@@ -87,7 +88,7 @@ for (const [name, engine] of engines) {
           await page.locator('#code').evaluate(el => el.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'historyUndo' })));
           assert.equal(await page.locator('#code').inputValue(), sample, 'Native undo command uses the same chain');
         }
-        await open();
+        await settings();
         await page.locator('#edit-font').selectOption('20');
         await page.locator('#edit-numbers').check();
         await page.locator('#edit-line').fill('99999');
@@ -100,11 +101,11 @@ for (const [name, engine] of engines) {
         assert((await page.locator('#code').evaluate(el => el.scrollTop)) > 0);
         assert.equal(await page.locator('#code').evaluate(el => getComputedStyle(el).fontSize), '20px');
         await page.screenshot({ path: join(output, `${name}-${viewport.width}-code.png`) });
-        await open();
+        await settings();
         await page.locator('#edit-wrap').uncheck();
-        await page.locator('#edit-query').fill('Строка 90:');
+        await open(); await page.locator('#edit-query').fill('Строка 90:');
         await page.screenshot({ path: join(output, `${name}-${viewport.width}-tools.png`) });
-        await page.locator('#edit-close').click();
+        await page.locator('#edit-find-close').click();
         assert.equal(await page.locator('#code').getAttribute('wrap'), 'off');
         assert(await page.locator('#code').evaluate(el => el.scrollWidth > el.clientWidth));
         await page.locator('#expert-toggle').click();
@@ -118,10 +119,10 @@ for (const [name, engine] of engines) {
         assert.equal(await page.locator('#code').evaluate(el => getComputedStyle(el).fontSize), '20px');
         await page.locator('#expert-toggle').click();
         await open();
-        assert(await page.locator('#edit-undo').isDisabled(), 'Undo is session-local');
+        assert(await page.locator('#edit-quick-undo').isDisabled(), 'Undo is session-local');
         await page.locator('#edit-query').fill('');
         assert(await page.locator('#edit-replace-all').isDisabled());
-        await page.locator('#edit-close').click();
+        await page.locator('#edit-find-close').click();
 
         // Saving and preview must keep source text, not line numbers or display wrapping.
         await page.locator('#save').click();
@@ -185,18 +186,19 @@ for (const [name, engine] of engines) {
       await page.locator('#import-file').setInputFiles({ name: 'large.html', mimeType: 'text/html', buffer: Buffer.from(large) });
       await page.waitForFunction(() => document.querySelector('#code').value.endsWith('ФИНИШ'));
       await page.locator('#edit-open').click();
-      await page.locator('#edit-numbers').check();
+      await page.locator('#edit-numbers').check(); await page.locator('#edit-panel-find').click();
       await page.locator('#edit-query').fill('x');
       assert.equal(await page.locator('#edit-result').innerText(), '1 из 2200001');
       await page.locator('#edit-query').fill('ФИНИШ');
-      await page.locator('#edit-show').click();
+      await page.locator('#edit-find-close').click();
       assert.equal(await page.locator('#code').evaluate(el => el.value.slice(el.selectionStart, el.selectionEnd)), 'ФИНИШ');
       assert((await page.locator('#code-lines span').count()) < 100);
-      await page.locator('#edit-open').click();
+      await page.locator('#edit-find').click();
       await page.locator('#edit-query').fill('<img');
-      assert.equal(await page.locator('#edit-snippet img').count(), 0);
+      assert.equal(await page.locator('#edit-inline img').count(), 0);
       console.log(`${name}: 2 MB document and escaped snippets passed.`);
     } finally { await page.close(); }
   } finally { await browser.close(); }
 }
 console.log(`Editor screenshots: ${output}`);
+await import('./editor-touch.mjs');

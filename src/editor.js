@@ -20,6 +20,10 @@ let editLayoutFrame = 0;
 let editMeasured = null;
 let errorSource = null;
 let errorTarget = null;
+const editInline = document.querySelector('#edit-inline');
+const editQuick = document.querySelector('#edit-quick');
+let editFindOpen = false;
+let editGeometryFrame = 0;
 
 function editSelection() {
   return { start: codeField.selectionStart, end: codeField.selectionEnd, direction: codeField.selectionDirection };
@@ -148,18 +152,8 @@ function refreshEditSearch(reset = false) {
   }
   const count = editSearch.count;
   editResult.textContent = !query ? 'Введите текст для поиска.' : count ? `${editSearch.index + 1} из ${count}` : 'Совпадений нет.';
-  for (const id of ['edit-prev', 'edit-next', 'edit-show', 'edit-replace', 'edit-replace-all']) document.getElementById(id).disabled = !count;
-  const range = editSearch.range;
-  const snippet = document.querySelector('#edit-snippet');
-  snippet.replaceChildren();
-  if (range) {
-    const [start, end] = range;
-    const mark = document.createElement('mark');
-    mark.textContent = code.slice(start, Math.min(end, start + 200)) + (end - start > 200 ? '…' : '');
-    snippet.append(code.slice(Math.max(0, start - 65), start), mark, code.slice(end, end + 100));
-    document.querySelector('#edit-location').textContent = `Строка ${code.slice(0, start).split('\n').length}`;
-  } else document.querySelector('#edit-location').textContent = '';
-  snippet.hidden = !range;
+  for (const id of ['edit-prev', 'edit-next', 'edit-replace', 'edit-replace-all']) document.getElementById(id).disabled = !count || (id.startsWith('edit-replace') && codeField.readOnly);
+  scheduleCodeLayout();
 }
 
 function replaceEditMatch(all = false) {
@@ -183,7 +177,91 @@ function updateCodeTools() {
   editButton.setAttribute('aria-pressed', String(currentPanel() === editPanel));
   document.querySelector('#edit-undo').disabled = !editUndo.length || blocked || codeField.readOnly;
   document.querySelector('#edit-redo').disabled = !editRedo.length || blocked || codeField.readOnly;
+  updateInlineEditor();
   scheduleCodeLayout();
+}
+
+function inlineEditorAvailable() {
+  return editReady && expertMode && !modeBusy && !readingClipboard && !codeField.disabled && !codeField.hidden && !currentPanel() && !historyOpen && !comparisonOpen && !extractionOpen;
+}
+
+function updateInlineGeometry() {
+  for (const [name, element] of [['--edit-top', editInline], ['--edit-bottom', editQuick]]) {
+    const size = `${element.hidden ? 0 : element.offsetHeight}px`;
+    if (workspaceElement.style.getPropertyValue(name) !== size) workspaceElement.style.setProperty(name, size);
+  }
+  scheduleCodeLayout();
+}
+
+function scheduleInlineGeometry() {
+  if (!editGeometryFrame) editGeometryFrame = requestAnimationFrame(() => { editGeometryFrame = 0; updateInlineGeometry(); });
+}
+
+function updateInlineEditor() {
+  if (!editReady) return;
+  const available = inlineEditorAvailable();
+  if (!available) appElement.classList.remove('editing-active');
+  if (!expertMode) { editFindOpen = false; appElement.classList.remove('editing-active'); }
+  editInline.hidden = !available || !editFindOpen;
+  editQuick.hidden = !available || codeField.readOnly;
+  document.querySelector('#edit-find').setAttribute('aria-pressed', String(editFindOpen));
+  document.querySelector('#edit-quick-undo').disabled = !editUndo.length;
+  document.querySelector('#edit-quick-redo').disabled = !editRedo.length;
+  document.querySelector('#edit-copy-selection').disabled = codeField.selectionStart === codeField.selectionEnd;
+  if (!editInline.hidden) refreshEditSearch();
+  updateInlineGeometry();
+}
+
+function showInlineMatch() {
+  if (editSearch.range) revealCodeRange(...editSearch.range, 'none', false);
+}
+
+function openInlineSearch(replace = false) {
+  if (!expertMode || modeBusy || (running && !isSplitWorkspace())) return;
+  closeWorkspacePanels(false);
+  editFindOpen = true;
+  document.querySelector('#edit-replace-box').hidden = !replace;
+  document.querySelector('#edit-replace-toggle').setAttribute('aria-expanded', String(replace));
+  updateInlineEditor(); refreshEditSearch();
+  editQuery.focus({ preventScroll: true }); showInlineMatch();
+}
+
+function closeInlineSearch() {
+  editFindOpen = false; updateInlineEditor();
+  codeField.focus({ preventScroll: true });
+}
+
+// Two-space indentation changes only the touched lines; an endpoint at the next
+// line's beginning does not include that line. Tabs are removed as one indent.
+function indentCodeSelection(code, start, end, outdent) {
+  const first = start ? code.lastIndexOf('\n', start - 1) + 1 : 0;
+  const last = end > start && code[end - 1] === '\n' ? end - 1 : end;
+  const changes = [];
+  for (let at = first; at <= last;) {
+    const length = outdent ? /^(?:\t| {1,2})/.exec(code.slice(at, at + 2))?.[0].length || 0 : 0;
+    if (!outdent || length) changes.push({ at, length, insert: outdent ? '' : '  ' });
+    const newline = code.indexOf('\n', at);
+    if (newline < 0) break;
+    at = newline + 1;
+  }
+  const parts = [];
+  let cursor = 0;
+  for (const change of changes) {
+    parts.push(code.slice(cursor, change.at), change.insert);
+    cursor = change.at + change.length;
+  }
+  parts.push(code.slice(cursor));
+  const map = position => position + changes.reduce((delta, change) => delta + (change.at <= position ? change.insert.length - Math.min(change.length, position - change.at) : 0), 0);
+  return { code: parts.join(''), start: map(start), end: map(end) };
+}
+
+function quickCodeEdit(pair, outdent) {
+  if (!inlineEditorAvailable() || codeField.readOnly || codeField.disabled) return;
+  const { start, end } = editSelection(), code = codeField.value;
+  const next = pair ? { code: code.slice(0, start) + pair[0] + code.slice(start, end) + pair[1] + code.slice(end), start: start + 1, end: end + 1 }
+    : indentCodeSelection(code, start, end, outdent);
+  changeCodeFromEditor(next.code, next);
+  revealCodeRange(next.start, next.end);
 }
 
 function openCodeTools() {
@@ -252,8 +330,11 @@ function codePointRect(offset) {
 function drawCodeLines() {
   editLayoutFrame = 0;
   editGutter.hidden = !editView.numbers || codeField.hidden || Boolean(currentPanel());
-  if (editGutter.hidden) return;
+  if (codeField.hidden || currentPanel()) { document.querySelector('#edit-highlight').hidden = true; return; }
+  if (editGutter.hidden && editInline.hidden) { document.querySelector('#edit-highlight').hidden = true; return; }
   const { starts, lineHeight } = measureCode();
+  drawSearchHighlight();
+  if (editGutter.hidden) return;
   const digits = String(starts.length).length;
   const width = `${Math.max(3, digits + 1)}ch`;
   if (workspaceElement.style.getPropertyValue('--line-width') !== width) {
@@ -280,18 +361,48 @@ function drawCodeLines() {
   editGutter.replaceChildren(...nodes);
 }
 
+function drawSearchHighlight() {
+  const highlight = document.querySelector('#edit-highlight');
+  const range = editSearch.range;
+  highlight.hidden = editInline.hidden || !range || editSearch.code !== codeField.value;
+  if (highlight.hidden) return;
+  const rect = codeField.getBoundingClientRect(), origin = workspaceElement.getBoundingClientRect();
+  Object.assign(highlight.style, { top: `${rect.top - origin.top}px`, left: `${rect.left - origin.left}px`, width: `${codeField.clientWidth}px`, height: `${codeField.clientHeight}px` });
+  const mirror = editMirror.getBoundingClientRect(), starts = editMeasured.starts;
+  let low = 0, high = starts.length;
+  while (low + 1 < high) { const mid = (low + high) >>> 1; if (codePointRect(starts[mid]).top < codeField.scrollTop) low = mid; else high = mid; }
+  const nodes = [];
+  for (let i = low; i < starts.length; i++) {
+    if (starts[i] >= range[1] || codePointRect(starts[i]).top - codeField.scrollTop > codeField.clientHeight) break;
+    const from = Math.max(range[0], starts[i]), to = Math.min(range[1], i + 1 < starts.length ? starts[i + 1] - 1 : codeField.value.length);
+    if (to <= from) continue;
+    const selection = document.createRange(), node = editMirror.children[i].firstChild;
+    selection.setStart(node, from - starts[i]); selection.setEnd(node, to - starts[i]);
+    for (const part of selection.getClientRects()) {
+      const top = part.top - mirror.top - codeField.scrollTop, left = part.left - mirror.left - codeField.scrollLeft;
+      if (top + part.height < 0 || top > codeField.clientHeight) continue;
+      const marker = document.createElement('span');
+      Object.assign(marker.style, { top: `${top}px`, left: `${left}px`, width: `${part.width}px`, height: `${part.height}px` });
+      nodes.push(marker);
+      if (nodes.length >= 200) break;
+    }
+    if (nodes.length >= 200) break;
+  }
+  highlight.replaceChildren(...nodes);
+}
+
 function scheduleCodeLayout() {
   if (editReady && !editLayoutFrame) editLayoutFrame = requestAnimationFrame(drawCodeLines);
 }
 
-function revealCodeRange(start, end = start, direction = 'none') {
+function revealCodeRange(start, end = start, direction = 'none', focus = true) {
   if (running && !isSplitWorkspace()) stopPreview();
   closeWorkspacePanels(false);
   closeHistory();
   closeComparison();
   closeLibraryExtraction();
   updateControls();
-  codeField.focus({ preventScroll: true });
+  if (focus) codeField.focus({ preventScroll: true });
   codeField.setSelectionRange(start, end, direction);
   const position = () => {
     measureCode();
@@ -332,6 +443,45 @@ function initCodeEditor() {
   editReady = true;
   applyCodeView();
   editButton.addEventListener('click', openCodeTools);
+  document.querySelector('#edit-panel-find').addEventListener('click', () => openInlineSearch());
+  document.querySelector('#edit-find').addEventListener('click', () => editFindOpen ? closeInlineSearch() : openInlineSearch());
+  document.querySelector('#edit-find-close').addEventListener('click', closeInlineSearch);
+  document.querySelector('#edit-quick-settings').addEventListener('click', openCodeTools);
+  document.querySelector('#edit-replace-toggle').addEventListener('click', event => {
+    const box = document.querySelector('#edit-replace-box'); box.hidden = !box.hidden;
+    event.currentTarget.setAttribute('aria-expanded', String(!box.hidden)); updateInlineGeometry(); showInlineMatch();
+  });
+  editInline.addEventListener('keydown', event => {
+    if (event.isComposing) return;
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeInlineSearch(); }
+    if (event.key === 'Enter' && event.target === editQuery) { event.preventDefault(); document.querySelector(event.shiftKey ? '#edit-prev' : '#edit-next').click(); }
+  });
+  document.querySelector('#edit-quick-undo').addEventListener('click', () => undoCodeEdit());
+  document.querySelector('#edit-quick-redo').addEventListener('click', () => undoCodeEdit(true));
+  for (const button of editQuick.querySelectorAll('[data-edit-pair], [data-edit-indent]')) button.addEventListener('click', () => quickCodeEdit(button.dataset.editPair, button.dataset.editIndent === 'out'));
+  editQuick.addEventListener('mousedown', event => { if (event.target.closest('button') && document.activeElement === codeField) event.preventDefault(); });
+  document.querySelector('#edit-copy-selection').addEventListener('click', () => {
+    if (!inlineEditorAvailable()) return;
+    const text = codeField.value.slice(codeField.selectionStart, codeField.selectionEnd);
+    if (text) { rememberEditorPosition(); void copyOrSelect(text, 'Выделенный фрагмент скопирован.'); }
+  });
+  document.querySelector('#edit-range-form').addEventListener('submit', event => {
+    event.preventDefault();
+    const first = Number(document.querySelector('#edit-range-start').value), last = Number(document.querySelector('#edit-range-end').value);
+    const { starts } = measureCode();
+    if (!Number.isInteger(first) || !Number.isInteger(last) || first < 1 || last < first || last > starts.length) {
+      document.querySelector('#edit-range-feedback').textContent = `Укажите строки от 1 до ${starts.length}; последняя не меньше первой.`; return;
+    }
+    revealCodeRange(starts[first - 1], last < starts.length ? starts[last] : codeField.value.length);
+  });
+  // Keep the compact layout while moving focus to a toolbar button: restoring
+  // the header on pointerdown would move the button before its click arrives.
+  const updateFocus = () => { if (expertMode && (document.activeElement === codeField || editInline.contains(document.activeElement) || editQuick.contains(document.activeElement))) appElement.classList.add('editing-active'); };
+  document.addEventListener('focusin', updateFocus);
+  document.addEventListener('focusout', () => queueMicrotask(updateFocus));
+  document.addEventListener('selectionchange', () => { if (!editQuick.hidden) document.querySelector('#edit-copy-selection').disabled = codeField.selectionStart === codeField.selectionEnd; });
+  new ResizeObserver(scheduleInlineGeometry).observe(editInline);
+  new ResizeObserver(scheduleInlineGeometry).observe(editQuick);
   document.querySelector('#edit-close').addEventListener('click', () => closeWorkspacePanel());
   codeField.addEventListener('beforeinput', event => {
     if (event.inputType === 'historyUndo' || event.inputType === 'historyRedo') {
@@ -344,30 +494,28 @@ function initCodeEditor() {
   codeField.addEventListener('blur', () => { editGroup = null; });
   codeField.addEventListener('scroll', scheduleCodeLayout);
   codeField.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && editFindOpen) { event.preventDefault(); closeInlineSearch(); return; }
     if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
     const key = event.key.toLowerCase();
     if (key === 'z' || key === 'y') { event.preventDefault(); undoCodeEdit(key === 'y' || event.shiftKey); }
     else if (expertMode && ['f', 'h', 'g'].includes(key)) {
-      event.preventDefault(); openCodeTools();
-      document.querySelector(key === 'g' ? '#edit-line' : '#edit-query').focus();
+      event.preventDefault();
+      if (key === 'g') { openCodeTools(); document.querySelector('#edit-line').focus(); }
+      else openInlineSearch(key === 'h');
     }
   });
   document.querySelector('#edit-undo').addEventListener('click', () => undoCodeEdit());
   document.querySelector('#edit-redo').addEventListener('click', () => undoCodeEdit(true));
-  editQuery.addEventListener('input', () => refreshEditSearch(true));
-  editCase.addEventListener('change', () => refreshEditSearch(true));
+  editQuery.addEventListener('input', () => { refreshEditSearch(true); showInlineMatch(); });
+  editCase.addEventListener('change', () => { refreshEditSearch(true); showInlineMatch(); });
   for (const [id, step] of [['edit-prev', -1], ['edit-next', 1]]) document.getElementById(id).addEventListener('click', () => {
     refreshEditSearch();
     if (editSearch.count) selectEditMatch((editSearch.index + step + editSearch.count) % editSearch.count);
     refreshEditSearch();
+    showInlineMatch();
   });
-  document.querySelector('#edit-show').addEventListener('click', () => {
-    refreshEditSearch();
-    const range = editSearch.range;
-    if (range) revealCodeRange(...range);
-  });
-  document.querySelector('#edit-replace').addEventListener('click', () => replaceEditMatch());
-  document.querySelector('#edit-replace-all').addEventListener('click', () => replaceEditMatch(true));
+  document.querySelector('#edit-replace').addEventListener('click', () => { replaceEditMatch(); showInlineMatch(); });
+  document.querySelector('#edit-replace-all').addEventListener('click', () => { replaceEditMatch(true); showInlineMatch(); });
   document.querySelector('#edit-line-form').addEventListener('submit', event => {
     event.preventDefault();
     if (!goToCodeLine(Number(document.querySelector('#edit-line').value))) document.querySelector('#edit-line-feedback').textContent = `Введите номер от 1 до ${measureCode().starts.length}.`;
@@ -376,7 +524,7 @@ function initCodeEditor() {
     editView = { size: Number(document.querySelector('#edit-font').value), wrap: document.querySelector('#edit-wrap').checked, numbers: document.querySelector('#edit-numbers').checked };
     applyCodeView();
     try { localStorage.setItem('onehtml-lab-editor-view', JSON.stringify(editView)); }
-    catch { document.querySelector('#edit-feedback').textContent = 'Настройки действуют сейчас, но браузер не сохранил их.'; }
+    catch { document.querySelector('#edit-view-feedback').textContent = 'Настройки действуют сейчас, но браузер не сохранил их.'; }
   });
   document.querySelector('#error-line').addEventListener('click', () => { if (errorTarget && errorSource?.code === codeField.value) goToCodeLine(errorTarget.line, errorTarget.column); });
   new ResizeObserver(scheduleCodeLayout).observe(codeField);

@@ -524,6 +524,32 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 #preview-empty { position: absolute; left: calc(var(--code-width) + 10px); right: 0; top: var(--preview-tools-height, 60px); bottom: 0; display: grid; place-content: center; padding: 24px; color: #69809e; font-size: 16px; text-align: center; background: #f5f8fc; }
 .workspace.has-panel #code-lines { visibility: hidden; }
 
+/* Search and touch actions occupy real space, never covering editable text. */
+.workspace #code { position: absolute; top: var(--edit-top, 0px); left: 0; height: calc(100% - var(--edit-top, 0px) - var(--edit-bottom, 0px)); }
+.workspace #code-lines { top: var(--edit-top, 0px); bottom: var(--edit-bottom, 0px); }
+#edit-inline, #edit-quick { position: absolute; left: 0; width: 100%; z-index: 1; background: #f0f5fc; color: #315c93; }
+.split-workspace #edit-inline, .split-workspace #edit-quick { width: var(--code-width); }
+#edit-inline { top: 0; max-height: 50%; overflow-y: auto; padding: 5px 8px; border-bottom: 1px solid #c9d9ed; }
+#edit-highlight { position: absolute; pointer-events: none; overflow: hidden; }
+#edit-highlight span { position: absolute; background: #ffc84955; border-bottom: 2px solid #d38b08; }
+.edit-find-row { display: flex; gap: 4px; }
+#edit-inline input[type="text"] { min-width: 0; width: 100%; height: 44px; padding: 8px; font-size: 16px; border: 1px solid #b9cbe3; border-radius: 5px; background: white; }
+#edit-inline button, #edit-quick button { flex: 0 0 auto; min-width: 44px; min-height: 44px; padding: 6px 10px; border: 0; border-radius: 5px; color: #315c93; background: transparent; font: inherit; }
+#edit-inline button:hover, #edit-quick button:hover { background: #dceaff; }
+#edit-inline button:disabled, #edit-quick button:disabled { opacity: .28; }
+.edit-find-options { display: flex; align-items: center; gap: 8px; min-height: 38px; font-size: 13px; }
+.edit-find-options output { flex: 1; min-width: 0; }
+.edit-find-options label { display: flex; gap: 4px; align-items: center; min-height: 44px; }
+.edit-find-options input { accent-color: #2d6cdf; width: 18px; height: 18px; }
+#edit-replace-box { padding-top: 4px; }
+#edit-feedback { overflow-wrap: anywhere; }
+#edit-quick { bottom: 0; display: flex; overflow-x: auto; overscroll-behavior-x: contain; padding: 2px 4px; border-top: 1px solid #c9d9ed; scrollbar-width: thin; }
+#edit-quick button { font-size: 16px; white-space: nowrap; }
+#edit-quick svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; vertical-align: middle; }
+#edit-range-form .edit-line-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+.editing-active.compact-viewport .brand, .editing-active.compact-viewport .expert-tools { display: none; }
+.editing-active.compact-viewport .toolbar { min-height: 50px; }
+
 /* Prompt preparation and its preview share one workspace screen. */
 .ai-compose { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 22px; }
 .ai-task-section, .ai-services { min-width: 0; }

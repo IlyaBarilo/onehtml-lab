@@ -138,10 +138,12 @@ try {
           await page.locator('#activity-close').click();
           // Search/replace and navigation work without stopping a split preview.
           await page.locator('#edit-open').click();
+          await page.locator('#edit-panel-find').click();
           await page.locator('#edit-query').fill('Игра B');
+          await page.locator('#edit-replace-toggle').click();
           await page.locator('#edit-replacement').fill('Игра C');
           await page.locator('#edit-replace-all').click();
-          await page.locator('#edit-close').click();
+          await page.locator('#edit-find-close').click();
           assert((await page.locator('#code').inputValue()).includes('Игра C'));
           assert.equal(await nextFrame.locator('h1').innerText(), 'Игра B');
           await page.locator('#code').evaluate(el => { el.readOnly = true; });
