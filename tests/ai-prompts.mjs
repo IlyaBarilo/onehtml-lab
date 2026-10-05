@@ -85,6 +85,9 @@ try {
           await page.locator('#ai-task').fill('космос 😀');
           let text = await prepared(page);
           assert.match(text, /Сделай игру про космос 😀 для телефона/);
+          assert.match(text, /Основное устройство — телефон/);
+          assert.match(text, /касаниями и экранными кнопками/);
+          assert.match(text, /Также обеспечь работу на компьютере:.*мышью и клавиатурой/);
           assert(!text.includes('Текущий код:'));
           assert.equal(parseInt((await page.locator('#ai-summary').innerText()).match(/\d+/)[0]), Array.from(text).length);
           await page.locator('#ai-view').click();
@@ -96,7 +99,9 @@ try {
           await page.locator('#ai-dialog [data-platform="desktop"]').click();
           text = await prepared(page);
           assert.match(text, /для компьютера/);
-          assert.match(text, /мышью или клавиатурой/);
+          assert.match(text, /Основное устройство — компьютер/);
+          assert.match(text, /управляться мышью и клавиатурой/);
+          assert.match(text, /Также обеспечь работу на телефоне:.*экранные кнопки и управление касаниями/);
           await page.locator('#ai-close').click();
           await page.locator('#code').fill(game);
           await page.locator('#ai-open').click();
@@ -104,6 +109,8 @@ try {
           await page.locator('#ai-task').fill('Добавь паузу\nи новый уровень');
           text = await prepared(page);
           assert.match(text, /Что изменить:\nДобавь паузу\nи новый уровень/);
+          assert.match(text, /Основное устройство — компьютер/);
+          assert.match(text, /Также обеспечь работу на телефоне:/);
           assert(text.endsWith(game));
           await page.locator('#prompt-fix').click();
           assert(await page.locator('#ai-copy').isDisabled());
@@ -111,6 +118,8 @@ try {
           await page.locator('#ai-task').fill('Кнопка прыжка не работает');
           text = await prepared(page);
           assert.match(text, /Что не работает:\nКнопка прыжка/);
+          assert.match(text, /Основное устройство — компьютер/);
+          assert.match(text, /Также обеспечь работу на телефоне:/);
           assert(!text.includes('Сообщение об ошибке:'));
           await page.locator('#prompt-change').click();
           assert.equal(await page.locator('#ai-task').inputValue(), 'Добавь паузу\nи новый уровень');
