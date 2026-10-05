@@ -87,6 +87,7 @@ function setPreviewExpanded(value) {
 }
 
 function updateWorkspaceUI() {
+  appElement.classList.toggle('panel-open', Boolean(currentPanel()) || extractionOpen);
   helpButton.disabled = modeBusy || readingClipboard || extractionOpen;
   helpButton.setAttribute('aria-expanded', String(currentPanel() === helpPanel));
   expertTools.hidden = !expertMode;

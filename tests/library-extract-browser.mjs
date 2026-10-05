@@ -172,6 +172,12 @@ try {
           await page.locator('#code').fill(custom);
           await page.setViewportSize({ width: 320, height: 350 });
           await openExtraction(page, 'cdn', false);
+          assert(await page.locator('#expert-tools').isHidden(), 'Extraction gives its space to the library list');
+          const usableHeight = await page.locator('.library-extraction-body').evaluate(el => {
+            const style = getComputedStyle(el);
+            return el.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+          });
+          assert(usableHeight >= 80, 'Library details must remain readable at keyboard-sized heights');
           assert.match(await page.locator('#library-extraction-list').innerText(), /Нет CDN/);
           await page.locator('[data-library-mode="files"]').click();
           await page.waitForFunction(() => !document.querySelector('#library-extract-apply').disabled);
