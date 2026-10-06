@@ -422,6 +422,7 @@ function renderExamples() {
     (selectedExampleCategory !== 'games' || item.platform === selectedPlatform))) {
     const card = document.createElement('div');
     card.className = 'example-card';
+    card.dataset.exampleId = example.id;
     const title = document.createElement('strong');
     title.textContent = example.title;
     const description = document.createElement('span');
@@ -441,13 +442,18 @@ function renderExamples() {
         : example.category === 'tests' ? `Тест «${example.title}» открыт. Запустите его для проверки библиотек, FPS и касаний.`
         : `Пример «${example.title}» открыт. Измените код и сохраните свою версию.`);
     });
-    card.append(title, description, button);
+    const actions = document.createElement('div');
+    actions.className = 'example-actions';
+    actions.append(button);
+    card.append(title, description, actions);
+    appendExampleLesson(card, actions, example);
     exampleList.append(card);
   }
+  updateExampleLessonControls();
 }
 
 function setExampleCategory(category) {
-  if (!['games', 'fix', 'tests'].includes(category)) return;
+  if (!['games', 'media', 'fix', 'tests'].includes(category)) return;
   selectedExampleCategory = category;
   for (const tab of document.querySelectorAll('.example-category')) {
     tab.setAttribute('aria-selected', String(tab.dataset.exampleCategory === category));
@@ -456,6 +462,7 @@ function setExampleCategory(category) {
   document.querySelector('#example-guide').textContent = category === 'fix'
     ? 'Это исходные игры ИИ с ошибками. Откройте копию, запустите и попробуйте исправить её. При первом запуске загрузите Three.js; сохранённая копия работает без интернета игры.'
     : category === 'tests' ? 'Тест работы библиотек на телефоне и компьютере: FPS, касания и нагрузка. При первом запуске можно скачать библиотеки и проверить их встраивание при сохранении.'
+    : category === 'media' ? 'Автономные HTML-приложения для телефона и компьютера. Откройте копию или раскройте задание; подсказки помогут изменить пример.'
     : 'Откройте копию примера, измените код и сохраните свою версию.';
   renderExamples();
 }
@@ -466,7 +473,7 @@ function setPlatform(platform) {
   for (const tab of document.querySelectorAll('.platform-tab')) {
     tab.setAttribute('aria-selected', String(tab.dataset.platform === platform));
   }
-  renderExamples();
+  if (selectedExampleCategory === 'games') renderExamples();
   updateAiControls();
 }
 
@@ -1155,6 +1162,7 @@ function updateControls() {
   updateCodeTools();
   updateAiControls();
   updateDiagnostics();
+  updateExampleLessonControls();
 }
 
 codeField.addEventListener('input', event => {

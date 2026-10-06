@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Архив после заката — история с выбором</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg:#e8f1ec;
+  --ink:#203c39;
+  --muted:#526d67;
+  --line:#adbfba;
+  --accent:#27665e;
+  --sky:#c2dad0;
+  --land:#567d71;
+  --moon:#fff0c1;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.55 system-ui, sans-serif;
+}
+body.dark {
+  color-scheme: dark;
+  --bg:#142b2b;
+  --ink:#e7f1e9;
+  --muted:#aec6bc;
+  --line:#4f7770;
+  --accent:#abdcc5;
+  --sky:#214947;
+  --land:#3a6660;
+  --moon:#f9d794;
+}
+button {
+  font: inherit;
+  min-height: 48px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 20px clamp(20px, 5vw, 72px);
+  gap: 24px;
+  max-width: 1600px;
+  margin: auto;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+  gap: 12px;
+}
+.label {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.theme {
+  width: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 22px;
+}
+.layout {
+  display: grid;
+  gap: 24px;
+  flex: 1;
+  align-content: center;
+}
+.world {
+  position: relative;
+  min-height: 180px;
+  aspect-ratio: 1.65;
+  background: var(--sky);
+  border-radius: 80px 80px 8px 8px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.moon {
+  position: absolute;
+  right: 20%;
+  top: 16%;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: var(--moon);
+  box-shadow: 0 0 60px #f9d79444;
+}
+.hill {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  height: 65%;
+  bottom: -30%;
+  border-radius: 50%;
+  background: var(--land);
+  transform: rotate(-8deg);
+}
+.hill.far {
+  bottom: -15%;
+  opacity: .4;
+  transform: rotate(12deg);
+}
+.tower {
+  position: absolute;
+  width: 34px;
+  height: 100px;
+  left: 30%;
+  bottom: 15%;
+  background: var(--ink);
+  clip-path: polygon(25% 0, 75% 0, 100% 100%, 0 100%);
+}
+.beam {
+  position: absolute;
+  left: 31%;
+  bottom: calc(15% + 85px);
+  height: 70px;
+  width: 65%;
+  background:
+    linear-gradient(
+      90deg,
+      #ffebb866,
+      transparent);
+  clip-path: polygon(0 50%, 100% 0, 100% 100%);
+  transform-origin: left center;
+  animation: sweep 10s ease-in-out infinite;
+}
+.caption {
+  position: absolute;
+  left: 16px;
+  bottom: 14px;
+  color: var(--ink);
+  font-size: 12px;
+  letter-spacing: .05em;
+}
+.step {
+  font-size: 13px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+h1 {
+  font-size: clamp(32px, 7vw, 62px);
+  line-height: 1.1;
+  letter-spacing: -.035em;
+  margin: 0 0 20px;
+  max-width: 650px;
+}
+#scene-text {
+  font-size: clamp(17px, 2vw, 21px);
+  max-width: 620px;
+  margin: 0 0 24px;
+}
+#choices {
+  display: grid;
+  gap: 10px;
+}
+#choices button {
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+#choices button:hover {
+  border-color: var(--accent);
+  background: var(--sky);
+}
+.ending {
+  border-left: 3px solid var(--accent);
+  padding-left: 14px;
+  color: var(--muted);
+}
+footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+footer button {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  padding: 8px;
+}
+button:disabled {
+  opacity: .4;
+  cursor: default;
+}
+@keyframes sweep {
+  50% {
+    transform: rotate(-12deg);
+  }
+}
+@media (min-width: 850px) {
+  .layout {
+    grid-template-columns: .9fr 1.1fr;
+    align-items: center;
+    gap: 60px;
+  }
+  .world {
+    aspect-ratio: .9;
+    max-height: 70vh;
+  }
+  .tower {
+    height: 170px;
+    width: 54px;
+  }
+  .beam {
+    bottom: calc(15% + 150px);
+  }
+  .moon {
+    width: 100px;
+    height: 100px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .beam {
+    animation: none;
+  }
+}
+[hidden] {
+  display: none !important;
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <header><p class="label">Короткая история / ваш выбор</p><button id="theme" class="theme" aria-label="Включить тёмную тему" aria-pressed="false">◐</button></header>
+  <div class="layout">
+    <div class="world" aria-hidden="true"><div class="moon"></div><div class="hill far"></div><div class="hill"></div><div class="tower"></div><div class="beam"></div><span class="caption">На берегу ещё горит маяк</span></div>
+    <section aria-labelledby="scene-title"><p class="step" id="step"></p><h1 id="scene-title" tabindex="-1"></h1><p id="scene-text"></p><div id="choices"></div><p id="ending" class="ending" hidden>Конец истории. Вернитесь к выбору и найдите другое окончание.</p></section>
+  </div>
+  <footer><button id="back" disabled>← Назад</button><button id="restart">Начать сначала ↻</button></footer>
+</main>
+<script>
+const scenes = {
+  start: { title: "Архив после заката", text: "В старой студии вы нашли кассету с надписью «Открыть, когда загорится маяк». Снаружи уже темнеет. Что вы сделаете?", choices: [["Пойти к маяку", "lighthouse"], ["Прослушать запись в студии", "studio"]] },
+  lighthouse: { title: "Сигнал над водой", text: "Смотритель узнаёт кассету. Это запись голосов жителей, которые когда-то покинули город. Он предлагает два способа вернуть её людям.", choices: [["Передать голоса в эфир", "broadcast"], ["Создать тихую выставку", "exhibition"]] },
+  studio: { title: "Голос из прошлого", text: "На записи — знакомые улицы, музыка и смех. На последней минуте звучит просьба: «Дайте этому городу новую историю».", choices: [["Смонтировать фильм о городе", "film"], ["Показать запись смотрителю", "lighthouse"]] },
+  broadcast: { title: "Город отвечает", text: "Вы включаете запись в эфир. На набережную выходят люди. Каждый добавляет свой голос, и старый архив становится началом новой общей истории.", choices: [] },
+  exhibition: { title: "Комната памяти", text: "Вы устраиваете выставку: один голос, один предмет, одна история. Посетители оставляют свои воспоминания. Архив снова растёт.", choices: [] },
+  film: { title: "Новый кадр", text: "Вы соединяете старые голоса с сегодняшними улицами. На первом показе зрители узнают себя и предлагают вместе снять продолжение.", choices: [] }
+};
+const route = ["start"], heading = document.querySelector("#scene-title"), choices = document.querySelector("#choices"), back = document.querySelector("#back");
+function show(focus = false) {
+  const scene = scenes[route.at(-1)];
+  heading.textContent = scene.title;
+  document.querySelector("#scene-text").textContent = scene.text;
+  document.querySelector("#step").textContent = "Шаг " + route.length.toLocaleString("ru-RU");
+  choices.replaceChildren();
+  for (const [label, next] of scene.choices) {
+    const button = document.createElement("button");
+    button.textContent = label;
+    button.onclick = () => {
+      route.push(next);
+      show(true);
+    };
+    choices.append(button);
+  }
+  document.querySelector("#ending").hidden = scene.choices.length > 0;
+  back.disabled = route.length === 1;
+  if (focus) heading.focus();
+}
+back.onclick = () => {
+  if (route.length > 1) {
+    route.pop();
+    show(true);
+  }
+};
+document.querySelector("#restart").onclick = () => {
+  route.splice(0, route.length, "start");
+  show(true);
+};
+document.querySelector("#theme").onclick = (event) => {
+  const dark = document.body.classList.toggle("dark");
+  event.currentTarget.setAttribute("aria-pressed", String(dark));
+  event.currentTarget.setAttribute("aria-label", dark ? "Включить светлую тему" : "Включить тёмную тему");
+};
+show();
+</script>
+</body>
+</html>

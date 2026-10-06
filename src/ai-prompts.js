@@ -18,6 +18,7 @@ let aiSourcePlan = null;
 
 function aiPromptSnapshot() {
   return { mode: aiMode, platform: selectedPlatform, task: aiTask.value.trim(), shorten: aiShorten.checked,
+    project: examples.some(example => example.category === 'media' && gameStorageScope === `example:${example.id}`) ? 'application' : 'game',
     code: aiMode === 'create' ? '' : codeField.value,
     error: aiMode === 'fix' && runtimeErrorCode === codeField.value ? diagnosticAiContext() || runtimeErrorReport : '' };
 }
@@ -29,14 +30,17 @@ function sameAiSnapshot(a, b) {
 function aiPromptText(snapshot, code, shortened) {
   const mobile = snapshot.platform === 'mobile';
   const screen = mobile ? 'телефона' : 'компьютера';
+  const application = snapshot.mode !== 'create' && snapshot.project === 'application';
+  const subject = application ? 'Приложение' : 'Игра';
   const device = mobile
-    ? 'Основное устройство — телефон. В первую очередь продумай расположение элементов, размер текста и кнопок для его экрана. Игра должна занимать весь экран и удобно управляться касаниями и экранными кнопками. Также обеспечь работу на компьютере: адаптацию к размеру окна, управление мышью и клавиатурой.'
-    : 'Основное устройство — компьютер. В первую очередь продумай расположение элементов, размер текста и элементов управления для его экрана. Игра должна занимать всё окно браузера и удобно управляться мышью и клавиатурой. Также обеспечь работу на телефоне: адаптацию к небольшому экрану, читаемый текст, крупные экранные кнопки и управление касаниями.';
+    ? `Основное устройство — телефон. В первую очередь продумай расположение элементов, размер текста и кнопок для его экрана. ${subject} ${application ? 'должно использовать доступный экран' : 'должна занимать весь экран'} и удобно управляться касаниями и экранными кнопками. Также обеспечь работу на компьютере: адаптацию к размеру окна, управление мышью и клавиатурой.`
+    : `Основное устройство — компьютер. В первую очередь продумай расположение элементов, размер текста и элементов управления для его экрана. ${subject} ${application ? 'должно использовать доступное окно браузера' : 'должна занимать всё окно браузера'} и удобно управляться мышью и клавиатурой. Также обеспечь работу на телефоне: адаптацию к небольшому экрану, читаемый текст, крупные экранные кнопки и управление касаниями.`;
   if (snapshot.mode === 'create') {
     return `Сделай игру про ${snapshot.task || '[тема игры]'} для ${screen}. Сделай одним файлом HTML со встроенными CSS и JavaScript. ${device} Добавь возможность сыграть ещё раз. Верни только полный HTML-код.`;
   }
-  const parts = [snapshot.mode === 'fix' ? 'Исправь ошибку в игре ниже.' : 'Измени игру ниже по моему описанию.',
+  const parts = [snapshot.mode === 'fix' ? `Исправь ошибку в ${application ? 'приложении' : 'игре'} ниже.` : `Измени ${application ? 'приложение' : 'игру'} ниже по моему описанию.`,
     `Верни полный HTML-файл, чтобы я мог целиком заменить прежний код. ${device}`];
+  if (application) parts.push('Сохрани автономный HTML со встроенными CSS и JavaScript. Не добавляй внешние файлы, шрифты или библиотеки. Сохрани доступное управление и учти предпочтение уменьшенного движения.');
   if (snapshot.task) parts.push(`${snapshot.mode === 'fix' ? 'Что не работает' : 'Что изменить'}:\n${snapshot.task}`);
   else if (snapshot.mode === 'change') parts.push('Если задача изменения ещё не указана, сначала спроси, что именно поменять.');
   if (snapshot.error) parts.push(`Сообщение об ошибке:\n${snapshot.error}`);
@@ -71,13 +75,13 @@ function setAiMode(mode) {
   updateAiControls();
 }
 
-function openAiPrompts(mode) {
+function openAiPrompts(mode, nested = false) {
   if (!expertMode || modeBusy) return;
   if (mode) setAiMode(mode);
   setAiPreview(false);
   aiSourcePlan = null;
   aiSnapshot = null;
-  showWorkspacePanel(aiDialog, mode === 'fix' && currentPanel() === activityPanel);
+  showWorkspacePanel(aiDialog, nested || (mode === 'fix' && currentPanel() === activityPanel));
 }
 
 function updateAiControls() {

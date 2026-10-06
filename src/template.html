@@ -63,7 +63,7 @@
       </div>
       <div class="expert-resource-actions">
         <button id="ai-open" class="import-button" type="button" title="ИИ-боты и готовые запросы">ИИ и запросы</button>
-        <button id="examples-open" class="import-button" type="button" title="Открыть примеры игр">Примеры игр</button>
+        <button id="examples-open" class="import-button" type="button" title="Открыть примеры и задания">Примеры</button>
         <button id="diagnostic-open" class="expert-icon-button" type="button" title="Диагностика и библиотеки" aria-label="Диагностика и библиотеки" aria-pressed="false"><!-- ICON:diagnostics --></button>
       </div>
       <span id="draft-status" class="draft-status" role="status" aria-live="polite"></span>
@@ -85,7 +85,7 @@
               <li><strong>Сохраните свою игру</strong><p>Нажмите «Сохранить» и подтвердите имя game.html или задайте своё. Для подготовленных библиотек выберите встраивание «Внутри HTML», чтобы получить один файл. Откройте скачанную игру отдельно и проверьте её.</p></li>
               <li><strong>Поделитесь результатом</strong><p>Кнопка «Поделиться» открывает меню отправки файла. Если браузер его не поддерживает, отправьте сохранённый HTML через файловый менеджер.</p></li>
             </ol>
-            <details class="help-details"><summary>Без интернета</summary><p>Заранее скачайте onehtml-lab.html и откройте его в браузере. В экспертном режиме выберите «Примеры игр» → «Готовые игры»: они уже внутри редактора и не требуют сети.</p><p>Начните с «Поймай круг» на вкладке «Телефон»: измените заголовок игры в коде, запустите и сохраните результат. ИИ-боту потребуется отдельное подключение к интернету.</p><p>Библиотеки не входят в редактор. Игры с ними подготовьте заранее: загрузите нужные копии, сохраните с встраиванием и проверьте скачанный HTML без сети. Картинки, звук и другие внешние ресурсы автоматически не встраиваются.</p></details>
+            <details class="help-details"><summary>Без интернета</summary><p>Заранее скачайте onehtml-lab.html и откройте его в браузере. В экспертном режиме выберите «Примеры» → «Готовые игры» или «Мультимедиа»: они уже внутри редактора и не требуют сети.</p><p>Начните с «Поймай круг» на вкладке «Телефон» или выберите мультимедийный пример. Кнопка «Задание» раскрывает правку, подсказку и проверку результата. Откройте копию, измените код, запустите и сохраните результат. ИИ-боту потребуется отдельное подключение к интернету.</p><p>Библиотеки не входят в редактор. Игры с ними подготовьте заранее: загрузите нужные копии, сохраните с встраиванием и проверьте скачанный HTML без сети. Картинки, звук и другие внешние ресурсы автоматически не встраиваются.</p></details>
             <details class="help-details"><summary>Если не получается</summary><p><strong>Вставился только кусок:</strong> скопируйте весь HTML, выделите всё в поле и вставьте заново. Обычная вставка работает в позиции курсора.</p><p><strong>Ошибка или пустой экран:</strong> откройте строку сообщений. В экспертном режиме доступна «Диагностика и библиотеки»: скопируйте отчёт для ИИ. Если ошибок нет, опишите боту, что видите и что ожидали.</p><p><strong>Нужна библиотека:</strong> подключитесь к сети и подтвердите её загрузку в сообщениях. Для занятия без сети выберите готовый пример без библиотек.</p><p><strong>Не найти файл:</strong> проверьте загрузки браузера или папку «Загрузки». Если скачалось несколько файлов, соберите HTML и JS в одной папке с исходными именами.</p></details>
             <p class="help-note">Перед завершением сохраните HTML-файл. Черновик в браузере помогает продолжить работу, но не заменяет отдельную копию.</p>
           </div>
@@ -290,10 +290,11 @@
     <div class="ai-footer"><p id="ai-summary" role="status" aria-live="polite"></p><div class="ai-footer-actions"><button id="ai-view" type="button" aria-pressed="false" disabled>Просмотр</button><button id="ai-copy" type="button" disabled>Копировать</button></div></div>
   </section>
   <section id="examples-dialog" class="work-panel guide-panel" aria-labelledby="examples-title" hidden>
-    <div class="panel-heading"><h2 id="examples-title">Примеры игр</h2><button id="examples-close" type="button" aria-label="Закрыть примеры">✕</button></div>
+    <div class="panel-heading"><h2 id="examples-title">Примеры</h2><button id="examples-close" type="button" aria-label="Закрыть примеры">✕</button></div>
     <div class="panel-body">
     <div class="example-categories" role="tablist" aria-label="Раздел примеров">
       <button class="example-category" type="button" role="tab" data-example-category="games" aria-selected="true">Готовые игры</button>
+      <button class="example-category" type="button" role="tab" data-example-category="media" aria-selected="false">Мультимедиа</button>
       <button class="example-category" type="button" role="tab" data-example-category="fix" aria-selected="false">Исправление ошибок</button>
       <button class="example-category" type="button" role="tab" data-example-category="tests" aria-selected="false">Тесты</button>
     </div>

@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ночь идей — интерактивная афиша</title>
+<style>
+:root {
+  color-scheme: light;
+  --paper:#f5eee2;
+  --ink:#252b38;
+  --accent:#a63d26;
+  --line:#c4b8a7;
+  --art:#ddd1bb;
+  --orb:#e77b50;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.5 system-ui, sans-serif;
+}
+body.dark {
+  color-scheme: dark;
+  --paper:#191f2a;
+  --ink:#f4e9d8;
+  --accent:#ffac85;
+  --line:#59606c;
+  --art:#303b4d;
+  --orb:#d56843;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  min-height: 44px;
+}
+button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+.poster {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 20px clamp(20px, 5vw, 72px);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1600px;
+  margin: auto;
+}
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+.masthead p {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.theme {
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  width: 44px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  flex: 1;
+  align-items: center;
+}
+.eyebrow {
+  color: var(--accent);
+  font-size: 14px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin: 0 0 12px;
+}
+h1 {
+  font-size: clamp(54px, 14vw, 136px);
+  line-height: .95;
+  letter-spacing: -.065em;
+  margin: 0 0 24px;
+  font-weight: 850;
+}
+h1 span {
+  display: block;
+}
+.intro {
+  max-width: 460px;
+  margin: 0;
+  font-size: clamp(17px, 2vw, 22px);
+}
+.art {
+  position: relative;
+  min-height: 220px;
+  aspect-ratio: 1.3;
+  overflow: hidden;
+  background: var(--art);
+  border-radius: 120px 120px 8px 8px;
+  isolation: isolate;
+}
+.orbit {
+  position: absolute;
+  inset: 14%;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  transform: rotate(-32deg) scaleX(.56);
+}
+.orbit.second {
+  transform: rotate(32deg) scaleX(.56);
+}
+.orb {
+  position: absolute;
+  inset: 23%;
+  border-radius: 50%;
+  background: var(--orb);
+  box-shadow: inset -20px -20px 0 #0002;
+  animation: float 7s ease-in-out infinite;
+}
+.art:after {
+  content: "\418\434\435\44f  \43d\430\447\438\43d\430\435\442\441\44f  \441  \432\43e\43f\440\43e\441\430";
+  position: absolute;
+  bottom: 18px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: .06em;
+}
+.spark {
+  position: absolute;
+  top: 20%;
+  left: 15%;
+  width: 18px;
+  height: 18px;
+  background: var(--ink);
+  border-radius: 50%;
+}
+.spark:last-child {
+  top: 70%;
+  left: 80%;
+  width: 10px;
+  height: 10px;
+}
+.footer {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+.event-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.event-meta p {
+  margin: 0;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.actions button {
+  border: 1px solid var(--ink);
+  padding: 10px 18px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+}
+#program-toggle {
+  background: var(--ink);
+  color: var(--paper);
+}
+#remember[aria-pressed=true] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+#program {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+#program li {
+  display: flex;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+#program time {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+#status {
+  min-height: 24px;
+  margin: 10px 0 0;
+  font-size: 14px;
+}
+@keyframes float {
+  50% {
+    transform: translateY(-12px) rotate(8deg);
+  }
+}
+@media (min-width: 800px) {
+  .hero {
+    grid-template-columns: 1.15fr 1fr;
+    gap: 50px;
+  }
+  .art {
+    aspect-ratio: 1;
+    max-height: 65vh;
+  }
+  .poster {
+    gap: 30px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .orb {
+    animation: none;
+  }
+}
+[hidden] {
+  display: none !important;
+}
+</style>
+</head>
+<body>
+<main class="poster">
+  <header class="masthead"><p>Медиа / лаборатория</p><button class="theme" id="theme" aria-label="Включить тёмную тему" aria-pressed="false">◐</button></header>
+  <section class="hero" aria-labelledby="title">
+    <div><p class="eyebrow">Открытая встреча</p><h1 id="title">НОЧЬ<span>ИДЕЙ</span></h1><p class="intro">Истории, изображения и интерактив. Вечер, на котором замысел становится первым прототипом.</p></div>
+    <div class="art" aria-hidden="true"><div class="orbit"></div><div class="orbit second"></div><div class="orb"></div><div class="spark"></div><div class="spark"></div></div>
+  </section>
+  <footer class="footer">
+    <div class="event-meta"><p><strong>Пятница · 19:00</strong><br>Студия на набережной</p><p>Вход свободный<br>Возьмите телефон или ноутбук</p></div>
+    <div class="actions"><button id="program-toggle" aria-expanded="false" aria-controls="program">Программа</button><button id="remember" aria-pressed="false">Добавить в планы</button></div>
+    <ul id="program" hidden><li><time>19:00</time><span>Знакомство и обмен идеями</span></li><li><time>19:20</time><span>Создаём интерактивную историю</span></li><li><time>20:20</time><span>Показ прототипов и обсуждение</span></li></ul>
+    <p id="status" role="status"></p>
+  </footer>
+</main>
+<script>
+const theme = document.querySelector("#theme"), program = document.querySelector("#program"), toggle = document.querySelector("#program-toggle"), remember = document.querySelector("#remember");
+theme.onclick = () => {
+  const dark = document.body.classList.toggle("dark");
+  theme.setAttribute("aria-pressed", String(dark));
+  theme.setAttribute("aria-label", dark ? "Включить светлую тему" : "Включить тёмную тему");
+};
+toggle.onclick = () => {
+  program.hidden = !program.hidden;
+  toggle.setAttribute("aria-expanded", String(!program.hidden));
+  toggle.textContent = program.hidden ? "Программа" : "Скрыть программу";
+};
+remember.onclick = () => {
+  const chosen = remember.getAttribute("aria-pressed") !== "true";
+  remember.setAttribute("aria-pressed", String(chosen));
+  remember.textContent = chosen ? "В планах ✓" : "Добавить в планы";
+  document.querySelector("#status").textContent = chosen ? "До встречи на вечере идей!" : "Можно добавить встречу в планы снова.";
+};
+</script>
+</body>
+</html>

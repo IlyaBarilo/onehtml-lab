@@ -23,6 +23,7 @@
     "test:desktop": "node tests/desktop.mjs",
     "test:diagnostics": "node tests/diagnostics.mjs",
     "test:workshop": "node tests/workshop.mjs",
+    "test:learning": "node tests/learning-examples.mjs",
     "test:readiness": "node tests/readiness.mjs",
     "test:syntax": "node tests/syntax.mjs",
     "test:comparison-game": "node tests/comparison-game.mjs"

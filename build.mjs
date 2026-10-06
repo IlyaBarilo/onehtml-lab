@@ -17,11 +17,14 @@ for (const name of ['app', 'paste', 'clear', 'save', 'share', 'play', 'stop', 'e
   template = template.replace(`<!-- ICON:${name} -->`, () => icon.trim());
 }
 const css = await readFile(join(root, 'src/styles.css'), 'utf8');
-const files = ['format.js', 'vendor/codemirror.bundle.js', 'game-storage.js', 'library-bundle.js', 'sandbox.js', 'exporter.js', 'library-extract.js', 'draft.js', 'compare.js', 'comparison-game.js', 'workspace.js', 'syntax.js', 'editor.js', 'alternative-editor.js', 'desktop.js', 'readiness.js', 'diagnostics.js', 'ai-prompts.js', 'app.js'];
+const files = ['format.js', 'vendor/codemirror.bundle.js', 'game-storage.js', 'library-bundle.js', 'sandbox.js', 'exporter.js', 'library-extract.js', 'draft.js', 'compare.js', 'comparison-game.js', 'workspace.js', 'syntax.js', 'editor.js', 'alternative-editor.js', 'desktop.js', 'readiness.js', 'diagnostics.js', 'ai-prompts.js', 'example-lessons.js', 'app.js'];
 const exampleFiles = [
   { id: 'catch-circle', platform: 'mobile', title: 'Поймай круг', description: 'Касайтесь цели на всём экране.' },
   { id: 'memory', platform: 'mobile', title: 'Найди пару', description: 'Открывайте пары касанием карточек.' },
   { id: 'reaction', platform: 'mobile', title: 'Проверь реакцию', description: 'Коснитесь экрана после смены цвета.' },
+  { id: 'interactive-poster', category: 'media', platform: 'mobile', title: 'Интерактивная афиша', description: 'Анимация, программа мероприятия и смена темы.' },
+  { id: 'branching-story', category: 'media', platform: 'mobile', title: 'История с выбором', description: 'Развилки, разные окончания и возврат к выбору.' },
+  { id: 'interactive-infographic', category: 'media', platform: 'mobile', title: 'Интерактивная инфографика', description: 'Данные, диаграмма и пояснения по нажатию.' },
   { id: 'snake', platform: 'desktop', title: 'Змейка', description: 'Управляйте стрелками или WASD.' },
   { id: 'falling-stars', platform: 'desktop', title: 'Лови звёзды', description: 'Двигайте платформу мышью.' },
   { id: 'space-reaction', platform: 'desktop', title: 'Реакция на пробел', description: 'Нажмите пробел после сигнала.' },

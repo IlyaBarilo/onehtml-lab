@@ -55,7 +55,7 @@ for (const [name, engine] of engines) {
         await page.locator('#help-open').click();
         await page.keyboard.press('Escape');
         assert(await page.locator('#examples-dialog').isVisible(), 'Help returns to the originating panel');
-        await page.locator('.example-card').filter({ hasText: 'Поймай круг' }).getByRole('button').click();
+        await page.locator('.example-card').filter({ hasText: 'Поймай круг' }).getByRole('button', { name: 'Открыть копию', exact: true }).click();
         const original = await page.locator('#code').inputValue();
         await page.locator('#run').click();
         const frameElement = await page.locator('#preview > iframe').elementHandle();

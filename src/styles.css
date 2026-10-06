@@ -301,9 +301,21 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .service-list li:last-child { border-bottom: 0; }
 .service-links { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 .service-links a { display: inline-flex; align-items: center; min-height: 32px; color: #235eaf; white-space: nowrap; }
-.example-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.example-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 8px; }
 .example-card { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: 12px; border: 1px solid #d7e3f2; border-radius: 9px; background: #f7faff; font-size: 13px; }
 .example-card span { flex: 1; color: #607895; line-height: 1.4; }
+.example-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.example-task { width: 100%; border-top: 1px solid #d7e3f2; padding-top: 16px; }
+.example-task-level + .example-task-level { margin-top: 20px; padding-top: 16px; border-top: 1px solid #d7e3f2; }
+.example-task h3 { margin: 0 0 8px; font-size: 17px; }
+.example-task p { margin: 0 0 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.example-task details { margin: 0 0 12px; }
+.example-task summary { min-height: 44px; padding: 10px 0; color: #285b9e; cursor: pointer; }
+.example-task-check, .example-task-source { font-size: 14px; color: #526b8c; }
+.example-task-source { margin-top: 16px !important; margin-bottom: 0 !important; }
+.example-task-toggle[aria-expanded="true"] { background: #dceaff; border-color: #9dbfea; }
+.theme-dark :is(.example-task, .example-task-level + .example-task-level) { border-color: #3b4b61; }
+.theme-dark .example-task summary { color: #a5c6fb; }
 .history-view { width: 100%; height: 100%; overflow: auto; padding: 0 0 max(20px, env(safe-area-inset-bottom)); background: #fcfdff; }
 .library-extraction { display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 0; overflow: hidden; background: #fcfdff; }
 .library-extraction-heading { flex: 0 0 auto; }
@@ -471,7 +483,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .history-action { width: 44px; height: 44px; flex: 0 0 44px; }
 @media (max-width: 600px) {
   .example-list { grid-template-columns: 1fr; }
-  .example-categories { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .example-categories { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
   .example-category { padding: 8px 4px; font-size: 14px; }
 }
 @media (max-width: 360px) {

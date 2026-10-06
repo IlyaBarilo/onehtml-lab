@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Время на проект — интерактивная инфографика</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg:#f0f0fa;
+  --ink:#252642;
+  --muted:#5e607d;
+  --line:#b9bad4;
+  --accent:#5345a5;
+  --track:#dddeed;
+  --card:#fafaff;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 system-ui, sans-serif;
+}
+body.dark {
+  color-scheme: dark;
+  --bg:#1c1e32;
+  --ink:#eceafa;
+  --muted:#b6b6cf;
+  --line:#565976;
+  --accent:#c4b4ff;
+  --track:#363953;
+  --card:#24273e;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  min-height: 44px;
+}
+button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 1600px;
+  margin: auto;
+  padding: 20px clamp(20px, 5vw, 72px);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+.label {
+  margin: 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.theme {
+  border: 1px solid var(--line);
+  width: 44px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  font-size: 22px;
+}
+.layout {
+  display: grid;
+  gap: 28px;
+  flex: 1;
+  align-content: center;
+}
+.eyebrow {
+  font-size: 13px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+h1 {
+  font-size: clamp(38px, 8vw, 80px);
+  line-height: 1.05;
+  letter-spacing: -.05em;
+  margin: 0 0 24px;
+}
+.total {
+  margin: 0;
+  font-size: clamp(56px, 11vw, 96px);
+  line-height: 1;
+  color: var(--accent);
+  font-weight: 750;
+  letter-spacing: -.06em;
+}
+.total-label {
+  margin: 8px 0 24px;
+  color: var(--muted);
+}
+.switch {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.switch button {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 18px;
+  color: var(--ink);
+}
+.switch button[aria-pressed=true] {
+  background: var(--ink);
+  color: var(--bg);
+}
+figure {
+  margin: 0;
+}
+figcaption {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+#bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.row {
+  width: 100%;
+  display: block;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  padding: 12px;
+  text-align: left;
+}
+.row[aria-pressed=true] {
+  background: var(--card);
+  border-color: var(--line);
+}
+.row-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 650;
+  margin-bottom: 8px;
+}
+.bar-track {
+  display: block;
+  height: 18px;
+  background: var(--track);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.bar {
+  display: block;
+  height: 100%;
+  width: var(--width);
+  background: var(--color);
+  border-radius: 12px;
+  transition: width .5s ease;
+}
+.note {
+  border-top: 1px solid var(--line);
+  margin-top: 20px;
+  padding-top: 16px;
+  min-height: 100px;
+}
+.note h2 {
+  font-size: 19px;
+  margin: 0 0 6px;
+}
+.note p {
+  margin: 0;
+  color: var(--muted);
+}
+footer {
+  font-size: 13px;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+footer p {
+  margin: 0;
+}
+@media (min-width: 850px) {
+  .layout {
+    grid-template-columns: .8fr 1.2fr;
+    align-items: center;
+    gap: 70px;
+  }
+  .total-label {
+    margin-bottom: 30px;
+  }
+  #bars {
+    gap: 18px;
+  }
+  .bar-track {
+    height: 24px;
+  }
+  .row-title {
+    font-size: 19px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    transition: none;
+  }
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <header><p class="label">Интерактивные данные</p><button id="theme" class="theme" aria-label="Включить тёмную тему" aria-pressed="false">◐</button></header>
+  <div class="layout">
+    <section aria-labelledby="title"><p class="eyebrow">Учебный медиапроект</p><h1 id="title">Время<br>на проект</h1><p class="total" id="total">28</p><p class="total-label">часов на выбранный этап</p><div class="switch" role="group" aria-label="Этап проекта"><button data-stage="sketch" aria-pressed="true">Эскиз</button><button data-stage="prototype" aria-pressed="false">Прототип</button></div></section>
+    <section aria-label="Распределение времени"><figure><figcaption>Выберите направление, чтобы узнать подробности</figcaption><ul id="bars"></ul></figure><div class="note" aria-live="polite"><h2 id="note-title"></h2><p id="note-text"></p></div></section>
+  </div>
+  <footer><p>Условные учебные данные. Длина полос показывает часы; максимум шкалы — <span id="scale">16</span> часов.</p></footer>
+</main>
+<script>
+const stages = { sketch: [12, 7, 4, 5], prototype: [6, 12, 5, 9] };
+const topics = [
+  { title: "Изображение", color: "#8b79c9", note: "Композиция, палитра, типографика и визуальные материалы." },
+  { title: "Анимация", color: "#3e9d92", note: "Движение, переходы и ритм, которые помогают понять идею." },
+  { title: "Звук", color: "#c68a4d", note: "Звуковая атмосфера, сигналы действий и управление громкостью." },
+  { title: "Интерактив", color: "#cc7290", note: "Выбор пользователя, реакция интерфейса и проверка управления." }
+];
+let stage = "sketch", selected = 0;
+function render() {
+  const values = stages[stage], maximum = Math.max(16, ...Object.values(stages).flat());
+  document.querySelector("#scale").textContent = maximum.toLocaleString("ru-RU");
+  document.querySelector("#total").textContent = values.reduce((sum, n) => sum + n, 0).toLocaleString("ru-RU");
+  document.querySelector("#bars").replaceChildren();
+  topics.forEach((topic, i) => {
+    const li = document.createElement("li"), button = document.createElement("button");
+    button.className = "row";
+    button.setAttribute("aria-pressed", String(i === selected));
+    button.setAttribute("aria-label", topic.title + ": " + values[i].toLocaleString("ru-RU") + " часов. Подробнее");
+    const label = document.createElement("span");
+    label.className = "row-title";
+    const title = document.createElement("span"), value = document.createElement("span");
+    title.textContent = topic.title;
+    value.textContent = values[i].toLocaleString("ru-RU") + " ч";
+    label.append(title, value);
+    const track = document.createElement("span"), bar = document.createElement("span");
+    track.className = "bar-track";
+    track.setAttribute("aria-hidden", "true");
+    bar.className = "bar";
+    bar.style.setProperty("--width", values[i] / maximum * 100 + "%");
+    bar.style.setProperty("--color", topic.color);
+    track.append(bar);
+    button.append(label, track);
+    button.onclick = () => {
+      selected = i;
+      updateSelection();
+      button.focus({ preventScroll: true });
+    };
+    li.append(button);
+    document.querySelector("#bars").append(li);
+  });
+  updateSelection();
+  document.querySelectorAll("[data-stage]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.stage === stage)));
+}
+function updateSelection() {
+  document.querySelectorAll(".row").forEach((row, i) => row.setAttribute("aria-pressed", String(i === selected)));
+  document.querySelector("#note-title").textContent = topics[selected].title;
+  document.querySelector("#note-text").textContent = topics[selected].note;
+}
+document.querySelectorAll("[data-stage]").forEach((button) => button.onclick = () => {
+  stage = button.dataset.stage;
+  render();
+});
+document.querySelector("#theme").onclick = (event) => {
+  const dark = document.body.classList.toggle("dark");
+  event.currentTarget.setAttribute("aria-pressed", String(dark));
+  event.currentTarget.setAttribute("aria-label", dark ? "Включить светлую тему" : "Включить тёмную тему");
+};
+render();
+</script>
+</body>
+</html>
