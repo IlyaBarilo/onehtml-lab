@@ -37,7 +37,7 @@ async function saveHtml(page) {
 async function openExtraction(page, mode = 'cdn', enabled = true) {
   await page.locator('#library-extract-open').click();
   await page.locator('#library-extraction').waitFor({ state: 'visible' });
-  if (mode !== 'cdn') await page.locator(`[data-library-mode="${mode}"]`).click();
+  await page.locator(`[data-library-mode="${mode}"]`).click();
   await page.waitForFunction(() => !document.querySelector('#library-extraction-summary').textContent.includes('Проверяю'));
   assert.equal(await page.locator('#library-extract-apply').isEnabled(), enabled);
   assert(await page.locator('#code').isHidden());
@@ -52,7 +52,7 @@ async function openExtraction(page, mode = 'cdn', enabled = true) {
 async function applyExtraction(page) {
   await page.locator('#library-extract-apply').click();
   await page.locator('#library-extraction').waitFor({ state: 'hidden' });
-  assert(await page.locator('#code').isVisible());
+  assert(await page.locator('#code').isVisible() || await page.locator('#alternative-editor').isVisible());
   return page.locator('#code').inputValue();
 }
 async function saveFiles(page) {
@@ -92,14 +92,27 @@ try {
           await seed.route(sourceUrl, route => route.fulfill({ contentType: 'text/javascript', headers: { 'access-control-allow-origin': '*' }, body: library }));
           await seed.route(licenseUrl, route => route.fulfill({ contentType: 'text/plain', headers: { 'access-control-allow-origin': '*' }, body: license }));
           const seedPage = await seed.newPage();
-          await useNativeEditor(seedPage);
           await ready(seedPage, location);
-          await seedPage.locator('#code').fill(game);
-          await seedPage.locator('#run').click();
+          assert(await seedPage.locator('#alternative-editor').isVisible(), 'Editor conversion also works with the default CodeMirror');
+          await seedPage.locator('#code').evaluate((el, value) => { el.value = value; el.dispatchEvent(new Event('input', { bubbles: true })); }, game);
+          await seedPage.locator('#expert-toggle').click();
+          await openExtraction(seedPage, 'embed', false);
+          assert(await seedPage.locator('#library-convert-load').isVisible(), 'Missing copies can be obtained before applying');
+          assert.equal(await seedPage.locator('#code').inputValue(), game, 'Planning never modifies source');
+          await seedPage.locator('#library-convert-load').click();
           await seedPage.locator('#library-request').waitFor({ state: 'visible' });
           await seedPage.locator('#library-download').click();
-          await seedPage.locator('#library-request').waitFor({ state: 'hidden' });
+          await seedPage.locator('#library-extraction').waitFor({ state: 'visible' });
+          await seedPage.waitForFunction(() => !document.querySelector('#library-extract-apply').disabled);
+          const converted = await applyExtraction(seedPage);
+          await seedPage.locator('.cm-content').getByText('REVISION').first().waitFor();
+          assert(converted.includes(license) && converted.includes(library), 'Editor embedding includes the complete license and source');
+          assert.equal(await seedPage.evaluate(() => typeof window.THREE), 'undefined', 'Conversion must not execute the library');
+          await seedPage.locator('#history-open').click();
+          assert.equal(await seedPage.locator('.history-entry').count(), 1, 'Conversion archives the source once');
+          await seedPage.locator('#history-close').click();
           embedded = await saveHtml(seedPage);
+          assert.equal(embedded, converted, 'Saving already embedded source preserves it exactly');
           assert(embedded.includes('data-onehtml-sha256='));
         } finally { await seed.close(); }
 
@@ -192,6 +205,10 @@ try {
           await page.locator('#run').click();
           await page.frameLocator('#preview > iframe').locator('#result').getByText('ready', { exact: true }).waitFor();
           await page.locator('#run').click();
+          await openExtraction(page, 'embed');
+          const customEmbedded = await applyExtraction(page);
+          assert(customEmbedded.includes(customSource) && customEmbedded.includes(license), 'Relative links embed their retained local copy');
+          assert.equal(internetRequests, 0, 'Cached editor transformations do not use the network');
           await page.locator('#code').fill(embedded);
           await openExtraction(page);
           await page.locator('#expert-toggle').click();

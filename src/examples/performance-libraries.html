@@ -120,7 +120,8 @@
       .mode:first-child { display: block; flex-basis: 110px; }
       .mode:first-child small { margin-top: 3px; }
       input[type="range"] { height: 28px; }
-      .details { margin-top: 4px; }
+      .details { display: flex; overflow-x: auto; gap: 12px; margin-top: 4px; font-size: 12px; scrollbar-width: thin; }
+      .details::-webkit-scrollbar { height: 4px; }
       #stage { min-height: 64px; }
     }
     @media (max-height: 360px) {

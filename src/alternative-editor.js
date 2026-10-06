@@ -10,16 +10,18 @@ const alternativeHost = document.querySelector('#alternative-editor');
 const alternativeSelect = document.querySelector('#editor-engine');
 const alternativeToggle = document.querySelector('#editor-toggle');
 const themeToggle = document.querySelector('#theme-toggle');
+const comparisonEditorHost = document.querySelector('#comparison-editor');
+let comparisonEditorView = null;
 function alternativeActive() { return alternativeChoice === 'codemirror' && Boolean(alternativeView); }
 function alternativeMarks(source) {
   if (alternativeScan.source !== source) alternativeScan = { source, result: scanCodeColors(source) };
   return alternativeScan.result;
 }
 
-function alternativeExtensions() {
+function alternativeExtensions(readOnly = codeField.readOnly || codeField.disabled) {
   const cm = OneHTMLCodeMirror, tags = cm.tags;
   const palette = editorDark ? ['#c6a3ee', '#a2d4aa', '#e7bd7e', '#97a6ba', '#91baff', '#e3bb87', '#84cbdc'] : ['#7953a0', '#337447', '#98600c', '#687989', '#235ba5', '#875218', '#276785'];
-  const extensions = [cm.EditorState.readOnly.of(codeField.readOnly || codeField.disabled), cm.EditorView.editable.of(!codeField.readOnly && !codeField.disabled),
+  const extensions = [cm.EditorState.readOnly.of(readOnly), cm.EditorView.editable.of(!readOnly),
     cm.EditorView.theme({ '&': { fontSize: `${editView.size}px`, height: '100%' }, '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace', lineHeight: '1.65' } }, { dark: editorDark })];
   if (editView.wrap) extensions.push(cm.EditorView.lineWrapping);
   if (editView.numbers) extensions.push(cm.lineNumbers());
@@ -29,6 +31,44 @@ function alternativeExtensions() {
     { tag: tags.propertyName, color: palette[5] }, { tag: tags.function(tags.variableName), color: palette[6] }
   ])));
   return extensions;
+}
+
+// The comparison owns a read-only view, so folding and selection cannot alter
+// the source editor's document, undo chain, cursor or folded ranges.
+function clearComparisonEditor() {
+  comparisonEditorView?.destroy();
+  comparisonEditorView = null;
+  comparisonEditorHost.replaceChildren();
+  comparisonEditorHost.hidden = true;
+  comparison.classList.remove('uses-codemirror');
+}
+
+function renderComparisonEditor(parts) {
+  clearComparisonEditor();
+  diffContent.style.fontSize = `${editView.size}px`;
+  diffContent.style.whiteSpace = editView.wrap ? 'pre-wrap' : 'pre';
+  diffContent.style.overflowWrap = editView.wrap ? 'anywhere' : 'normal';
+  if (!alternativeActive()) return;
+  const cm = OneHTMLCodeMirror, marks = [];
+  let source = '';
+  for (const part of parts) {
+    const text = part.text.replace(/\r\n?/g, '\n'), from = source.length;
+    source += text;
+    if (part.type !== 'same' && text.length) marks.push(cm.Decoration.mark({ class: `diff-${part.type}` }).range(from, source.length));
+  }
+  comparisonEditorView = new cm.EditorView({ parent: comparisonEditorHost, state: cm.EditorState.create({ doc: source, extensions: [
+    cm.html(), alternativeExtensions(true), cm.drawSelection(), cm.keymap.of(cm.defaultKeymap),
+    cm.EditorView.contentAttributes.of({ 'aria-label': 'Сравнение HTML-кода CodeMirror', tabindex: '0' }),
+    cm.EditorView.decorations.of(cm.Decoration.set(marks)),
+    cm.EditorView.updateListener.of(update => { if (update.geometryChanged || update.viewportChanged) requestAnimationFrame(updateComparisonScrollbar); }),
+    cm.foldGutter({ markerDOM(open) { const marker = document.createElement('span'); marker.textContent = open ? '−' : '+'; marker.title = open ? 'Свернуть блок' : 'Развернуть блок'; return marker; } }),
+    cm.codeFolding()
+  ] }) });
+  comparisonEditorHost.hidden = false;
+  diffContent.hidden = true;
+  comparison.classList.add('uses-codemirror');
+  comparisonEditorView.scrollDOM.addEventListener('scroll', positionComparisonScrollbar);
+  comparisonEditorView.requestMeasure({ write: updateComparisonScrollbar });
 }
 
 function alternativeAccents(view) {

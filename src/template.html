@@ -59,7 +59,7 @@
         <button id="compare" class="expert-icon-button" type="button" aria-label="Сравнить с последней прошлой версией" aria-pressed="false" title="Сравнить с последней прошлой версией" disabled><!-- ICON:compare --></button>
         <button id="history-open" class="expert-icon-button" type="button" aria-label="История версий" title="История версий"><!-- ICON:restore --></button>
         <button id="storage-toggle" class="expert-icon-button storage-button" type="button" aria-label="Виртуальное хранилище игры" aria-pressed="true" title="Хранилище игры включено — нажмите, чтобы выключить"><span id="storage-on-icon"><!-- ICON:storage-on --></span><span id="storage-off-icon" hidden><!-- ICON:storage-off --></span></button>
-        <button id="library-extract-open" class="expert-icon-button" type="button" aria-label="Вынести библиотеки" aria-pressed="false" title="Вынести встроенные библиотеки в ссылки" disabled><!-- ICON:library-out --></button>
+        <button id="library-extract-open" class="expert-icon-button" type="button" aria-label="Библиотеки в коде" aria-pressed="false" title="Встроить библиотеки или заменить их ссылками" disabled><!-- ICON:library-out --></button>
       </div>
       <div class="expert-resource-actions">
         <button id="ai-open" class="import-button" type="button" title="ИИ-боты и готовые запросы">ИИ и запросы</button>
@@ -105,7 +105,10 @@
       </section>
       <div id="edit-quick" role="group" aria-label="Правка кода" hidden>
         <div id="edit-quick-tools">
-        <button id="edit-find" type="button" aria-label="Поиск в коде" title="Поиск в коде"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"></circle><path d="m15 15 6 6"></path></svg></button><button id="edit-quick-undo" type="button" aria-label="Отменить" title="Отменить">↶</button><button id="edit-quick-redo" type="button" aria-label="Повторить" title="Повторить">↷</button><button data-edit-indent="out" type="button" aria-label="Убрать отступ" title="Убрать отступ">⇤</button><button data-edit-indent="in" type="button" aria-label="Добавить отступ" title="Добавить отступ">⇥</button><button data-edit-pair="()" type="button" aria-label="Круглые скобки">()</button><button data-edit-pair="{}" type="button" aria-label="Фигурные скобки">{}</button><button data-edit-pair="[]" type="button" aria-label="Квадратные скобки">[]</button><button data-edit-pair="&quot;&quot;" type="button" aria-label="Двойные кавычки">&quot;&quot;</button><button data-edit-pair="''" type="button" aria-label="Одинарные кавычки">''</button><button id="edit-copy-selection" type="button" disabled>Копировать выделенное</button><button id="edit-fold" type="button" title="Свернуть блок у курсора" hidden>− Свернуть</button><button id="edit-unfold-all" type="button" hidden>Развернуть всё</button><button id="edit-quick-settings" type="button">Строки и вид</button>
+        <button id="edit-find" type="button" aria-label="Поиск в коде" title="Поиск в коде"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"></circle><path d="m15 15 6 6"></path></svg></button><button id="edit-quick-undo" type="button" aria-label="Отменить" title="Отменить">↶</button><button id="edit-quick-redo" type="button" aria-label="Повторить" title="Повторить">↷</button>
+        <button id="edit-copy-selection" type="button" aria-label="Копировать выделенное" title="Копировать выделенное" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"></rect><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"></path></svg></button>
+        <button id="edit-fold" type="button" aria-label="Свернуть блок у курсора" title="Свернуть блок у курсора" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14M5 21h14m3-15 4 4 4-4m-8 12 4-4 4 4"></path></svg></button>
+        <button id="edit-unfold-all" type="button" aria-label="Развернуть всё" title="Развернуть всё" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14M5 21h14m-11-10 4-4 4 4m-8 2 4 4 4-4"></path></svg></button>
         </div>
         <div id="edit-display-controls" role="group" aria-label="Вид редактора">
           <button id="editor-toggle" type="button" aria-label="Переключить редактор" title="Переключить редактор" aria-pressed="true"><span id="editor-current" aria-hidden="true">CM</span></button>
@@ -143,6 +146,7 @@
         <div id="comparison-versions" role="group" aria-label="Версия игры" hidden><button id="comparison-current" type="button" aria-pressed="true">Текущая</button><button id="comparison-past" type="button" aria-pressed="false">Выбранная <small id="comparison-date"></small></button><button id="comparison-restart" type="button" aria-label="Перезапустить сравниваемую игру" title="Перезапустить">↻</button></div>
         <div class="comparison-legend"><span class="legend-added">Добавлено: <b id="comparison-added">0 символов</b></span><span class="legend-removed">Удалено: <b id="comparison-removed">0 символов</b></span></div>
         <pre id="diff-content" class="diff-content"></pre>
+        <div id="comparison-editor" hidden></div>
         <section id="comparison-game" aria-label="Проверка выбранной версии игры" hidden><p id="comparison-game-status" role="status"></p><div id="comparison-messages"><div id="comparison-game-error" role="status" hidden></div><div id="comparison-game-warning" role="status" hidden></div></div><div id="comparison-stage"></div></section>
       </div>
       <div id="comparison-scrollbar" class="comparison-scrollbar" role="scrollbar" aria-label="Прокрутка сравнения" aria-controls="comparison" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0" hidden><div id="comparison-scrollbar-thumb" class="comparison-scrollbar-thumb"></div></div>
@@ -160,13 +164,13 @@
       </div>
       <div id="preview-empty" hidden>Нажмите «Запустить», чтобы проверить игру.</div>
       <section id="library-extraction" class="library-extraction" aria-labelledby="library-extraction-title" hidden>
-        <div class="history-heading library-extraction-heading"><h2 id="library-extraction-title">Вынести библиотеки</h2><button id="library-extract-close" type="button" aria-label="Закрыть вынос библиотек" title="Вернуться к редактору">✕</button></div>
+        <div class="history-heading library-extraction-heading"><h2 id="library-extraction-title">Библиотеки в коде</h2><button id="library-extract-close" type="button" aria-label="Закрыть преобразование библиотек" title="Вернуться к редактору">✕</button></div>
         <div class="library-extraction-body">
-          <p class="library-extraction-intro">Замените встроенные библиотеки ссылками, чтобы сократить HTML для ИИ.</p>
-          <div class="platform-tabs" role="group" aria-label="Ссылки на библиотеки"><button class="platform-tab library-extraction-mode" type="button" data-library-mode="cdn" aria-pressed="true">CDN</button><button class="platform-tab library-extraction-mode" type="button" data-library-mode="files" aria-pressed="false">Файлы рядом</button></div>
+          <p class="library-extraction-intro">Встройте библиотеки в HTML или замените их ссылками, чтобы сократить код для ИИ.</p>
+          <div class="platform-tabs" role="group" aria-label="Способ подключения библиотек"><button class="platform-tab library-extraction-mode" type="button" data-library-mode="embed" aria-pressed="false">Встроить</button><button class="platform-tab library-extraction-mode" type="button" data-library-mode="cdn" aria-pressed="true">CDN</button><button class="platform-tab library-extraction-mode" type="button" data-library-mode="files" aria-pressed="false">Файлы рядом</button></div>
           <ul id="library-extraction-list" class="library-extraction-list"></ul>
         </div>
-        <div class="library-extraction-footer"><p id="library-extraction-summary" role="status" aria-live="polite"></p><button id="library-extract-apply" type="button" disabled>Применить</button></div>
+        <div class="library-extraction-footer"><p id="library-extraction-summary" role="status" aria-live="polite"></p><div class="library-conversion-actions"><button id="library-convert-load" type="button" hidden>Получить копии</button><button id="library-extract-apply" type="button" disabled>Применить</button></div></div>
       </section>
       <section id="activity-panel" class="work-panel" aria-labelledby="activity-title" hidden>
         <div class="panel-heading"><h2 id="activity-title">Диагностика</h2><button id="activity-close" type="button" aria-label="Закрыть сообщения">✕</button></div>

@@ -53,8 +53,8 @@ try {
           assert.match(await page.locator('#resource-source-list').innerText(),/image.svg/);
           assert(!(await page.locator('#resource-source-list').innerText()).includes('data.json'),'Dynamic URL is not presented as a static scan');
           assert.equal(requests.length,0,'Inspecting code cannot load resources');
-          await page.locator('[data-diagnostic-tab="speed"]').click();assert(!await page.locator('#speed-toggle').isChecked());
-          await page.locator('#speed-toggle').check();await page.locator('#activity-close').click();
+          await page.locator('[data-diagnostic-tab="speed"]').click();assert(await page.locator('#speed-toggle').isChecked(), 'Speed measurement is enabled by default');
+          await page.locator('#activity-close').click();
           await page.locator('#run').click();
           const frame=await (await page.locator('#preview > iframe').elementHandle()).contentFrame();
           await page.waitForFunction(()=>/^FPS \d+/.test(document.querySelector('#speed-strip').textContent));
@@ -86,6 +86,10 @@ try {
           await open(page,'speed');assert.match(await page.locator('#speed-run-note').innerText(),/Код изменён/);
           assert.match(await page.locator('#speed-result').innerText(),/FPS/);
           await page.locator('#speed-toggle').uncheck();await page.locator('#activity-close').click();
+          await page.waitForFunction(()=>document.querySelector('#draft-status').textContent==='Сохранено');
+          await page.reload();await page.waitForFunction(()=>!document.querySelector('#code').disabled);
+          await open(page,'speed');assert(!await page.locator('#speed-toggle').isChecked(),'An explicitly disabled measurement survives reload');
+          await page.locator('#activity-close').click();
           await page.locator('#network-toggle').click();
           const count=requests.length;await page.locator('#run').click();
           assert(await page.locator('#speed-strip').isHidden());
@@ -114,6 +118,7 @@ try {
             await page.locator('#library-request').waitFor({state:'hidden'});
             await page.locator('#run').click();
             await page.frameLocator('#preview > iframe').locator('#lib').getByText('128',{exact:true}).waitFor();
+            assert.match(await page.locator('#activity-summary').innerText(), /Three\.js r128 \(\+[\d,]+ КБ\)/, 'Each embedded library includes its added size');
             await open(page,'resources');
             assert.match(await page.locator('#resource-source-list').innerText(),/Копия доступна для подмены/);
             assert.match(await page.locator('#resource-bundled').innerText(),/three/);

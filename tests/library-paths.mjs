@@ -69,6 +69,7 @@ const knownCode = classic('./three-r128.min.js');
 const bundled = await prepareGameHtml(knownCode);
 assert.equal(bundled.missingLibraries.length, 0);
 assert(bundled.html.includes('data-onehtml-library="three@0.128.0"'));
+assert.equal(bundled.bundledLibraryDetails[0].addedBytes, Buffer.byteLength(bundled.html) - Buffer.byteLength(knownCode), 'Reported increase includes the source, license and embedding metadata');
 assert.equal((await prepareGameHtml(knownCode, false)).html, knownCode);
 const sriCode = '<script id="engine" src="./three-r128.min.js" integrity="sha256-old" crossorigin="anonymous"></script>';
 assert(!(await prepareGameHtml(sriCode)).html.includes('integrity='));

@@ -39,7 +39,8 @@ function updateComparisonGameUI() {
   document.querySelector('#comparison-game').hidden = !comparisonGameMode;
   document.querySelector('#comparison-versions').hidden = !comparisonGameMode;
   document.querySelector('.comparison-legend').hidden = comparisonGameMode;
-  diffContent.hidden = comparisonGameMode;
+  diffContent.hidden = comparisonGameMode || Boolean(comparisonEditorView);
+  comparisonEditorHost.hidden = comparisonGameMode || !comparisonEditorView;
   document.querySelector('#comparison-code-tab').setAttribute('aria-pressed', String(!comparisonGameMode));
   document.querySelector('#comparison-game-tab').setAttribute('aria-pressed', String(comparisonGameMode));
   document.querySelector('#comparison-current').setAttribute('aria-pressed', String(comparisonSide === 'current'));
@@ -87,7 +88,7 @@ async function startComparisonGame(replaceLibraries = true) {
     frame.comparisonStorage = gameStorageAllowed;
     frame.comparisonUnchanged = prepared.html === code;
     comparisonFrame = frame;
-    comparisonMetrics.libraries = [...new Set(prepared.bundledLibraries || [])];
+    comparisonMetrics.libraries = bundledLibraryLabels(prepared);
     comparisonStage.replaceChildren(frame);
     updateComparisonGameStatus();
   } catch {

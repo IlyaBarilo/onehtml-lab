@@ -266,30 +266,48 @@ function licensedLibrarySource(reference, entry) {
   return `${comment}\r\n${entry.source}`;
 }
 
+async function embeddedLibraryTag(reference, entry) {
+  const title = reference.title.replace(/--/g, '—').replace(/[<>]/g, '');
+  const catalog = libraryCatalogReference(entry.catalogKey || entry.key);
+  const cdn = catalog && libraryReference(entry.sourceUrl)?.key === catalog.key ? entry.sourceUrl : catalog?.url;
+  const metadata = { 'library': entry.key, 'bundle': '1', 'source': reference.originalUrl || reference.localPath || reference.url || '',
+    'filename': libraryFilename(reference, entry), 'sha256': await librarySourceHash(entry.source) };
+  if (cdn) { metadata.cdn = cdn; metadata.catalog = catalog.key; }
+  const attributes = Object.entries(metadata).map(([name, value]) => `data-onehtml-${name}="${libraryAttribute(value)}"`).join(' ');
+  return `<!--onehtml-library:${encodeURIComponent(entry.key)}\n${title}, MIT license:\n${entry.license}\n-->\n<script ${reference.inlineAttributes ? reference.inlineAttributes + ' ' : ''}${attributes}>\n${entry.source}\n</script>`;
+}
+
 async function prepareGameHtml(code, replaceLibraries = true) {
-  if (!replaceLibraries) return { html: code, bundledLibraries: [], missingLibraries: [] };
+  if (!replaceLibraries) return { html: code, bundledLibraries: [], bundledLibraryDetails: [], missingLibraries: [] };
   const matches = await resolvedLibraryMatches(code);
   const missingLibraries = [...new Map(matches.filter(ref => !cachedLibrary(ref)).map(ref => [ref.key, ref])).values()];
   let html = '';
   let cursor = 0;
   const bundledLibraries = [];
+  const bundledLibraryDetails = [];
   for (const reference of matches) {
     const entry = cachedLibrary(reference);
     if (!entry) continue;
     html += code.slice(cursor, reference.index);
-    const title = reference.title.replace(/--/g, '—').replace(/[<>]/g, '');
-    const catalog = libraryCatalogReference(entry.catalogKey || entry.key);
-    const cdn = catalog && libraryReference(entry.sourceUrl)?.key === catalog.key ? entry.sourceUrl : catalog?.url;
-    const metadata = { 'library': entry.key, 'bundle': '1', 'source': reference.originalUrl || reference.localPath || reference.url || '',
-      'filename': libraryFilename(reference, entry), 'sha256': await librarySourceHash(entry.source) };
-    if (cdn) { metadata.cdn = cdn; metadata.catalog = catalog.key; }
-    const attributes = Object.entries(metadata).map(([name, value]) => `data-onehtml-${name}="${libraryAttribute(value)}"`).join(' ');
-    html += `<!--onehtml-library:${encodeURIComponent(entry.key)}\n${title}, MIT license:\n${entry.license}\n-->\n<script ${reference.inlineAttributes ? reference.inlineAttributes + ' ' : ''}${attributes}>\n${entry.source}\n</script>`;
+    const embedded = await embeddedLibraryTag(reference, entry);
+    html += embedded;
     cursor = reference.index + reference.tag.length;
     bundledLibraries.push(reference.title);
+    const encoder = new TextEncoder();
+    bundledLibraryDetails.push({ title: reference.title, addedBytes: encoder.encode(embedded).length - encoder.encode(reference.tag).length });
   }
   html += code.slice(cursor);
-  return { html, bundledLibraries, missingLibraries };
+  return { html, bundledLibraries, bundledLibraryDetails, missingLibraries };
+}
+
+function bundledLibraryLabels(prepared) {
+  const sizes = new Map();
+  for (const item of prepared.bundledLibraryDetails || []) sizes.set(item.title, (sizes.get(item.title) || 0) + item.addedBytes);
+  return [...sizes].map(([title, bytes]) => {
+    const kb = Math.abs(bytes) / 1024;
+    const size = kb > 0 && kb < .1 ? '<0,1' : kb.toLocaleString('ru-RU', { maximumFractionDigits: 1 });
+    return `${title} (${bytes < 0 ? '−' : '+'}${size} КБ)`;
+  });
 }
 
 async function importLocalLibrary(reference, source, license) {

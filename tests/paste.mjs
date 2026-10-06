@@ -42,6 +42,7 @@ async function createApp(clipboard) {
     clearTimeout: () => {},
     makePreview: () => ({}),
     prepareGameHtml: code => ({ html: code, bundledLibraries: [], missingLibraries: [] }),
+    bundledLibraryLabels: () => [],
     loadLibraryCache: async () => {},
     gameStorageSnapshot: () => [],
     registerGameStorageFrame: () => {},

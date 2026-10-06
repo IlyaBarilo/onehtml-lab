@@ -49,7 +49,7 @@ try { for (const [name, engine] of engines) {
     await page.route('https://**', route => { requests++; return route.abort(); });
     const code = page.locator('#code'), content = page.locator('#alternative-editor .cm-content');
     const settings = async () => {
-      if (await page.locator('#edit-panel').isHidden()) await page.locator(await page.locator('#edit-open').isVisible() ? '#edit-open' : '#edit-quick-settings').click();
+      if (await page.locator('#edit-panel').isHidden()) await page.locator('#edit-open').click();
     };
     const choose = async value => { await settings(); await page.locator('#editor-engine').selectOption(value); };
     const source = () => code.inputValue();
@@ -80,6 +80,12 @@ try { for (const [name, engine] of engines) {
       await code.fill(sample);
       await code.evaluate(el => el.setSelectionRange(0, 0));
       await page.locator('#expert-toggle').click();
+      assert.equal(await page.locator('[data-edit-indent], [data-edit-pair], #edit-quick-settings').count(), 0);
+      for (const id of ['edit-copy-selection', 'edit-fold', 'edit-unfold-all']) {
+        assert.equal(await page.locator('#' + id + ' svg').count(), 1);
+        assert.equal(await page.locator('#' + id).innerText(), '');
+        assert(await page.locator('#' + id).getAttribute('aria-label'));
+      }
       await choose('codemirror');
       await content.waitFor();
       assert.equal(await source(), sample);
@@ -218,6 +224,26 @@ try { for (const [name, engine] of engines) {
       };
       await pinned();
       await page.screenshot({ path: join(output, `${name}-${width}-dark-codemirror.png`) });
+      await page.locator('#compare').click();
+      const diffEditor = page.locator('#comparison-editor .cm-content');
+      await diffEditor.waitFor();
+      assert.equal(await diffEditor.getAttribute('contenteditable'), 'false', 'Comparison preserves CodeMirror in a read-only view');
+      assert(await page.locator('#comparison-editor .cm-lineNumbers').isVisible());
+      assert.equal(await page.locator('#comparison-editor').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(23, 30, 42)');
+      assert.equal(await page.locator('#comparison-editor .diff-added').first().evaluate(el => getComputedStyle(el).color), 'rgb(185, 232, 197)');
+      assert.equal(await page.locator('#comparison-editor .diff-removed').first().evaluate(el => getComputedStyle(el).color), 'rgb(241, 187, 182)');
+      await page.locator('#comparison-editor .cm-foldGutter').getByText('−', { exact: true }).first().click();
+      await page.locator('#comparison-editor .cm-foldPlaceholder').first().waitFor();
+      assert.equal(await source(), displaySource, 'Folding comparison leaves the source intact');
+      await page.locator('#comparison-editor .cm-foldPlaceholder').first().click();
+      await diffEditor.click(); await page.keyboard.insertText('НЕ МЕНЯТЬ');
+      assert.equal(await source(), displaySource, 'Comparison cannot modify the source');
+      await page.screenshot({ path: join(output, `${name}-${width}-dark-comparison-codemirror.png`) });
+      await page.locator('#comparison-game-tab').click();
+      assert(await page.locator('#comparison-editor').isHidden());
+      await page.locator('#comparison-code-tab').click(); await diffEditor.waitFor();
+      await page.locator('#comparison-close').click();
+      assert.equal(await source(), displaySource); assert.equal(await code.evaluate(el => el.selectionStart), caretBeforeTheme, 'Closing comparison restores the source cursor');
       await page.locator('#editor-toggle').click();
       await code.waitFor({ state: 'visible' });
       assert.equal(await source(), displaySource); assert.equal(await code.evaluate(el => el.selectionStart), caretBeforeTheme);
@@ -227,7 +253,19 @@ try { for (const [name, engine] of engines) {
       await page.locator('#code-colors').waitFor();
       assert.equal(await code.evaluate(el => getComputedStyle(el).color), 'rgba(0, 0, 0, 0)', 'Native text stays transparent over the dark syntax layer');
       assert.equal(await page.locator('#code-colors').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(23, 30, 42)');
+      await page.waitForFunction(() => [...document.querySelectorAll('#code-colors .syntax-keyword')].some(el => el.textContent === 'function' && getComputedStyle(el).color === 'rgb(198, 163, 238)'), null, { timeout: 10000 });
+      await settings(); await page.locator('#edit-colors').selectOption('off'); await page.locator('#edit-close').click();
+      await page.waitForFunction(() => !document.querySelector('#code').classList.contains('has-colors'));
+      assert.equal(await code.evaluate(el => getComputedStyle(el).color), 'rgb(217, 226, 239)', 'Native plain text is light in dark mode');
+      assert.equal(await code.evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(23, 30, 42)');
+      await settings(); await page.locator('#edit-colors').selectOption('accents'); await page.locator('#edit-close').click();
       await page.screenshot({ path: join(output, `${name}-${width}-dark-native.png`) });
+      await page.locator('#compare').click();
+      assert(await page.locator('#comparison-editor').isHidden());
+      assert.equal(await page.locator('#diff-content').evaluate(el => getComputedStyle(el).color), 'rgb(217, 226, 239)', 'Unchanged comparison text is readable in the dark theme');
+      assert.equal(await page.locator('#diff-content').evaluate(el => getComputedStyle(el).fontSize), '20px', 'Native comparison keeps the chosen text size');
+      await page.screenshot({ path: join(output, `${name}-${width}-dark-comparison-native.png`) });
+      await page.locator('#comparison-close').click();
       await page.waitForFunction(() => document.querySelector('#draft-status').textContent === 'Сохранено');
       await page.reload(); await page.waitForFunction(() => !document.querySelector('#code').disabled);
       assert(await content.isHidden(), 'Native choice persists');

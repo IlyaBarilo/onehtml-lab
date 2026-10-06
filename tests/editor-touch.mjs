@@ -21,24 +21,13 @@ for(const [name,engine] of engines) {
       await page.goto(new URL('../onehtml-lab.html',import.meta.url).href);await page.waitForFunction(()=>!document.querySelector('#code').disabled);
       await page.locator('#expert-toggle').click();
       const original='first\n  second\n\tthird\nlast';await field.fill(original);
-      await select(6,22);await page.locator('[data-edit-indent="in"]').tap();
-      assert.equal(await value(),'first\n    second\n  \tthird\nlast');await undo();assert.equal(await value(),original);
-      await select(6,22);await page.locator('[data-edit-indent="out"]').tap();
-      assert.equal(await value(),'first\nsecond\nthird\nlast');await undo();assert.equal(await value(),original);
-      await select(0,6);await page.locator('[data-edit-indent="in"]').tap();
-      assert.equal(await value(),'  first\n  second\n\tthird\nlast','A selection ending at the next line excludes that line');await undo();
-      await select(8,14);await page.getByRole('button',{name:'Фигурные скобки',exact:true}).tap();
-      assert.equal(await value(),'first\n  {second}\n\tthird\nlast');await undo();assert.equal(await value(),original);
-      await select(0);await page.getByRole('button',{name:'Двойные кавычки',exact:true}).tap();
-      assert.equal(await value(),'""'+original);assert.equal(await field.evaluate(el=>el.selectionStart),1);await undo();
-      await field.fill('\nlast');await select(0);await page.locator('[data-edit-indent="in"]').tap();assert.equal(await value(),'  \nlast');await undo();
-      if(width===320) {
-        const lines=Array.from({length:1200},(_,i)=>`line ${i} ${'x'.repeat(80)}`), large=lines.join('\n');
-        await field.fill(large);await select(0,large.length);await page.locator('[data-edit-indent="in"]').tap();
-        assert.equal(await value(),lines.map(line=>'  '+line).join('\n'));await undo();assert.equal(await value(),large);
-      }
+      assert.equal(await page.locator('[data-edit-indent], [data-edit-pair], #edit-quick-settings').count(),0,'Simplified footer omits extra editing controls');
+      assert.equal(await page.locator('#edit-copy-selection svg').count(),1);
+      assert.equal(await page.locator('#edit-copy-selection').innerText(),'','Copy uses an icon with an accessible name');
+      await select(0,5);await page.keyboard.insertText('FIRST');
+      assert.equal(await value(),original.replace('first','FIRST'));await undo();assert.equal(await value(),original);
       await field.fill(original);
-      await page.locator('#edit-quick-settings').click();
+      await page.locator('#edit-open').click();
       await page.locator('#edit-range-start').fill('3');await page.locator('#edit-range-end').fill('2');await page.locator('#edit-range-form button').click();
       assert.match(await page.locator('#edit-range-feedback').innerText(),/последняя не меньше/);
       await page.locator('#edit-range-start').fill('2');await page.locator('#edit-range-end').fill('3');await page.locator('#edit-range-form button').click();
@@ -60,13 +49,13 @@ for(const [name,engine] of engines) {
         await page.setViewportSize({width,height:844});
       }
       await page.locator('#edit-find-close').click();
-      await page.locator('#edit-quick-settings').click();await page.locator('#edit-numbers').uncheck();await page.locator('#edit-close').click();
+      await page.locator('#edit-open').click();await page.locator('#edit-numbers').uncheck();await page.locator('#edit-close').click();
       await page.locator('#edit-find').click();await page.locator('#edit-query').fill('first');await page.locator('#edit-highlight span').first().waitFor();
       await page.locator('#edit-find-close').click();
       // Apply the native readonly flag: synthetic invocations still cannot mutate source.
       await field.evaluate(el=>{el.readOnly=true;});await page.locator('#help-open').click();await page.locator('#help-close').click();
       assert(await page.locator('#edit-quick-tools').isHidden());const locked=await value();
-      await page.locator('[data-edit-pair="{}"]').evaluate(el=>el.click());assert.equal(await value(),locked);
+      await page.locator('#edit-quick-undo').evaluate(el=>el.click());assert.equal(await value(),locked);
       await field.evaluate(el=>{el.readOnly=false;});await page.locator('#help-open').click();await page.locator('#help-close').click();
       if(width===1365) {
         await page.locator('#split-toggle').click();await page.locator('#run').click();

@@ -23,6 +23,7 @@ const extractionPanel = document.querySelector('#library-extraction');
 const extractionList = document.querySelector('#library-extraction-list');
 const extractionSummary = document.querySelector('#library-extraction-summary');
 const extractionApply = document.querySelector('#library-extract-apply');
+const conversionLoad = document.querySelector('#library-convert-load');
 const historyView = document.querySelector('#history-view');
 const historyList = document.querySelector('#history-list');
 const currentHistory = document.querySelector('#history-current');
@@ -275,7 +276,8 @@ function requestLibraries(prepared, action, code = codeField.value) {
   libraryRequestText.textContent = `Для автономной игры нужны: ${titles}.`
     + (downloadable.length ? ` Скачать с ${hosts}; до 4 МБ на библиотеку.` : '')
     + (local.length ? ` Локальный файл: ${local[0].localPath}. Можно выбрать JS и полный текст MIT-лицензии.` : '')
-    + ' Копия будет доступна для предпросмотра и встраивания при сохранении.';
+    + (action === 'convert' ? ' После получения нажмите «Применить», чтобы встроить копию и лицензию в код.'
+      : ' Копия будет доступна для предпросмотра и встраивания при сохранении.');
   libraryDownloadButton.hidden = !downloadable.length;
   libraryFilesButton.hidden = !local.length;
   libraryFilesButton.textContent = 'Выбрать JS и лицензию';
@@ -302,6 +304,7 @@ libraryDownloadButton.addEventListener('click', async () => {
     if (!libraryActionIsCurrent(pending)) return;
     hideLibraryRequest();
     if (pending.action === 'compare') { await startComparisonGame(); return; }
+    if (pending.action === 'convert') { openLibraryExtraction('embed'); return; }
     if (pending.action === 'inspect') { openDiagnostics('libraries'); inform(persisted ? 'Копия сохранена в браузере.' : 'Копия доступна только в этом сеансе.', !persisted); return; }
     if (pending.code === codeField.value) requestLibraries(prepared, pending.action);
     inform(persisted
@@ -362,6 +365,7 @@ libraryFiles.addEventListener('change', async () => {
     if (!libraryActionIsCurrent(pending)) return;
     hideLibraryRequest();
     if (pending.action === 'compare') { await startComparisonGame(); return; }
+    if (pending.action === 'convert') { openLibraryExtraction('embed'); return; }
     if (pending.action === 'inspect') { openDiagnostics('libraries'); inform(persisted ? 'Копия сохранена в браузере.' : 'Копия доступна только в этом сеансе.', !persisted); return; }
     requestLibraries(prepared, pending.action);
     inform(persisted ? 'Библиотека и лицензия сохранены. Повторите запуск, сохранение или отправку.'
@@ -385,7 +389,8 @@ librarySkipButton.addEventListener('click', async () => {
     return;
   }
   try {
-    if (pending.action === 'compare') await startComparisonGame(false);
+    if (pending.action === 'convert') openLibraryExtraction('embed');
+    else if (pending.action === 'compare') await startComparisonGame(false);
     else if (pending.action === 'run') await startPreview(false);
     else if (pending.action === 'share') {
       const result = await shareHtml(pending.code, currentFilename);
@@ -654,9 +659,10 @@ async function refreshLibraryExtraction() {
   extractionBusy = true;
   extractionPlan = null;
   extractionApply.disabled = true;
+  conversionLoad.hidden = true;
   extractionSummary.textContent = 'Проверяю библиотеки…';
   try {
-    const plan = await planLibraryExtraction(code, extractionMode);
+    const plan = extractionMode === 'embed' ? await planLibraryEmbedding(code) : await planLibraryExtraction(code, extractionMode);
     if (!extractionOpen || request !== extractionRequest) return;
     if (code !== codeField.value) { closeLibraryExtraction(); return; }
     extractionPlan = plan;
@@ -683,7 +689,9 @@ async function refreshLibraryExtraction() {
       extractionList.append(item);
     }
     extractionSummary.textContent = plan.count ? `${plan.removedBytes < 0 ? 'Увеличение' : 'Уменьшение'}: ${formatLibrarySize(Math.abs(plan.removedBytes))}`
-      : plan.rows.length ? 'Нет библиотек для выбранного варианта.' : 'Встроенные копии OneHTML Lab не найдены.';
+      : plan.rows.length ? 'Нет библиотек для выбранного варианта.'
+      : extractionMode === 'embed' ? 'Поддерживаемые ссылки на библиотеки не найдены.' : 'Встроенные копии OneHTML Lab не найдены.';
+    conversionLoad.hidden = !plan.missingLibraries?.length;
     extractionApply.disabled = !plan.count;
   } catch {
     if (request === extractionRequest && extractionOpen) extractionSummary.textContent = 'Не удалось проверить библиотеки. Код сохранён.';
@@ -692,8 +700,8 @@ async function refreshLibraryExtraction() {
   }
 }
 
-function openLibraryExtraction() {
-  if (!expertMode || running || modeBusy || readingClipboard) return;
+function openLibraryExtraction(mode) {
+  if (!expertMode || running || modeBusy || readingClipboard || codeField.readOnly) return;
   if (extractionOpen) { closeLibraryExtraction(); return; }
   rememberEditorPosition();
   closeWorkspacePanels(false);
@@ -702,7 +710,7 @@ function openLibraryExtraction() {
   hideLibraryRequest();
   inform();
   extractionOpen = true;
-  extractionMode = 'cdn';
+  extractionMode = ['embed', 'cdn', 'files'].includes(mode) ? mode : /data-onehtml-library\s*=/i.test(codeField.value) ? 'cdn' : 'embed';
   extractionPlan = null;
   extractionPanel.hidden = false;
   codeField.hidden = true;
@@ -712,7 +720,13 @@ function openLibraryExtraction() {
   void refreshLibraryExtraction();
 }
 
-extractionButton.addEventListener('click', openLibraryExtraction);
+extractionButton.addEventListener('click', () => openLibraryExtraction());
+conversionLoad.addEventListener('click', () => {
+  if (!extractionOpen || extractionBusy || extractionMode !== 'embed' || extractionCode !== codeField.value || !extractionPlan?.missingLibraries?.length) return;
+  const prepared = extractionPlan;
+  closeLibraryExtraction();
+  requestLibraries(prepared, 'convert');
+});
 document.querySelector('#library-extract-close').addEventListener('click', () => { closeLibraryExtraction(); extractionButton.focus(); });
 for (const button of document.querySelectorAll('.library-extraction-mode')) button.addEventListener('click', () => {
   if (!extractionOpen || extractionMode === button.dataset.libraryMode) return;
@@ -721,7 +735,7 @@ for (const button of document.querySelectorAll('.library-extraction-mode')) butt
   void refreshLibraryExtraction();
 });
 extractionApply.addEventListener('click', async () => {
-  if (!extractionOpen || extractionBusy || !extractionPlan?.count || extractionCode !== codeField.value) return;
+  if (!extractionOpen || extractionBusy || !extractionPlan?.count || extractionCode !== codeField.value || codeField.readOnly) return;
   const plan = extractionPlan;
   const code = extractionCode;
   const request = extractionRequest;
@@ -729,17 +743,18 @@ extractionApply.addEventListener('click', async () => {
   extractionApply.disabled = true;
   try {
     const persisted = await retainExtractionAssets(plan);
-    if (!extractionOpen || request !== extractionRequest || code !== codeField.value) return;
+    if (!extractionOpen || request !== extractionRequest || code !== codeField.value || codeField.readOnly) return;
     closeLibraryExtraction();
     replaceCode(plan.html, true);
     extractionButton.focus();
-    inform(persisted ? 'Библиотеки заменены ссылками. Предыдущий вариант доступен в истории.'
+    inform(plan.mode === 'embed' ? `Встроено с лицензиями: ${plan.libraryLabels.join(', ')}. Предыдущий вариант доступен в истории.`
+      : persisted ? 'Библиотеки заменены ссылками. Предыдущий вариант доступен в истории.'
       : 'Библиотеки заменены ссылками и доступны сейчас. Сохраните HTML и JS до закрытия редактора.', !persisted, !persisted);
   } catch {
     if (request === extractionRequest && extractionOpen) {
       extractionBusy = false;
       extractionApply.disabled = false;
-      inform('Не удалось вынести библиотеки. Код остался в поле.', true);
+      inform('Не удалось преобразовать библиотеки. Код остался в поле.', true);
     }
   }
 });
@@ -846,6 +861,7 @@ function closeComparison() {
   comparisonAdded.textContent = formatSymbolCount(0);
   comparisonRemoved.textContent = formatSymbolCount(0);
   diffContent.replaceChildren();
+  clearComparisonEditor();
   if (!running && !historyOpen && !extractionOpen) codeField.hidden = false;
   restoreEditorPosition();
   updateControls();
@@ -878,27 +894,36 @@ function openComparison(baseline = latestHistory()) {
   codeField.hidden = true;
   comparisonOpen = true;
   resetComparisonGame(baseline);
+  renderComparisonEditor(parts);
   updateComparisonScrollbar();
   updateControls();
 }
 
+function comparisonScrollTarget() { return comparisonEditorView?.scrollDOM || comparison; }
+
 function positionComparisonScrollbar() {
   if (comparisonScrollbar.hidden) return;
-  const scrollRange = comparison.scrollHeight - comparison.clientHeight;
+  const target = comparisonScrollTarget();
+  const scrollRange = target.scrollHeight - target.clientHeight;
   const travel = comparisonScrollbar.clientHeight - comparisonScrollbarThumb.offsetHeight;
-  const progress = scrollRange > 0 ? comparison.scrollTop / scrollRange : 0;
+  const progress = scrollRange > 0 ? target.scrollTop / scrollRange : 0;
   comparisonScrollbarThumb.style.transform = `translateY(${Math.round(travel * progress)}px)`;
   comparisonScrollbar.setAttribute('aria-valuenow', String(Math.round(progress * 100)));
 }
 
 function updateComparisonScrollbar() {
-  if (!comparisonOpen || comparisonGameMode) return;
-  const needed = comparison.scrollHeight > comparison.clientHeight + 1;
+  if (!comparisonOpen || comparisonGameMode) {
+    comparisonScrollbar.hidden = true;
+    comparison.classList.remove('has-custom-scrollbar');
+    return;
+  }
+  const target = comparisonScrollTarget();
+  const needed = target.scrollHeight > target.clientHeight + 1;
   comparison.classList.toggle('has-custom-scrollbar', needed);
   comparisonScrollbar.hidden = !needed;
   if (!needed) return;
   const trackHeight = comparisonScrollbar.clientHeight;
-  comparisonScrollbarThumb.style.height = `${Math.min(trackHeight, Math.max(48, Math.round(trackHeight * comparison.clientHeight / comparison.scrollHeight)))}px`;
+  comparisonScrollbarThumb.style.height = `${Math.min(trackHeight, Math.max(48, Math.round(trackHeight * target.clientHeight / target.scrollHeight)))}px`;
   positionComparisonScrollbar();
 }
 
@@ -915,7 +940,8 @@ comparisonScrollbar.addEventListener('pointerdown', event => {
     const travel = track.height - comparisonScrollbarThumb.offsetHeight;
     if (travel <= 0) return;
     const position = Math.max(0, Math.min(travel, pointer.clientY - track.top - offset));
-    comparison.scrollTop = position / travel * (comparison.scrollHeight - comparison.clientHeight);
+    const target = comparisonScrollTarget();
+    target.scrollTop = position / travel * (target.scrollHeight - target.clientHeight);
   }
   move(event);
   function stop() {
@@ -928,11 +954,12 @@ comparisonScrollbar.addEventListener('pointerdown', event => {
   comparisonScrollbar.addEventListener('pointercancel', stop);
 });
 comparisonScrollbar.addEventListener('keydown', event => {
-  const step = Math.max(40, Math.round(comparison.clientHeight * .1));
-  const movements = { ArrowUp: -step, ArrowDown: step, PageUp: -comparison.clientHeight, PageDown: comparison.clientHeight };
-  if (event.key in movements) comparison.scrollTop += movements[event.key];
-  else if (event.key === 'Home') comparison.scrollTop = 0;
-  else if (event.key === 'End') comparison.scrollTop = comparison.scrollHeight;
+  const target = comparisonScrollTarget();
+  const step = Math.max(40, Math.round(target.clientHeight * .1));
+  const movements = { ArrowUp: -step, ArrowDown: step, PageUp: -target.clientHeight, PageDown: target.clientHeight };
+  if (event.key in movements) target.scrollTop += movements[event.key];
+  else if (event.key === 'Home') target.scrollTop = 0;
+  else if (event.key === 'End') target.scrollTop = target.scrollHeight;
   else return;
   event.preventDefault();
 });
@@ -1034,9 +1061,9 @@ function updateControls() {
   importButton.disabled = modeBusy || extractionOpen;
   aiButton.disabled = modeBusy || extractionOpen;
   examplesButton.disabled = modeBusy || extractionOpen;
-  extractionButton.disabled = !expertMode || running || modeBusy || readingClipboard || (!extractionOpen && !/data-onehtml-library\s*=/i.test(codeField.value));
+  extractionButton.disabled = !expertMode || running || modeBusy || readingClipboard || codeField.readOnly || (!extractionOpen && !/data-onehtml-library\s*=/i.test(codeField.value) && !libraryMatches(codeField.value).length);
   extractionButton.setAttribute('aria-pressed', String(extractionOpen));
-  extractionButton.title = extractionOpen ? 'Вернуться к редактору' : 'Вынести встроенные библиотеки в ссылки';
+  extractionButton.title = extractionOpen ? 'Вернуться к редактору' : 'Встроить библиотеки или заменить их ссылками';
   const baseline = latestHistory();
   compareButton.disabled = !expertMode || running || modeBusy || (!comparisonOpen && (!baseline || baseline.code === codeField.value));
   historyButton.disabled = !expertMode || running || modeBusy;
@@ -1200,7 +1227,7 @@ async function startPreview(replaceLibraries = true) {
     if (gameStorageAllowed) registerGameStorageFrame(frame);
     running = true;
     previewCode = code;
-    activeBundledLibraries = [...new Set(prepared.bundledLibraries || [])];
+    activeBundledLibraries = bundledLibraryLabels(prepared);
     updateLocalAccessHint();
   } catch {
     if (request !== previewRequest) return;

@@ -21,7 +21,7 @@ for (const [name, engine] of engines) {
       await useNativeEditor(page);
       const errors = [];
       page.on('pageerror', error => { if (!error.message.includes('editor-location')) errors.push(error.message); });
-      const settings = async () => { if (await page.locator('#edit-panel').isHidden()) await page.locator(await page.locator('#edit-open').isVisible() ? '#edit-open' : '#edit-quick-settings').click(); };
+      const settings = async () => { if (await page.locator('#edit-panel').isHidden()) await page.locator('#edit-open').click(); };
       const open = async () => { if (await page.locator('#edit-panel').isVisible()) await page.locator('#edit-panel-find').click(); else if (await page.locator('#edit-inline').isHidden()) await page.locator('#edit-find').click(); if (await page.locator('#edit-replace-box').isHidden()) await page.locator('#edit-replace-toggle').click(); };
       const selection = () => page.locator('#code').evaluate(el => ({ start: el.selectionStart, end: el.selectionEnd, selected: el.value.slice(el.selectionStart, el.selectionEnd) }));
       try {

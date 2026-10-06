@@ -125,6 +125,19 @@ async function retainExtractionAssets(plan) {
   return persisted;
 }
 
+async function planLibraryEmbedding(code) {
+  const references = await resolvedLibraryMatches(code);
+  const prepared = await prepareGameHtml(code);
+  const rows = await Promise.all(references.map(async reference => {
+    const entry = cachedLibrary(reference);
+    return { title: reference.title, removable: Boolean(entry),
+      note: reference.localPath ? `Выберите ${reference.filename} и MIT-лицензию.` : 'Нужна копия библиотеки с MIT-лицензией.',
+      removedBytes: entry ? new Blob([reference.tag]).size - new Blob([await embeddedLibraryTag(reference, entry)]).size : 0 };
+  }));
+  return { html: prepared.html, rows, libraryLabels: bundledLibraryLabels(prepared), missingLibraries: prepared.missingLibraries, assets: [],
+    count: prepared.bundledLibraries.length, mode: 'embed', removedBytes: new Blob([code]).size - new Blob([prepared.html]).size };
+}
+
 function extractedSavePreference(code) {
   const refs = libraryMatches(code).filter(ref => ref.assetKey);
   return refs.length ? (refs.some(ref => ref.localPath) ? 'files' : 'cdn') : null;

@@ -242,39 +242,6 @@ function closeInlineSearch() {
   codeField.focus({ preventScroll: true });
 }
 
-// Two-space indentation changes only the touched lines; an endpoint at the next
-// line's beginning does not include that line. Tabs are removed as one indent.
-function indentCodeSelection(code, start, end, outdent) {
-  const first = start ? code.lastIndexOf('\n', start - 1) + 1 : 0;
-  const last = end > start && code[end - 1] === '\n' ? end - 1 : end;
-  const changes = [];
-  for (let at = first; at <= last;) {
-    const length = outdent ? /^(?:\t| {1,2})/.exec(code.slice(at, at + 2))?.[0].length || 0 : 0;
-    if (!outdent || length) changes.push({ at, length, insert: outdent ? '' : '  ' });
-    const newline = code.indexOf('\n', at);
-    if (newline < 0) break;
-    at = newline + 1;
-  }
-  const parts = [];
-  let cursor = 0;
-  for (const change of changes) {
-    parts.push(code.slice(cursor, change.at), change.insert);
-    cursor = change.at + change.length;
-  }
-  parts.push(code.slice(cursor));
-  const map = position => position + changes.reduce((delta, change) => delta + (change.at <= position ? change.insert.length - Math.min(change.length, position - change.at) : 0), 0);
-  return { code: parts.join(''), start: map(start), end: map(end) };
-}
-
-function quickCodeEdit(pair, outdent) {
-  if (!inlineEditorAvailable() || codeField.readOnly || codeField.disabled) return;
-  const { start, end } = editSelection(), code = codeField.value;
-  const next = pair ? { code: code.slice(0, start) + pair[0] + code.slice(start, end) + pair[1] + code.slice(end), start: start + 1, end: end + 1 }
-    : indentCodeSelection(code, start, end, outdent);
-  changeCodeFromEditor(next.code, next);
-  revealCodeRange(next.start, next.end);
-}
-
 function openCodeTools() {
   if (editButton.disabled) return;
   editGroup = null;
@@ -497,7 +464,6 @@ function initCodeEditor() {
   document.querySelector('#edit-panel-find').addEventListener('click', () => openInlineSearch());
   document.querySelector('#edit-find').addEventListener('click', () => editFindOpen ? closeInlineSearch() : openInlineSearch());
   document.querySelector('#edit-find-close').addEventListener('click', closeInlineSearch);
-  document.querySelector('#edit-quick-settings').addEventListener('click', openCodeTools);
   document.querySelector('#edit-replace-toggle').addEventListener('click', event => {
     const box = document.querySelector('#edit-replace-box'); box.hidden = !box.hidden;
     event.currentTarget.setAttribute('aria-expanded', String(!box.hidden)); updateInlineGeometry(); showInlineMatch();
@@ -509,7 +475,6 @@ function initCodeEditor() {
   });
   document.querySelector('#edit-quick-undo').addEventListener('click', () => undoCodeEdit());
   document.querySelector('#edit-quick-redo').addEventListener('click', () => undoCodeEdit(true));
-  for (const button of editQuick.querySelectorAll('[data-edit-pair], [data-edit-indent]')) button.addEventListener('click', () => quickCodeEdit(button.dataset.editPair, button.dataset.editIndent === 'out'));
   editQuick.addEventListener('mousedown', event => { if (event.target.closest('button') && document.activeElement === codeField) event.preventDefault(); });
   document.querySelector('#edit-copy-selection').addEventListener('click', () => {
     if (!inlineEditorAvailable()) return;

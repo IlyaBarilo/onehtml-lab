@@ -35,7 +35,7 @@ for(const [name,engine] of engines){
     let requests=0;const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.route('https://**',route=>{requests++;return route.abort();});
     const code=page.locator('#code');
-    const settings=async()=>{await page.locator(await page.locator('#edit-open').isVisible()?'#edit-open':'#edit-quick-settings').click();};
+    const settings=async()=>{await page.locator('#edit-open').click();};
     const paint=()=>page.waitForFunction(()=>document.querySelector('#code').classList.contains('has-colors')&&!document.querySelector('#code-colors').hidden);
     try{
       await page.goto(new URL('../onehtml-lab.html',import.meta.url).href);await page.waitForFunction(()=>!document.querySelector('#code').disabled);

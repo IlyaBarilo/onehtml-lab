@@ -1,6 +1,6 @@
 // Source inspection is a text scan: no user markup is attached or parsed into a DOM.
 const resourceLimit = 200;
-let speedEnabled = false;
+let speedEnabled = true;
 let readinessReady = false;
 let readinessTimer = 0;
 let speedGeneration = 0;
@@ -176,7 +176,7 @@ function readinessReport() {
 }
 
 function initReadiness() {
-  try { speedEnabled = localStorage.getItem('onehtml-lab-speed') === 'true'; } catch {}
+  try { speedEnabled = localStorage.getItem('onehtml-lab-speed') !== 'false'; } catch {}
   readinessReady = true;
   document.querySelector('#speed-toggle').addEventListener('change', event => {
     if (!expertMode) return;
