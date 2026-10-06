@@ -631,7 +631,11 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .syntax-function { color: #276785; }
 .syntax-text { color: #263b53; }
 .has-accents .syntax-text { color: #236a70; }
-.syntax-accent { text-decoration: underline; text-decoration-color: #839abc; text-underline-offset: 3px; }
+.syntax-accent { border-radius: 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.syntax-accent-library { background: #eee5fa; color: #60368a; box-shadow: inset 0 -1px #bda0d8; }
+.syntax-accent-resource { background: #e0f1fc; color: #215f84; box-shadow: inset 0 -1px #92c5e2; }
+.syntax-accent-text { background: #e8f4e9; color: #285e3d; }
+.syntax-accent-network, .syntax-accent-storage { background: #fff1d7; color: #795015; box-shadow: inset 0 -1px #dabd86; }
 .syntax-color {
   color: var(--sample-ink); text-decoration: none;
   background-color: #fff;
@@ -2326,9 +2330,15 @@ function scanCodeColors(code) {
     start = Math.max(start, tokens.at(-1)?.end || 0);
     if (end > start) tokens.push({ start, end, kind });
   };
-  const accent = (start, end, label, color = '') => { if (accents.length < 1000) accents.push({ start, end, label, color }); };
+  const accent = (start, end, label, color = '', kind = 'resource') => { if (accents.length < 1000) accents.push({ start, end, label, color, kind }); };
+  const location = path => /^(?:https?:)?\/\//i.test(path) ? 'внешний адрес' : /^(?:data|blob):/i.test(path) ? 'встроенные данные' : path.startsWith('#') ? 'ссылка внутри документа' : /^[a-z][\w+.-]*:/i.test(path) && !/^file:/i.test(path) ? 'адрес' : 'локальный путь';
+  const htmlText = (start, end, label = 'Текст HTML') => {
+    add(start, end, 'text');
+    const value = code.slice(start, end), trimmed = value.trim();
+    if (trimmed) { const at = start + value.indexOf(trimmed); accent(at, at + trimmed.length, label, '', 'text'); }
+  };
   const keywords = new Set('async await break case catch class const continue debugger default delete do else export extends false finally for from function get if import in instanceof let new null of return set static super switch this throw true try typeof undefined var void while with yield'.split(' '));
-  function language(text, offset, css = false, accentsOnly = false) {
+  function language(text, offset, css = false, accentsOnly = false, markApis = true) {
     let depth = accentsOnly ? 1 : 0, valueMode = false;
     const pattern = css
       ? /\/\*[\s\S]*?(?:\*\/|$)|url\(\s*(?:"[^"]*"|'[^']*'|[^)]*)\s*\)|"(?:\\[\s\S]|[^"\\])*"?|'(?:\\[\s\S]|[^'\\])*'?|#[\da-fA-F]{3,8}\b|(?:rgba?|hsla?)\([^)]*\)|\b(?:red|blue|green|white|black|gray|grey|orange|purple|yellow|transparent)\b|[\w-]+(?=\s*:)|@[-\w]+|\b\d+(?:\.\d+)?(?:[a-z%]+)?|[{}:;(),]/gi
@@ -2346,20 +2356,33 @@ function scanCodeColors(code) {
       if (value.startsWith('/*') || (!css && value.startsWith('//'))) kind = 'comment';
       else if (/^["'`]/.test(value)) kind = 'string';
       else if (/^\d/.test(value)) kind = 'number';
-      else if (css && /^url\(/i.test(value)) { kind = 'string'; accent(start, end, `Ресурс CSS · ${value.slice(0,160)}`); }
+      else if (css && /^url\(/i.test(value)) {
+        kind = 'string';
+        const path = value.slice(value.indexOf('(') + 1, -1).trim().replace(/^(["'])([\s\S]*)\1$/, '$2');
+        accent(start, end, `Ресурс CSS · ${location(path)} · ${path.slice(0,160)}`);
+      }
       else if (css && /^(?:#|rgba?\(|hsla?\(|red$|blue$|green$|white$|black$|gr[ae]y$|orange$|purple$|yellow$|transparent$)/i.test(value)) {
         kind = 'number';
-        if (valueMode) accent(start, end, `Цвет: ${value}`, value);
+        if (valueMode) accent(start, end, `Цвет: ${value}`, value, 'color');
       } else if (css && /^[\w@-]/.test(value)) kind = 'property';
       else if (!css && keywords.has(value)) kind = 'keyword';
       else if (!css && /^\s*\(/.test(text.slice(match.index + value.length, match.index + value.length + 30))) kind = 'function';
       if (kind && !accentsOnly) add(start, end, kind);
+      if (!css && markApis && /^(?:fetch|XMLHttpRequest|WebSocket|EventSource|localStorage|sessionStorage)$/.test(value)) {
+        const before = text.slice(0, match.index).trimEnd(), after = text.slice(match.index + value.length);
+        const global = !before.endsWith('.') || /(?:^|[^\w$.])(?:window|globalThis|self)\.$/.test(before);
+        const declaration = /\b(?:function|class|const|let|var)\s*$/.test(before);
+        const storage = /Storage$/.test(value);
+        if (global && !declaration && (storage ? /^\s*(?:\.(?:getItem|setItem|removeItem|clear|key|length)\b|\[)/.test(after) : /^\s*\(/.test(after))) {
+          accent(start, end, `${storage ? 'Хранилище' : 'Сеть'} · ${value} · обращение в коде, выполнение не проверялось`, '', storage ? 'storage' : 'network');
+        }
+      }
     }
   }
   const html = /<!--[\s\S]*?(?:-->|$)|<![^>]*>|<\/?[a-zA-Z](?:[^"'<>]|"[^"]*"|'[^']*')*>/g;
   let cursor = 0, match;
   while ((match = html.exec(code)) && !limited) {
-    if (match.index > cursor) add(cursor, match.index, 'text');
+    if (match.index > cursor) htmlText(cursor, match.index);
     const tag = match[0], start = match.index, end = start + tag.length;
     if (tag.startsWith('<!--')) add(start, end, 'comment');
     else {
@@ -2379,10 +2402,10 @@ function scanCodeColors(code) {
         const quoted = /^["']/.test(value), raw = quoted ? value.slice(1, -1) : value;
         const path = decodeScriptUrl(raw);
         if (['src', 'href', 'poster', 'data'].includes(key) && ['script', 'link', 'img', 'audio', 'video', 'source', 'iframe', 'object', 'track'].includes(name)) {
-          let label = name === 'script' ? 'Скрипт' : name === 'link' ? 'Ресурс link' : ['img','video'].includes(name) && key === 'poster' || name === 'img' ? 'Изображение' : 'Ресурс';
+          let label = name === 'script' ? 'Скрипт' : name === 'link' ? 'Ресурс link' : ['img','video'].includes(name) && key === 'poster' || name === 'img' ? 'Изображение' : name === 'audio' ? 'Звук' : name === 'video' ? 'Видео' : 'Ресурс';
           const ref = name === 'script' && (libraryReference(path.split(/[?#]/)[0]) || localLibraryReference(path));
           if (ref?.title && ref.title !== ref.filename) label = `Библиотека: ${ref.title}`;
-          accent(valueAt, valueAt + value.length, `${label} · ${path.slice(0, 160)}`);
+          accent(valueAt, valueAt + value.length, `${label} · ${ref?.url && !ref?.localPath ? 'CDN' : location(path)} · ${path.slice(0, 160)}`, '', name === 'script' ? 'library' : 'resource');
         }
         if (key === 'style') {
           // Attribute remains a string; color chips are metadata only.
@@ -2397,16 +2420,20 @@ function scanCodeColors(code) {
         if (name === 'style') language(body, end, true);
         else if (name === 'script') {
           const type = parsed.get('type')?.value || '';
-          if (!type || /^(?:module|(?:text|application)\/(?:javascript|ecmascript|json|ld\+json))$/i.test(type)) language(body, end);
-          const bundled = parsed.get('data-onehtml-filename')?.value;
-          if (bundled) accent(start, end, `Встроенная библиотека: ${decodeScriptUrl(bundled).slice(0, 160)}`);
-        } else add(end, bodyEnd, 'text');
+          const bundled = parsed.get('data-onehtml-filename')?.value || parsed.get('data-onehtml-library')?.value;
+          if (!type || /^(?:module|(?:text|application)\/(?:javascript|ecmascript|json|ld\+json))$/i.test(type)) language(body, end, false, false, !bundled && !/json/i.test(type));
+          if (bundled) {
+            const title = decodeScriptUrl(bundled).slice(0, 160);
+            accent(start, end, `Начало встроенной библиотеки · ${title}`, '', 'library');
+            if (closing) accent(bodyEnd, bodyEnd + closing[0].length, `Конец встроенной библиотеки · ${title}`, '', 'library');
+          }
+        } else htmlText(end, bodyEnd, name === 'title' ? 'Название страницы' : 'Текст поля HTML');
         cursor = bodyEnd; html.lastIndex = bodyEnd; continue;
       }
     }
     cursor = end;
   }
-  if (!limited && cursor < code.length) add(cursor, code.length, 'text');
+  if (!limited && cursor < code.length) htmlText(cursor, code.length);
   return { tokens, accents, limited };
 }
 
@@ -2449,7 +2476,7 @@ function drawCodeColors() {
   if (syntaxSnapshot?.code !== code) syntaxSnapshot = { code, longLine: code.split('\n').some(line => line.length > 12000), ...scanCodeColors(code) };
   const note = document.querySelector('#edit-colors-note');
   const limited = syntaxSnapshot.limited || syntaxSnapshot.longLine;
-  note.textContent = limited ? 'Для этого большого файла или длинной строки используется обычный текст, чтобы сохранить отзывчивость.' : 'Оформление не меняет код. Подключения подчёркнуты, пояснение появляется при выборе строки. Большие файлы автоматически показываются обычным текстом.';
+  note.textContent = limited ? 'Для этого большого файла или длинной строки используется обычный текст, чтобы сохранить отзывчивость.' : 'Акценты: библиотеки — фиолетовые, ресурсы — голубые, текст HTML — зелёный, сеть и хранилище — песочные. Пояснение появляется при выборе строки. Это разметка кода, а не проверка его выполнения.';
   if (limited || !code) { clearCodeColors(); return; }
   const style = getComputedStyle(codeField), box = codeField.getBoundingClientRect(), origin = workspaceElement.getBoundingClientRect();
   Object.assign(syntaxLayer.style, { top: `${box.top-origin.top}px`, left: `${box.left-origin.left}px`, width: `${codeField.clientWidth}px`, height: `${codeField.clientHeight}px` });
@@ -2486,6 +2513,7 @@ function drawCodeColors() {
       if (token && token.start <= a) span.className = `syntax-${token.kind}`;
       if (mark) {
         span.classList.add('syntax-accent');
+        span.classList.add(`syntax-accent-${mark.kind}`);
         if (mark.color && CSS.supports('color',mark.color)) {
           span.classList.add('syntax-color');
           span.style.setProperty('--sample-color',mark.color);

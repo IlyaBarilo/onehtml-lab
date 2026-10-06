@@ -90,6 +90,22 @@ for(const [name,engine] of engines){
       assert.deepEqual(swatches.map(s=>s.ink),['rgb(0, 0, 0)','rgb(255, 255, 255)','rgb(0, 0, 0)','rgb(0, 0, 0)','rgb(0, 0, 0)','rgb(255, 255, 255)','rgb(255, 255, 255)']);
       assert(swatches.every(s=>s.background.includes('conic-gradient')&&s.decoration==='none'));
       await page.screenshot({path:join(output,`${name}-${width}-swatches.png`)});
+      const cases=[
+        ['<script src="./three-r160.min.js"></script>','library','three-r160',/Библиотека: Three.js r160 · локальный путь/],
+        ['<img src="https://site.test/a.png">','resource','https:',/Изображение · внешний адрес/],
+        ['<button>Начать игру</button>','text','Начать',/Текст HTML/],
+        ['<script>fetch("/data")</script>','network','fetch',/Сеть · fetch/],
+        ['<script>localStorage.clear()</script>','storage','localStorage',/Хранилище · localStorage/]
+      ];
+      for(const [source,kind,needle,label] of cases){
+        await code.fill(source);await code.evaluate((el,at)=>el.setSelectionRange(at,at),source.indexOf(needle));
+        await page.locator(`.syntax-accent-${kind}`).first().waitFor();await page.locator('#syntax-caption').getByText(label).waitFor();
+        assert.notEqual(await page.locator(`.syntax-accent-${kind}`).first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
+        assert.equal(await code.inputValue(),source);
+      }
+      await code.fill('<h1>Моя игра</h1>\n<script src="./three-r160.min.js"></script>\n<img src="./player.png">\n<script>\nfetch("/scores");\nlocalStorage.setItem("score", "10");\n</script>');await paint();
+      await page.screenshot({path:join(output,`${name}-${width}-semantic.png`)});
+      assert.equal(requests,0);assert.deepEqual(errors,[]);
       console.log(`${name} ${width}: syntax, accents, geometry, native input, settings, inert rendering and exact export passed.`);
     }catch(error){await page.screenshot({path:join(output,`${name}-${width}-failure.png`)});throw error;}finally{await page.close();}
   }}finally{await browser.close();}

@@ -593,7 +593,11 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .syntax-function { color: #276785; }
 .syntax-text { color: #263b53; }
 .has-accents .syntax-text { color: #236a70; }
-.syntax-accent { text-decoration: underline; text-decoration-color: #839abc; text-underline-offset: 3px; }
+.syntax-accent { border-radius: 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.syntax-accent-library { background: #eee5fa; color: #60368a; box-shadow: inset 0 -1px #bda0d8; }
+.syntax-accent-resource { background: #e0f1fc; color: #215f84; box-shadow: inset 0 -1px #92c5e2; }
+.syntax-accent-text { background: #e8f4e9; color: #285e3d; }
+.syntax-accent-network, .syntax-accent-storage { background: #fff1d7; color: #795015; box-shadow: inset 0 -1px #dabd86; }
 .syntax-color {
   color: var(--sample-ink); text-decoration: none;
   background-color: #fff;
