@@ -11,7 +11,9 @@ assert(!standalone.includes('не распространяется по лице
 assert(!standalone.includes('<!-- APP_'), 'No template markers may remain');
 assert(!/<(?:script|link)[^>]+(?:src|href)="https?:/i.test(standalone), 'No external application resources');
 const editorLicenses = await readFile(new URL('../src/vendor/codemirror-LICENSE.txt', import.meta.url), 'utf8');
-assert(standalone.includes(editorLicenses.trim()), 'All CodeMirror copyright and permission notices must be included in full');
+// Git uses LF on Linux; the standalone build deliberately writes CRLF.
+const normalizeLineEndings = text => text.replace(/\r\n/g, '\n');
+assert(normalizeLineEndings(standalone).includes(normalizeLineEndings(editorLicenses).trim()), 'All CodeMirror copyright and permission notices must be included in full');
 const expectedVersion = process.argv[2];
 assert(process.argv.length <= 3, 'Use: node tests/build.mjs [v1.2.3]');
 const matches = [...standalone.matchAll(/class="app-version"/g)];
