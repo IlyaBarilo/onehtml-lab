@@ -62,7 +62,7 @@ function updateComparisonGameStatus() {
   if (state.libraries.length) parts.push(`Встроено: ${state.libraries.join(', ')}`);
   if (state.local) parts.push('localStorage · временно');
   if (state.blocked.size) parts.push(`Недоступно: ${[...state.blocked].join(', ')}`);
-  if (state.files) parts.push(`Сеть: ${state.files} файл. · ${state.bytes ? (state.bytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' КБ' : '(нет данных)'}`);
+  if (state.files) parts.push(`Сеть: ${formatUIInteger(state.files)} файл. · ${state.bytes ? (state.bytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' КБ' : '(нет данных)'}`);
   comparisonGameStatus.textContent = parts.join(' · ');
 }
 
@@ -128,7 +128,7 @@ function handleComparisonMessage(event) {
     const place = Number.isInteger(line) && line > 0 ? ` · строка ${ownDocument && comparisonFrame.comparisonUnchanged ? 'кода' : 'предпросмотра/скрипта'} ${line}` : '';
     const original = detail.message.slice(0, 500), message = describeRuntimeMessage(original);
     const target = warning ? comparisonGameWarning : comparisonGameError;
-    target.textContent = `${comparisonLabel()} · ${warning ? 'Предупреждение' : 'Ошибка'} (${count})${place}: ${message}`;
+    target.textContent = `${comparisonLabel()} · ${warning ? 'Предупреждение' : 'Ошибка'} (${formatUIInteger(count)})${place}: ${message}`;
     if (message !== original && original !== 'Script error.') {
       const details = document.createElement('details'), summary = document.createElement('summary'), text = document.createElement('div');
       summary.textContent = 'Исходное сообщение'; text.textContent = original;

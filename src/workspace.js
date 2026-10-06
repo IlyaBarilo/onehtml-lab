@@ -103,9 +103,9 @@ function updateWorkspaceUI() {
 function updateActivitySummary() {
   const parts = [];
   const diagnostics = diagnosticCounts();
-  if (diagnostics.errors) parts.push(`Ошибка игры (${diagnostics.errors})`);
-  else if (!runtimeError.hidden && !runtimeError.classList.contains('is-warning')) parts.push(`Ошибка игры${runtimeErrorCount > 1 ? ` (${runtimeErrorCount})` : ''}`);
-  if (diagnostics.warnings) parts.push(`Предупреждения (${diagnostics.warnings})`);
+  if (diagnostics.errors) parts.push(`Ошибка игры (${formatUIInteger(diagnostics.errors)})`);
+  else if (!runtimeError.hidden && !runtimeError.classList.contains('is-warning')) parts.push(`Ошибка игры${runtimeErrorCount > 1 ? ` (${formatUIInteger(runtimeErrorCount)})` : ''}`);
+  if (diagnostics.warnings) parts.push(`Предупреждения (${formatUIInteger(diagnostics.warnings)})`);
   if (!libraryRequest.hidden) parts.push('Нужны библиотеки');
   if (!networkStatus.hidden) parts.push(`Сеть: ${networkCountField.textContent} файл. · ${networkKbField.textContent}`);
   if (activeBundledLibraries.length) parts.push(`Встроено: ${activeBundledLibraries.join(', ')}`);

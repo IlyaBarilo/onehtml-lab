@@ -7,6 +7,10 @@ const editCase = document.querySelector('#edit-case');
 const editResult = document.querySelector('#edit-result');
 const editGutter = document.querySelector('#code-lines');
 const editMirror = document.querySelector('#code-measure');
+const editTextSizes = [14, 16, 18, 20, 22];
+const editSizeButton = document.querySelector('#edit-size-toggle');
+const editSizePopover = document.querySelector('#edit-size-popover');
+const editSizeRange = document.querySelector('#edit-size-range');
 let editReady = false;
 let editView = { size: 16, wrap: true, numbers: true, colors: 'accents' };
 let editBaseline = '';
@@ -152,7 +156,7 @@ function refreshEditSearch(reset = false) {
     editSearch = { code, query, sensitive, count, index, range };
   }
   const count = editSearch.count;
-  editResult.textContent = !query ? 'Введите текст для поиска.' : count ? `${editSearch.index + 1} из ${count}` : 'Совпадений нет.';
+  editResult.textContent = !query ? 'Введите текст для поиска.' : count ? `${formatUIInteger(editSearch.index + 1)} из ${formatUIInteger(count)}` : 'Совпадений нет.';
   for (const id of ['edit-prev', 'edit-next', 'edit-replace', 'edit-replace-all']) document.getElementById(id).disabled = !count || (id.startsWith('edit-replace') && codeField.readOnly);
   scheduleCodeLayout();
 }
@@ -169,7 +173,7 @@ function replaceEditMatch(all = false) {
     : source.slice(0, start) + replacement + source.slice(end);
   changeCodeFromEditor(next, { start, end: start + replacement.length });
   refreshEditSearch(true);
-  document.querySelector('#edit-feedback').textContent = next === source ? 'Текст не изменился.' : `Заменено: ${count}. Можно отменить.`;
+  document.querySelector('#edit-feedback').textContent = next === source ? 'Текст не изменился.' : `Заменено: ${formatUIInteger(count)}. Можно отменить.`;
 }
 
 function updateCodeTools() {
@@ -214,6 +218,7 @@ function updateInlineEditor() {
   if (!expertMode) { editFindOpen = false; appElement.classList.remove('editing-active'); }
   editInline.hidden = !available || !editFindOpen;
   editQuick.hidden = !editorWorkspaceAvailable();
+  if (editQuick.hidden) closeEditorTextSize();
   document.querySelector('#edit-quick-tools').hidden = !available || codeField.readOnly;
   document.querySelector('#edit-find').setAttribute('aria-pressed', String(editFindOpen));
   document.querySelector('#edit-quick-undo').disabled = !editUndo.length;
@@ -262,8 +267,64 @@ function applyCodeView() {
   document.querySelector('#edit-wrap').checked = editView.wrap;
   document.querySelector('#edit-numbers').checked = editView.numbers;
   document.querySelector('#edit-colors').value = editView.colors;
+  updateEditorTextSize();
   editMeasured = null;
   scheduleCodeLayout();
+}
+
+function updateEditorTextSize() {
+  const index = editTextSizes.indexOf(editView.size);
+  editSizeRange.value = String(editView.size);
+  editSizeRange.setAttribute('aria-valuetext', `${editView.size} пикселей`);
+  document.querySelector('#edit-size-value').textContent = `${editView.size} px`;
+  document.querySelector('#edit-size-decrease').disabled = index === 0;
+  document.querySelector('#edit-size-increase').disabled = index === editTextSizes.length - 1;
+  editSizeButton.title = `Размер текста · ${editView.size} px`;
+  editSizeButton.setAttribute('aria-label', `Размер текста редактора: ${editView.size} пикселей`);
+}
+
+function closeEditorTextSize() {
+  editSizePopover.hidden = true;
+  editSizeButton.setAttribute('aria-expanded', 'false');
+}
+
+function saveCodeView() {
+  try { localStorage.setItem('onehtml-lab-editor-view', JSON.stringify(editView)); }
+  catch { document.querySelector('#edit-view-feedback').textContent = 'Настройки действуют сейчас, но браузер не сохранил их.'; }
+}
+
+function setEditorTextSize(size) {
+  if (!editTextSizes.includes(size) || size === editView.size) return;
+  editView.size = size;
+  applyCodeView();
+  updateAlternativeEditor();
+  saveCodeView();
+}
+
+function initEditorTextSize() {
+  editSizeButton.addEventListener('click', () => {
+    if (!editSizePopover.hidden) { closeEditorTextSize(); return; }
+    updateEditorTextSize();
+    editSizePopover.hidden = false;
+    editSizeButton.setAttribute('aria-expanded', 'true');
+    editSizeRange.focus({ preventScroll: true });
+  });
+  editSizeRange.addEventListener('input', () => setEditorTextSize(Number(editSizeRange.value)));
+  for (const [id, step] of [['edit-size-decrease', -1], ['edit-size-increase', 1]]) document.querySelector('#' + id).addEventListener('click', () => {
+    setEditorTextSize(editTextSizes[editTextSizes.indexOf(editView.size) + step]);
+  });
+  document.addEventListener('pointerdown', event => {
+    if (!editSizePopover.hidden && !editSizePopover.contains(event.target) && !editSizeButton.contains(event.target)) closeEditorTextSize();
+  }, true);
+  document.addEventListener('focusin', event => {
+    if (!editSizePopover.hidden && !editSizePopover.contains(event.target) && !editSizeButton.contains(event.target)) closeEditorTextSize();
+  });
+  window.addEventListener('blur', closeEditorTextSize);
+  editSizePopover.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault(); event.stopPropagation();
+    closeEditorTextSize(); editSizeButton.focus({ preventScroll: true });
+  });
 }
 
 function measureCode() {
@@ -445,13 +506,14 @@ function locateRuntimeError(detail) {
 function initCodeEditor() {
   try {
     const saved = JSON.parse(localStorage.getItem('onehtml-lab-editor-view'));
-    if ([14, 16, 18, 20, 22].includes(saved?.size)) editView.size = saved.size;
+    if (editTextSizes.includes(saved?.size)) editView.size = saved.size;
     editView.wrap = saved?.wrap !== false;
     editView.numbers = saved?.numbers !== false;
     if (['off','syntax','accents'].includes(saved?.colors)) editView.colors = saved.colors;
   } catch {}
   editReady = true;
   applyCodeView();
+  initEditorTextSize();
   editButton.addEventListener('click', openCodeTools);
   codeField.addEventListener('compositionstart', () => { syntaxComposing = true; clearCodeColors(); });
   codeField.addEventListener('compositionend', () => { syntaxComposing = false; scheduleCodeLayout(); });
@@ -539,8 +601,7 @@ function initCodeEditor() {
   for (const id of ['edit-font', 'edit-wrap', 'edit-numbers', 'edit-colors']) document.getElementById(id).addEventListener('change', () => {
     editView = { size: Number(document.querySelector('#edit-font').value), wrap: document.querySelector('#edit-wrap').checked, numbers: document.querySelector('#edit-numbers').checked, colors: document.querySelector('#edit-colors').value };
     applyCodeView();
-    try { localStorage.setItem('onehtml-lab-editor-view', JSON.stringify(editView)); }
-    catch { document.querySelector('#edit-view-feedback').textContent = 'Настройки действуют сейчас, но браузер не сохранил их.'; }
+    saveCodeView();
   });
   document.querySelector('#error-line').addEventListener('click', () => { if (errorTarget && errorSource?.code === codeField.value) goToCodeLine(errorTarget.line, errorTarget.column); });
   new ResizeObserver(scheduleCodeLayout).observe(codeField);

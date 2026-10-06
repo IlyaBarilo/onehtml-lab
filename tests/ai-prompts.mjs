@@ -91,7 +91,7 @@ try {
           assert.match(text, /касаниями и экранными кнопками/);
           assert.match(text, /Также обеспечь работу на компьютере:.*мышью и клавиатурой/);
           assert(!text.includes('Текущий код:'));
-          assert.equal(parseInt((await page.locator('#ai-summary').innerText()).match(/\d+/)[0]), Array.from(text).length);
+          assert.equal(Number((await page.locator('#ai-summary').innerText()).match(/\d[\d\u00a0\u202f ]*/)[0].replace(/\s/g, '')), Array.from(text).length);
           await page.locator('#ai-view').click();
           assert(await page.locator('#ai-output').isVisible());
           assert(await page.locator('#ai-compose').isHidden());

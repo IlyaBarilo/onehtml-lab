@@ -35,6 +35,52 @@ const sample = `<!doctype html>
   </script>
 </body>
 </html>`;
+
+async function checkEditorTextSize(page, prefix) {
+  const code = page.locator('#code'), toggle = page.locator('#edit-size-toggle'), panel = page.locator('#edit-size-popover');
+  const source = await code.inputValue(), originalSize = await page.locator('#edit-font').inputValue();
+  await page.locator('#expert-toggle').click();
+  assert(await toggle.isVisible(), 'Text size is available in simple mode');
+  for (const editor of ['codemirror', 'native']) {
+    if (await page.locator('#editor-current').innerText() !== (editor === 'codemirror' ? 'CM' : 'Aa')) await page.locator('#editor-toggle').click();
+    await code.evaluate(el => el.setSelectionRange(10, 18));
+    const selection = await code.evaluate(el => [el.selectionStart, el.selectionEnd]);
+    for (const dark of [false, true]) {
+      if ((await page.locator('#theme-toggle').getAttribute('aria-pressed') === 'true') !== dark) await page.locator('#theme-toggle').click();
+      await toggle.click(); await panel.waitFor();
+      const rect = await panel.boundingBox(), anchor = await toggle.boundingBox(), engine = await page.locator('#editor-toggle').boundingBox();
+      assert(rect.x >= 0 && rect.x + rect.width <= (await page.viewportSize()).width && rect.y >= 0 && rect.y + rect.height <= anchor.y && anchor.x + anchor.width <= engine.x, 'Popover fits above the pinned text-size button left of the editor');
+      const range = page.locator('#edit-size-range');
+      for (const value of [14, 22]) {
+        await range.evaluate((el, value) => { el.value = String(value); el.dispatchEvent(new Event('input', { bubbles: true })); }, value);
+        await page.waitForFunction(({ editor, value }) => getComputedStyle(document.querySelector(editor === 'native' ? '#code' : '#alternative-editor .cm-editor')).fontSize === `${value}px`, { editor, value });
+        assert.equal(await page.locator('#edit-size-value').innerText(), `${value} px`);
+        assert.equal(await page.locator('#edit-font').inputValue(), String(value));
+        assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('onehtml-lab-editor-view')).size), value);
+        assert.equal(await code.inputValue(), source);
+        assert.deepEqual(await code.evaluate(el => [el.selectionStart, el.selectionEnd]), selection, 'Scaling preserves the selected code');
+      }
+      assert(await page.locator('#edit-size-increase').isDisabled());
+      for (const value of [20, 18, 16, 14]) {
+        await page.locator('#edit-size-decrease').click();
+        assert.equal(await range.inputValue(), String(value));
+      }
+      assert(await page.locator('#edit-size-decrease').isDisabled());
+      await page.locator('#edit-size-increase').click();
+      assert.equal(await range.inputValue(), '16');
+      await page.screenshot({ path: `${prefix}-size-${editor}-${dark ? 'dark' : 'light'}.png` });
+      await range.press('Escape'); assert(await panel.isHidden());
+      await toggle.click(); await page.locator('h1').first().click(); assert(await panel.isHidden(), 'Clicking outside closes the size controls');
+      await toggle.click(); await toggle.click(); assert(await panel.isHidden(), 'The same button closes the size controls');
+    }
+  }
+  await page.locator('#editor-toggle').click();
+  await page.locator('#theme-toggle').click();
+  await toggle.click();
+  await page.locator('#edit-size-range').evaluate((el, value) => { el.value = value; el.dispatchEvent(new Event('input', { bubbles: true })); }, originalSize);
+  await page.locator('#edit-size-range').press('Escape');
+  await page.locator('#expert-toggle').click();
+}
 try { for (const [name, engine] of engines) {
   const browser = await engine.launch();
   try { for (const [url, width] of [[fileURL, 320], [fileURL, 390], [fileURL, 1365], [httpURL, 390]]) {
@@ -222,8 +268,8 @@ try { for (const [name, engine] of engines) {
       assert.equal(await page.locator('#alternative-editor').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(23, 30, 42)');
       const pinned = async () => {
         await page.locator('#edit-quick-tools').evaluate(el => { el.scrollLeft = el.scrollWidth; });
-        const engine = await page.locator('#editor-toggle').boundingBox(), theme = await page.locator('#theme-toggle').boundingBox();
-        assert(engine && theme && engine.width >= 44 && theme.width >= 44 && engine.x + engine.width <= theme.x && theme.x + theme.width <= width && theme.y + theme.height <= 844, 'Display buttons stay pinned at the right with touch targets');
+        const scale = await page.locator('#edit-size-toggle').boundingBox(), engine = await page.locator('#editor-toggle').boundingBox(), theme = await page.locator('#theme-toggle').boundingBox();
+        assert(scale && engine && theme && scale.width >= 44 && engine.width >= 44 && theme.width >= 44 && scale.x + scale.width <= engine.x && engine.x + engine.width <= theme.x && theme.x + theme.width <= width && theme.y + theme.height <= 844, 'Display buttons stay pinned at the right with touch targets');
       };
       await pinned();
       await page.screenshot({ path: join(output, `${name}-${width}-dark-codemirror.png`) });
@@ -317,6 +363,7 @@ try { for (const [name, engine] of engines) {
         assert.equal(await page.locator('#alternative-editor').evaluate(el => el.getBoundingClientRect().top), workspaceTop, 'Editor stays under the toolbar');
       }
       await checkCompactComparison(page, join(output, `${name}-${width}`));
+      await checkEditorTextSize(page, join(output, `${name}-${width}`));
       if (width === 390 && url === fileURL) {
         const large = '<!-- Большой документ -->\n' + ('x'.repeat(110) + '\n').repeat(20000) + 'ФИНИШ';
         await setSource(large);

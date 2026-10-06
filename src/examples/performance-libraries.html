@@ -175,6 +175,8 @@
       const colors = ['#70b3ff', '#7be0b0', '#ffc777', '#c59dff', '#ff8f9f'];
       const libraries = {};
       const externalLibraryButtons = new Map();
+      const integerFormat = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
+      const integer = value => integerFormat.format(value);
       const sizeFormat = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
       const labels = {
         canvas: 'Движущиеся частицы · Canvas 2D',
@@ -239,14 +241,14 @@
         if (frames === 0) frameStart = time;
         frames += 1;
         if (pendingInput !== null) {
-          $('input-time').textContent = `До кадра: ${Math.max(0, time - pendingInput).toFixed(1)} мс`;
+          $('input-time').textContent = `До кадра: ${sizeFormat.format(Math.max(0, time - pendingInput))} мс`;
           pendingInput = null;
         }
         const elapsed = time - frameStart;
         if (elapsed >= 800) {
           const fps = (frames - 1) * 1000 / elapsed;
-          $('fps').textContent = String(Math.round(fps));
-          $('frame-time').textContent = `Кадр: ${(1000 / fps).toFixed(1)} мс`;
+          $('fps').textContent = integer(Math.round(fps));
+          $('frame-time').textContent = `Кадр: ${sizeFormat.format(1000 / fps)} мс`;
           frames = 1;
           frameStart = time;
         }
@@ -482,7 +484,7 @@
 
       function comparisonStats(model) {
         const moved = model.blocks.filter(item => Math.hypot(item.x - item.startX, item.y - item.startY) > model.size * .6 || Math.abs(item.angle) > .25).length;
-        $('scene-stats').textContent = `Сдвинуто: ${moved}/12 · Выстрелов: ${model.shots}`;
+        $('scene-stats').textContent = `Сдвинуто: ${moved}/12 · Выстрелов: ${integer(model.shots)}`;
       }
 
       function stepComparison(model, delta) {
@@ -1217,7 +1219,7 @@
               this.finished = true; this.player.setVelocity(0, 0); this.player.anims.stop(); this.player.body.enable = false;
               this.particles.explode(90, 3080, 407); this.cameras.main.flash(250, 150, 235, 205);
               const title = document.createElement('b'); title.textContent = 'Станция запущена!';
-              const points = document.createElement('span'); points.textContent = `Очки: ${this.score} · кристаллы: ${this.collected}/25`;
+              const points = document.createElement('span'); points.textContent = `Очки: ${integer(this.score)} · кристаллы: ${this.collected}/25`;
               const hint = document.createElement('span'); hint.textContent = 'Коснитесь сцены — пройти снова';
               result.replaceChildren(title, points, hint); result.hidden = false;
               if (demo) this.time.delayedCall(3200, () => this.scene.restart());
@@ -1250,7 +1252,7 @@
               this.particles.explode(this.jumps === 1 ? 6 : 16, this.player.x, this.player.y + 23);
             },
             syncHud() {
-              totals.textContent = `◇ ${this.collected}/25 · ${'♥'.repeat(this.health)} · ${this.score}`;
+              totals.textContent = `◇ ${this.collected}/25 · ${'♥'.repeat(this.health)} · ${integer(this.score)}`;
               const sector = this.player.x < 1050 ? 'Лес' : this.player.x < 2490 ? 'Переправа' : 'Станция';
               area.textContent = `${demo ? 'Демо' : compact ? 'Бег' : 'Игра'} · ${sector}`;
             },
@@ -1326,7 +1328,7 @@
         infoOpen = value;
         document.querySelector('.app').classList.toggle('info-open', value);
         $('library-info').hidden = !value; $('info-toggle').setAttribute('aria-expanded', String(value));
-        pointers.clear(); activeScene?.release?.(); $('finger-count').textContent = `0 / ${peakPointers}`;
+        pointers.clear(); activeScene?.release?.(); $('finger-count').textContent = `0 / ${integer(peakPointers)}`;
         activeScene?.pause?.(paused || infoOpen || document.hidden); pendingInput = null; resetFps();
         (value ? $('info-close') : $('info-toggle')).focus();
       }
@@ -1390,7 +1392,7 @@
         overlay.height = Math.round(height * ratio);
         touchContext.setTransform(ratio, 0, 0, ratio, 0, 0);
         pointers.clear();
-        $('finger-count').textContent = `0 / ${peakPointers}`;
+        $('finger-count').textContent = `0 / ${integer(peakPointers)}`;
         if (activeScene?.resize) activeScene.resize(); else startScene();
       }
 
@@ -1399,7 +1401,7 @@
         const known = Number.isFinite(bytes) && bytes > 0;
         const size = bytes < 1024 ? `${sizeFormat.format(bytes)} Б` : `${sizeFormat.format(bytes / 1024)} КБ`;
         field.textContent = known ? `Размер: ${size}` : 'Размер: (нет данных)';
-        field.title = known ? `${bytes} байт JS-кода; без сетевого сжатия` : 'Браузер не сообщил размер загруженного JS-файла';
+        field.title = known ? `${integer(bytes)} байт JS-кода; без сетевого сжатия` : 'Браузер не сообщил размер загруженного JS-файла';
       }
 
       if ('PerformanceObserver' in window) {
@@ -1444,9 +1446,9 @@
         const time = performance.now();
         pendingInput = paused ? null : time;
         rings.push({ ...point, time });
-        $('tap-count').textContent = String(tapCount);
-        $('finger-count').textContent = `${pointers.size} / ${peakPointers}`;
-        $('coordinates').textContent = `Координаты: ${Math.round(point.x)}, ${Math.round(point.y)}`;
+        $('tap-count').textContent = integer(tapCount);
+        $('finger-count').textContent = `${integer(pointers.size)} / ${integer(peakPointers)}`;
+        $('coordinates').textContent = `Координаты: ${integer(Math.round(point.x))}, ${integer(Math.round(point.y))}`;
         if (!paused) activeScene?.tap(point.x, point.y, event.pointerId, event.target.closest('[data-phaser-action]')?.dataset.phaserAction);
         drawTouches(performance.now());
       });
@@ -1460,7 +1462,7 @@
       for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) stage.addEventListener(name, event => {
         pointers.delete(event.pointerId);
         activeScene?.release?.(event.pointerId);
-        $('finger-count').textContent = `${pointers.size} / ${peakPointers}`;
+        $('finger-count').textContent = `${integer(pointers.size)} / ${integer(peakPointers)}`;
         drawTouches(performance.now());
       });
       document.querySelectorAll('.mode').forEach(button => button.addEventListener('click', () => startScene(button.dataset.mode)));
@@ -1468,7 +1470,7 @@
       $('info-close').addEventListener('click', () => showInfo(false));
       document.addEventListener('keydown', event => { if (event.key === 'Escape' && infoOpen) showInfo(false); });
       $('scenario').addEventListener('change', event => { scenario = event.target.value; startScene(); });
-      $('load').addEventListener('input', event => { $('load-value').textContent = event.target.value; });
+      $('load').addEventListener('input', event => { $('load-value').textContent = integer(Number(event.target.value)); });
       $('load').addEventListener('change', event => { objectCount = Number(event.target.value); startScene(); });
       $('pause').addEventListener('click', () => {
         paused = !paused;
@@ -1482,7 +1484,7 @@
       $('reset').addEventListener('click', () => {
         tapCount = 0; peakPointers = pointers.size; rings = []; pendingInput = null;
         $('tap-count').textContent = '0';
-        $('finger-count').textContent = `${pointers.size} / ${peakPointers}`;
+        $('finger-count').textContent = `${integer(pointers.size)} / ${integer(peakPointers)}`;
         $('input-time').textContent = 'До кадра: —';
         $('coordinates').textContent = 'Координаты: —';
         startScene();
@@ -1490,7 +1492,7 @@
       document.addEventListener('visibilitychange', () => {
         pointers.clear();
         activeScene?.release?.();
-        $('finger-count').textContent = `0 / ${peakPointers}`;
+        $('finger-count').textContent = `0 / ${integer(peakPointers)}`;
         activeScene.pause?.(paused || infoOpen || document.hidden);
         resetFps();
       });

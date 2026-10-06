@@ -178,12 +178,12 @@ window.addEventListener('message', event => {
     const line = errorTarget?.line || detail.line;
     const column = errorTarget?.column || detail.column;
     const place = Number.isInteger(line) && line > 0
-      ? ` (строка ${errorTarget ? 'кода' : typeof detail.filename === 'string' && detail.filename && !detail.filename.startsWith('about:') ? 'скрипта' : 'предпросмотра'} ${line}${Number.isInteger(column) && column > 0 ? `, столбец ${column}` : ''})`
+      ? ` (строка ${errorTarget ? 'кода' : typeof detail.filename === 'string' && detail.filename && !detail.filename.startsWith('about:') ? 'скрипта' : 'предпросмотра'} ${line}${Number.isInteger(column) && column > 0 ? `, столбец ${formatUIInteger(column)}` : ''})`
       : '';
     runtimeErrorCount += 1;
     const errorLabel = { rejection: 'Необработанный Promise', resource: 'Ошибка загрузки', 'console-error': 'console.error' }[detail.kind] || 'Ошибка JavaScript';
     runtimeErrorReportBase = `${errorLabel}: ${message}${place}`;
-    runtimeErrorMessageBase = `Ошибка игры${runtimeErrorCount > 1 ? ` (${runtimeErrorCount})` : ''}: ${message}${place}`;
+    runtimeErrorMessageBase = `Ошибка игры${runtimeErrorCount > 1 ? ` (${formatUIInteger(runtimeErrorCount)})` : ''}: ${message}${place}`;
     addDiagnosticEntry(detail, runtimeErrorReportBase);
     runtimeError.classList.remove('is-warning');
     runtimeError.hidden = false;
@@ -195,7 +195,7 @@ window.addEventListener('message', event => {
   if (typeof bytes !== 'number' || !Number.isFinite(bytes) || bytes < 0) return;
   networkCount += 1;
   networkBytes = Math.min(Number.MAX_SAFE_INTEGER, networkBytes + Math.floor(bytes));
-  networkCountField.textContent = String(networkCount);
+  networkCountField.textContent = formatUIInteger(networkCount);
   const kb = networkBytes / 1024;
   networkKbField.textContent = networkBytes === 0 ? '(нет данных)' : kb < 0.1
     ? '<0,1 КБ' : `${kb.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} КБ`;
@@ -527,7 +527,7 @@ function formatSymbolCount(count) {
   const lastTwo = count % 100;
   const last = count % 10;
   const unit = lastTwo >= 11 && lastTwo <= 14 ? 'символов' : last === 1 ? 'символ' : last >= 2 && last <= 4 ? 'символа' : 'символов';
-  return `${count} ${unit}`;
+  return `${formatUIInteger(count)} ${unit}`;
 }
 
 function changedSymbols(before, after) {
@@ -596,7 +596,7 @@ function historyMetrics(before, after) {
     const value = document.createElement('span');
     value.className = 'history-metric-value';
     value.setAttribute('aria-hidden', 'true');
-    value.textContent = String(amount);
+    value.textContent = formatUIInteger(amount);
     metric.append(icon, value);
     metrics.append(metric);
   }
@@ -629,15 +629,15 @@ function historyMeta(time, source) {
   const size = document.createElement('span');
   size.className = 'history-size';
   const bytes = new TextEncoder().encode(source).length;
-  size.textContent = `${bytes} байт`;
-  size.setAttribute('aria-label', `Размер HTML в UTF-8: ${bytes} байт`);
+  size.textContent = `${formatUIInteger(bytes)} байт`;
+  size.setAttribute('aria-label', `Размер HTML в UTF-8: ${formatUIInteger(bytes)} байт`);
   size.title = size.getAttribute('aria-label');
   meta.append(time, size);
   return meta;
 }
 
 function formatLibrarySize(bytes) {
-  return bytes < 1024 ? `${bytes} Б` : `${(bytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} КБ`;
+  return bytes < 1024 ? `${formatUIInteger(bytes)} Б` : `${(bytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} КБ`;
 }
 
 function closeLibraryExtraction() {
@@ -885,8 +885,8 @@ function comparisonGapButton(gap) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'comparison-gap';
-  button.textContent = `… ${gap.count} строк${suffix}`;
-  button.setAttribute('aria-label', `Показать скрытые строки: ${gap.count}`);
+  button.textContent = `… ${formatUIInteger(gap.count)} строк${suffix}`;
+  button.setAttribute('aria-label', `Показать скрытые строки: ${formatUIInteger(gap.count)}`);
   button.title = 'Показать этот участок';
   button.dataset.lines = String(gap.count);
   button.addEventListener('click', () => {

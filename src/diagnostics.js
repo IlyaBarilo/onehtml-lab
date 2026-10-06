@@ -95,7 +95,7 @@ function renderDiagnosticErrors() {
     button.type = 'button'; button.className = 'diagnostic-error-row';
     button.setAttribute('aria-pressed', String(diagnosticSelected === entry));
     const heading = document.createElement('span'); heading.className = 'diagnostic-error-meta';
-    heading.textContent = `${new Date(entry.time).toLocaleTimeString('ru-RU')} · ${entry.kind === 'warning' ? 'Предупреждение' : 'Ошибка'}${entry.count > 1 ? ` ×${entry.count}` : ''}`;
+    heading.textContent = `${new Date(entry.time).toLocaleTimeString('ru-RU')} · ${entry.kind === 'warning' ? 'Предупреждение' : 'Ошибка'}${entry.count > 1 ? ` ×${formatUIInteger(entry.count)}` : ''}`;
     const text = document.createElement('span'); text.textContent = describeRuntimeMessage(entry.message);
     button.classList.toggle('is-warning', entry.kind === 'warning');
     button.append(heading, text);
@@ -106,7 +106,7 @@ function renderDiagnosticErrors() {
 }
 
 function diagnosticBytes(source) { return new TextEncoder().encode(source || '').length; }
-function diagnosticSize(bytes) { return `${bytes.toLocaleString('ru-RU')} байт`; }
+function diagnosticSize(bytes) { return `${formatUIInteger(bytes)} байт`; }
 
 async function inspectDiagnosticLibraries(code) {
   const references = await resolvedLibraryMatches(code);
@@ -125,7 +125,7 @@ async function inspectDiagnosticLibraries(code) {
     }
     const ref = supported.get(match.index);
     const cached = ref && cachedLibrary(ref);
-    rows.push({ title: ref?.title || path.split('/').pop() || 'Внешний скрипт', path,
+    rows.push({ title: ref?.title || path.split('/').pop() || 'Внешний скрипт', path, filename: ref?.localPath ? ref.filename : '',
       state: cached ? 'Есть сохранённая копия' : ref ? (ref.url ? 'Нужно скачать' : 'Нужно выбрать файл') : 'Подмена не поддерживается',
       bytes: cached ? diagnosticBytes(cached.source) : null, usedKey: cached?.key, reference: ref,
       note: ref ? '' : 'Подключение остаётся как в коде. Версия автоматически не заменяется.' });
@@ -146,6 +146,12 @@ function diagnosticButton(text, action) {
   button.addEventListener('click', action); return button;
 }
 
+function diagnosticLibraryDescription(item) {
+  const size = item.bytes != null ? diagnosticSize(item.bytes) : '(нет данных)';
+  const file = item.filename ? `\nФайл: ${item.filename} · ${size}` : '';
+  return `${item.state}${!item.filename && item.bytes != null ? ` · ${size}` : ''}${file}${item.path ? `\n${item.path}` : ''}${item.note ? `\n${item.note}` : ''}`;
+}
+
 function renderDiagnosticLibraries(rows) {
   const inspectedCode = diagnosticSnapshot?.code;
   const list = document.querySelector('#diagnostic-library-list');
@@ -153,7 +159,7 @@ function renderDiagnosticLibraries(rows) {
     ? 'Подключения в текущем тексте редактора. Динамические загрузки из JavaScript не разбираются.'
     : 'Подключений библиотек в HTML не найдено. Динамические загрузки из JavaScript не разбираются.';
   list.replaceChildren(...rows.map(item => {
-    const row = diagnosticRow(item.title, `${item.state}${item.bytes != null ? ` · ${diagnosticSize(item.bytes)}` : ''}${item.path ? `\n${item.path}` : ''}${item.note ? `\n${item.note}` : ''}`);
+    const row = diagnosticRow(item.title, diagnosticLibraryDescription(item));
     if (item.reference && !item.usedKey) {
       const ref = item.reference;
       row.append(diagnosticButton(ref.url ? 'Загрузить…' : 'Выбрать файл…', () => {
@@ -171,7 +177,7 @@ function renderDiagnosticCache() {
   const entries = [...libraryCache.values()];
   const total = entries.reduce((sum, entry) => sum + diagnosticBytes(entry.source) + diagnosticBytes(entry.license), 0);
   document.querySelector('#diagnostic-cache-size').textContent = entries.length
-    ? `${entries.length} копий · JS и лицензии: ${diagnosticSize(total)}` : 'Сохранённых копий нет.';
+    ? `${formatUIInteger(entries.length)} копий · JS и лицензии: ${diagnosticSize(total)}` : 'Сохранённых копий нет.';
   const blocked = diagnosticCacheBusy || Boolean(pendingLibraryAction) || !diagnosticReportReady;
   document.querySelector('#diagnostic-cache-clear').disabled = !entries.length || blocked;
   document.querySelector('#diagnostic-cache-list').replaceChildren(...entries.map(entry => {
@@ -188,7 +194,7 @@ function confirmDiagnosticDelete(entries) {
   if (diagnosticCacheBusy || pendingLibraryAction || !diagnosticReportReady || diagnosticSnapshot?.code !== codeField.value) return;
   diagnosticDelete = entries;
   const used = entries.some(entry => diagnosticLibraries.some(row => row.usedKey === entry.key));
-  document.querySelector('#diagnostic-confirm-text').textContent = `Удалить ${entries.length === 1 ? entries[0].title || 'копию' : `все копии (${entries.length})`}? `
+  document.querySelector('#diagnostic-confirm-text').textContent = `Удалить ${entries.length === 1 ? entries[0].title || 'копию' : `все копии (${formatUIInteger(entries.length)})`}? `
     + (used ? 'Есть копии для текущего кода. ' : '')
     + 'Для следующих запусков и встраивания может понадобиться повторная загрузка или выбор JS и лицензии. Код, история и данные игры сохранятся.';
   const box = document.querySelector('#diagnostic-confirm'); box.hidden = false;
@@ -237,10 +243,10 @@ function diagnosticReport() {
   const lines = ['OneHTML Lab — диагностика', run ? `Сеть при запуске: ${run.network ? 'включена' : 'выключена'}. Хранилище игры: ${run.storage ? 'включено' : 'выключено'}.` : 'Игра ещё не запускалась.'];
   if (run && run.code !== codeField.value) lines.push('Код редактора изменён. Сообщения относятся к последнему запуску; библиотеки ниже — к текущему коду.');
   lines.push('Ошибки и предупреждения:');
-  for (const entry of diagnosticEntries) lines.push(`${new Date(entry.time).toLocaleTimeString('ru-RU')} · ${entry.report}${entry.count > 1 ? ` (повторов: ${entry.count})` : ''}${entry.filename ? `\nИсточник: ${entry.filename}` : ''}`);
+  for (const entry of diagnosticEntries) lines.push(`${new Date(entry.time).toLocaleTimeString('ru-RU')} · ${entry.report}${entry.count > 1 ? ` (повторов: ${formatUIInteger(entry.count)})` : ''}${entry.filename ? `\nИсточник: ${entry.filename}` : ''}`);
   if (!diagnosticEntries.length) lines.push('Не зарегистрированы.');
   lines.push('Библиотеки текущего кода:');
-  for (const row of diagnosticLibraries) lines.push(`${row.title}: ${row.state}${row.bytes != null ? `, ${diagnosticSize(row.bytes)}` : ''}${row.path ? `\n${row.path}` : ''}${row.note ? `\n${row.note}` : ''}`);
+  for (const row of diagnosticLibraries) lines.push(`${row.title}: ${diagnosticLibraryDescription(row)}`);
   if (!diagnosticLibraries.length) lines.push('Подключения в HTML не найдены.');
   return [...lines, ...readinessReport()].join('\n');
 }

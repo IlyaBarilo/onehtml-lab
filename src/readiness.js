@@ -114,12 +114,12 @@ function recordResource(data) {
 
 function speedText() {
   const stats = diagnosticRun?.speed;
-  return stats?.frames ? `FPS ${Math.round(stats.frames * 1000 / stats.elapsed)} · макс. пауза ${Math.round(stats.max)} мс · >100 мс: ${stats.slow}` : 'Нет измерений.';
+  return stats?.frames ? `FPS ${formatUIInteger(Math.round(stats.frames * 1000 / stats.elapsed))} · макс. пауза ${formatUIInteger(Math.round(stats.max))} мс · >100 мс: ${formatUIInteger(stats.slow)}` : 'Нет измерений.';
 }
 
 function resourceText(row) {
   return `${row.blocked ? 'Заблокировано политикой' : row.error ? 'Ошибка загрузки' : 'Загрузка замечена'}${row.blocked && row.error ? ' · ошибка загрузки' : ''}`
-    + `${row.count ? ` · ${row.count} загрузок · ${row.bytes ? diagnosticSize(row.bytes) : '(нет данных)'}` : ''}`;
+    + `${row.count ? ` · ${formatUIInteger(row.count)} загрузок · ${row.bytes ? diagnosticSize(row.bytes) : '(нет данных)'}` : ''}`;
 }
 
 function renderReadiness() {
@@ -142,7 +142,7 @@ function renderResourceSource(code, libraries) {
   const result = inspectResources(code, libraries);
   resourceRows = result.rows; resourceOverflow = result.overflow;
   document.querySelector('#resource-source-note').textContent = `${resourceRows.length ? 'Ссылки в HTML и встроенных стилях; наличие ссылки не означает загрузку.' : 'Внешних ссылок в HTML и встроенных стилях не найдено.'} Импорты и адреса внутри JavaScript и внешнего CSS здесь не разбираются.${resourceOverflow ? ' Показаны первые 200 записей.' : ''}`;
-  document.querySelector('#resource-source-list').replaceChildren(...resourceRows.map(row => diagnosticRow(row.kind, `${row.state}${row.count > 1 ? ` · ${row.count} подключений` : ''}\n${row.path}`)));
+  document.querySelector('#resource-source-list').replaceChildren(...resourceRows.map(row => diagnosticRow(row.kind, `${row.state}${row.count > 1 ? ` · ${formatUIInteger(row.count)} подключений` : ''}\n${row.path}`)));
 }
 
 function scheduleReadiness() {

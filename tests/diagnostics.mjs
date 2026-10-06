@@ -57,6 +57,7 @@ try {
           await open(page, 'libraries');
           assert.equal(await page.locator('#diagnostic-library-list > li').count(), 4);
           assert.match(await page.locator('#diagnostic-library-list').innerText(), /Подмена не поддерживается/);
+          assert.match(await page.locator('#diagnostic-library-list > li').filter({ hasText: 'custom.js' }).innerText(), /Файл: custom\.js · \(нет данных\)/);
           assert.equal(requests, 0, 'Inspection must not download or execute source');
           await page.locator('#diagnostic-library-list > li').filter({ hasText: 'Three.js' }).getByRole('button').click();
           await page.locator('#library-download').click();
@@ -69,6 +70,7 @@ try {
             { name: 'LICENSE', mimeType: 'text/plain', buffer: Buffer.from(license) }
           ]);
           await cacheCount(page, 2);
+          assert.match(await page.locator('#diagnostic-library-list > li').filter({ hasText: 'custom.js' }).innerText(), /Файл: custom\.js · 19 байт/);
           assert.equal(await page.locator('#code').inputValue(), fixture);
           const total = Buffer.byteLength(script) + Buffer.byteLength('window.custom=true;') + 2 * Buffer.byteLength(license.trim());
           assert((await page.locator('#diagnostic-cache-size').innerText()).replace(/\s/g, '').includes(String(total)));

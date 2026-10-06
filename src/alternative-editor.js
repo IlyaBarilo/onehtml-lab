@@ -61,7 +61,12 @@ function renderComparisonEditor(parts) {
   class GapWidget extends cm.WidgetType {
     constructor(gap) { super(); this.gap = gap; }
     eq(other) { return this.gap.id === other.gap.id && this.gap.count === other.gap.count; }
-    toDOM() { return comparisonGapButton(this.gap); }
+    toDOM() {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'comparison-gap-widget';
+      wrapper.append(comparisonGapButton(this.gap));
+      return wrapper;
+    }
     get estimatedHeight() { return 52; }
   }
   for (const gap of comparisonHiddenGaps(normalizedParts)) {

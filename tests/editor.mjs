@@ -191,7 +191,7 @@ for (const [name, engine] of engines) {
       await page.locator('#edit-open').click();
       await page.locator('#edit-numbers').check(); await page.locator('#edit-panel-find').click();
       await page.locator('#edit-query').fill('x');
-      assert.equal(await page.locator('#edit-result').innerText(), '1 из 2200001');
+      assert.equal(await page.locator('#edit-result').innerText(), '1 из 2\u00a0200\u00a0001');
       await page.locator('#edit-query').fill('ФИНИШ');
       await page.locator('#edit-find-close').click();
       assert.equal(await page.locator('#code').evaluate(el => el.value.slice(el.selectionStart, el.selectionEnd)), 'ФИНИШ');
