@@ -158,7 +158,24 @@ try {
         await useNativeEditor(page);
         await page.goto(file.href); await page.waitForFunction(() => !document.querySelector('#code').disabled);
         await page.locator('#expert-toggle').click();
-        await source(page, '<script src="./custom.js"></script>'); await open(page, 'libraries');
+        await source(page, '<script src="./custom.js"></script>');
+        await page.locator('#draft-status.error').waitFor();
+        for (const width of [320, 390, 600, 800, 801, 1365]) {
+          await page.setViewportSize({ width, height: 844 });
+          const layout = await page.evaluate(() => {
+            const status = document.querySelector('#draft-status').getBoundingClientRect();
+            const buttons = [...document.querySelectorAll('#expert-tools button')].filter(el => el.getClientRects().length).map(el => el.getBoundingClientRect());
+            const resources = document.querySelector('.expert-resource-actions').getBoundingClientRect();
+            const actions = document.querySelector('.expert-actions').getBoundingClientRect();
+            return { overlap: buttons.some(rect => rect.left < status.right && rect.right > status.left && rect.top < status.bottom && rect.bottom > status.top), scroll: document.documentElement.scrollWidth, joined: resources.left - actions.right };
+          });
+          assert(!layout.overlap, `Draft error cannot cover toolbar buttons at ${width}px`);
+          assert(layout.scroll <= width);
+          if (width >= 801) assert(layout.joined >= 0 && layout.joined <= 16, 'Resource buttons follow editing buttons with a small separator');
+          await open(page, 'libraries'); await close(page);
+        }
+        await page.setViewportSize({ width: 390, height: 844 });
+        await open(page, 'libraries');
         await page.locator('#diagnostic-library-list button').click();
         await page.locator('#library-files').setInputFiles([
           { name: 'custom.js', mimeType: 'text/javascript', buffer: Buffer.from('window.custom=true;') },

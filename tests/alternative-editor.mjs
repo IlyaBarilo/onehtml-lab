@@ -245,6 +245,36 @@ try { for (const [name, engine] of engines) {
       assert.equal(await page.locator('#theme-toggle').getAttribute('aria-pressed'), 'false', 'Light theme persists');
       assert.equal(await source(), displaySource);
       await pinned();
+      // Different wrapping and line heights must never scroll the workspace itself.
+      const switchingSource = Array.from({ length: 200 }, (_, i) => `<p>Строка ${i} ${'длинный текст '.repeat(i % 5 === 0 ? 15 : 1)}</p>`).join('\n') + '\nПОСЛЕДНЯЯ';
+      await setSource(switchingSource);
+      await content.press('Control+End');
+      const workspaceTop = await page.locator('.workspace').evaluate(el => el.getBoundingClientRect().top);
+      for (let repeat = 0; repeat < 3; repeat++) {
+        await page.locator('#editor-toggle').click(); await code.waitFor({ state: 'visible' });
+        await page.waitForFunction(() => {
+          const field = document.querySelector('#code');
+          const line = [...document.querySelectorAll('#code-colors .syntax-line')].find(el => el.textContent === 'ПОСЛЕДНЯЯ');
+          if (!line) return false;
+          const range = document.createRange(); range.selectNodeContents(line);
+          const glyph = range.getBoundingClientRect(), editor = field.getBoundingClientRect();
+          return glyph.top >= editor.top && glyph.bottom <= editor.top + field.clientHeight;
+        });
+        assert.equal(await code.evaluate(el => el.selectionStart), switchingSource.length);
+        await page.locator('#editor-toggle').click(); await content.waitFor();
+        await page.waitForFunction(() => {
+          const line = [...document.querySelectorAll('.cm-line')].find(el => el.textContent === 'ПОСЛЕДНЯЯ');
+          const editor = document.querySelector('#alternative-editor').getBoundingClientRect();
+          if (!line) return false;
+          const range = document.createRange(); range.selectNodeContents(line);
+          const glyph = range.getBoundingClientRect();
+          return glyph.top >= editor.top && glyph.bottom <= editor.bottom;
+        });
+        assert.equal(await source(), switchingSource);
+        assert.equal(await code.evaluate(el => el.selectionStart), switchingSource.length);
+        assert.equal(await page.locator('.workspace').evaluate(el => el.scrollTop), 0, 'Outer workspace cannot be scrolled by cursor reveal');
+        assert.equal(await page.locator('#alternative-editor').evaluate(el => el.getBoundingClientRect().top), workspaceTop, 'Editor stays under the toolbar');
+      }
       if (width === 390 && url === fileURL) {
         const large = '<!-- Большой документ -->\n' + ('x'.repeat(110) + '\n').repeat(20000) + 'ФИНИШ';
         await setSource(large);

@@ -42,6 +42,10 @@ try {
       assert(await page.locator('#history-view').isVisible());
       assert(await code.isHidden());
       assert.equal(await entries.count(), 1);
+      assert.equal(await entries.first().locator('.history-size').innerText(), `${Buffer.byteLength('A старая игра', 'utf8')} байт`);
+      assert.equal(await page.locator('.history-current-row .history-size').innerText(), `${Buffer.byteLength('B новая игра', 'utf8')} байт`);
+      assert(await entries.first().locator('.history-size').evaluate(el => el.previousElementSibling.classList.contains('history-time')), 'Size follows the timestamp separately');
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'History fits the phone width');
       assert.match(await entries.first().locator('.history-time').innerText(), /\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}:\d{2}/);
       assert.match(await entries.first().locator('.history-added .history-metric-value').innerText(), /^\d+$/);
       assert.equal(await entries.first().locator('.history-removed').count(), 0);
@@ -56,6 +60,7 @@ try {
       assert.equal(await code.inputValue(), 'C импорт');
       await history.click();
       assert.equal(await entries.count(), 2);
+      assert.equal(await page.locator('.history-current-row .history-size').innerText(), `${Buffer.byteLength('C импорт', 'utf8')} байт`);
       assert.match(await entries.first().locator('.history-time').innerText(), /✓/);
       assert.match(await page.locator('.history-current-row .history-added .history-metric-value').innerText(), /^\d+$/);
       await page.locator('.history-current-row [aria-label="Сравнить с последней прошлой версией"]').click();

@@ -617,6 +617,19 @@ function historyTime(timestamp, current = false, migrated = false) {
   return time;
 }
 
+function historyMeta(time, source) {
+  const meta = document.createElement('div');
+  meta.className = 'history-meta';
+  const size = document.createElement('span');
+  size.className = 'history-size';
+  const bytes = new TextEncoder().encode(source).length;
+  size.textContent = `${bytes} байт`;
+  size.setAttribute('aria-label', `Размер HTML в UTF-8: ${bytes} байт`);
+  size.title = size.getAttribute('aria-label');
+  meta.append(time, size);
+  return meta;
+}
+
 function formatLibrarySize(bytes) {
   return bytes < 1024 ? `${bytes} Б` : `${(bytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} КБ`;
 }
@@ -760,7 +773,7 @@ function renderHistory() {
   currentHistory.classList.toggle('is-verified', currentVerified);
   currentHistory.replaceChildren();
   const currentTime = historyTime(null, true);
-  currentHistory.append(currentTime, historyMetrics(latest?.code ?? '', codeField.value));
+  currentHistory.append(historyMeta(currentTime, codeField.value), historyMetrics(latest?.code ?? '', codeField.value));
   const currentActions = document.createElement('div');
   currentActions.className = 'history-entry-actions';
   const compare = historyAction(null, 'Сравнить с последней прошлой версией', () => {
@@ -788,7 +801,7 @@ function renderHistory() {
       time.setAttribute('aria-label', `${time.getAttribute('aria-label')}, верная версия`);
     }
     const older = historyState.entries[index + 1];
-    row.append(time, historyMetrics(older?.code ?? '', entry.code));
+    row.append(historyMeta(time, entry.code), historyMetrics(older?.code ?? '', entry.code));
     const actions = document.createElement('div');
     actions.className = 'history-entry-actions';
     const compareEntry = historyAction(null, 'Сравнить эту версию с текущей', () => {

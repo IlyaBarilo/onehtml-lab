@@ -125,7 +125,7 @@ function selectAlternativeRange(start, end = start, direction = 'none', scroll =
   updateAlternativeEditor();
   start = Math.min(start, alternativeView.state.doc.length); end = Math.min(end, alternativeView.state.doc.length);
   cm.foldedRanges(alternativeView.state).between(start, Math.max(start, end), (from, to) => { effects.push(cm.unfoldEffect.of({ from, to })); });
-  if (scroll) effects.push(cm.EditorView.scrollIntoView(start, { y: 'center' }));
+  if (scroll) effects.push(cm.EditorView.scrollIntoView(start, { y: typeof scroll === 'string' ? scroll : 'center' }));
   alternativeBusy = true;
   try { alternativeView.dispatch({ selection: cm.EditorSelection.single(direction === 'backward' ? end : start, direction === 'backward' ? start : end), effects }); }
   finally { alternativeBusy = false; }
@@ -200,7 +200,8 @@ function initAlternativeEditor() {
     updateAlternativeEditor(); updateInlineEditor(); scheduleCodeLayout();
     restoreEditorPosition();
     codeField.focus({ preventScroll: true });
-    if (alternativeActive()) selectAlternativeRange(codeField.selectionStart, codeField.selectionEnd, codeField.selectionDirection, true);
+    if (alternativeActive()) selectAlternativeRange(codeField.selectionStart, codeField.selectionEnd, codeField.selectionDirection, 'nearest');
+    else { editRevealCaret = true; scheduleCodeLayout(); }
   };
   alternativeSelect.addEventListener('change', () => choose(alternativeSelect.value));
   alternativeToggle.addEventListener('click', () => choose(alternativeActive() ? 'native' : 'codemirror'));

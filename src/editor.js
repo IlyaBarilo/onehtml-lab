@@ -362,7 +362,15 @@ function drawCodeLines() {
   editGutter.hidden = !editView.numbers || codeField.hidden || Boolean(currentPanel());
   if (codeField.hidden || currentPanel()) { document.querySelector('#edit-highlight').hidden = true; clearCodeColors(); return; }
   if (editGutter.hidden && editInline.hidden && editView.colors === 'off' && !editRevealCaret) { document.querySelector('#edit-highlight').hidden = true; clearCodeColors(); return; }
-  const { starts, lineHeight } = measureCode();
+  let { starts, lineHeight } = measureCode();
+  if (!editGutter.hidden) {
+    const digits = String(starts.length).length;
+    const width = `${Math.max(3, digits + 1)}ch`;
+    if (workspaceElement.style.getPropertyValue('--line-width') !== width) {
+      workspaceElement.style.setProperty('--line-width', width);
+      ({ starts, lineHeight } = measureCode());
+    }
+  }
   if (editRevealCaret) {
     editRevealCaret = false;
     if (document.activeElement === codeField && codeField.selectionStart === codeField.selectionEnd) {
@@ -374,12 +382,6 @@ function drawCodeLines() {
   drawCodeColors();
   drawSearchHighlight();
   if (editGutter.hidden) return;
-  const digits = String(starts.length).length;
-  const width = `${Math.max(3, digits + 1)}ch`;
-  if (workspaceElement.style.getPropertyValue('--line-width') !== width) {
-    workspaceElement.style.setProperty('--line-width', width);
-    measureCode();
-  }
   let low = 0, high = starts.length;
   while (low < high) {
     const mid = (low + high) >>> 1;

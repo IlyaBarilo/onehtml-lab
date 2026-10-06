@@ -93,7 +93,8 @@ h1 span { font-weight: 450; color: #637e9f; }
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  flex-wrap: wrap;
   gap: 12px;
   min-height: 52px;
   padding: 4px max(12px, env(safe-area-inset-right)) 4px max(12px, env(safe-area-inset-left));
@@ -101,7 +102,7 @@ h1 span { font-weight: 450; color: #637e9f; }
   background: #f5f8fd;
 }
 .expert-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
-.expert-resource-actions { display: flex; align-items: center; gap: 6px; }
+.expert-resource-actions { display: flex; align-items: center; gap: 6px; padding-left: 12px; border-left: 1px solid #c9d9ed; }
 .import-button {
   display: inline-flex;
   align-items: center;
@@ -140,9 +141,9 @@ h1 span { font-weight: 450; color: #637e9f; }
 .expert-icon-button[aria-pressed="true"] { background: #dceaff; border-color: #9dbfea; color: #2059bf; }
 .storage-button.is-off { background: #eff2f6; border-color: #d6dfeb; color: #8796aa; }
 .expert-icon-button:disabled { opacity: .35; cursor: default; }
-.draft-status { min-width: 0; color: #607895; font-size: 12px; text-align: right; }
+.draft-status { min-width: 0; margin-left: auto; color: #607895; font-size: 12px; text-align: right; }
 .draft-status.error { color: #9a4a4a; }
-.workspace { width: 100%; flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; }
+.workspace { width: 100%; flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; overflow: clip; }
 textarea {
   display: block;
   width: 100%;
@@ -329,7 +330,9 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .history-heading h2 { margin: 0; font-size: 20px; }
 .history-heading button { width: 44px; height: 44px; border: 0; border-radius: 8px; background: #edf3fd; color: #315c93; font-size: 22px; }
 .history-list { width: 100%; padding: 0; margin: 0; list-style: none; }
-.history-row { display: grid; grid-template-columns: clamp(180px, 22vw, 210px) minmax(0, 1fr) auto; align-items: center; gap: 14px; min-height: 60px; padding: 5px max(18px, env(safe-area-inset-right)) 5px max(18px, env(safe-area-inset-left)); border-bottom: 1px solid #dce6f3; white-space: nowrap; }
+.history-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: center; gap: 14px; min-height: 60px; padding: 5px max(18px, env(safe-area-inset-right)) 5px max(18px, env(safe-area-inset-left)); border-bottom: 1px solid #dce6f3; white-space: nowrap; }
+.history-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; min-width: 0; }
+.history-size { color: #607895; font-size: 14px; font-variant-numeric: tabular-nums; }
 .history-current-row { position: sticky; top: 64px; z-index: 1; background: #e8f2ff; color: #2059bf; border-bottom-color: #b9d1f2; }
 .history-current-row.is-verified { background: #dcecff; }
 .history-entry:hover { background: #f7faff; }
@@ -358,11 +361,11 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   .app-mark { width: 30px; height: 30px; }
   .actions { gap: 3px; }
   .run-button { margin-left: 3px; }
-  .expert-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "tools tools" "resources draft"; align-items: center; gap: 4px 8px; }
-  .expert-actions { grid-area: tools; flex-wrap: nowrap; }
-  .expert-resource-actions { grid-area: resources; min-width: 0; }
+  .expert-tools { gap: 4px 8px; }
+  .expert-actions { flex: 0 0 100%; flex-wrap: nowrap; }
+  .expert-resource-actions { min-width: 0; padding-left: 0; border-left: 0; }
   .expert-resource-actions .import-button { white-space: nowrap; }
-  .draft-status { grid-area: draft; justify-self: end; }
+  .draft-status { flex: 1 0 64px; }
   textarea { padding: 16px 14px max(16px, env(safe-area-inset-bottom)); font-size: 16px; }
   .comparison-heading { gap: 8px; padding-right: 8px; padding-left: 14px; }
   .comparison-heading strong { font-size: 17px; }
@@ -376,6 +379,8 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   .history-row { grid-template-columns: 110px minmax(0, 1fr) auto; gap: 8px; min-height: 56px; padding-right: max(10px, env(safe-area-inset-right)); padding-left: max(10px, env(safe-area-inset-left)); }
   .history-current-row { top: 58px; }
   .history-time { flex-direction: column; gap: 1px; font-size: 14px; line-height: 1.15; }
+  .history-meta { flex-direction: column; gap: 2px; }
+  .history-size { font-size: 12px; }
   .history-metrics { gap: 9px; }
   .history-metric { font-size: 15px; gap: 4px; }
   .history-metric-icon { width: 19px; height: 19px; }
@@ -520,10 +525,10 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   .expert-actions #import span { display: none; }
 }
 @media (min-width: 601px) and (max-width: 800px) {
-  .expert-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "tools tools" "resources draft"; gap: 4px 8px; }
-  .expert-actions { grid-area: tools; }
-  .expert-resource-actions { grid-area: resources; }
-  .draft-status { grid-area: draft; }
+  .expert-tools { gap: 4px 8px; }
+  .expert-actions { flex: 0 0 100%; }
+  .expert-resource-actions { padding-left: 0; border-left: 0; }
+  .draft-status { flex: 1 0 64px; }
 }
 
 /* Diagnostics use the same full workspace as the other tools. */
@@ -561,8 +566,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .diagnostic-confirm { position: sticky; bottom: 0; padding: 12px; background: #fff8e8; border: 1px solid #e5cf9d; border-radius: 8px; font-size: 15px; line-height: 1.4; }
 .diagnostic-confirm p { margin: 0; }
 @media (max-width: 380px) {
-  .expert-tools { grid-template-areas: "tools tools" "resources resources" "draft draft"; }
-  .draft-status { font-size: 11px; line-height: 1.1; }
+  .draft-status { flex-basis: 100%; font-size: 11px; line-height: 1.1; }
 }
 
 /* Wide layouts keep the code and iframe in their original DOM positions. */
@@ -620,6 +624,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .editing-active.compact-viewport .toolbar { min-height: 50px; }
 .editing-active.compact-viewport:not(.panel-open):not(.preview-expanded):not(.comparison-game-open) .expert-tools { display: flex; flex-wrap: nowrap; justify-content: flex-start; gap: 8px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
 .editing-active.compact-viewport .expert-tools > .expert-actions, .editing-active.compact-viewport .expert-tools > .expert-resource-actions, .editing-active.compact-viewport .expert-tools > .draft-status { flex: 0 0 auto; flex-wrap: nowrap; white-space: nowrap; }
+.editing-active.compact-viewport .expert-resource-actions { padding-left: 8px; border-left: 1px solid #c9d9ed; }
 .editing-active.compact-viewport #edit-inline { max-height: min(50%, max(44px, calc(100% - var(--edit-bottom, 0px) - 80px))); }
 
 /* The native textarea owns editing and selection; this inert layer only paints. */
@@ -712,6 +717,8 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .theme-dark :is(h1 span, .app-version, .draft-status, .dialog-copy, dialog label, .save-library-hint, .guide-panel p, .example-card span, .library-extraction-intro, .extraction-note, .library-extraction-footer p, .history-empty, .help-intro, .help-note, .edit-note, #edit-result, #ai-dialog #ai-summary, #ai-dialog #ai-libraries, #ai-dialog #ai-error) { color: #a9b8cc; }
 .theme-dark :is(.service-links a, .help-details summary, .history-action, .comparison-legend) { color: #a5c6fb; }
 .theme-dark :is(.service-list li, .history-row, .help-details, .edit-section + .edit-section, .library-extraction-row, .comparison-legend, #edit-display-controls) { border-color: #3b4b61; }
+.theme-dark .expert-resource-actions { border-color: #3b4b61; }
+.theme-dark .history-size { color: #a9b8cc; }
 .theme-dark button { background: #29384d; color: #c5d8f3; border-color: #465b77; }
 .theme-dark button:hover:not(:disabled) { background: #344965; color: #e0ebfc; }
 .theme-dark button:disabled { color: #8292a9; }
@@ -3467,7 +3474,15 @@ function drawCodeLines() {
   editGutter.hidden = !editView.numbers || codeField.hidden || Boolean(currentPanel());
   if (codeField.hidden || currentPanel()) { document.querySelector('#edit-highlight').hidden = true; clearCodeColors(); return; }
   if (editGutter.hidden && editInline.hidden && editView.colors === 'off' && !editRevealCaret) { document.querySelector('#edit-highlight').hidden = true; clearCodeColors(); return; }
-  const { starts, lineHeight } = measureCode();
+  let { starts, lineHeight } = measureCode();
+  if (!editGutter.hidden) {
+    const digits = String(starts.length).length;
+    const width = `${Math.max(3, digits + 1)}ch`;
+    if (workspaceElement.style.getPropertyValue('--line-width') !== width) {
+      workspaceElement.style.setProperty('--line-width', width);
+      ({ starts, lineHeight } = measureCode());
+    }
+  }
   if (editRevealCaret) {
     editRevealCaret = false;
     if (document.activeElement === codeField && codeField.selectionStart === codeField.selectionEnd) {
@@ -3479,12 +3494,6 @@ function drawCodeLines() {
   drawCodeColors();
   drawSearchHighlight();
   if (editGutter.hidden) return;
-  const digits = String(starts.length).length;
-  const width = `${Math.max(3, digits + 1)}ch`;
-  if (workspaceElement.style.getPropertyValue('--line-width') !== width) {
-    workspaceElement.style.setProperty('--line-width', width);
-    measureCode();
-  }
   let low = 0, high = starts.length;
   while (low < high) {
     const mid = (low + high) >>> 1;
@@ -3811,7 +3820,7 @@ function selectAlternativeRange(start, end = start, direction = 'none', scroll =
   updateAlternativeEditor();
   start = Math.min(start, alternativeView.state.doc.length); end = Math.min(end, alternativeView.state.doc.length);
   cm.foldedRanges(alternativeView.state).between(start, Math.max(start, end), (from, to) => { effects.push(cm.unfoldEffect.of({ from, to })); });
-  if (scroll) effects.push(cm.EditorView.scrollIntoView(start, { y: 'center' }));
+  if (scroll) effects.push(cm.EditorView.scrollIntoView(start, { y: typeof scroll === 'string' ? scroll : 'center' }));
   alternativeBusy = true;
   try { alternativeView.dispatch({ selection: cm.EditorSelection.single(direction === 'backward' ? end : start, direction === 'backward' ? start : end), effects }); }
   finally { alternativeBusy = false; }
@@ -3886,7 +3895,8 @@ function initAlternativeEditor() {
     updateAlternativeEditor(); updateInlineEditor(); scheduleCodeLayout();
     restoreEditorPosition();
     codeField.focus({ preventScroll: true });
-    if (alternativeActive()) selectAlternativeRange(codeField.selectionStart, codeField.selectionEnd, codeField.selectionDirection, true);
+    if (alternativeActive()) selectAlternativeRange(codeField.selectionStart, codeField.selectionEnd, codeField.selectionDirection, 'nearest');
+    else { editRevealCaret = true; scheduleCodeLayout(); }
   };
   alternativeSelect.addEventListener('change', () => choose(alternativeSelect.value));
   alternativeToggle.addEventListener('click', () => choose(alternativeActive() ? 'native' : 'codemirror'));
@@ -5369,6 +5379,19 @@ function historyTime(timestamp, current = false, migrated = false) {
   return time;
 }
 
+function historyMeta(time, source) {
+  const meta = document.createElement('div');
+  meta.className = 'history-meta';
+  const size = document.createElement('span');
+  size.className = 'history-size';
+  const bytes = new TextEncoder().encode(source).length;
+  size.textContent = `${bytes} байт`;
+  size.setAttribute('aria-label', `Размер HTML в UTF-8: ${bytes} байт`);
+  size.title = size.getAttribute('aria-label');
+  meta.append(time, size);
+  return meta;
+}
+
 function formatLibrarySize(bytes) {
   return bytes < 1024 ? `${bytes} Б` : `${(bytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} КБ`;
 }
@@ -5512,7 +5535,7 @@ function renderHistory() {
   currentHistory.classList.toggle('is-verified', currentVerified);
   currentHistory.replaceChildren();
   const currentTime = historyTime(null, true);
-  currentHistory.append(currentTime, historyMetrics(latest?.code ?? '', codeField.value));
+  currentHistory.append(historyMeta(currentTime, codeField.value), historyMetrics(latest?.code ?? '', codeField.value));
   const currentActions = document.createElement('div');
   currentActions.className = 'history-entry-actions';
   const compare = historyAction(null, 'Сравнить с последней прошлой версией', () => {
@@ -5540,7 +5563,7 @@ function renderHistory() {
       time.setAttribute('aria-label', `${time.getAttribute('aria-label')}, верная версия`);
     }
     const older = historyState.entries[index + 1];
-    row.append(time, historyMetrics(older?.code ?? '', entry.code));
+    row.append(historyMeta(time, entry.code), historyMetrics(older?.code ?? '', entry.code));
     const actions = document.createElement('div');
     actions.className = 'history-entry-actions';
     const compareEntry = historyAction(null, 'Сравнить эту версию с текущей', () => {
