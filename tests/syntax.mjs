@@ -84,11 +84,21 @@ for(const [name,engine] of engines){
       await code.fill(sample);await paint();assert.equal(requests,0);assert.deepEqual(errors,[]);
       await code.fill('<style>p { color: white; background: black; border-color: yellow; outline-color: transparent; caret-color: rgba(0, 0, 0, 0.1); fill: #0008; stroke: hsl(240, 100%, 20%); }</style>');
       await page.waitForFunction(()=>document.querySelectorAll('.syntax-color').length===7);
-      const swatches=await page.locator('.syntax-color').evaluateAll(elements=>elements.map(el=>{
-        const css=getComputedStyle(el);return {text:el.textContent,ink:css.color,background:css.backgroundImage,decoration:css.textDecorationLine};
-      }));
-      assert.deepEqual(swatches.map(s=>s.ink),['rgb(0, 0, 0)','rgb(255, 255, 255)','rgb(0, 0, 0)','rgb(0, 0, 0)','rgb(0, 0, 0)','rgb(255, 255, 255)','rgb(255, 255, 255)']);
-      assert(swatches.every(s=>s.background.includes('conic-gradient')&&s.decoration==='none'));
+      // evaluateAll resolves its node list before evaluating the callback.
+      // Repainting can detach those nodes in between, giving empty CSS values.
+      // Query and read computed styles together, then assert the plain snapshot.
+      for(let repaint=0;repaint<5;repaint++){
+        const previous=await page.locator('#code-colors .syntax-color').first().elementHandle();
+        try{
+          await code.evaluate(el=>el.dispatchEvent(new Event('scroll')));
+          await page.waitForFunction(el=>!el.isConnected,previous);
+        }finally{await previous.dispose();}
+        const swatches=await page.evaluate(()=>Array.from(document.querySelectorAll('#code-colors .syntax-color'),el=>{
+          const css=getComputedStyle(el);return {text:el.textContent,ink:css.color,background:css.backgroundImage,decoration:css.textDecorationLine};
+        }));
+        assert.deepEqual(swatches.map(s=>s.ink),['rgb(0, 0, 0)','rgb(255, 255, 255)','rgb(0, 0, 0)','rgb(0, 0, 0)','rgb(0, 0, 0)','rgb(255, 255, 255)','rgb(255, 255, 255)']);
+        assert(swatches.every(s=>s.background.includes('conic-gradient')&&s.decoration==='none'));
+      }
       await page.screenshot({path:join(output,`${name}-${width}-swatches.png`)});
       const cases=[
         ['<script src="./three-r160.min.js"></script>','library','three-r160',/Библиотека: Three.js r160 · локальный путь/],
