@@ -24,6 +24,11 @@ async function checkCanvasRoute(page, name) {
       const height = 420, canvas = document.createElement('canvas');
       canvas.width = width; canvas.height = height;
       const context = canvas.getContext('2d', { willReadFrequently: true });
+      let waveLines = [], pathStart, pathEnd;
+      const moveTo = context.moveTo.bind(context), lineTo = context.lineTo.bind(context), stroke = context.stroke.bind(context);
+      context.moveTo = (x, y) => { pathStart = x; moveTo(x, y); };
+      context.lineTo = (x, y) => { pathEnd = x; lineTo(x, y); };
+      context.stroke = () => { if (context.strokeStyle === '#a7d2db') waveLines.push({ from: pathStart, to: pathEnd }); stroke(); };
       const scene = new Function('makeCanvas', 'width', 'height', source + '\nreturn canvasShowcase();')(() => context, width, height);
       const bounds = () => {
         const pixels = context.getImageData(0, Math.floor(height * .59) - 40, width, 42).data;
@@ -36,9 +41,25 @@ async function checkCanvasRoute(page, name) {
       };
       scene.tick(0);
       const day = canvas.toDataURL('image/png');
-      let previous = bounds(), exits = 0, entries = 0;
+      const roadBandTop = Math.floor(height * .59) - 40;
+      const roadPixels = context.getImageData(0, roadBandTop, width, 50).data;
+      let wheelBottom = -1;
+      for (let i = 0; i < roadPixels.length; i += 4) if (roadPixels[i] < 65 && roadPixels[i + 1] < 80 && roadPixels[i + 2] < 90) wheelBottom = roadBandTop + Math.floor(i / 4 / width);
+      if (wheelBottom < Math.floor(height * .59) - 3 || wheelBottom > height * .60) throw new Error(`Wheels float above or below the road: ${wheelBottom}`);
+      let previous = bounds(), exits = 0, entries = 0, waveWraps = 0, previousWaves = waveLines;
       for (let step = 1; step <= 240; step += 1) {
+        waveLines = [];
         scene.tick(400);
+        if (waveLines.length !== 84) throw new Error('Each wave must keep its place in the moving pattern');
+        for (let index = 0; index < waveLines.length; index += 1) if (waveLines[index].from < previousWaves[index].from) {
+          if (previousWaves[index].from < width || waveLines[index].from >= 0) throw new Error('A wave wrapped while already visible on screen');
+          waveWraps += 1;
+        }
+        previousWaves = waveLines;
+        for (const x of [.21, .77]) {
+          const pillar = context.getImageData(Math.floor(width * x), Math.floor(height * .59) - 32, 1, 27).data;
+          for (let i = 0; i < pillar.length; i += 4) if (pillar[i] !== 83 || pillar[i + 1] !== 100 || pillar[i + 2] !== 115) throw new Error('The car or its lights painted over a foreground bridge support');
+        }
         const current = bounds();
         if (previous && !current) {
           if (previous.max < width - 2) throw new Error(`Car disappeared inside the scene at ${step * .4}s: ${JSON.stringify(previous)}`);
@@ -57,12 +78,13 @@ async function checkCanvasRoute(page, name) {
       for (let step = 0; step < 80; step += 1) scene.tick(50);
       const night = canvas.toDataURL('image/png');
       scene.dispose();
-      return { day, night, exits, entries };
+      return { day, night, exits, entries, waveWraps };
     }, { source: canvasSource, width });
     assert(result.exits >= 2 && result.entries >= 2, 'Check multiple complete crossings and returns');
+    assert(result.waveWraps > 10, 'Check waves entering from outside the scene across multiple rows');
     for (const theme of ['day', 'night']) await writeFile(join(tmpdir(), `onehtml-lab-canvas-${name}-${width}-${theme}.png`), Buffer.from(result[theme].split(',')[1], 'base64'));
   }
-  console.log(`${name}: Canvas car crosses the whole scene and wraps outside the frame on phone and desktop.`);
+  console.log(`${name}: Canvas wheels follow the road, supports cover the car, and vehicles/waves wrap outside the frame on phone and desktop.`);
 }
 
 async function libraryLabels(frame, status) {
