@@ -11,6 +11,7 @@ const editTextSizes = [14, 16, 18, 20, 22];
 const editSizeButton = document.querySelector('#edit-size-toggle');
 const editSizePopover = document.querySelector('#edit-size-popover');
 const editSizeRange = document.querySelector('#edit-size-range');
+const editorIntro = document.querySelector('#editor-intro');
 let editReady = false;
 let editView = { size: 16, wrap: true, numbers: true, colors: 'accents' };
 let editBaseline = '';
@@ -213,6 +214,14 @@ function scheduleInlineGeometry() {
 
 function updateInlineEditor() {
   if (!editReady) return;
+  const showIntro = !expertMode && !codeField.value && editorWorkspaceAvailable();
+  editorIntro.hidden = !showIntro;
+  workspaceElement.classList.toggle('has-editor-intro', showIntro);
+  for (const field of [codeField, document.querySelector('#alternative-editor .cm-content')]) {
+    if (!field) continue;
+    if (showIntro) field.setAttribute('aria-describedby', editorIntro.id);
+    else field.removeAttribute('aria-describedby');
+  }
   const available = inlineEditorAvailable();
   if (!available) appElement.classList.remove('editing-active');
   if (!expertMode) { editFindOpen = false; appElement.classList.remove('editing-active'); }

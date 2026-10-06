@@ -127,6 +127,25 @@ textarea {
   scrollbar-color: #7189a8 #dce5ef;
 }
 textarea::placeholder { color: rgba(96, 116, 143, .42); opacity: 1; }
+.has-editor-intro #code::placeholder { color: transparent; }
+#editor-intro {
+  position: absolute;
+  top: calc(var(--edit-top, 0px) + 48px);
+  right: max(20px, env(safe-area-inset-right));
+  bottom: calc(var(--edit-bottom, 0px) + 16px);
+  left: max(72px, env(safe-area-inset-left));
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  color: #60748f;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.editor-intro-copy { max-width: 560px; }
+.editor-intro-copy p { margin: 0 0 16px; }
+.editor-intro-copy p:last-child { margin-bottom: 0; }
+.theme-dark #editor-intro { color: #a9b8cc; }
 textarea::selection { color: #173c72; background: #dbe9ff; }
 textarea:focus-visible { outline: none; }
 textarea:disabled { background: #eef2f7; color: #617086; }
