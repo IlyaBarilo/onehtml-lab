@@ -16,6 +16,54 @@ const assets = [
   ['phaser', 'https://cdnjs.cloudflare.com/ajax/libs/phaser/3.90.0/phaser.min.js', 'https://cdn.jsdelivr.net/npm/phaser@3.90.0/LICENSE.md', 'window.Phaser={VERSION:"3.90.0"};']
 ].map(([id, url, licenseUrl, source], index) => ({ id, url, licenseUrl, source: '/* ' + 'x'.repeat(2048 + index * 512) + ' */\n' + source }));
 const engines = process.argv.includes('--engines=chromium') ? [['chromium', chromium]] : [['chromium', chromium], ['webkit', webkit]];
+const canvasSource = example.slice(example.indexOf('      function canvasShowcase()'), example.indexOf('      function threeColor('));
+
+async function checkCanvasRoute(page, name) {
+  for (const width of [320, 1365]) {
+    const result = await page.evaluate(({ source, width }) => {
+      const height = 420, canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      const scene = new Function('makeCanvas', 'width', 'height', source + '\nreturn canvasShowcase();')(() => context, width, height);
+      const bounds = () => {
+        const pixels = context.getImageData(0, Math.floor(height * .59) - 40, width, 42).data;
+        let min = width, max = -1;
+        for (let i = 0; i < pixels.length; i += 4) {
+          if (pixels[i] !== 210 || pixels[i + 1] !== 147 || pixels[i + 2] !== 89) continue;
+          const x = i / 4 % width; min = Math.min(min, x); max = Math.max(max, x);
+        }
+        return max < 0 ? null : { min, max };
+      };
+      scene.tick(0);
+      const day = canvas.toDataURL('image/png');
+      let previous = bounds(), exits = 0, entries = 0;
+      for (let step = 1; step <= 240; step += 1) {
+        scene.tick(400);
+        const current = bounds();
+        if (previous && !current) {
+          if (previous.max < width - 2) throw new Error(`Car disappeared inside the scene at ${step * .4}s: ${JSON.stringify(previous)}`);
+          exits += 1;
+        }
+        if (!previous && current) {
+          if (current.min > 2) throw new Error(`Car appeared inside the scene at ${step * .4}s: ${JSON.stringify(current)}`);
+          entries += 1;
+        }
+        if (previous && current && current.min < previous.min && !(previous.max >= width - 2 && current.min <= 2)) {
+          throw new Error(`Car jumped backwards at ${step * .4}s: ${JSON.stringify({ previous, current })}`);
+        }
+        previous = current;
+      }
+      scene.tap();
+      for (let step = 0; step < 80; step += 1) scene.tick(50);
+      const night = canvas.toDataURL('image/png');
+      scene.dispose();
+      return { day, night, exits, entries };
+    }, { source: canvasSource, width });
+    assert(result.exits >= 2 && result.entries >= 2, 'Check multiple complete crossings and returns');
+    for (const theme of ['day', 'night']) await writeFile(join(tmpdir(), `onehtml-lab-canvas-${name}-${width}-${theme}.png`), Buffer.from(result[theme].split(',')[1], 'base64'));
+  }
+  console.log(`${name}: Canvas car crosses the whole scene and wraps outside the frame on phone and desktop.`);
+}
 
 async function libraryLabels(frame, status) {
   for (const asset of assets) {
@@ -25,7 +73,7 @@ async function libraryLabels(frame, status) {
     const size = await button.locator('.library-size').innerText();
     assert.match(size, /^Размер: (?:[\d\s,.]+ (?:Б|КБ)|\(нет данных\))$/);
     if (status === 'Встроена в HTML') {
-      assert.equal(await button.locator('.library-size').getAttribute('title'), `${Buffer.byteLength('\n' + asset.source + '\n')} байт JS-кода; без сетевого сжатия`);
+      assert.equal((await button.locator('.library-size').getAttribute('title')).replace(/[\u00a0\u202f]/g, ''), `${Buffer.byteLength('\n' + asset.source + '\n')} байт JS-кода; без сетевого сжатия`);
     }
   }
 }
@@ -60,6 +108,7 @@ try {
         page.on('pageerror', error => errors.push(error.message));
         await page.goto(appUrl);
         await page.waitForFunction(() => !document.querySelector('#code').disabled);
+        await checkCanvasRoute(page, name);
         await page.locator('#expert-toggle').click();
         await page.locator('#examples-open').click();
         await page.locator('[data-example-category="tests"]').click();
@@ -104,7 +153,7 @@ try {
           field.dispatchEvent(new Event('input', { bubbles: true }));
           field.dispatchEvent(new Event('change', { bubbles: true }));
         });
-        assert.equal(await frame.locator('#load-value').innerText(), '10000');
+        assert.equal((await frame.locator('#load-value').innerText()).replace(/\s/g, ''), '10000');
         const bounds = await frame.locator('#stage').boundingBox();
         assert(bounds && bounds.height >= 64);
         await frame.locator('#stage').tap({ position: { x: 30, y: 50 } });
@@ -113,7 +162,7 @@ try {
         await frame.locator('#fps').filter({ hasText: /^\d+$/ }).waitFor();
         await frame.locator('#stage').tap({ position: { x: 45, y: 60 } });
         assert.equal(await frame.locator('#tap-count').innerText(), '2');
-        await frame.locator('#input-time').filter({ hasText: /^До кадра: [\d.]+ мс$/ }).waitFor();
+        await frame.locator('#input-time').filter({ hasText: /^До кадра: [\d\s,.]+ мс$/ }).waitFor();
         const layout = await frame.locator('footer').evaluate(footer => ({ bottom: footer.getBoundingClientRect().bottom,
           viewportHeight: innerHeight, viewportWidth: innerWidth, scrollWidth: document.documentElement.scrollWidth }));
         if (name === 'chromium') await page.screenshot({ path: join(tmpdir(), 'onehtml-lab-performance-example.png') });
@@ -135,7 +184,7 @@ try {
         await frame.locator('#scene-stats').filter({ hasText: /Сдвинуто: [1-9]/ }).waitFor();
         await frame.locator('#scenario').selectOption('load');
         assert(await frame.locator('.load').isVisible());
-        assert.equal(await frame.locator('#load-value').innerText(), '10000');
+        assert.equal((await frame.locator('#load-value').innerText()).replace(/\s/g, ''), '10000');
         await page.locator('#run').click();
         assert.equal(requests, 6, 'Cached preview must not request external scripts');
         const embedded = await downloadHtml(page);

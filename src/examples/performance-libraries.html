@@ -194,7 +194,7 @@
         canvas: [
           'Canvas 2D встроен в браузер. На нём можно рисовать интерфейсы, персонажей, фон, диаграммы и целые 2D-игры без дополнительных библиотек. Он подходит для небольших игр и собственных визуальных эффектов.',
           'Canvas выполняет команды рисования. Правила игры, движение, столкновения, камеры, смену уровней и учёт очков разработчик организует сам. Сложную игру тоже можно написать, но готовые игровые системы придётся создавать вручную.',
-          'Возможности: набережная с многослойным фоном, водой, движущимся катером и переходом дня в ночь. Сравнение: шар и блоки рисуются Canvas, а упрощённый расчёт движения и столкновений написан в самом примере.'
+          'Возможности: набережная с многослойным фоном, водой, машиной на мосту и движущимся катером. Касание переключает день и ночь: меняются цвета сцены, загораются фары, огни катера и подсветка моста; свет отражается в воде. Сравнение: шар и блоки рисуются Canvas, а упрощённый расчёт движения и столкновений написан в самом примере.'
         ],
         three160: [
           'Three.js даёт готовую основу для 3D: геометрию, камеры, материалы, свет, тени и работу с графическим процессором. Он полезен, когда нужен объём и пространственное движение, а не только плоский рисунок.',
@@ -713,29 +713,85 @@
                 context.beginPath(); context.moveTo(x, y); context.lineTo(x + width * .04, y); context.stroke();
               }
             }
-            context.strokeStyle = '#435566'; context.lineWidth = Math.max(3, height * .025);
-            const bridgeY = height * .59;
-            context.beginPath(); context.moveTo(width * .04, bridgeY); context.lineTo(width * .62, bridgeY); context.stroke();
-            for (let x of [.12, .53]) {
-              context.fillStyle = '#536473'; context.fillRect(width * x, height * .33, width * .025, height * .3);
-              context.strokeStyle = '#70828a'; context.lineWidth = 1.5;
-              for (let index = 0; index < 9; index += 1) {
-                context.beginPath(); context.moveTo(width * (x + .012), height * .33);
-                context.lineTo(width * (.04 + index * .072), bridgeY); context.stroke();
+            const bridgeY = height * .59, deckHeight = Math.max(7, height * .025), roadY = bridgeY - deckHeight / 2;
+            // The road continues beyond both screen edges; vehicles wrap only after leaving the frame.
+            context.fillStyle = blend([67, 85, 102], [24, 36, 58]);
+            context.fillRect(0, roadY, width, deckHeight);
+            context.strokeStyle = blend([137, 155, 159], [82, 139, 177]); context.lineWidth = 1.5;
+            context.beginPath(); context.moveTo(0, roadY + 1); context.lineTo(width, roadY + 1); context.stroke();
+            for (let x of [.2, .76]) {
+              context.fillStyle = blend([83, 100, 115], [33, 50, 72]); context.fillRect(width * x, height * .33, width * .02, height * .3);
+              context.strokeStyle = blend([112, 130, 138], [61, 94, 125]); context.lineWidth = 1.5;
+              for (let index = 0; index < 7; index += 1) {
+                context.beginPath(); context.moveTo(width * (x + .01), height * .33);
+                context.lineTo(width * ((x < .5 ? .02 : .5) + index * .08), bridgeY); context.stroke();
               }
             }
-            const tram = ((time * .02) % .73) * width - width * .08;
-            context.fillStyle = '#d29359'; context.fillRect(tram, bridgeY - Math.max(7, height * .035), width * .07, Math.max(7, height * .035));
-            context.fillStyle = '#dbe6dd'; context.fillRect(tram + width * .008, bridgeY - Math.max(6, height * .03), width * .052, Math.max(3, height * .017));
+            context.save(); context.globalAlpha = night;
+            context.strokeStyle = '#6dd4eb'; context.shadowColor = '#58ccff'; context.shadowBlur = 7; context.lineWidth = 1.5;
+            context.beginPath(); context.moveTo(0, bridgeY + deckHeight / 2 - 1); context.lineTo(width, bridgeY + deckHeight / 2 - 1); context.stroke();
+            context.restore();
+            const carWidth = Math.max(30, Math.min(width * .075, 86)), wheelRadius = carWidth * .065;
+            const carX = (time * Math.max(20, width * .04) + width * .13 + carWidth) % (width + carWidth * 2) - carWidth;
+            context.save(); context.translate(carX, roadY - wheelRadius);
+            context.save(); context.globalAlpha = night;
+            const headlights = context.createLinearGradient(carWidth * .45, 0, carWidth * 1.8, 0);
+            headlights.addColorStop(0, '#fff2be70'); headlights.addColorStop(1, '#fff2be00');
+            context.fillStyle = headlights; context.beginPath(); context.moveTo(carWidth * .46, -carWidth * .12);
+            context.lineTo(carWidth * 1.8, -carWidth * .22); context.lineTo(carWidth * 1.8, wheelRadius); context.closePath(); context.fill();
+            context.restore();
+            context.fillStyle = blend([210, 147, 89], [67, 112, 156]);
+            context.fillRect(-carWidth * .48, -carWidth * .18, carWidth * .96, carWidth * .15);
+            context.beginPath(); context.moveTo(-carWidth * .32, -carWidth * .18); context.lineTo(-carWidth * .18, -carWidth * .32);
+            context.lineTo(carWidth * .17, -carWidth * .32); context.lineTo(carWidth * .34, -carWidth * .18); context.closePath(); context.fill();
+            context.fillStyle = blend([195, 226, 233], [247, 212, 137]);
+            context.beginPath(); context.moveTo(-carWidth * .24, -carWidth * .2); context.lineTo(-carWidth * .15, -carWidth * .29);
+            context.lineTo(-carWidth * .035, -carWidth * .29); context.lineTo(-carWidth * .035, -carWidth * .2); context.closePath(); context.fill();
+            context.beginPath(); context.moveTo(carWidth * .01, -carWidth * .29); context.lineTo(carWidth * .15, -carWidth * .29);
+            context.lineTo(carWidth * .26, -carWidth * .2); context.lineTo(carWidth * .01, -carWidth * .2); context.closePath(); context.fill();
+            for (const x of [-.29, .29]) {
+              context.fillStyle = '#19232d'; context.beginPath(); context.arc(carWidth * x, 0, wheelRadius, 0, Math.PI * 2); context.fill();
+              context.fillStyle = '#a2b3bf'; context.beginPath(); context.arc(carWidth * x, 0, wheelRadius * .45, 0, Math.PI * 2); context.fill();
+            }
+            context.save(); context.shadowBlur = night * 8;
+            context.fillStyle = blend([244, 233, 206], [255, 242, 180]); context.shadowColor = '#ffefad';
+            context.fillRect(carWidth * .43, -carWidth * .15, carWidth * .055, carWidth * .06);
+            context.fillStyle = blend([160, 65, 52], [255, 87, 93]); context.shadowColor = '#ff575d';
+            context.fillRect(-carWidth * .48, -carWidth * .15, carWidth * .045, carWidth * .06);
+            context.restore(); context.restore();
             const boatX = ((time * .016 + .2) % 1.3 - .15) * width, boatY = height * .79 + Math.sin(time * .9) * height * .008;
             context.save(); context.translate(boatX, boatY);
-            const boatWidth = Math.max(35, Math.min(width * .2, 150)), boatHeight = boatWidth * .24;
-            context.fillStyle = '#eeeee6'; context.beginPath(); context.moveTo(-boatWidth / 2, 0); context.lineTo(boatWidth / 2, 0);
+            const boatWidth = Math.max(48, Math.min(width * .2, 150)), boatHeight = boatWidth * .24;
+            context.save(); context.globalAlpha = night * .7;
+            context.translate(boatWidth * .05, boatHeight * 1.15); context.scale(1, .3);
+            const reflectionRadius = boatWidth * .6;
+            const reflection = context.createRadialGradient(0, 0, 0, 0, 0, reflectionRadius);
+            reflection.addColorStop(0, '#efc97780'); reflection.addColorStop(.5, '#efc97730'); reflection.addColorStop(1, '#efc97700');
+            context.fillStyle = reflection; context.fillRect(-reflectionRadius, -reflectionRadius, reflectionRadius * 2, reflectionRadius * 2);
+            context.restore();
+            context.fillStyle = blend([238, 238, 230], [38, 62, 90]); context.beginPath(); context.moveTo(-boatWidth / 2, 0); context.lineTo(boatWidth / 2, 0);
             context.lineTo(boatWidth * .32, boatHeight * .6); context.lineTo(-boatWidth * .38, boatHeight * .6); context.closePath(); context.fill();
-            context.fillStyle = '#b87646'; context.fillRect(-boatWidth * .2, -boatHeight * .65, boatWidth * .48, boatHeight * .65);
-            context.fillStyle = '#95c8d9'; context.fillRect(-boatWidth * .13, -boatHeight * .52, boatWidth * .3, boatHeight * .34);
-            context.strokeStyle = '#ffffff55'; context.lineWidth = 2;
-            context.beginPath(); context.moveTo(-boatWidth * .55, boatHeight); context.lineTo(-boatWidth * .9, boatHeight); context.stroke();
+            context.strokeStyle = blend([126, 161, 173], [105, 195, 209]); context.lineWidth = 1.5;
+            context.beginPath(); context.moveTo(-boatWidth * .48, boatHeight * .1); context.lineTo(boatWidth * .46, boatHeight * .1); context.stroke();
+            context.fillStyle = blend([184, 118, 70], [54, 79, 103]); context.fillRect(-boatWidth * .2, -boatHeight * .65, boatWidth * .48, boatHeight * .65);
+            context.fillStyle = blend([220, 220, 204], [106, 163, 186]); context.fillRect(-boatWidth * .23, -boatHeight * .73, boatWidth * .53, boatHeight * .1);
+            context.save(); context.shadowColor = '#ffd789'; context.shadowBlur = night * 6;
+            context.fillStyle = blend([149, 200, 217], [255, 213, 132]);
+            for (let index = 0; index < 3; index += 1) context.fillRect(boatWidth * (-.14 + index * .13), -boatHeight * .52, boatWidth * .09, boatHeight * .34);
+            context.restore();
+            context.strokeStyle = blend([154, 173, 176], [128, 169, 194]); context.lineWidth = 1.5;
+            context.beginPath(); context.moveTo(boatWidth * .04, -boatHeight * .73); context.lineTo(boatWidth * .04, -boatHeight * 1.3); context.stroke();
+            context.save(); context.globalAlpha = night; context.shadowBlur = 7;
+            for (const [x, y, color] of [[-.19, -.62, '#ff7772'], [.28, -.62, '#70efbc'], [.04, -1.3, '#e4f6ff']]) {
+              context.fillStyle = context.shadowColor = color;
+              context.beginPath(); context.arc(boatWidth * x, boatHeight * y, Math.max(1.5, boatWidth * .015), 0, Math.PI * 2); context.fill();
+            }
+            context.restore();
+            context.strokeStyle = blend([196, 224, 229], [100, 150, 177]); context.lineWidth = 1.5;
+            for (let index = 0; index < 3; index += 1) {
+              context.beginPath(); context.moveTo(-boatWidth * (.5 + index * .12), boatHeight * (.7 + index * .16));
+              context.lineTo(-boatWidth * (.82 + index * .1), boatHeight * (.7 + index * .16)); context.stroke();
+            }
             context.restore();
             context.fillStyle = blend([43, 66, 78], [15, 25, 38]); context.fillRect(0, height * .94, width, height * .06);
             for (let index = 0; index < 7; index += 1) {

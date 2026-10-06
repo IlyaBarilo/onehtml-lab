@@ -103,11 +103,15 @@ try {
         headerBottom: document.querySelector('.toolbar').getBoundingClientRect().bottom,
         networkTop: document.querySelector('#activity-toggle').getBoundingClientRect().top,
         networkBottom: document.querySelector('#activity-toggle').getBoundingClientRect().bottom,
+        speedTop: document.querySelector('#speed-strip').getBoundingClientRect().top,
+        speedBottom: document.querySelector('#speed-strip').getBoundingClientRect().bottom,
         previewTop: document.querySelector('#preview').getBoundingClientRect().top
       }));
       assert(layout.content <= layout.screen, 'Network indicator must fit the mobile screen');
       assert.equal(layout.networkTop, layout.headerBottom);
-      assert.equal(layout.previewTop, layout.networkBottom);
+      assert(await page.locator('#speed-strip').isVisible(), 'Frame timing is enabled by default');
+      assert.equal(layout.speedTop, layout.networkBottom, 'Frame timing follows the network indicator');
+      assert.equal(layout.previewTop, layout.speedBottom, 'Preview follows the frame timing strip without a gap');
       const initialCount = Number(await page.locator('#network-count').innerText());
       await page.frameLocator('iframe').locator('#later').click();
       await page.waitForFunction(count => Number(document.querySelector('#network-count').textContent) > count, initialCount);
@@ -128,6 +132,22 @@ try {
       await page.locator('#run').click();
       await page.waitForFunction(() => Number(document.querySelector('#network-count').textContent) >= 4);
       const firstFrame = await page.locator('#preview > iframe').elementHandle();
+      for (const enabled of [false, true]) {
+        await page.locator('#diagnostic-open').click();
+        await page.locator('[data-diagnostic-tab="speed"]').click();
+        await page.locator('#speed-toggle').setChecked(enabled);
+        await page.locator('#activity-close').click();
+        const bounds = await page.evaluate(() => ({
+          networkBottom: document.querySelector('#activity-toggle').getBoundingClientRect().bottom,
+          speedTop: document.querySelector('#speed-strip').getBoundingClientRect().top,
+          speedBottom: document.querySelector('#speed-strip').getBoundingClientRect().bottom,
+          previewTop: document.querySelector('#preview').getBoundingClientRect().top
+        }));
+        assert.equal(await page.locator('#speed-strip').isVisible(), enabled);
+        if (enabled) assert.equal(bounds.speedTop, bounds.networkBottom);
+        assert.equal(bounds.previewTop, enabled ? bounds.speedBottom : bounds.networkBottom, 'Preview is adjacent to the last visible indicator');
+        assert(await firstFrame.evaluate(element => element.isConnected), 'Changing frame timing must preserve the running game');
+      }
       await page.locator('#network-toggle').click();
       assert.equal(await page.locator('#network-toggle').getAttribute('aria-pressed'), 'false');
       assert(await firstFrame.evaluate(element => !element.isConnected));
