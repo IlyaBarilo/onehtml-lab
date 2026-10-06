@@ -4,10 +4,13 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
+import { checkCompactComparison } from './comparison-compact.mjs';
 
 const output = join(tmpdir(), 'onehtml-lab-alternative-editor');
 await mkdir(output, { recursive: true });
-const engines = process.argv.includes('--engines=chromium') ? [['chromium', chromium]] : [['chromium', chromium], ['webkit', webkit]];
+const engineOption = process.argv.find(arg => arg.startsWith('--engines='))?.slice(10);
+const engines = [['chromium', chromium], ['webkit', webkit]].filter(([name]) => !engineOption || engineOption.split(',').includes(name));
+assert(engines.length, 'Choose chromium or webkit');
 const fileURL = new URL('../onehtml-lab.html', import.meta.url).href;
 const html = await readFile(new URL(fileURL));
 const server = createServer((request, response) => response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(html));
@@ -313,6 +316,7 @@ try { for (const [name, engine] of engines) {
         assert.equal(await page.locator('.workspace').evaluate(el => el.scrollTop), 0, 'Outer workspace cannot be scrolled by cursor reveal');
         assert.equal(await page.locator('#alternative-editor').evaluate(el => el.getBoundingClientRect().top), workspaceTop, 'Editor stays under the toolbar');
       }
+      await checkCompactComparison(page, join(output, `${name}-${width}`));
       if (width === 390 && url === fileURL) {
         const large = '<!-- Большой документ -->\n' + ('x'.repeat(110) + '\n').repeat(20000) + 'ФИНИШ';
         await setSource(large);
@@ -326,7 +330,7 @@ try { for (const [name, engine] of engines) {
       assert.equal(requests, 0, 'Both editors work offline');
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       assert.deepEqual(errors, []);
-      console.log(`${name} ${new URL(url).protocol} ${width}: switching, folding, undo, search, paste/history, import, exact export, preview, settings and offline persistence passed.`);
+      console.log(`${name} ${new URL(url).protocol} ${width}: switching, folding, undo, search, paste/history, compact comparison, import, exact export, preview, settings and offline persistence passed.`);
     } catch (error) { await page.screenshot({ path: join(output, `${name}-${width}-failure.png`) }); throw error; }
     finally { await context.close(); }
   } } finally { await browser.close(); }

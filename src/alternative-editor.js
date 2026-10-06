@@ -12,6 +12,7 @@ const alternativeToggle = document.querySelector('#editor-toggle');
 const themeToggle = document.querySelector('#theme-toggle');
 const comparisonEditorHost = document.querySelector('#comparison-editor');
 let comparisonEditorView = null;
+let comparisonDecorationConfig = null;
 function alternativeActive() { return alternativeChoice === 'codemirror' && Boolean(alternativeView); }
 function alternativeMarks(source) {
   if (alternativeScan.source !== source) alternativeScan = { source, result: scanCodeColors(source) };
@@ -38,28 +39,45 @@ function alternativeExtensions(readOnly = codeField.readOnly || codeField.disabl
 function clearComparisonEditor() {
   comparisonEditorView?.destroy();
   comparisonEditorView = null;
+  comparisonDecorationConfig = null;
   comparisonEditorHost.replaceChildren();
   comparisonEditorHost.hidden = true;
   comparison.classList.remove('uses-codemirror');
 }
 
 function renderComparisonEditor(parts) {
-  clearComparisonEditor();
   diffContent.style.fontSize = `${editView.size}px`;
   diffContent.style.whiteSpace = editView.wrap ? 'pre-wrap' : 'pre';
   diffContent.style.overflowWrap = editView.wrap ? 'anywhere' : 'normal';
-  if (!alternativeActive()) return;
+  if (!alternativeActive()) { clearComparisonEditor(); return; }
   const cm = OneHTMLCodeMirror, marks = [];
+  const normalizedParts = parts.map(part => ({ type: part.type, text: part.text.replace(/\r\n?/g, '\n') }));
   let source = '';
-  for (const part of parts) {
-    const text = part.text.replace(/\r\n?/g, '\n'), from = source.length;
+  for (const part of normalizedParts) {
+    const text = part.text, from = source.length;
     source += text;
     if (part.type !== 'same' && text.length) marks.push(cm.Decoration.mark({ class: `diff-${part.type}` }).range(from, source.length));
   }
+  class GapWidget extends cm.WidgetType {
+    constructor(gap) { super(); this.gap = gap; }
+    eq(other) { return this.gap.id === other.gap.id && this.gap.count === other.gap.count; }
+    toDOM() { return comparisonGapButton(this.gap); }
+    get estimatedHeight() { return 52; }
+  }
+  for (const gap of comparisonHiddenGaps(normalizedParts)) {
+    marks.push(cm.Decoration.replace({ widget: new GapWidget(gap), block: true }).range(gap.from, gap.to));
+  }
+  const decorations = cm.EditorView.decorations.of(cm.Decoration.set(marks, true));
+  if (comparisonEditorView) {
+    comparisonEditorView.dispatch({ effects: comparisonDecorationConfig.reconfigure(decorations) });
+    comparisonEditorView.requestMeasure({ write: updateComparisonScrollbar });
+    return;
+  }
+  comparisonDecorationConfig = new cm.Compartment();
   comparisonEditorView = new cm.EditorView({ parent: comparisonEditorHost, state: cm.EditorState.create({ doc: source, extensions: [
     cm.html(), alternativeExtensions(true), cm.drawSelection(), cm.keymap.of(cm.defaultKeymap),
     cm.EditorView.contentAttributes.of({ 'aria-label': 'Сравнение HTML-кода CodeMirror', tabindex: '0' }),
-    cm.EditorView.decorations.of(cm.Decoration.set(marks)),
+    comparisonDecorationConfig.of(decorations),
     cm.EditorView.updateListener.of(update => { if (update.geometryChanged || update.viewportChanged) requestAnimationFrame(updateComparisonScrollbar); }),
     cm.foldGutter({ markerDOM(open) { const marker = document.createElement('span'); marker.textContent = open ? '−' : '+'; marker.title = open ? 'Свернуть блок' : 'Развернуть блок'; return marker; } }),
     cm.codeFolding()

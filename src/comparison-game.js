@@ -39,6 +39,7 @@ function updateComparisonGameUI() {
   document.querySelector('#comparison-game').hidden = !comparisonGameMode;
   document.querySelector('#comparison-versions').hidden = !comparisonGameMode;
   document.querySelector('.comparison-legend').hidden = comparisonGameMode;
+  comparisonCompactButton.hidden = comparisonGameMode;
   diffContent.hidden = comparisonGameMode || Boolean(comparisonEditorView);
   comparisonEditorHost.hidden = comparisonGameMode || !comparisonEditorView;
   document.querySelector('#comparison-code-tab').setAttribute('aria-pressed', String(!comparisonGameMode));

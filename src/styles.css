@@ -162,6 +162,10 @@ textarea::-webkit-scrollbar-thumb:hover, .comparison::-webkit-scrollbar-thumb:ho
 .comparison-game-open .expert-tools, .comparison-game-open #activity-toggle { display: none; }
 .comparison-modes button, #comparison-versions button { min-height: 44px; border: 1px solid #c4d6ef; border-radius: 7px; background: #f7faff; color: #315c93; padding: 5px 14px; font-size: 15px; }
 .comparison-modes button[aria-pressed="true"], #comparison-versions button[aria-pressed="true"] { background: #dceaff; border-color: #8cb6ff; color: #1759bd; }
+#comparison-compact { margin-left: auto; }
+.comparison-gap { display: block; width: 100%; min-height: 44px; margin: 4px 0; padding: 6px 12px; border: 1px dashed #b8cce6; border-radius: 5px; background: #eaf1fa; color: #456383; font: 15px/1.4 system-ui, sans-serif; text-align: left; white-space: normal; cursor: pointer; }
+.comparison-gap:hover { background: #dceaff; }
+#comparison-editor .comparison-gap { width: calc(100% - 24px); margin-inline: 12px; }
 #comparison-versions { padding-top: 0; }
 #comparison-current, #comparison-past { flex: 1; min-width: 0; }
 #comparison-date { display: block; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -178,6 +182,7 @@ textarea::-webkit-scrollbar-thumb:hover, .comparison::-webkit-scrollbar-thumb:ho
 #comparison-stage { flex: 1; min-height: 0; position: relative; background: #fff; }
 #comparison-stage iframe { display: block; width: 100%; height: 100%; border: 0; }
 .comparison-legend span::before { content: ""; display: inline-block; width: 13px; height: 13px; margin-right: 7px; border-radius: 3px; vertical-align: -1px; }
+.comparison-legend .legend-total::before { display: none; }
 .legend-added::before { background: #c8efcf; }
 .legend-removed::before { background: #ffd8d5; }
 .diff-content {
@@ -741,6 +746,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .theme-dark #comparison-game-status { color: #a9b8cc; }
 .theme-dark .comparison :is(.diff-added, .diff-added *) { color: #b9e8c5; }
 .theme-dark .comparison :is(.diff-removed, .diff-removed *) { color: #f1bbb6; }
+.theme-dark .comparison-gap { background: #202c3d; color: #b4c7e1; border-color: #536c8f; }
 .theme-dark .diff-added { background: #254631; color: #b9e8c5; }
 .theme-dark .diff-removed { background: #542d33; color: #f1bbb6; }
 .theme-dark #edit-snippet mark { background: #355c93; color: #e7efff; }

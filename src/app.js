@@ -29,6 +29,7 @@ const historyList = document.querySelector('#history-list');
 const currentHistory = document.querySelector('#history-current');
 const comparison = document.querySelector('#comparison');
 const comparisonSource = document.querySelector('#comparison-source');
+const comparisonTotal = document.querySelector('#comparison-total');
 const comparisonAdded = document.querySelector('#comparison-added');
 const comparisonRemoved = document.querySelector('#comparison-removed');
 const comparisonScrollbar = document.querySelector('#comparison-scrollbar');
@@ -858,44 +859,98 @@ function closeComparison() {
   comparison.classList.remove('has-custom-scrollbar');
   comparisonScrollbar.hidden = true;
   comparisonSource.textContent = '';
+  comparisonTotal.textContent = formatSymbolCount(0);
   comparisonAdded.textContent = formatSymbolCount(0);
   comparisonRemoved.textContent = formatSymbolCount(0);
   diffContent.replaceChildren();
+  comparisonParts = [];
+  comparisonExpanded.clear();
   clearComparisonEditor();
   if (!running && !historyOpen && !extractionOpen) codeField.hidden = false;
   restoreEditorPosition();
   updateControls();
 }
 
+let comparisonParts = [];
+let comparisonCompact = true;
+const comparisonExpanded = new Set();
+const comparisonCompactButton = document.querySelector('#comparison-compact');
+
+function comparisonHiddenGaps(parts) {
+  return comparisonCompact ? comparisonLineGaps(parts).gaps.filter(gap => !comparisonExpanded.has(gap.id)) : [];
+}
+
+function comparisonGapButton(gap) {
+  const suffix = gap.count % 10 === 1 && gap.count % 100 !== 11 ? 'а' : gap.count % 10 >= 2 && gap.count % 10 <= 4 && (gap.count % 100 < 12 || gap.count % 100 > 14) ? 'и' : '';
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'comparison-gap';
+  button.textContent = `… ${gap.count} строк${suffix}`;
+  button.setAttribute('aria-label', `Показать скрытые строки: ${gap.count}`);
+  button.title = 'Показать этот участок';
+  button.dataset.lines = String(gap.count);
+  button.addEventListener('click', () => {
+    const top = comparisonScrollTarget().scrollTop;
+    comparisonExpanded.add(gap.id);
+    renderComparisonContent();
+    const target = comparisonScrollTarget();
+    target.scrollTop = top;
+    requestAnimationFrame(() => { target.scrollTop = top; updateComparisonScrollbar(); });
+  });
+  return button;
+}
+
+function renderComparisonContent() {
+  const nodes = comparisonChunks(comparisonParts, comparisonHiddenGaps(comparisonParts)).map(part => {
+    if (part.type === 'gap') return comparisonGapButton(part.gap);
+    if (part.type === 'same') return document.createTextNode(part.text);
+    const mark = document.createElement('span');
+    mark.className = `diff-${part.type}`;
+    mark.textContent = part.text;
+    return mark;
+  });
+  diffContent.replaceChildren(...nodes);
+  comparisonCompactButton.setAttribute('aria-pressed', String(comparisonCompact));
+  comparisonCompactButton.textContent = comparisonCompact ? 'Кратко' : 'Полностью';
+  comparisonCompactButton.title = comparisonCompact ? 'Показать все строки' : 'Скрыть одинаковые строки';
+  renderComparisonEditor(comparisonParts);
+  updateComparisonScrollbar();
+}
+
+comparisonCompactButton.addEventListener('click', () => {
+  comparisonCompact = !comparisonCompact;
+  comparisonExpanded.clear();
+  if (comparisonEditorView) OneHTMLCodeMirror.unfoldAll(comparisonEditorView);
+  renderComparisonContent();
+  comparisonScrollTarget().scrollTop = 0;
+});
+
 function openComparison(baseline = latestHistory()) {
   if (!baseline || running) return;
   rememberEditorPosition();
   closeWorkspacePanels(false);
   closeLibraryExtraction();
+  clearComparisonEditor();
   const versionDate = formatVersionDate(baseline.createdAt);
   comparisonSource.textContent = `Текущий код и версия ${versionDate.date} ${versionDate.time}`;
-  const parts = codeDiff(baseline.code, codeField.value);
+  comparisonParts = codeDiff(baseline.code, codeField.value);
+  comparisonCompact = true;
+  comparisonExpanded.clear();
   let added = 0;
   let removed = 0;
-  const nodes = parts.map(part => {
-    if (part.type === 'same') return document.createTextNode(part.text);
+  for (const part of comparisonParts) {
     if (part.type === 'added') added += symbolCount(part.text);
-    else removed += symbolCount(part.text);
-    const mark = document.createElement('span');
-    mark.className = part.type === 'added' ? 'diff-added' : 'diff-removed';
-    mark.textContent = part.text;
-    return mark;
-  });
+    if (part.type === 'removed') removed += symbolCount(part.text);
+  }
+  comparisonTotal.textContent = formatSymbolCount(symbolCount(codeField.value));
   comparisonAdded.textContent = formatSymbolCount(added);
   comparisonRemoved.textContent = formatSymbolCount(removed);
-  diffContent.replaceChildren(...nodes);
   comparison.scrollTop = 0;
   comparison.hidden = false;
   codeField.hidden = true;
   comparisonOpen = true;
   resetComparisonGame(baseline);
-  renderComparisonEditor(parts);
-  updateComparisonScrollbar();
+  renderComparisonContent();
   updateControls();
 }
 

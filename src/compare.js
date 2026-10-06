@@ -80,3 +80,64 @@ function codeDiff(before, after) {
   append('same', oldTokens.slice(oldEnd).join(''));
   return result;
 }
+
+// Only complete unchanged lines can be hidden. Offsets refer to the full diff,
+// including removed text, and retain the original newline bytes.
+function comparisonLineGaps(parts, contextLines = 3) {
+  let source = '';
+  const changes = [];
+  for (const part of parts) {
+    const from = source.length;
+    source += part.text;
+    if (part.type !== 'same' && part.text) changes.push({ from, to: source.length });
+  }
+  const lines = [];
+  let from = 0;
+  for (const newline of source.matchAll(/\r\n|\r|\n/g)) {
+    const to = newline.index + newline[0].length;
+    lines.push({ from, to });
+    from = to;
+  }
+  if (from < source.length) lines.push({ from, to: source.length });
+  const visible = new Uint8Array(lines.length);
+  let changeIndex = 0;
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    while (changes[changeIndex]?.to <= line.from) changeIndex++;
+    if (changes[changeIndex]?.from < line.to) {
+      visible.fill(1, Math.max(0, index - contextLines), Math.min(lines.length, index + contextLines + 1));
+    }
+  }
+  const gaps = [];
+  for (let index = 0; index < lines.length;) {
+    if (visible[index]) { index++; continue; }
+    const first = index;
+    while (index < lines.length && !visible[index]) index++;
+    gaps.push({ id: first, from: lines[first].from, to: lines[index - 1].to, count: index - first });
+  }
+  return { source, gaps };
+}
+
+function comparisonChunks(parts, gaps) {
+  const result = [];
+  let position = 0, gapIndex = 0;
+  for (const part of parts) {
+    const start = position, end = start + part.text.length;
+    while (position < end) {
+      const gap = gaps[gapIndex];
+      if (gap && position >= gap.from) {
+        if (position === gap.from) result.push({ type: 'gap', gap });
+        position = Math.min(end, gap.to);
+        if (position === gap.to) gapIndex++;
+      } else {
+        const to = Math.min(end, gap?.from ?? end);
+        const text = part.text.slice(position - start, to - start);
+        const last = result[result.length - 1];
+        if (last?.type === part.type) last.text += text;
+        else result.push({ type: part.type, text });
+        position = to;
+      }
+    }
+  }
+  return result;
+}

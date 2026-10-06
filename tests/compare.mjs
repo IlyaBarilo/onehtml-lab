@@ -35,4 +35,37 @@ for (let caseNumber = 0; caseNumber < 500; caseNumber++) {
   check(before, after);
 }
 check('x'.repeat(100_000), 'y'.repeat(100_000));
-console.log('Code diff reconstruction and multiple changes passed.');
+
+function compact(parts, contextLines = 3) {
+  const { source, gaps } = context.comparisonLineGaps(parts, contextLines);
+  const chunks = Array.from(context.comparisonChunks(parts, gaps));
+  assert.equal(chunks.map(part => part.type === 'gap' ? source.slice(part.gap.from, part.gap.to) : part.text).join(''), source, 'Expanding every gap reconstructs the full diff');
+  for (const type of ['added', 'removed']) {
+    assert.equal(chunks.filter(part => part.type === type).map(part => part.text).join(''), parts.filter(part => part.type === type).map(part => part.text).join(''), 'No changed characters can be hidden');
+  }
+  return { source, gaps: Array.from(gaps, gap => ({ ...gap })), chunks };
+}
+const numbered = Array.from({ length: 55 }, (_, i) => `Строка ${i}`).join('\n');
+const edited = numbered.replace('Строка 13\n', 'Новая 13\n').replace('Строка 37\n', 'Новая 37 ⭐\n');
+assert.deepEqual(compact(diff(numbered, edited)).gaps.map(gap => [gap.id, gap.count]), [[0, 10], [17, 17], [41, 14]]);
+assert.deepEqual(compact(diff(numbered, numbered.replace('Строка 13\n', 'Новая 13\n').replace('Строка 18\n', 'Новая 18\n'))).gaps.map(gap => [gap.id, gap.count]), [[0, 10], [22, 33]], 'Nearby context merges without hiding changes');
+assert.equal(compact(diff('', '')).gaps.length, 0);
+assert.equal(compact(diff('unchanged\n', 'unchanged\n')).gaps[0].count, 1, 'A trailing newline is not an extra hidden line');
+assert.equal(compact(diff('\n\n\n', '\n\n\n')).gaps[0].count, 3);
+for (const [before, after] of [
+  ['first\r\n\r\nlast\r\n', 'first\r\nnew\r\nlast\r\n'],
+  ['one\rtwo\rthree', 'one\rTWO\rthree'],
+  ['a b\nc', 'a\nb\nc'],
+  ['a\nb\nc', 'a b\nc'],
+  ['⭐ x', '🏆 x'],
+  ['a\n', 'a'],
+  ['a', 'a\n']
+]) compact(diff(before, after), 0);
+const splitNewline = compact([{ type: 'same', text: 'a\r' }, { type: 'same', text: '\nb' }], 0);
+assert.equal(splitNewline.gaps[0].count, 2, 'CRLF across fragments is one newline');
+for (let caseNumber = 0; caseNumber < 250; caseNumber++) {
+  const before = Array.from({ length: random() % 60 }, () => alphabet[random() % alphabet.length]).join('');
+  const after = Array.from({ length: random() % 60 }, () => alphabet[random() % alphabet.length]).join('');
+  compact(diff(before, after), random() % 4);
+}
+console.log('Code diff reconstruction, context merging, exact hidden-line counts and complete changes passed.');
