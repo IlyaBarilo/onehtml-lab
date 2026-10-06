@@ -108,18 +108,21 @@
     @media (max-height: 580px) and (max-width: 600px) {
       header, footer { padding: 6px 8px; }
       header { padding-top: 4px; padding-bottom: 4px; }
-      .heading { margin-bottom: 3px; }
+      .heading { gap: 6px; margin-bottom: 2px; }
+      .heading h1 { flex-shrink: 0; white-space: nowrap; }
       #scenario { min-height: 32px; }
-      .library-description { margin-top: 6px; }
-      .metric { padding: 4px 8px; }
+      .library-description, #info-toggle { margin-top: 4px; }
+      .metric { padding: 3px 6px; }
+      .metrics { grid-template-columns: 1fr 1fr 1.3fr; }
       .metric strong { font-size: 21px; }
-      .metric span { margin-top: 2px; font-size: 12px; }
-      .mode { flex: 0 0 138px; padding: 5px 8px; min-height: 64px; }
+      .metric span { margin-top: 2px; font-size: 12px; line-height: 1.2; }
+      .mode { flex: 0 0 160px; padding: 5px 8px; min-height: 64px; }
       .library-size { margin-top: 2px; }
-      .modes { display: flex; overflow-x: auto; margin-top: 6px; padding-bottom: 4px; }
+      .modes { display: flex; overflow-x: auto; margin-top: 3px; padding-bottom: 2px; }
       .mode:first-child { display: block; flex-basis: 110px; }
       .mode:first-child small { margin-top: 3px; }
       input[type="range"] { height: 28px; }
+      .load label { white-space: normal; line-height: 1.2; }
       .details { display: flex; overflow-x: auto; gap: 12px; margin-top: 4px; font-size: 12px; scrollbar-width: thin; }
       .details::-webkit-scrollbar { height: 4px; }
       #stage { min-height: 64px; }
@@ -792,7 +795,7 @@
               context.beginPath(); context.arc(boatWidth * x, boatHeight * y, Math.max(1.5, boatWidth * .015), 0, Math.PI * 2); context.fill();
             }
             context.restore();
-            context.strokeStyle = blend([196, 224, 229], [100, 150, 177]); context.lineWidth = 1.5;
+            context.strokeStyle = blend([196, 224, 229], [60, 84, 105]); context.lineWidth = 1.5;
             for (let index = 0; index < 3; index += 1) {
               context.beginPath(); context.moveTo(-boatWidth * (.5 + index * .12), boatHeight * (.7 + index * .16));
               context.lineTo(-boatWidth * (.82 + index * .1), boatHeight * (.7 + index * .16)); context.stroke();

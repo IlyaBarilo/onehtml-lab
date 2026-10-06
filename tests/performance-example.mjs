@@ -108,6 +108,45 @@ async function downloadHtml(page, embed = true) {
   return readFile(await (await event).path(), 'utf8');
 }
 
+async function checkCompactLayout(page, name) {
+  await page.locator('#scenario').selectOption('load');
+  await page.locator('#load').evaluate(field => {
+    field.value = '10000';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await page.locator('#stage').tap({ position: { x: 30, y: 50 } });
+  await page.locator('#input-time').filter({ hasText: /^До кадра: [\d\s,.]+ мс$/ }).waitFor();
+  await page.locator('#pause').click();
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 367 });
+    for (const font of ['system-ui', 'Arial, sans-serif', 'Verdana, sans-serif']) {
+      await page.locator('html').evaluate((root, font) => { root.style.fontFamily = font; }, font);
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      const layout = await page.evaluate(() => {
+        const footer = document.querySelector('footer').getBoundingClientRect();
+        const stage = document.querySelector('#stage').getBoundingClientRect();
+        const label = document.querySelector('.load label');
+        return { width: innerWidth, height: innerHeight, bottom: footer.bottom, stage: stage.height,
+          scrollWidth: document.documentElement.scrollWidth,
+          labelWidth: label.clientWidth, labelScrollWidth: label.scrollWidth,
+          controls: Array.from(document.querySelectorAll('.controls button')).map(button => {
+            const rect = button.getBoundingClientRect();
+            return { left: rect.left, right: rect.right, bottom: rect.bottom, height: rect.height };
+          }) };
+      });
+      const detail = `${name}, ${font}: ${JSON.stringify(layout)}`;
+      assert(layout.bottom <= layout.height + 1, 'Metrics and controls must fit with different system font metrics: ' + detail);
+      assert(layout.stage >= 64, 'Keep space for the test scene: ' + detail);
+      assert(layout.scrollWidth <= layout.width, 'The compact test must not overflow horizontally: ' + detail);
+      assert(layout.labelScrollWidth <= layout.labelWidth + 1, 'The object count must not overlap the pause button: ' + detail);
+      assert(layout.controls.every(control => control.height >= 44 && control.left >= 0 && control.right <= layout.width && control.bottom <= layout.height + 1), 'Touch controls must stay fully visible: ' + detail);
+      if (width === 320 && font.startsWith('Verdana')) await page.screenshot({ path: join(tmpdir(), `onehtml-lab-performance-compact-${name}.png`) });
+    }
+  }
+  console.log(`${name}: compact phone layout fits at 320/390 × 367 with three system fonts and full-sized touch controls.`);
+}
+
 try {
   for (const [name, engine] of engines) {
     const browser = await engine.launch();
@@ -219,6 +258,7 @@ try {
         await saved.goto(pathToFileURL(embeddedPath).href);
         await libraryLabels(saved, 'Встроена в HTML');
         assert.equal(requests, 6, 'Standalone embedded test must not request CDN resources');
+        await checkCompactLayout(saved, name);
         await saved.close();
         const unchanged = await downloadHtml(page, false);
         assert.equal(unchanged.replace(/\r\n/g, '\n'), example.replace(/\r\n/g, '\n'));
