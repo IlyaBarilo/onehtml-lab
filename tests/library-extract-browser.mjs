@@ -170,9 +170,8 @@ try {
           const customHash = createHash('sha256').update(customSource).digest('hex');
           const custom = `<!--onehtml-library:${encodeURIComponent(customKey)}\ncustom.js, MIT license:\n${license}\n-->\n<script data-onehtml-library="${customKey}" data-onehtml-bundle="1" data-onehtml-filename="custom.js" data-onehtml-sha256="${customHash}">\n${customSource}\n</script><output id="result"></output><script>document.querySelector('#result').textContent = CustomReady ? 'ready' : 'missing';</script>`;
           await page.locator('#code').fill(custom);
-          await openExtraction(page, 'cdn', false);
-          // Open from the toolbar before the compact editing layout hides it.
           await page.setViewportSize({ width: 320, height: 350 });
+          await openExtraction(page, 'cdn', false);
           assert(await page.locator('#expert-tools').isHidden(), 'Extraction gives its space to the library list');
           const usableHeight = await page.locator('.library-extraction-body').evaluate(el => {
             const style = getComputedStyle(el);

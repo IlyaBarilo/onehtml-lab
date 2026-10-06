@@ -104,6 +104,7 @@ try {
           assert.match(text, /Также обеспечь работу на телефоне:.*экранные кнопки и управление касаниями/);
           await page.locator('#ai-close').click();
           await page.locator('#code').fill(game);
+          assert(await page.locator('#ai-open').isVisible(), 'Editing code must keep AI tools accessible in landscape');
           await page.locator('#ai-open').click();
           await page.locator('#prompt-change').click();
           await page.locator('#ai-task').fill('Добавь паузу\nи новый уровень');
@@ -167,7 +168,11 @@ try {
           assert(await frame.evaluate(el => el.isConnected));
           await page.locator('#run').click();
           await page.locator('#code').fill('<p>Новое содержимое</p>');
+          // Keep expert actions reachable when a keyboard or a short window reduces the editor height.
+          await page.setViewportSize({ width: viewport.width, height: Math.min(viewport.height, 350) });
+          assert(await page.locator('#ai-open').isVisible(), 'AI tools must remain reachable after editing in a short viewport');
           await page.locator('#ai-open').click();
+          await page.setViewportSize(viewport);
           text = await prepared(page);
           assert(!text.includes('Сообщение об ошибке:'), 'Old error is not attached after editing code');
           assert(text.endsWith('<p>Новое содержимое</p>'));

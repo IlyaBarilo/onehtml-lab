@@ -610,8 +610,11 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 #edit-quick button { font-size: 16px; white-space: nowrap; }
 #edit-quick svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; vertical-align: middle; }
 #edit-range-form .edit-line-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
-.editing-active.compact-viewport .brand, .editing-active.compact-viewport .expert-tools { display: none; }
+.editing-active.compact-viewport .brand { display: none; }
 .editing-active.compact-viewport .toolbar { min-height: 50px; }
+.editing-active.compact-viewport:not(.panel-open):not(.preview-expanded):not(.comparison-game-open) .expert-tools { display: flex; flex-wrap: nowrap; justify-content: flex-start; gap: 8px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.editing-active.compact-viewport .expert-tools > .expert-actions, .editing-active.compact-viewport .expert-tools > .expert-resource-actions, .editing-active.compact-viewport .expert-tools > .draft-status { flex: 0 0 auto; flex-wrap: nowrap; white-space: nowrap; }
+.editing-active.compact-viewport #edit-inline { max-height: min(50%, max(44px, calc(100% - var(--edit-bottom, 0px) - 80px))); }
 
 /* The native textarea owns editing and selection; this inert layer only paints. */
 #code-colors { position: absolute; overflow: hidden; pointer-events: none; color: #263b53; background: #fcfdff; }
