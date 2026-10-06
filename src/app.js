@@ -1056,6 +1056,7 @@ function updateControls() {
   document.querySelector('#storage-off-icon').hidden = gameStorageAllowed;
   storageButton.classList.toggle('is-off', !gameStorageAllowed);
   updateWorkspaceUI();
+  updateAlternativeEditor();
   updateCodeTools();
   updateAiControls();
   updateDiagnostics();
@@ -1467,6 +1468,7 @@ document.querySelector('#save-form').addEventListener('submit', async event => {
 });
 initAiPrompts();
 initCodeEditor();
+initAlternativeEditor();
 initWorkspaceUI();
 initDesktopWorkspace();
 initComparisonGame();

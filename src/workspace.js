@@ -14,7 +14,7 @@ let editorPosition = null;
 function rememberEditorPosition() {
   if (codeField.hidden || workspacePanels.length) return;
   editorPosition = { value: codeField.value, start: codeField.selectionStart, end: codeField.selectionEnd,
-    direction: codeField.selectionDirection, top: codeField.scrollTop, left: codeField.scrollLeft };
+    direction: codeField.selectionDirection, top: alternativeActive() ? alternativeView.scrollDOM.scrollTop : codeField.scrollTop, left: alternativeActive() ? alternativeView.scrollDOM.scrollLeft : codeField.scrollLeft };
 }
 
 function restoreEditorPosition() {
@@ -23,6 +23,7 @@ function restoreEditorPosition() {
   codeField.setSelectionRange(position.start, position.end, position.direction);
   codeField.scrollTop = position.top;
   codeField.scrollLeft = position.left;
+  if (alternativeActive()) { alternativeView.scrollDOM.scrollTop = position.top; alternativeView.scrollDOM.scrollLeft = position.left; }
 }
 
 function currentPanel() { return workspacePanels.at(-1)?.panel; }

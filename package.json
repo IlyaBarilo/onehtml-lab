@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "build": "node build.mjs",
+    "build:editor": "node scripts/build-codemirror.mjs",
+    "test:alternative-editor": "node tests/alternative-editor.mjs",
     "format:text": "node scripts/format-text.mjs",
     "test:build": "node tests/build.mjs",
     "test:pages": "node tests/pages.mjs",
@@ -26,6 +28,13 @@
     "test:comparison-game": "node tests/comparison-game.mjs"
   },
   "devDependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-html": "^6.4.12",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13",
+    "@lezer/highlight": "^1.2.5",
+    "esbuild": "^0.28.2",
     "playwright": "1.62.1"
   }
 }

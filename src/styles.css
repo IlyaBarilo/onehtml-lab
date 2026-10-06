@@ -639,3 +639,22 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   #ai-dialog #ai-summary { margin: 0; }
   .ai-footer-actions { flex: 0 0 300px; }
 }
+
+/* The optional editor uses the same workspace and source document. */
+#editor-engine { min-height: 44px; max-width: 166px; padding: 6px 9px; font: inherit; color: #315c93; background: #f0f5fc; border: 1px solid #c9d9ed; border-radius: 6px; }
+.alternative-active #code { visibility: hidden; pointer-events: none; }
+#alternative-editor { position: absolute; top: var(--edit-top, 0px); left: 0; width: 100%; height: calc(100% - var(--edit-top, 0px) - var(--edit-bottom, 0px)); background: #fcfdff; color: #263b53; }
+.split-workspace #alternative-editor { width: var(--code-width); }
+#alternative-editor .cm-scroller { overflow: auto; scrollbar-width: auto; scrollbar-color: #8198b7 #eaf0f8; }
+#alternative-editor .cm-scroller::-webkit-scrollbar { width: 14px; height: 14px; }
+#alternative-editor .cm-scroller::-webkit-scrollbar-thumb { background: #8198b7; border: 3px solid #eaf0f8; border-radius: 8px; }
+#alternative-editor .cm-content { padding: 12px 0; }
+#alternative-editor .cm-line { padding: 0 12px; }
+#alternative-editor .cm-gutters { background: #f0f4fa; color: #637895; border-right: 1px solid #dbe5f3; }
+#alternative-editor .cm-foldGutter .cm-gutterElement { min-width: 30px; text-align: center; cursor: pointer; font-weight: 600; color: #315c93; }
+#alternative-editor .cm-foldPlaceholder { font: inherit; padding: 0 8px; border: 1px solid #bfd1e9; border-radius: 4px; color: #315c93; background: #eaf2ff; cursor: pointer; }
+#alternative-editor .cm-activeLine { background: #eaf2ff55; }
+#alternative-editor .cm-selectionBackground { background: #b6d5ff !important; }
+#alternative-editor .cm-cursor { border-left-color: #173c72; }
+#alternative-editor.is-locked, #alternative-editor.is-locked .cm-gutters { background: #eef2f7; }
+#alternative-editor.is-locked .cm-activeLine { background: transparent; }

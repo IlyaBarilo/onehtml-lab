@@ -93,6 +93,7 @@
       </section>
       <div id="code-colors" aria-hidden="true" hidden></div>
       <textarea id="code" aria-label="HTML-код" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Вставьте HTML-код…"></textarea>
+      <div id="alternative-editor" hidden></div>
       <p id="syntax-caption" hidden></p>
       <div id="code-lines" aria-hidden="true" hidden></div>
       <div id="edit-highlight" aria-hidden="true" hidden></div>
@@ -103,7 +104,7 @@
         <div id="edit-replace-box" hidden><input id="edit-replacement" type="text" aria-label="Заменить на" placeholder="Заменить на" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="edit-find-options"><button id="edit-replace" type="button" disabled>Заменить</button><button id="edit-replace-all" type="button" disabled>Все</button><span id="edit-feedback" role="status"></span></div></div>
       </section>
       <div id="edit-quick" role="group" aria-label="Правка кода" hidden>
-        <button id="edit-find" type="button" aria-label="Поиск в коде" title="Поиск в коде"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"></circle><path d="m15 15 6 6"></path></svg></button><button id="edit-quick-undo" type="button" aria-label="Отменить" title="Отменить">↶</button><button id="edit-quick-redo" type="button" aria-label="Повторить" title="Повторить">↷</button><button data-edit-indent="out" type="button" aria-label="Убрать отступ" title="Убрать отступ">⇤</button><button data-edit-indent="in" type="button" aria-label="Добавить отступ" title="Добавить отступ">⇥</button><button data-edit-pair="()" type="button" aria-label="Круглые скобки">()</button><button data-edit-pair="{}" type="button" aria-label="Фигурные скобки">{}</button><button data-edit-pair="[]" type="button" aria-label="Квадратные скобки">[]</button><button data-edit-pair="&quot;&quot;" type="button" aria-label="Двойные кавычки">&quot;&quot;</button><button data-edit-pair="''" type="button" aria-label="Одинарные кавычки">''</button><button id="edit-copy-selection" type="button" disabled>Копировать выделенное</button><button id="edit-quick-settings" type="button">Строки и вид</button>
+        <button id="edit-find" type="button" aria-label="Поиск в коде" title="Поиск в коде"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"></circle><path d="m15 15 6 6"></path></svg></button><button id="edit-quick-undo" type="button" aria-label="Отменить" title="Отменить">↶</button><button id="edit-quick-redo" type="button" aria-label="Повторить" title="Повторить">↷</button><button data-edit-indent="out" type="button" aria-label="Убрать отступ" title="Убрать отступ">⇤</button><button data-edit-indent="in" type="button" aria-label="Добавить отступ" title="Добавить отступ">⇥</button><button data-edit-pair="()" type="button" aria-label="Круглые скобки">()</button><button data-edit-pair="{}" type="button" aria-label="Фигурные скобки">{}</button><button data-edit-pair="[]" type="button" aria-label="Квадратные скобки">[]</button><button data-edit-pair="&quot;&quot;" type="button" aria-label="Двойные кавычки">&quot;&quot;</button><button data-edit-pair="''" type="button" aria-label="Одинарные кавычки">''</button><button id="edit-copy-selection" type="button" disabled>Копировать выделенное</button><button id="edit-fold" type="button" title="Свернуть блок у курсора" hidden>− Свернуть</button><button id="edit-unfold-all" type="button" hidden>Развернуть всё</button><button id="edit-quick-settings" type="button">Строки и вид</button>
       </div>
       <section id="edit-panel" class="work-panel" aria-labelledby="edit-title" hidden>
         <div class="panel-heading"><h2 id="edit-title">Редактирование</h2><button id="edit-close" type="button" aria-label="Закрыть редактирование">✕</button></div>
@@ -121,6 +122,7 @@
           </form>
           <section class="edit-section" aria-labelledby="edit-view-title">
             <h3 id="edit-view-title">Вид текста</h3>
+            <label class="edit-font-row" for="editor-engine">Редактор<select id="editor-engine"><option value="native">Обычный</option><option value="codemirror">CodeMirror</option></select></label>
             <label class="edit-font-row" for="edit-font">Размер текста<select id="edit-font"><option value="14">14</option><option value="16" selected>16</option><option value="18">18</option><option value="20">20</option><option value="22">22</option></select></label>
             <label class="edit-check"><input id="edit-wrap" type="checkbox" checked>Перенос длинных строк</label>
             <label class="edit-check"><input id="edit-numbers" type="checkbox" checked>Номера строк</label>

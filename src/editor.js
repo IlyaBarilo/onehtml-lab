@@ -301,6 +301,7 @@ function measureCode() {
   while ((at = code.indexOf('\n', at + 1)) >= 0) starts.push(at + 1);
   // Separate formatting blocks avoid laying out an entire large document as
   // one wrapped paragraph. Text stays inert and source offsets stay unchanged.
+  if (alternativeActive()) { editMeasured = { signature, starts, lineHeight: parseFloat(style.lineHeight) }; return editMeasured; }
   const lines = starts.map((start, index) => {
     const line = document.createElement('div');
     const end = index + 1 < starts.length ? starts[index + 1] - 1 : code.length;
@@ -332,6 +333,14 @@ function codePointRect(offset) {
 
 function drawCodeLines() {
   editLayoutFrame = 0;
+  updateAlternativeEditor();
+  if (alternativeActive()) {
+    editGutter.hidden = true;
+    document.querySelector('#edit-highlight').hidden = true;
+    codeField.classList.remove('has-colors'); syntaxLayer.hidden = true;
+    alternativeCaption();
+    return;
+  }
   editGutter.hidden = !editView.numbers || codeField.hidden || Boolean(currentPanel());
   if (codeField.hidden || currentPanel()) { document.querySelector('#edit-highlight').hidden = true; clearCodeColors(); return; }
   if (editGutter.hidden && editInline.hidden && editView.colors === 'off') { document.querySelector('#edit-highlight').hidden = true; clearCodeColors(); return; }
@@ -408,6 +417,7 @@ function revealCodeRange(start, end = start, direction = 'none', focus = true) {
   updateControls();
   if (focus) codeField.focus({ preventScroll: true });
   codeField.setSelectionRange(start, end, direction);
+  if (alternativeActive()) { selectAlternativeRange(start, end, direction, true); rememberEditorPosition(); return; }
   const position = () => {
     measureCode();
     const rect = codePointRect(start);

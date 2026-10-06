@@ -5,11 +5,13 @@ const standalone = await readFile(new URL('../onehtml-lab.html', import.meta.url
 assert(standalone.includes('data:image/svg+xml,'), 'Favicon must be embedded');
 assert(standalone.includes('Permission is hereby granted, free of charge'), 'Standalone file must include its MIT license');
 assert(!standalone.includes('embeddedThreeR128'), 'Application must not contain a preloaded Three.js copy');
-assert(Buffer.byteLength(standalone) < 515000, 'Application must stay small without preloaded game libraries');
+assert(Buffer.byteLength(standalone) < 1100000, 'Application including both editors must stay within its size budget');
 assert(standalone.includes('data-onehtml-library'), 'Standalone file must contain the library replacement mechanism');
 assert(!standalone.includes('не распространяется по лицензии MIT'), 'Standalone file must not retain separate logo restrictions');
 assert(!standalone.includes('<!-- APP_'), 'No template markers may remain');
 assert(!/<(?:script|link)[^>]+(?:src|href)="https?:/i.test(standalone), 'No external application resources');
+const editorLicenses = await readFile(new URL('../src/vendor/codemirror-LICENSE.txt', import.meta.url), 'utf8');
+assert(standalone.includes(editorLicenses.trim()), 'All CodeMirror copyright and permission notices must be included in full');
 const expectedVersion = process.argv[2];
 assert(process.argv.length <= 3, 'Use: node tests/build.mjs [v1.2.3]');
 const matches = [...standalone.matchAll(/class="app-version"/g)];
