@@ -27,13 +27,13 @@ function restoreEditorPosition() {
 
 function currentPanel() { return workspacePanels.at(-1)?.panel; }
 
-function showWorkspacePanel(panel, nested = false) {
+function showWorkspacePanel(panel, nested = false, preserveComparison = false) {
   if (currentPanel() === panel) { closeWorkspacePanel(); return; }
   rememberEditorPosition();
   if (panel !== helpPanel) {
     closeLibraryExtraction();
     closeHistory();
-    closeComparison();
+    if (!preserveComparison) closeComparison();
   }
   const trigger = document.activeElement;
   if (!nested) closeWorkspacePanels(false);

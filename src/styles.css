@@ -142,10 +142,35 @@ textarea::-webkit-scrollbar-thumb, .comparison::-webkit-scrollbar-thumb { min-he
 textarea::-webkit-scrollbar-thumb:hover, .comparison::-webkit-scrollbar-thumb:hover { background: #526e91; }
 .comparison-heading { position: sticky; top: 0; z-index: 1; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 10px 14px 6px 22px; background: #eef2f7; }
 .comparison-heading strong { min-width: 0; align-self: center; color: #315c93; font-size: 18px; font-weight: 650; line-height: 1.3; }
-.comparison-heading button { flex: 0 0 44px; width: 44px; height: 44px; border: 0; border-radius: 8px; background: #e4ecf7; color: #315c93; font-size: 22px; }
+.comparison-heading > button { flex: 0 0 44px; width: 44px; height: 44px; border: 0; border-radius: 8px; background: #e4ecf7; color: #315c93; font-size: 22px; }
 .comparison-heading button:hover { background: #d5e3f5; }
 .comparison-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 20px; padding: 2px 22px 12px; border-bottom: 1px solid #d6e0ec; color: #526b8c; font-size: 15px; line-height: 1.35; }
 .comparison-legend b { font-weight: 650; font-variant-numeric: tabular-nums; }
+.comparison-modes, #comparison-versions { display: flex; gap: 6px; padding: 4px 14px 8px; flex-shrink: 0; }
+.comparison-heading { display: grid; grid-template-columns: minmax(0, 1fr) 44px; grid-template-areas: "title close" "modes modes"; }
+.comparison-heading > strong { grid-area: title; }
+#comparison-close { grid-area: close; }
+.comparison-modes { grid-area: modes; padding: 0; }
+.comparison.is-game .comparison-heading { grid-template-areas: "modes close"; padding: 8px 14px; }
+.comparison.is-game .comparison-heading > strong { display: none; }
+.comparison-game-open .expert-tools, .comparison-game-open #activity-toggle { display: none; }
+.comparison-modes button, #comparison-versions button { min-height: 44px; border: 1px solid #c4d6ef; border-radius: 7px; background: #f7faff; color: #315c93; padding: 5px 14px; font-size: 15px; }
+.comparison-modes button[aria-pressed="true"], #comparison-versions button[aria-pressed="true"] { background: #dceaff; border-color: #8cb6ff; color: #1759bd; }
+#comparison-versions { padding-top: 0; }
+#comparison-current, #comparison-past { flex: 1; min-width: 0; }
+#comparison-date { display: block; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#comparison-restart { flex: 0 0 44px; padding: 0; font-size: 24px; }
+.comparison.is-game { display: flex; flex-direction: column; overflow: hidden; }
+.comparison.is-game .comparison-heading { flex-shrink: 0; }
+#comparison-game { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+#comparison-game-status, #comparison-game-error, #comparison-game-warning { margin: 0; padding: 5px 12px; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; flex-shrink: 0; }
+#comparison-game-status { max-height: 48px; color: #456383; overflow: auto; }
+#comparison-messages { max-height: 120px; overflow: auto; flex-shrink: 0; }
+#comparison-game-error { background: #ffeded; color: #8c2525; }
+#comparison-game-warning { background: #fff8e8; color: #77511b; border-top: 1px solid #e5cf9d; }
+#comparison-messages summary { cursor: pointer; padding-block: 6px; }
+#comparison-stage { flex: 1; min-height: 0; position: relative; background: #fff; }
+#comparison-stage iframe { display: block; width: 100%; height: 100%; border: 0; }
 .comparison-legend span::before { content: ""; display: inline-block; width: 13px; height: 13px; margin-right: 7px; border-radius: 3px; vertical-align: -1px; }
 .legend-added::before { background: #c8efcf; }
 .legend-removed::before { background: #ffd8d5; }

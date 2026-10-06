@@ -27,6 +27,7 @@ jobs:
       - run: node tests/workspace.mjs --engines=chromium
       - run: node tests/editor.mjs --engines=chromium
       - run: node tests/syntax.mjs --engines=chromium
+      - run: node tests/comparison-game.mjs --engines=chromium
       - run: node tests/ai-prompts.mjs --engines=chromium
       - run: node tests/desktop.mjs --engines=chromium
       - run: node tests/diagnostics.mjs --engines=chromium

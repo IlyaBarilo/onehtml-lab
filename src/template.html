@@ -131,9 +131,11 @@
         </div>
       </section>
       <div id="comparison" class="comparison" role="region" aria-label="Сравнение с прошлым кодом" hidden>
-        <div class="comparison-heading"><strong id="comparison-source"></strong><button id="comparison-close" type="button" aria-label="Закрыть сравнение и вернуться к редактору" title="Вернуться к редактору">✕</button></div>
+        <div class="comparison-heading"><strong id="comparison-source"></strong><button id="comparison-close" type="button" aria-label="Закрыть сравнение и вернуться к редактору" title="Вернуться к редактору">✕</button><div class="comparison-modes" role="group" aria-label="Вид сравнения"><button id="comparison-code-tab" type="button" aria-pressed="true">Код</button><button id="comparison-game-tab" type="button" aria-pressed="false">Игра</button></div></div>
+        <div id="comparison-versions" role="group" aria-label="Версия игры" hidden><button id="comparison-current" type="button" aria-pressed="true">Текущая</button><button id="comparison-past" type="button" aria-pressed="false">Выбранная <small id="comparison-date"></small></button><button id="comparison-restart" type="button" aria-label="Перезапустить сравниваемую игру" title="Перезапустить">↻</button></div>
         <div class="comparison-legend"><span class="legend-added">Добавлено: <b id="comparison-added">0 символов</b></span><span class="legend-removed">Удалено: <b id="comparison-removed">0 символов</b></span></div>
         <pre id="diff-content" class="diff-content"></pre>
+        <section id="comparison-game" aria-label="Проверка выбранной версии игры" hidden><p id="comparison-game-status" role="status"></p><div id="comparison-messages"><div id="comparison-game-error" role="status" hidden></div><div id="comparison-game-warning" role="status" hidden></div></div><div id="comparison-stage"></div></section>
       </div>
       <div id="comparison-scrollbar" class="comparison-scrollbar" role="scrollbar" aria-label="Прокрутка сравнения" aria-controls="comparison" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0" hidden><div id="comparison-scrollbar-thumb" class="comparison-scrollbar-thumb"></div></div>
       <section id="history-view" class="history-view" aria-labelledby="history-title" hidden>

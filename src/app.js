@@ -259,9 +259,15 @@ function hideLibraryRequest() {
   if (currentPanel() === activityPanel) closeWorkspacePanel();
 }
 
-function requestLibraries(prepared, action) {
+function libraryActionIsCurrent(pending) {
+  return pending === pendingLibraryAction && (pending.action === 'compare'
+    ? comparisonOpen && comparisonGameMode && comparisonSession === pending.session && comparisonSide === pending.side
+    : pending.code === codeField.value);
+}
+
+function requestLibraries(prepared, action, code = codeField.value) {
   if (!prepared.missingLibraries?.length) return false;
-  pendingLibraryAction = { action, code: codeField.value, references: prepared.missingLibraries };
+  pendingLibraryAction = { action, code, references: prepared.missingLibraries, session: action === 'compare' ? comparisonSession : null, side: comparisonSide };
   const titles = prepared.missingLibraries.map(item => item.title).join(', ');
   const downloadable = prepared.missingLibraries.filter(item => item.url && item.licenseUrl);
   const local = prepared.missingLibraries.filter(item => item.localPath);
@@ -275,7 +281,7 @@ function requestLibraries(prepared, action) {
   libraryFilesButton.textContent = 'Выбрать JS и лицензию';
   libraryRequest.hidden = false;
   setDiagnosticTab(action === 'inspect' ? 'libraries' : 'errors');
-  if (currentPanel() !== activityPanel) showWorkspacePanel(activityPanel);
+  if (currentPanel() !== activityPanel) showWorkspacePanel(activityPanel, false, action === 'compare');
   return true;
 }
 
@@ -293,8 +299,9 @@ libraryDownloadButton.addEventListener('click', async () => {
       persisted = await downloadLibrary(reference) && persisted;
     }
     const prepared = await prepareGameHtml(pending.code);
-    if (pending !== pendingLibraryAction || pending.code !== codeField.value) return;
+    if (!libraryActionIsCurrent(pending)) return;
     hideLibraryRequest();
+    if (pending.action === 'compare') { await startComparisonGame(); return; }
     if (pending.action === 'inspect') { openDiagnostics('libraries'); inform(persisted ? 'Копия сохранена в браузере.' : 'Копия доступна только в этом сеансе.', !persisted); return; }
     if (pending.code === codeField.value) requestLibraries(prepared, pending.action);
     inform(persisted
@@ -325,7 +332,7 @@ libraryFiles.addEventListener('change', async () => {
   librarySkipButton.disabled = true;
   libraryFilesButton.disabled = true;
   try {
-    if (pending.code !== codeField.value) throw new Error('Код изменился. Повторите действие.');
+    if (!libraryActionIsCurrent(pending)) throw new Error('Код изменился. Повторите действие.');
     const scripts = files.filter(file => /\.js$/i.test(file.name));
     const licenses = files.filter(file => !/\.js$/i.test(file.name));
     if (scripts.length > 1 || licenses.length > 1) throw new Error('Выберите один JS-файл и один файл его MIT-лицензии.');
@@ -349,11 +356,12 @@ libraryFiles.addEventListener('change', async () => {
       return;
     }
     if (!validLibraryAsset(source, license)) throw new Error('Нужны безопасный для встраивания JS-файл и полный текст MIT-лицензии с авторскими правами.');
-    if (pending !== pendingLibraryAction || pending.code !== codeField.value) return;
+    if (!libraryActionIsCurrent(pending)) return;
     const persisted = await importLocalLibrary(reference, source, license);
     const prepared = await prepareGameHtml(pending.code);
-    if (pending !== pendingLibraryAction || pending.code !== codeField.value) return;
+    if (!libraryActionIsCurrent(pending)) return;
     hideLibraryRequest();
+    if (pending.action === 'compare') { await startComparisonGame(); return; }
     if (pending.action === 'inspect') { openDiagnostics('libraries'); inform(persisted ? 'Копия сохранена в браузере.' : 'Копия доступна только в этом сеансе.', !persisted); return; }
     requestLibraries(prepared, pending.action);
     inform(persisted ? 'Библиотека и лицензия сохранены. Повторите запуск, сохранение или отправку.'
@@ -370,13 +378,15 @@ libraryFiles.addEventListener('change', async () => {
 librarySkipButton.addEventListener('click', async () => {
   const pending = pendingLibraryAction;
   if (!pending) return;
+  const valid = libraryActionIsCurrent(pending);
   hideLibraryRequest();
-  if (pending.code !== codeField.value) {
+  if (!valid) {
     inform('Код изменился. Повторите действие с актуальным кодом.', true);
     return;
   }
   try {
-    if (pending.action === 'run') await startPreview(false);
+    if (pending.action === 'compare') await startComparisonGame(false);
+    else if (pending.action === 'run') await startPreview(false);
     else if (pending.action === 'share') {
       const result = await shareHtml(pending.code, currentFilename);
       if (result === 'unsupported') inform('Передача HTML-файла здесь недоступна. Сохраните его и отправьте через приложение «Файлы».');
@@ -815,6 +825,7 @@ function renderHistory() {
 function closeComparison() {
   if (!comparisonOpen) return;
   comparisonOpen = false;
+  resetComparisonGame();
   comparison.hidden = true;
   comparison.classList.remove('has-custom-scrollbar');
   comparisonScrollbar.hidden = true;
@@ -853,6 +864,7 @@ function openComparison(baseline = latestHistory()) {
   comparison.hidden = false;
   codeField.hidden = true;
   comparisonOpen = true;
+  resetComparisonGame(baseline);
   updateComparisonScrollbar();
   updateControls();
 }
@@ -867,7 +879,7 @@ function positionComparisonScrollbar() {
 }
 
 function updateComparisonScrollbar() {
-  if (!comparisonOpen) return;
+  if (!comparisonOpen || comparisonGameMode) return;
   const needed = comparison.scrollHeight > comparison.clientHeight + 1;
   comparison.classList.toggle('has-custom-scrollbar', needed);
   comparisonScrollbar.hidden = !needed;
@@ -1004,7 +1016,7 @@ function updateControls() {
   clearButton.disabled = !codeField.value || running || readingClipboard || modeBusy || extractionOpen || Boolean(currentPanel());
   saveButton.disabled = empty || extractionOpen;
   shareButton.disabled = empty || extractionOpen;
-  runButton.disabled = modeBusy || extractionOpen || (!running && (empty || readingClipboard));
+  runButton.disabled = modeBusy || extractionOpen || comparisonOpen || (!running && (empty || readingClipboard));
   expertButton.disabled = modeBusy;
   importButton.disabled = modeBusy || extractionOpen;
   aiButton.disabled = modeBusy || extractionOpen;
@@ -1210,6 +1222,7 @@ expertButton.addEventListener('click', () => {
 networkButton.addEventListener('click', async () => {
   networkAllowed = !networkAllowed;
   const settingsSaved = saveSettings();
+  if (comparisonOpen && comparisonGameMode) await startComparisonGame();
   if (running) {
     stopPreview();
     await startPreview();
@@ -1222,6 +1235,7 @@ storageButton.addEventListener('click', async () => {
   if (!expertMode || modeBusy) return;
   gameStorageAllowed = !gameStorageAllowed;
   const settingsSaved = saveSettings();
+  if (comparisonOpen && comparisonGameMode) await startComparisonGame();
   if (running) {
     stopPreview();
     await startPreview();
@@ -1455,6 +1469,7 @@ initAiPrompts();
 initCodeEditor();
 initWorkspaceUI();
 initDesktopWorkspace();
+initComparisonGame();
 initDiagnostics();
 updateControls();
 void restoreStartupDraft();

@@ -40,7 +40,7 @@
     .metric strong { display: block; font-size: clamp(25px, 4vw, 34px); line-height: 1.1; font-variant-numeric: tabular-nums; }
     .metric span { display: block; margin-top: 4px; font-size: 13px; color: #a9bdd7; }
     #fps { color: #7cdbb0; }
-    .modes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+    .modes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
     .mode { padding: 7px 10px; text-align: left; }
     .mode b { display: block; font-size: 15px; }
     .mode small { display: block; margin-top: 3px; color: #b4c6de; font-size: 12px; }
@@ -140,7 +140,6 @@
       </div>
       <nav class="modes" aria-label="Выбор теста">
         <button class="mode" data-mode="canvas" data-state="ready" aria-pressed="true"><b>Canvas 2D</b><small>Без библиотек</small></button>
-        <button class="mode" data-mode="three128" aria-pressed="false" disabled><b>Three.js r128</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="three160" aria-pressed="false" disabled><b>Three.js r160</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="matter" aria-pressed="false" disabled><b>Matter.js 0.20</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="phaser" aria-pressed="false" disabled><b>Phaser 3.90</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
@@ -178,15 +177,13 @@
       const sizeFormat = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
       const labels = {
         canvas: 'Движущиеся частицы · Canvas 2D',
-        three128: 'Вращающиеся кубы · Three.js r128',
         three160: 'Вращающиеся кубы · Three.js r160',
         matter: 'Физика падающих шаров · Matter.js',
         phaser: 'Движущиеся частицы · Phaser'
       };
       const descriptions = {
         canvas: 'Canvas 2D — рисование 2D без игровой библиотеки.',
-        three128: 'Three.js r128 — 3D-графика, старая версия.',
-        three160: 'Three.js r160 — 3D-графика, более поздняя версия.',
+        three160: 'Three.js — объёмные модели, камера, свет и тени.',
         matter: 'Matter.js — физика: масса, столкновения и связи.',
         phaser: 'Phaser — готовый набор систем для 2D-игры.'
       };
@@ -196,15 +193,10 @@
           'Canvas выполняет команды рисования. Правила игры, движение, столкновения, камеры, смену уровней и учёт очков разработчик организует сам. Сложную игру тоже можно написать, но готовые игровые системы придётся создавать вручную.',
           'Возможности: набережная с многослойным фоном, водой, движущимся катером и переходом дня в ночь. Сравнение: шар и блоки рисуются Canvas, а упрощённый расчёт движения и столкновений написан в самом примере.'
         ],
-        three128: [
-          'Three.js нужен для настоящей 3D-сцены: объёмных моделей, перспективы, камеры, света, теней и материалов. При движении камеры меняется вид всех граней, а освещение рассчитывается для поверхностей. Это удобно для 3D-игр, просмотра моделей и пространственных сцен.',
-          'r128 и r160 — разные выпуски одной библиотеки. r128 оставлен для проверки игр со старым кодом и старым API. В r160 изменились некоторые API, обработка цвета и настройки освещения; перенос старой игры может требовать правок. Более поздний выпуск не делает любую игру автоматически лучше или быстрее.',
-          'Обе версии показывают одну модель марсохода с одинаковыми материалами, камерой и согласованными настройками света и цвета. Разный цвет модели не используется для обозначения версии. В режиме «Сравнение» шар и башня те же, но объём, свет и тени рассчитывает Three.js; движение остаётся упрощённым расчётом примера. Three.js сам по себе не является движком столкновений.'
-        ],
         three160: [
           'Three.js даёт готовую основу для 3D: геометрию, камеры, материалы, свет, тени и работу с графическим процессором. Он полезен, когда нужен объём и пространственное движение, а не только плоский рисунок.',
-          'r160 — более поздний выпуск, чем r128, с изменениями API, цветового пространства и освещения. r128 нужен для совместимости со старым кодом; r160 позволяет проверить работу примера на другом поколении библиотеки. Эти номера не означают два разных вида игр, и r160 здесь не обозначен как самая новая версия.',
-          'Марсоход и параметры сцены общие для r128/r160, включая согласованную обработку цвета и света. Сравнивайте совместимость, размер и FPS на своём устройстве. В режиме «Сравнение» Three.js строит объёмные шар и блоки с тенями; физику для них рассчитывает код примера.'
+          'При повороте камеры меняются перспектива, вид граней и освещение поверхностей. Three.js помогает создавать 3D-игры, просмотр моделей и пространственные сцены. Правила игры и физику столкновений нужно реализовать отдельно. В примере используется выпуск r160.',
+          'Возможности: марсоход с объёмными деталями, материалами, светом и тенями; проведите по сцене, чтобы повернуть камеру. В режиме «Сравнение» Three.js строит объёмные шар и блоки с тенями; физику для них рассчитывает код примера.'
         ],
         matter: [
           'Matter.js рассчитывает 2D-физику твёрдых тел: падение, массу, трение, удары, вращение, связи и шарниры. Он нужен для головоломок с конструкциями, катапульт, маятников, падающих башен и механизмов, где поведение предметов должно зависеть от их взаимодействия.',
@@ -219,7 +211,6 @@
       };
       const showcaseLabels = {
         canvas: 'Набережная · касание переключает день и ночь',
-        three128: 'Марсоход · проведите по сцене, чтобы повернуть камеру',
         three160: 'Марсоход · проведите по сцене, чтобы повернуть камеру',
         matter: 'Механизмы · перетаскивайте тела или толкните маятники',
         phaser: 'Лесная станция · двойной прыжок'
@@ -1519,8 +1510,6 @@
     })();
   </script>
   <!-- Exact classic builds let OneHTML Lab replace these links and include their MIT licenses on export. -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script>registerLabLibrary('three128', window.THREE?.REVISION === '128' ? window.THREE : null);</script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script>registerLabLibrary('three160', window.THREE?.REVISION === '160' ? window.THREE : null);</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js"></script>

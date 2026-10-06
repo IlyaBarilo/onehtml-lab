@@ -35,6 +35,7 @@ async function createApp(clipboard) {
     initAiPrompts() {}, updateAiControls() {}, openAiPrompts() {},
     initDesktopWorkspace() {}, sizeDesktopPreview() {}, isSplitWorkspace: () => false,
     initDiagnostics() {}, updateDiagnostics() {}, beginDiagnosticRun() {},
+    initComparisonGame() {},
     errorTarget: null, errorSource: null,
     closeWorkspacePanels() {}, setPreviewExpanded() {}, currentPanel: () => null, activityPanel: {},
     setTimeout(fn, ms) { timers.push({ fn, ms }); return timers.length; },

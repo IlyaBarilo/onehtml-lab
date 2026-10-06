@@ -22,7 +22,8 @@
     "test:diagnostics": "node tests/diagnostics.mjs",
     "test:workshop": "node tests/workshop.mjs",
     "test:readiness": "node tests/readiness.mjs",
-    "test:syntax": "node tests/syntax.mjs"
+    "test:syntax": "node tests/syntax.mjs",
+    "test:comparison-game": "node tests/comparison-game.mjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

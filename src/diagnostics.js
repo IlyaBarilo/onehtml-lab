@@ -21,6 +21,15 @@ function diagnosticCounts() {
   return { errors, warnings };
 }
 
+function describeRuntimeMessage(message) {
+  const original = message.slice(0, 500);
+  if (/^(?:WARNING:\s*)?Multiple instances of Three\.js being imported\.$/.test(original.trim())) {
+    return 'Подключено несколько экземпляров Three.js. Проверьте, не подключена ли библиотека повторно или в разных версиях.';
+  }
+  if (original === 'Script error.') return 'Ошибка JavaScript (браузер не сообщил подробности)';
+  return original;
+}
+
 function beginDiagnosticRun(code, origin, preparedCode = code) {
   diagnosticEntries.length = 0;
   diagnosticSelected = null;
@@ -59,6 +68,7 @@ function selectDiagnosticEntry(entry) {
   errorTarget = diagnosticRun.code === codeField.value ? entry.target : null;
   runtimeErrorReportBase = entry.report;
   runtimeErrorMessageBase = entry.report;
+  if (entry.kind === 'warning' && describeRuntimeMessage(entry.message) !== entry.message) runtimeErrorMessageBase = `Предупреждение: ${describeRuntimeMessage(entry.message)}`;
   runtimeError.hidden = false;
   runtimeError.classList.toggle('is-warning', entry.kind === 'warning');
   updateLocalAccessHint();
@@ -86,7 +96,7 @@ function renderDiagnosticErrors() {
     button.setAttribute('aria-pressed', String(diagnosticSelected === entry));
     const heading = document.createElement('span'); heading.className = 'diagnostic-error-meta';
     heading.textContent = `${new Date(entry.time).toLocaleTimeString('ru-RU')} · ${entry.kind === 'warning' ? 'Предупреждение' : 'Ошибка'}${entry.count > 1 ? ` ×${entry.count}` : ''}`;
-    const text = document.createElement('span'); text.textContent = entry.message;
+    const text = document.createElement('span'); text.textContent = describeRuntimeMessage(entry.message);
     button.classList.toggle('is-warning', entry.kind === 'warning');
     button.append(heading, text);
     button.addEventListener('click', () => selectDiagnosticEntry(entry));
