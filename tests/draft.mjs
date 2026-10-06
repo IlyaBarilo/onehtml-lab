@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -24,6 +25,7 @@ try {
         } });
       });
       const page = await context.newPage();
+      await useNativeEditor(page);
       const code = page.locator('#code');
       const saved = () => page.waitForFunction(() => document.querySelector('#draft-status').textContent === 'Сохранено');
       await page.goto(url);
@@ -93,6 +95,7 @@ try {
         Object.defineProperty(window, 'indexedDB', { configurable: true, value: undefined });
       });
       const blockedPage = await blockedContext.newPage();
+      await useNativeEditor(blockedPage);
       await blockedPage.goto(url);
       await blockedPage.locator('#activity-summary').getByText('Автосохранение недоступно.', { exact: false }).waitFor();
       await blockedPage.locator('#code').fill('<h1>Без хранилища</h1>');

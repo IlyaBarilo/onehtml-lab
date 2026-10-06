@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -104,6 +105,7 @@ try {
               contentType: 'text/plain', body: sourceLicense });
           });
           const page = await context.newPage();
+          await useNativeEditor(page);
           await page.goto(appLocation);
           await page.waitForFunction(() => !document.querySelector('#code').disabled);
           assert.equal(await page.locator('#library-toggle').count(), 0);
@@ -165,6 +167,7 @@ try {
           const savedPath = join(scratch, `${name}-${new URL(appLocation).protocol.slice(0, -1)}.html`);
           await writeFile(savedPath, downloaded, 'utf8');
           const savedPage = await context.newPage();
+          await useNativeEditor(savedPage);
           await savedPage.goto(pathToFileURL(savedPath).href);
           await savedPage.locator('#result').getByText('128').waitFor();
           await savedPage.close();
@@ -179,6 +182,7 @@ try {
           const packageDirectory = await mkdtemp(join(scratch, 'package-'));
           for (const [fileName, content] of packageFiles) await writeFile(join(packageDirectory, fileName), content);
           const packagePage = await context.newPage();
+          await useNativeEditor(packagePage);
           await packagePage.goto(pathToFileURL(join(packageDirectory, 'Моя игра.html')).href);
           await packagePage.locator('#result').getByText('128').waitFor();
           await packagePage.close();
@@ -370,12 +374,14 @@ try {
             const bothPackageDirectory = await mkdtemp(join(scratch, 'multi-package-'));
             for (const [fileName, content] of bothPackage) await writeFile(join(bothPackageDirectory, fileName), content);
             const bothPackagePage = await context.newPage();
+            await useNativeEditor(bothPackagePage);
             await bothPackagePage.goto(pathToFileURL(join(bothPackageDirectory, 'game.html')).href);
             await bothPackagePage.locator('#result').getByText('0.20.0 / 3.90.0').waitFor();
             await bothPackagePage.close();
             const bothPath = join(scratch, 'cached-libraries.html');
             await writeFile(bothPath, savedBoth, 'utf8');
             const bothPage = await context.newPage();
+            await useNativeEditor(bothPage);
             await bothPage.goto(pathToFileURL(bothPath).href);
             await bothPage.locator('#result').getByText('0.20.0 / 3.90.0').waitFor();
             await bothPage.close();

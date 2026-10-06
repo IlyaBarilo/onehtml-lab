@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import {chromium,webkit} from 'playwright';
 import {readFile,mkdir} from 'node:fs/promises';
@@ -11,6 +12,7 @@ for(const [name,engine] of engines){
   const browser=await engine.launch();
   try{for(const width of [320,1365]){
     const page=await browser.newPage({viewport:{width,height:width===320?568:844},hasTouch:width===320,acceptDownloads:true});page.setDefaultTimeout(15000);
+    await useNativeEditor(page);
     let network=0,libraryRequests=0;const errors=[];
     page.on('pageerror',e=>errors.push(e.message));
     await page.route('https://example.test/**',route=>{network++;return route.fulfill({body:'ok',headers:{'access-control-allow-origin':'*','timing-allow-origin':'*'}});});

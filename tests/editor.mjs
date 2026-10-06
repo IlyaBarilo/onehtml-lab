@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { chromium, webkit } from 'playwright';
 import { mkdir, readFile } from 'node:fs/promises';
@@ -17,6 +18,7 @@ for (const [name, engine] of engines) {
       const context = await browser.newContext({ viewport, hasTouch: viewport.width < 900, acceptDownloads: true });
       context.setDefaultTimeout(10000);
       const page = await context.newPage();
+      await useNativeEditor(page);
       const errors = [];
       page.on('pageerror', error => { if (!error.message.includes('editor-location')) errors.push(error.message); });
       const settings = async () => { if (await page.locator('#edit-panel').isHidden()) await page.locator(await page.locator('#edit-open').isVisible() ? '#edit-open' : '#edit-quick-settings').click(); };
@@ -178,6 +180,7 @@ for (const [name, engine] of engines) {
     }
     // Large documents: virtual line labels, end-of-file navigation and safe snippets.
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await useNativeEditor(page);
     try {
       await page.goto(url);
       await page.waitForFunction(() => !document.querySelector('#code').disabled);

@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { chromium, webkit } from 'playwright';
@@ -16,6 +17,7 @@ for (const [name, engine] of engines) {
       Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
     });
     const page = await context.newPage();
+    await useNativeEditor(page);
     await page.goto(url);
     const code = page.locator('#code');
     assert(await page.locator('#ai-open').isHidden());

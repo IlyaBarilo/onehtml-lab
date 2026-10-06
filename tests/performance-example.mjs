@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -54,6 +55,7 @@ try {
             headers: { 'access-control-allow-origin': '*' }, body: source ? source.source : license });
         });
         const page = await context.newPage();
+        await useNativeEditor(page);
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         await page.goto(appUrl);
@@ -142,6 +144,7 @@ try {
         const embeddedPath = join(scratch, name + '-embedded.html');
         await writeFile(embeddedPath, embedded);
         const saved = await context.newPage();
+        await useNativeEditor(saved);
         await saved.goto(pathToFileURL(embeddedPath).href);
         await libraryLabels(saved, 'Встроена в HTML');
         assert.equal(requests, 6, 'Standalone embedded test must not request CDN resources');
@@ -151,6 +154,7 @@ try {
         const cdnPath = join(scratch, name + '-cdn.html');
         await writeFile(cdnPath, unchanged);
         const cdn = await context.newPage();
+        await useNativeEditor(cdn);
         await cdn.goto(pathToFileURL(cdnPath).href);
         await libraryLabels(cdn, 'Загружена с CDN');
         await cdn.close();
@@ -181,6 +185,7 @@ try {
         await page.locator('#cancel-save').click();
         const beforeLocal = requests;
         const local = await context.newPage();
+        await useNativeEditor(local);
         await local.goto(pathToFileURL(join(folder, 'game.html')).href);
         await libraryLabels(local, 'Загружена из файла');
         assert.equal(requests, beforeLocal, 'Separate libraries must load from files beside HTML');

@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
@@ -91,6 +92,7 @@ try {
           await seed.route(sourceUrl, route => route.fulfill({ contentType: 'text/javascript', headers: { 'access-control-allow-origin': '*' }, body: library }));
           await seed.route(licenseUrl, route => route.fulfill({ contentType: 'text/plain', headers: { 'access-control-allow-origin': '*' }, body: license }));
           const seedPage = await seed.newPage();
+          await useNativeEditor(seedPage);
           await ready(seedPage, location);
           await seedPage.locator('#code').fill(game);
           await seedPage.locator('#run').click();
@@ -106,6 +108,7 @@ try {
         await context.route('https://**/*', route => { internetRequests += 1; return route.abort(); });
         try {
           const page = await context.newPage();
+          await useNativeEditor(page);
           await ready(page, location);
           assert(await page.locator('#library-extract-open').isHidden());
           await page.locator('#expert-toggle').click();
@@ -157,6 +160,7 @@ try {
           const folder = await mkdtemp(join(scratch, 'game-'));
           for (const [fileName, content] of files) await writeFile(join(folder, fileName), content);
           const savedPage = await context.newPage();
+          await useNativeEditor(savedPage);
           await savedPage.goto(pathToFileURL(join(folder, 'game.html')).href);
           await savedPage.locator('#result').getByText('128', { exact: true }).waitFor();
           await savedPage.close();

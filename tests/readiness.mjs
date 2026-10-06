@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { chromium, webkit } from 'playwright';
 import { readFile, mkdir } from 'node:fs/promises';
@@ -34,6 +35,7 @@ try {
         const context=await browser.newContext({viewport:{width,height:844},hasTouch:width===320});
         context.setDefaultTimeout(10000);
         const page=await context.newPage();
+        await useNativeEditor(page);
         const requests=[];
         const errors=[];page.on('pageerror',error=>errors.push(error.message));
         await context.route('https://assets.onehtml.test/**',route=>{

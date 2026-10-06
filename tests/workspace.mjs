@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { chromium, webkit } from 'playwright';
 import { mkdir, readFile } from 'node:fs/promises';
@@ -17,6 +18,7 @@ for (const [engineName, engine] of engines) {
       const context = await browser.newContext({ viewport, hasTouch: viewport.width < 900, acceptDownloads: true });
       context.setDefaultTimeout(8000);
       const page = await context.newPage();
+      await useNativeEditor(page);
       const errors = [];
       page.on('pageerror', error => { if (!error.message.includes('workspace-error')) errors.push(error.message); });
       await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined }));

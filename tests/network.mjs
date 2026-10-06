@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import './network-policy.mjs';
 import { createServer } from 'node:http';
@@ -49,6 +50,7 @@ try {
         return route.fulfill({ status: 200, contentType: item.contentType, headers, body: item.body });
       });
       const page = await context.newPage();
+      await useNativeEditor(page);
       await page.goto(url);
       assert(await page.locator('#network-toggle').isVisible());
       assert.equal(await page.locator('#network-toggle').getAttribute('aria-pressed'), 'true');
@@ -186,6 +188,7 @@ try {
         Object.defineProperty(window, 'localStorage', { configurable: true, get() { throw new Error('blocked'); } });
       });
       const blockedPage = await blockedContext.newPage();
+      await useNativeEditor(blockedPage);
       await blockedPage.goto(url);
       assert.equal(await blockedPage.locator('#expert-toggle').getAttribute('aria-pressed'), 'false');
       assert.equal(await blockedPage.locator('#network-toggle').getAttribute('aria-pressed'), 'true');

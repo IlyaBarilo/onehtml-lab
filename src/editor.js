@@ -183,7 +183,11 @@ function updateCodeTools() {
 }
 
 function inlineEditorAvailable() {
-  return editReady && expertMode && !modeBusy && !readingClipboard && !codeField.disabled && !codeField.hidden && !currentPanel() && !historyOpen && !comparisonOpen && !extractionOpen;
+  return expertMode && editorWorkspaceAvailable();
+}
+
+function editorWorkspaceAvailable() {
+  return editReady && !modeBusy && !readingClipboard && !codeField.disabled && !codeField.hidden && !currentPanel() && !historyOpen && !comparisonOpen && !extractionOpen;
 }
 
 function updateInlineGeometry() {
@@ -209,7 +213,8 @@ function updateInlineEditor() {
   if (!available) appElement.classList.remove('editing-active');
   if (!expertMode) { editFindOpen = false; appElement.classList.remove('editing-active'); }
   editInline.hidden = !available || !editFindOpen;
-  editQuick.hidden = !available || codeField.readOnly;
+  editQuick.hidden = !editorWorkspaceAvailable();
+  document.querySelector('#edit-quick-tools').hidden = !available || codeField.readOnly;
   document.querySelector('#edit-find').setAttribute('aria-pressed', String(editFindOpen));
   document.querySelector('#edit-quick-undo').disabled = !editUndo.length;
   document.querySelector('#edit-quick-redo').disabled = !editRedo.length;

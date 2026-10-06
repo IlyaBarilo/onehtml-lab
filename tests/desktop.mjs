@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { chromium, webkit } from 'playwright';
 import { mkdir, readFile } from 'node:fs/promises';
@@ -36,6 +37,7 @@ try {
         const context = await browser.newContext({ viewport: { width, height: 900 }, acceptDownloads: true });
         context.setDefaultTimeout(10000);
         const page = await context.newPage();
+        await useNativeEditor(page);
         const errors = [];
         page.on('pageerror', error => { if (!error.message.includes('desktop-test-error')) errors.push(error.message); });
         try {
@@ -185,6 +187,7 @@ try {
           else localStorage.setItem('onehtml-lab-desktop-view', '{bad');
         }, blocked);
         const page = await context.newPage();
+        await useNativeEditor(page);
         await ready(page, file.href);
         await page.locator('#expert-toggle').click();
         assert.equal(await page.locator('#split-toggle').getAttribute('aria-pressed'), 'false');

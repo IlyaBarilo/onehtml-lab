@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
@@ -74,6 +75,7 @@ try {
         context.setDefaultTimeout(10000);
         await clipboard(context);
         const page = await context.newPage();
+        await useNativeEditor(page);
         const errors = [];
         page.on('pageerror', error => { if (!error.message.includes('ai-fix-error')) errors.push(error.message); });
         try {
@@ -190,6 +192,7 @@ try {
         let requests = 0;
         await context.route('https://**/*', route => { requests++; return route.abort(); });
         const page = await context.newPage();
+        await useNativeEditor(page);
         await page.addInitScript(() => {
           const digest = crypto.subtle.digest.bind(crypto.subtle);
           crypto.subtle.digest = async (...args) => {

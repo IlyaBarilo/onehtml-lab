@@ -606,7 +606,13 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .edit-find-options input { accent-color: #2d6cdf; width: 18px; height: 18px; }
 #edit-replace-box { padding-top: 4px; }
 #edit-feedback { overflow-wrap: anywhere; }
-#edit-quick { bottom: 0; display: flex; overflow-x: auto; overscroll-behavior-x: contain; padding: 2px 4px; border-top: 1px solid #c9d9ed; scrollbar-width: thin; }
+#edit-quick { bottom: 0; display: flex; overflow: hidden; padding: 2px 4px max(2px, env(safe-area-inset-bottom)); border-top: 1px solid #c9d9ed; }
+#edit-quick-tools { display: flex; flex: 1 1 auto; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+#edit-display-controls { display: flex; flex: 0 0 auto; gap: 2px; margin-left: auto; padding-left: 4px; border-left: 1px solid #c9d9ed; }
+#edit-display-controls button { width: 44px; padding: 6px; }
+#editor-current { font-size: 14px; font-weight: 650; }
+.theme-sun, .theme-dark .theme-moon { display: none; }
+.theme-dark .theme-sun { display: inline; }
 #edit-quick button { font-size: 16px; white-space: nowrap; }
 #edit-quick svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; vertical-align: middle; }
 #edit-range-form .edit-line-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
@@ -696,6 +702,74 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 #alternative-editor .cm-cursor { border-left-color: #173c72; }
 #alternative-editor.is-locked, #alternative-editor.is-locked .cm-gutters { background: #eef2f7; }
 #alternative-editor.is-locked .cm-activeLine { background: transparent; }
+
+/* The application theme never changes the game document inside its iframe. */
+:root.theme-dark { color-scheme: dark; color: #d9e2ef; background: #171e2a; }
+.theme-dark :focus-visible { outline-color: #91baff; }
+.theme-dark :is(.toolbar, .expert-tools, #edit-inline, #edit-quick, #syntax-caption, .panel-heading, .history-heading, .comparison-heading, .ai-footer, .library-extraction-footer, #preview-tools) { background: #202c3d; border-color: #3b4b61; color: #b4c7e1; }
+.theme-dark :is(.work-panel, .history-view, .library-extraction, .comparison, dialog, .workspace, #alternative-editor, #code-colors, #ai-output, #copy-text, #edit-snippet) { background: #171e2a; color: #d9e2ef; border-color: #3b4b61; }
+.theme-dark :is(h1, h2, h3, .comparison-heading strong) { color: #e1e9f5; }
+.theme-dark :is(h1 span, .app-version, .draft-status, .dialog-copy, dialog label, .save-library-hint, .guide-panel p, .example-card span, .library-extraction-intro, .extraction-note, .library-extraction-footer p, .history-empty, .help-intro, .help-note, .edit-note, #edit-result, #ai-dialog #ai-summary, #ai-dialog #ai-libraries, #ai-dialog #ai-error) { color: #a9b8cc; }
+.theme-dark :is(.service-links a, .help-details summary, .history-action, .comparison-legend) { color: #a5c6fb; }
+.theme-dark :is(.service-list li, .history-row, .help-details, .edit-section + .edit-section, .library-extraction-row, .comparison-legend, #edit-display-controls) { border-color: #3b4b61; }
+.theme-dark button { background: #29384d; color: #c5d8f3; border-color: #465b77; }
+.theme-dark button:hover:not(:disabled) { background: #344965; color: #e0ebfc; }
+.theme-dark button:disabled { color: #8292a9; }
+.theme-dark .toolbar .icon-button { background: transparent; color: #afc6e7; }
+.theme-dark .toolbar .icon-button:hover:not(:disabled) { background: #344965; }
+.theme-dark :is(.run-button, .dialog-actions button.primary, .library-extraction-footer button, #ai-dialog .ai-footer #ai-copy) { background: #356fd5; border-color: #5089ef; color: #fff; }
+.theme-dark :is(.run-button, .dialog-actions button.primary):hover:not(:disabled) { background: #467fe7; }
+.theme-dark .toolbar .run-button { background: #356fd5; color: #fff; }
+.theme-dark .toolbar .run-button:disabled { background: #263247; color: #667993; border-color: #35455d; }
+.theme-dark :is(button[aria-pressed="true"], button[aria-selected="true"], .history-current-row, .history-current-row.is-verified) { background: #284773; color: #c6dcff; border-color: #557ba9; }
+.theme-dark :is(.network-button.is-off, .storage-button.is-off) { background: #28313f; color: #8595ac; border-color: #465366; }
+.theme-dark :is(.example-card, .history-entry:hover, .resource-item) { background: #202b3b; border-color: #3b4b61; }
+.theme-dark :is(input:not([type="checkbox"]), select, textarea, #editor-engine, #edit-inline input[type="text"], .edit-body input:not([type="checkbox"]), .edit-body select, #ai-task, dialog input:not([type="checkbox"])) { background: #171e2a; color: #d9e2ef; border-color: #50627d; }
+.theme-dark textarea { caret-color: #b6d5ff; scrollbar-color: #7085a3 #202c3d; }
+.theme-dark textarea::placeholder { color: #98acc166; }
+.theme-dark textarea::selection { color: #e7efff; background: #355c93; }
+:root.theme-dark #code.has-colors { background: transparent; color: transparent; caret-color: #c6dcff; }
+.theme-dark #code.has-colors::selection { color: transparent; background: #6b9ee666; }
+.theme-dark :is(#code:read-only, #code:disabled, #alternative-editor.is-locked, #alternative-editor.is-locked .cm-gutters) { background: #2c3441; color: #afbdcf; }
+.theme-dark :is(#code-lines, #alternative-editor .cm-gutters) { background: #202c3d; color: #97aac5; border-color: #3b4b61; }
+.theme-dark #alternative-editor .cm-foldGutter .cm-gutterElement { color: #a5c6fb; }
+.theme-dark #alternative-editor .cm-foldPlaceholder { background: #293e5c; color: #c6dcff; border-color: #536c8f; }
+.theme-dark #alternative-editor .cm-activeLine { background: #31558033; }
+.theme-dark #alternative-editor .cm-selectionBackground { background: #355c93 !important; }
+.theme-dark #alternative-editor .cm-cursor { border-left-color: #c6dcff; }
+.theme-dark :is(#edit-inline button, #edit-quick button) { background: transparent; color: #afc9ed; }
+.theme-dark :is(#edit-inline button, #edit-quick button):hover:not(:disabled) { background: #344965; }
+.theme-dark .syntax-tag { color: #91baff; }
+.theme-dark :is(.syntax-attribute, .syntax-property) { color: #e3bb87; }
+.theme-dark .syntax-keyword { color: #c6a3ee; }
+.theme-dark .syntax-string { color: #a2d4aa; }
+.theme-dark .syntax-number { color: #e7bd7e; }
+.theme-dark .syntax-comment { color: #97a6ba; }
+.theme-dark .syntax-function { color: #84cbdc; }
+.theme-dark :is(.syntax-text, .has-accents .syntax-text) { color: #d9e2ef; }
+.theme-dark .syntax-accent-library { background: #423055; color: #dcc3f8; box-shadow: inset 0 -1px #8b68b0; }
+.theme-dark .syntax-accent-resource { background: #233e52; color: #b1dbf3; box-shadow: inset 0 -1px #547f9c; }
+.theme-dark .syntax-accent-text { background: #283f36; color: #b8debe; }
+.theme-dark :is(.syntax-accent-network, .syntax-accent-storage) { background: #4a3c27; color: #efd8a3; box-shadow: inset 0 -1px #a18655; }
+.theme-dark .syntax-color { color: var(--sample-ink); }
+.theme-dark :is(.notice, .network-status, .library-request) { background: #233651; color: #c5d8f3; border-color: #46648a; }
+.theme-dark :is(.local-access-status, .runtime-warning) { background: #423824; color: #ead4a4; border-color: #7b6740; }
+.theme-dark :is(.runtime-error, #comparison-game-error, #ai-error-context) { background: #482c31; color: #f4beb6; border-color: #82514d; }
+.theme-dark #comparison-game-warning { background: #423824; color: #ead4a4; border-color: #7b6740; }
+.theme-dark :is(.history-added, .extraction-size, .history-entry.is-verified .history-time) { color: #9ed1aa; }
+.theme-dark .history-removed { color: #eeaaa4; }
+.theme-dark .diff-added { background: #254631; color: #b9e8c5; }
+.theme-dark .diff-removed { background: #542d33; color: #f1bbb6; }
+.theme-dark #edit-snippet mark { background: #355c93; color: #e7efff; }
+.theme-dark :is(.comparison-scrollbar, #split-divider) { background: #29384d; border-color: #465b77; }
+.theme-dark .comparison-scrollbar-thumb, .theme-dark #split-divider::after { background: #8196b6; }
+.theme-dark :is(textarea, .comparison, .panel-body, #alternative-editor .cm-scroller) { scrollbar-color: #7085a3 #202c3d; }
+.theme-dark :is(textarea, .comparison, .panel-body, #alternative-editor .cm-scroller)::-webkit-scrollbar-track { background: #202c3d; }
+.theme-dark :is(textarea, .comparison, .panel-body, #alternative-editor .cm-scroller)::-webkit-scrollbar-thumb { background: #7085a3; border-color: #202c3d; }
+.theme-dark dialog::backdrop { background: #080e18a6; }
+.theme-dark #preview-empty, .theme-dark #preview.phone-preview { background: #171e2a; color: #a9b8cc; }
+.theme-dark #preview-restart { background: #29384d; color: #c5d8f3; border-color: #465b77; }
+.theme-dark #preview-changes { color: #ead4a4; }
 </style>
 </head>
 <body>
@@ -786,7 +860,13 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
         <div id="edit-replace-box" hidden><input id="edit-replacement" type="text" aria-label="Заменить на" placeholder="Заменить на" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="edit-find-options"><button id="edit-replace" type="button" disabled>Заменить</button><button id="edit-replace-all" type="button" disabled>Все</button><span id="edit-feedback" role="status"></span></div></div>
       </section>
       <div id="edit-quick" role="group" aria-label="Правка кода" hidden>
+        <div id="edit-quick-tools">
         <button id="edit-find" type="button" aria-label="Поиск в коде" title="Поиск в коде"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"></circle><path d="m15 15 6 6"></path></svg></button><button id="edit-quick-undo" type="button" aria-label="Отменить" title="Отменить">↶</button><button id="edit-quick-redo" type="button" aria-label="Повторить" title="Повторить">↷</button><button data-edit-indent="out" type="button" aria-label="Убрать отступ" title="Убрать отступ">⇤</button><button data-edit-indent="in" type="button" aria-label="Добавить отступ" title="Добавить отступ">⇥</button><button data-edit-pair="()" type="button" aria-label="Круглые скобки">()</button><button data-edit-pair="{}" type="button" aria-label="Фигурные скобки">{}</button><button data-edit-pair="[]" type="button" aria-label="Квадратные скобки">[]</button><button data-edit-pair="&quot;&quot;" type="button" aria-label="Двойные кавычки">&quot;&quot;</button><button data-edit-pair="''" type="button" aria-label="Одинарные кавычки">''</button><button id="edit-copy-selection" type="button" disabled>Копировать выделенное</button><button id="edit-fold" type="button" title="Свернуть блок у курсора" hidden>− Свернуть</button><button id="edit-unfold-all" type="button" hidden>Развернуть всё</button><button id="edit-quick-settings" type="button">Строки и вид</button>
+        </div>
+        <div id="edit-display-controls" role="group" aria-label="Вид редактора">
+          <button id="editor-toggle" type="button" aria-label="Переключить редактор" title="Переключить редактор" aria-pressed="true"><span id="editor-current" aria-hidden="true">CM</span></button>
+          <button id="theme-toggle" type="button" aria-label="Включить тёмную тему" title="Включить тёмную тему" aria-pressed="false"><svg class="theme-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4a8.5 8.5 0 1 0 11.5 11.5Z"></path></svg><svg class="theme-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"></path></svg></button>
+        </div>
       </div>
       <section id="edit-panel" class="work-panel" aria-labelledby="edit-title" hidden>
         <div class="panel-heading"><h2 id="edit-title">Редактирование</h2><button id="edit-close" type="button" aria-label="Закрыть редактирование">✕</button></div>
@@ -3208,7 +3288,11 @@ function updateCodeTools() {
 }
 
 function inlineEditorAvailable() {
-  return editReady && expertMode && !modeBusy && !readingClipboard && !codeField.disabled && !codeField.hidden && !currentPanel() && !historyOpen && !comparisonOpen && !extractionOpen;
+  return expertMode && editorWorkspaceAvailable();
+}
+
+function editorWorkspaceAvailable() {
+  return editReady && !modeBusy && !readingClipboard && !codeField.disabled && !codeField.hidden && !currentPanel() && !historyOpen && !comparisonOpen && !extractionOpen;
 }
 
 function updateInlineGeometry() {
@@ -3234,7 +3318,8 @@ function updateInlineEditor() {
   if (!available) appElement.classList.remove('editing-active');
   if (!expertMode) { editFindOpen = false; appElement.classList.remove('editing-active'); }
   editInline.hidden = !available || !editFindOpen;
-  editQuick.hidden = !available || codeField.readOnly;
+  editQuick.hidden = !editorWorkspaceAvailable();
+  document.querySelector('#edit-quick-tools').hidden = !available || codeField.readOnly;
   document.querySelector('#edit-find').setAttribute('aria-pressed', String(editFindOpen));
   document.querySelector('#edit-quick-undo').disabled = !editUndo.length;
   document.querySelector('#edit-quick-redo').disabled = !editRedo.length;
@@ -3601,13 +3686,16 @@ function initCodeEditor() {
 
 // The textarea remains the source of truth for all application operations.
 let alternativeView = null;
-let alternativeChoice = 'native';
+let alternativeChoice = 'codemirror';
+let editorDark = false;
 let alternativeBusy = false;
 let alternativeConfig = '';
 let alternativeOptions;
 let alternativeScan = { source: null, result: null };
 const alternativeHost = document.querySelector('#alternative-editor');
 const alternativeSelect = document.querySelector('#editor-engine');
+const alternativeToggle = document.querySelector('#editor-toggle');
+const themeToggle = document.querySelector('#theme-toggle');
 function alternativeActive() { return alternativeChoice === 'codemirror' && Boolean(alternativeView); }
 function alternativeMarks(source) {
   if (alternativeScan.source !== source) alternativeScan = { source, result: scanCodeColors(source) };
@@ -3616,14 +3704,15 @@ function alternativeMarks(source) {
 
 function alternativeExtensions() {
   const cm = OneHTMLCodeMirror, tags = cm.tags;
+  const palette = editorDark ? ['#c6a3ee', '#a2d4aa', '#e7bd7e', '#97a6ba', '#91baff', '#e3bb87', '#84cbdc'] : ['#7953a0', '#337447', '#98600c', '#687989', '#235ba5', '#875218', '#276785'];
   const extensions = [cm.EditorState.readOnly.of(codeField.readOnly || codeField.disabled), cm.EditorView.editable.of(!codeField.readOnly && !codeField.disabled),
-    cm.EditorView.theme({ '&': { fontSize: `${editView.size}px`, height: '100%' }, '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace', lineHeight: '1.65' } })];
+    cm.EditorView.theme({ '&': { fontSize: `${editView.size}px`, height: '100%' }, '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace', lineHeight: '1.65' } }, { dark: editorDark })];
   if (editView.wrap) extensions.push(cm.EditorView.lineWrapping);
   if (editView.numbers) extensions.push(cm.lineNumbers());
   if (editView.colors !== 'off') extensions.push(cm.syntaxHighlighting(cm.HighlightStyle.define([
-    { tag: tags.keyword, color: '#7953a0' }, { tag: tags.string, color: '#337447' }, { tag: tags.number, color: '#98600c' },
-    { tag: tags.comment, color: '#687989' }, { tag: tags.tagName, color: '#235ba5' }, { tag: tags.attributeName, color: '#875218' },
-    { tag: tags.propertyName, color: '#875218' }, { tag: tags.function(tags.variableName), color: '#276785' }
+    { tag: tags.keyword, color: palette[0] }, { tag: tags.string, color: palette[1] }, { tag: tags.number, color: palette[2] },
+    { tag: tags.comment, color: palette[3] }, { tag: tags.tagName, color: palette[4] }, { tag: tags.attributeName, color: palette[5] },
+    { tag: tags.propertyName, color: palette[5] }, { tag: tags.function(tags.variableName), color: palette[6] }
   ])));
   return extensions;
 }
@@ -3734,12 +3823,18 @@ function updateAlternativeEditor() {
   alternativeSelect.value = alternativeChoice;
   alternativeSelect.disabled = modeBusy || readingClipboard || Boolean(currentPanel() && currentPanel() !== editPanel) || historyOpen || comparisonOpen || extractionOpen;
   const active = alternativeActive();
+  alternativeToggle.disabled = alternativeSelect.disabled;
+  alternativeToggle.setAttribute('aria-pressed', String(active));
+  document.querySelector('#editor-current').textContent = active ? 'CM' : 'Aa';
+  const label = active ? 'Переключить на обычный редактор' : 'Переключить на CodeMirror';
+  alternativeToggle.title = `${active ? 'CodeMirror' : 'Обычный редактор'} · ${label}`;
+  alternativeToggle.setAttribute('aria-label', label);
   workspaceElement.classList.toggle('alternative-active', active);
   alternativeHost.hidden = !active || codeField.hidden || Boolean(currentPanel());
   alternativeHost.classList.toggle('is-locked', codeField.readOnly);
   for (const id of ['edit-fold', 'edit-unfold-all']) document.querySelector('#' + id).hidden = !active;
   if (!active || alternativeBusy) return;
-  const config = JSON.stringify([editView, codeField.readOnly, codeField.disabled]);
+  const config = JSON.stringify([editView, codeField.readOnly, codeField.disabled, editorDark]);
   alternativeBusy = true;
   try {
     const changes = alternativeView.state.doc.toString() === codeField.value ? null : editPatch(alternativeView.state.doc.toString(), codeField.value);
@@ -3764,20 +3859,43 @@ function initAlternativeEditor() {
   codeField.focus = options => alternativeActive() && !alternativeHost.hidden ? alternativeView.focus() : nativeFocus(options);
   codeField.select = () => { nativeSelect(); selectAlternativeRange(0, codeField.value.length); };
   codeField.setSelectionRange = (start, end, direction) => { nativeRange(start, end, direction); selectAlternativeRange(start, end, direction); };
-  try { if (localStorage.getItem('onehtml-lab-editor-engine') === 'codemirror') alternativeChoice = 'codemirror'; } catch {}
+  try {
+    const saved = localStorage.getItem('onehtml-lab-editor-engine');
+    if (['native', 'codemirror'].includes(saved)) alternativeChoice = saved;
+    editorDark = localStorage.getItem('onehtml-lab-theme') === 'dark';
+  } catch {}
+  const applyTheme = () => {
+    document.documentElement.classList.toggle('theme-dark', editorDark);
+    themeToggle.setAttribute('aria-pressed', String(editorDark));
+    themeToggle.title = editorDark ? 'Включить светлую тему' : 'Включить тёмную тему';
+    themeToggle.setAttribute('aria-label', themeToggle.title);
+    updateAlternativeEditor(); scheduleCodeLayout();
+  };
   const prepare = () => {
     if (alternativeChoice !== 'codemirror' || alternativeView) return;
     try { createAlternativeEditor(); }
     catch { alternativeChoice = 'native'; alternativeHost.replaceChildren(); inform('Не удалось открыть CodeMirror. Используется обычный редактор.', true); }
   };
   prepare();
-  alternativeSelect.addEventListener('change', () => {
-    alternativeChoice = alternativeSelect.value;
+  const choose = choice => {
+    rememberEditorPosition();
+    alternativeChoice = choice;
     prepare();
     try { localStorage.setItem('onehtml-lab-editor-engine', alternativeChoice); } catch { inform('Выбор редактора действует в этом сеансе.'); }
     closeWorkspacePanels(false);
-    updateAlternativeEditor(); updateInlineEditor(); scheduleCodeLayout(); codeField.focus();
+    updateAlternativeEditor(); updateInlineEditor(); scheduleCodeLayout();
+    restoreEditorPosition();
+    codeField.focus({ preventScroll: true });
+    if (alternativeActive()) selectAlternativeRange(codeField.selectionStart, codeField.selectionEnd, codeField.selectionDirection, true);
+  };
+  alternativeSelect.addEventListener('change', () => choose(alternativeSelect.value));
+  alternativeToggle.addEventListener('click', () => choose(alternativeActive() ? 'native' : 'codemirror'));
+  themeToggle.addEventListener('click', () => {
+    editorDark = !editorDark;
+    try { localStorage.setItem('onehtml-lab-theme', editorDark ? 'dark' : 'light'); } catch {}
+    applyTheme();
   });
+  applyTheme();
   document.querySelector('#edit-fold').addEventListener('click', () => { if (alternativeActive()) { OneHTMLCodeMirror.foldCode(alternativeView); alternativeView.focus(); } });
   document.querySelector('#edit-unfold-all').addEventListener('click', () => { if (alternativeActive()) OneHTMLCodeMirror.unfoldAll(alternativeView); });
   new MutationObserver(() => { updateAlternativeEditor(); scheduleCodeLayout(); }).observe(codeField, { attributes: true, attributeFilter: ['readonly', 'disabled', 'hidden'] });

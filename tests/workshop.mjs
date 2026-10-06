@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { chromium, webkit } from 'playwright';
 import { readFile, mkdir } from 'node:fs/promises';
@@ -17,6 +18,7 @@ for (const [name, engine] of engines) {
       const context = await browser.newContext({ viewport: { width, height: 844 }, hasTouch: width === 320, acceptDownloads: true });
       context.setDefaultTimeout(10000);
       const page = await context.newPage();
+      await useNativeEditor(page);
       const requests = [];
       await context.route(/^https?:/, route => { requests.push(route.request().url()); return route.abort(); });
       await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText: async () => window.testClipboard } }));
@@ -112,6 +114,7 @@ for (const [name, engine] of engines) {
         await download.saveAs(path);
         assert.equal(await readFile(path, 'utf8'), improved);
         const gamePage = await context.newPage();
+        await useNativeEditor(gamePage);
         await gamePage.goto(pathToFileURL(path).href);
         assert.equal(await gamePage.locator('h1').innerText(), 'Поймай звезду');
         await gamePage.locator('#start').click();

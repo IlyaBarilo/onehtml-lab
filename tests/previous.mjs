@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -24,6 +25,7 @@ try {
         } });
       });
       const page = await context.newPage();
+      await useNativeEditor(page);
       const code = page.locator('#code');
       const compare = page.locator('#compare');
       const history = page.locator('#history-open');
@@ -127,6 +129,7 @@ try {
     const legacyContext = await browser.newContext();
     try {
       const legacyPage = await legacyContext.newPage();
+      await useNativeEditor(legacyPage);
       await legacyPage.goto(url);
       await legacyPage.waitForFunction(() => document.querySelector('#code').disabled === false);
       await legacyPage.evaluate(() => new Promise((resolve, reject) => {
@@ -156,6 +159,7 @@ try {
     const oldHistoryContext = await browser.newContext();
     try {
       const oldHistoryPage = await oldHistoryContext.newPage();
+      await useNativeEditor(oldHistoryPage);
       await oldHistoryPage.goto(url);
       await oldHistoryPage.waitForFunction(() => document.querySelector('#code').disabled === false);
       await oldHistoryPage.evaluate(() => new Promise((resolve, reject) => {

@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { chromium, webkit } from 'playwright';
 import { readFile, mkdir } from 'node:fs/promises';
@@ -43,6 +44,7 @@ try {
         await context.route(scriptUrl, route => { requests++; return route.fulfill({ contentType: 'text/javascript', headers: { 'Access-Control-Allow-Origin': '*' }, body: script }); });
         await context.route(licenseUrl, route => route.fulfill({ headers: { 'Access-Control-Allow-Origin': '*' }, body: license }));
         const page = await context.newPage();
+        await useNativeEditor(page);
         const hostErrors = [];
         page.on('pageerror', error => { if (!/diagnostic-(throw|promise)/.test(error.message)) hostErrors.push(error.message); });
         try {
@@ -153,6 +155,7 @@ try {
       try {
         await context.addInitScript(() => Object.defineProperty(window, 'indexedDB', { configurable: true, get() { throw new Error('blocked'); } }));
         const page = await context.newPage();
+        await useNativeEditor(page);
         await page.goto(file.href); await page.waitForFunction(() => !document.querySelector('#code').disabled);
         await page.locator('#expert-toggle').click();
         await source(page, '<script src="./custom.js"></script>'); await open(page, 'libraries');

@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { chromium, webkit } from 'playwright';
 import { mkdir } from 'node:fs/promises';
@@ -9,6 +10,7 @@ for(const [name,engine] of engines) {
   const browser=await engine.launch();
   try { for(const width of [320,1365]) {
     const page=await browser.newPage({viewport:{width,height:844},hasTouch:true});page.setDefaultTimeout(10000);
+    await useNativeEditor(page);
     const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw new Error('denied');}}}));
     const field=page.locator('#code');
@@ -63,7 +65,7 @@ for(const [name,engine] of engines) {
       await page.locator('#edit-find-close').click();
       // Apply the native readonly flag: synthetic invocations still cannot mutate source.
       await field.evaluate(el=>{el.readOnly=true;});await page.locator('#help-open').click();await page.locator('#help-close').click();
-      assert(await page.locator('#edit-quick').isHidden());const locked=await value();
+      assert(await page.locator('#edit-quick-tools').isHidden());const locked=await value();
       await page.locator('[data-edit-pair="{}"]').evaluate(el=>el.click());assert.equal(await value(),locked);
       await field.evaluate(el=>{el.readOnly=false;});await page.locator('#help-open').click();await page.locator('#help-close').click();
       if(width===1365) {

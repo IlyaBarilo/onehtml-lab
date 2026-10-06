@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { createServer } from 'node:http';
@@ -55,6 +56,7 @@ async function runCase(browser, engine, url, mode) {
   if (offline && engine !== 'webkit') await context.setOffline(true);
   context.setDefaultTimeout(10000);
   const page = await context.newPage();
+  await useNativeEditor(page);
   const escapes = [];
   await context.route('**/*', route => {
     const requestUrl = route.request().url();
@@ -258,12 +260,14 @@ async function runCase(browser, engine, url, mode) {
         const gutter = document.querySelector('#code-lines').getBoundingClientRect();
         const caption = document.querySelector('#syntax-caption');
         const captionHeight = caption.hidden ? 0 : caption.getBoundingClientRect().height;
+        const footer = document.querySelector('#edit-quick');
+        const footerHeight = footer.hidden ? 0 : footer.getBoundingClientRect().height;
         const backgroundElement = document.querySelector('#code').classList.contains('has-colors') ? document.querySelector('#code-colors') : document.querySelector('#code');
         const buttons = [...document.querySelectorAll('.actions button')].filter(el => !el.hidden).map(el => {
           const rect = el.getBoundingClientRect();
           return { width: rect.width, height: rect.height, top: rect.top, bottom: rect.bottom, right: rect.right, name: el.getAttribute('aria-label'), svg: el.querySelectorAll('svg').length };
         });
-        return { width: innerWidth, height: innerHeight, scrollWidth: document.documentElement.scrollWidth, header: { top: header.top, bottom: header.bottom }, work: { left: work.left, right: work.right, top: work.top, bottom: work.bottom }, editor: { left: editor.left, right: editor.right, height: editor.height }, gutter: { left: gutter.left, right: gutter.right, width: gutter.width }, buttons, captionHeight, background: getComputedStyle(backgroundElement).backgroundColor };
+        return { width: innerWidth, height: innerHeight, scrollWidth: document.documentElement.scrollWidth, header: { top: header.top, bottom: header.bottom }, work: { left: work.left, right: work.right, top: work.top, bottom: work.bottom }, editor: { left: editor.left, right: editor.right, height: editor.height }, gutter: { left: gutter.left, right: gutter.right, width: gutter.width }, buttons, captionHeight, footerHeight, background: getComputedStyle(backgroundElement).backgroundColor };
       });
       assert(layout.scrollWidth <= layout.width, 'No horizontal overflow');
       assert.equal(layout.header.top, 0, 'Toolbar touches viewport top');
@@ -277,7 +281,7 @@ async function runCase(browser, engine, url, mode) {
       assert.equal(layout.gutter.left, 0, 'Line numbers start at the workspace edge');
       assert.equal(layout.editor.left, layout.gutter.right, 'Code follows the line numbers without a gap');
       assert(Math.abs(layout.editor.right - layout.width) < 1, 'Code fills the remaining width');
-      assert(Math.abs(layout.editor.height - (layout.height - layout.header.bottom - layout.captionHeight)) < 1);
+      assert(Math.abs(layout.editor.height - (layout.height - layout.header.bottom - layout.captionHeight - layout.footerHeight)) < 1);
       assert.equal(layout.background, 'rgb(252, 253, 255)');
       assert.equal(layout.buttons.length, 7);
       assert(layout.buttons.every(button => button.width >= 44 && button.height >= 44 && button.top >= 0 && button.bottom <= layout.header.bottom && button.right <= layout.width && button.name && button.svg), 'All icon controls fit the toolbar and have accessible names');

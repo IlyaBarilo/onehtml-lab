@@ -1,3 +1,4 @@
+import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -26,6 +27,7 @@ try {
         const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
         try {
           const page = await context.newPage();
+          await useNativeEditor(page);
           await page.goto(url);
           const code = page.locator('#code');
           assert(await page.locator('#storage-toggle').isHidden());
