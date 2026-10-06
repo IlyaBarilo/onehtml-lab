@@ -24,6 +24,7 @@ const editInline = document.querySelector('#edit-inline');
 const editQuick = document.querySelector('#edit-quick');
 let editFindOpen = false;
 let editGeometryFrame = 0;
+let editRevealCaret = false;
 
 function editSelection() {
   return { start: codeField.selectionStart, end: codeField.selectionEnd, direction: codeField.selectionDirection };
@@ -190,7 +191,10 @@ function updateInlineGeometry() {
   workspaceElement.style.setProperty('--syntax-caption-height', `${captionHeight}px`);
   for (const [name, element] of [['--edit-top', editInline], ['--edit-bottom', editQuick]]) {
     const size = `${(element.hidden ? 0 : element.offsetHeight) + (name === '--edit-bottom' ? captionHeight : 0)}px`;
-    if (workspaceElement.style.getPropertyValue(name) !== size) workspaceElement.style.setProperty(name, size);
+    if (workspaceElement.style.getPropertyValue(name) !== size) {
+      workspaceElement.style.setProperty(name, size);
+      if (document.activeElement === codeField) editRevealCaret = true;
+    }
   }
   scheduleCodeLayout();
 }
@@ -277,6 +281,9 @@ function openCodeTools() {
 
 function applyCodeView() {
   codeField.style.fontSize = `${editView.size}px`;
+  // Textarea line boxes and separate painted blocks round fractional heights
+  // differently. Whole CSS pixels keep caret, hit testing and text aligned.
+  codeField.style.lineHeight = `${Math.ceil(editView.size * 1.65)}px`;
   codeField.wrap = editView.wrap ? 'soft' : 'off';
   workspaceElement.classList.toggle('code-numbered', editView.numbers);
   document.querySelector('#edit-font').value = String(editView.size);
@@ -290,10 +297,13 @@ function applyCodeView() {
 function measureCode() {
   const style = getComputedStyle(codeField);
   const code = codeField.value;
-  const signature = [code, codeField.clientWidth, style.fontSize, editView.wrap, style.paddingTop, style.paddingLeft];
+  // clientWidth is rounded to an integer. At a wrapping boundary even half a
+  // pixel changes the number of visual lines, so retain the fractional width.
+  const width = codeField.getBoundingClientRect().width - (codeField.offsetWidth - codeField.clientWidth);
+  const signature = [code, width, style.fontSize, editView.wrap, style.paddingTop, style.paddingLeft, style.lineHeight];
   if (editMeasured && signature.every((value, i) => value === editMeasured.signature[i])) return editMeasured;
   for (const key of ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'tabSize', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft']) editMirror.style[key] = style[key];
-  editMirror.style.width = `${codeField.clientWidth}px`;
+  editMirror.style.width = `${width}px`;
   editMirror.style.whiteSpace = editView.wrap ? 'pre-wrap' : 'pre';
   editMirror.style.overflowWrap = editView.wrap ? 'break-word' : 'normal';
   const starts = [0];
@@ -301,15 +311,17 @@ function measureCode() {
   while ((at = code.indexOf('\n', at + 1)) >= 0) starts.push(at + 1);
   // Separate formatting blocks avoid laying out an entire large document as
   // one wrapped paragraph. Text stays inert and source offsets stay unchanged.
-  if (alternativeActive()) { editMeasured = { signature, starts, lineHeight: parseFloat(style.lineHeight) }; return editMeasured; }
+  if (alternativeActive()) { editMeasured = { signature, starts, width, lineHeight: parseFloat(style.lineHeight) }; return editMeasured; }
   const lines = starts.map((start, index) => {
     const line = document.createElement('div');
     const end = index + 1 < starts.length ? starts[index + 1] - 1 : code.length;
-    line.textContent = code.slice(start, end) + '\u200b';
+    // A sentinel after trailing spaces makes them wrap instead of hang like
+    // native textarea text. Only empty lines need it to create a line box.
+    line.textContent = code.slice(start, end) || '\u200b';
     return line;
   });
   editMirror.replaceChildren(...lines);
-  editMeasured = { signature, starts, lineHeight: parseFloat(style.lineHeight) };
+  editMeasured = { signature, starts, width, lineHeight: parseFloat(style.lineHeight) };
   return editMeasured;
 }
 
@@ -326,7 +338,7 @@ function codePointRect(offset) {
   const node = editMirror.children[low].firstChild;
   const position = absolute - starts[low];
   range.setStart(node, position);
-  range.setEnd(node, position + 1);
+  range.setEnd(node, Math.min(position + 1, node.length));
   const rect = range.getBoundingClientRect(), origin = editMirror.getBoundingClientRect();
   return { top: rect.top - origin.top, left: rect.left - origin.left, height: rect.height };
 }
@@ -335,6 +347,7 @@ function drawCodeLines() {
   editLayoutFrame = 0;
   updateAlternativeEditor();
   if (alternativeActive()) {
+    editRevealCaret = false;
     editGutter.hidden = true;
     document.querySelector('#edit-highlight').hidden = true;
     codeField.classList.remove('has-colors'); syntaxLayer.hidden = true;
@@ -343,8 +356,16 @@ function drawCodeLines() {
   }
   editGutter.hidden = !editView.numbers || codeField.hidden || Boolean(currentPanel());
   if (codeField.hidden || currentPanel()) { document.querySelector('#edit-highlight').hidden = true; clearCodeColors(); return; }
-  if (editGutter.hidden && editInline.hidden && editView.colors === 'off') { document.querySelector('#edit-highlight').hidden = true; clearCodeColors(); return; }
+  if (editGutter.hidden && editInline.hidden && editView.colors === 'off' && !editRevealCaret) { document.querySelector('#edit-highlight').hidden = true; clearCodeColors(); return; }
   const { starts, lineHeight } = measureCode();
+  if (editRevealCaret) {
+    editRevealCaret = false;
+    if (document.activeElement === codeField && codeField.selectionStart === codeField.selectionEnd) {
+      const caret = codePointRect(codeField.selectionStart), margin = Math.min(8, codeField.clientHeight / 4);
+      if (caret.top < codeField.scrollTop + margin) codeField.scrollTop = Math.max(0, caret.top - margin);
+      else if (caret.top + caret.height > codeField.scrollTop + codeField.clientHeight - margin) codeField.scrollTop = caret.top + caret.height - codeField.clientHeight + margin;
+    }
+  }
   drawCodeColors();
   drawSearchHighlight();
   if (editGutter.hidden) return;
@@ -462,6 +483,10 @@ function initCodeEditor() {
   codeField.addEventListener('compositionend', () => { syntaxComposing = false; scheduleCodeLayout(); });
   document.addEventListener('selectionchange', () => { if (document.activeElement === codeField) scheduleCodeLayout(); });
   for (const event of ['focus', 'select', 'keyup', 'click']) codeField.addEventListener(event, scheduleCodeLayout);
+  for (const event of ['input', 'keyup']) codeField.addEventListener(event, () => {
+    if (document.activeElement === codeField) editRevealCaret = true;
+    scheduleCodeLayout();
+  });
   document.querySelector('#edit-panel-find').addEventListener('click', () => openInlineSearch());
   document.querySelector('#edit-find').addEventListener('click', () => editFindOpen ? closeInlineSearch() : openInlineSearch());
   document.querySelector('#edit-find-close').addEventListener('click', closeInlineSearch);

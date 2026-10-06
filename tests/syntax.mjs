@@ -115,6 +115,40 @@ for(const [name,engine] of engines){
       }
       await code.fill('<h1>Моя игра</h1>\n<script src="./three-r160.min.js"></script>\n<img src="./player.png">\n<script>\nfetch("/scores");\nlocalStorage.setItem("score", "10");\n</script>');await paint();
       await page.screenshot({path:join(output,`${name}-${width}-semantic.png`)});
+      // Check painting against native hit testing, not just the measurement
+      // layer: fractional line heights can drift over a long document.
+      const longSource=Array.from({length:1500},(_,i)=>`// ${i+1}: ${'wrapped source '.repeat(7)}`).join('\n')+'\n<p>ФИНИШ</p>';
+      await page.locator('#expert-toggle').click();
+      await code.evaluate(el=>{el.style.scrollbarGutter='stable';});
+      for(const font of ['14','16','18','20','22']){
+        console.log(`${name} ${width}: checking final line at ${font}px`);
+        await settings();await page.locator('#edit-font').selectOption(font);await page.locator('#edit-wrap').check();await page.locator('#edit-close').click();
+        await code.fill(longSource);await code.press('Control+End');
+        await page.waitForFunction(()=>Array.from(document.querySelectorAll('#code-colors .syntax-line')).some(el=>el.textContent.includes('ФИНИШ')));
+        await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        const target=await page.evaluate(()=>{
+          const field=document.querySelector('#code'),box=field.getBoundingClientRect();
+          const span=Array.from(document.querySelectorAll('#code-colors span')).find(el=>el.textContent.includes('ФИНИШ'));
+          const range=document.createRange(),at=span.textContent.indexOf('ФИНИШ');range.setStart(span.firstChild,at);range.setEnd(span.firstChild,at+1);
+          const rect=range.getBoundingClientRect();
+          return {x:rect.left+1,y:(rect.top+rect.bottom)/2,top:rect.top,bottom:rect.bottom,fieldTop:box.top,fieldBottom:box.top+field.clientHeight};
+        });
+        assert(target.top>=target.fieldTop&&target.bottom<=target.fieldBottom,`${font}px: Last painted line is inside the native input: ${JSON.stringify(target)}`);
+        await page.mouse.click(target.x,target.y);
+        assert.equal(await code.evaluate(el=>el.selectionStart),longSource.indexOf('ФИНИШ'),`${font}px: Clicking colored text edits that exact character`);
+        await page.keyboard.insertText('!');assert.equal(await code.inputValue(),longSource.replace('ФИНИШ','!ФИНИШ'));
+        await code.press('Control+End');await code.press('Enter');await page.keyboard.insertText('ПОСЛЕДНЯЯ');
+        assert.equal(await code.inputValue(),longSource.replace('ФИНИШ','!ФИНИШ')+'\nПОСЛЕДНЯЯ','Keyboard reaches and edits the final empty line');
+        await page.waitForFunction(()=>Array.from(document.querySelectorAll('#code-colors .syntax-line')).some(el=>el.textContent.includes('ПОСЛЕДНЯЯ')));
+        await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+        const finalGeometry=await page.evaluate(()=>{
+          const field=document.querySelector('#code'),box=field.getBoundingClientRect();
+          const row=Array.from(document.querySelectorAll('#code-colors .syntax-line')).find(el=>el.textContent.includes('ПОСЛЕДНЯЯ'));
+          const range=document.createRange();range.selectNodeContents(row);
+          const rect=range.getBoundingClientRect();return {top:rect.top,bottom:rect.bottom,fieldTop:box.top,fieldBottom:box.top+field.clientHeight};
+        });
+        assert(finalGeometry.top>=finalGeometry.fieldTop&&finalGeometry.bottom<=finalGeometry.fieldBottom,`${font}px: Keyboard caret and final painted line remain visible: ${JSON.stringify(finalGeometry)}`);
+      }
       assert.equal(requests,0);assert.deepEqual(errors,[]);
       console.log(`${name} ${width}: syntax, accents, geometry, native input, settings, inert rendering and exact export passed.`);
     }catch(error){await page.screenshot({path:join(output,`${name}-${width}-failure.png`)});throw error;}finally{await page.close();}

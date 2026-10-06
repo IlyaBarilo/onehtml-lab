@@ -175,7 +175,7 @@ function drawCodeColors() {
     const row = document.createElement('div'); row.className = 'syntax-line';
     row.dataset.line = String(i + 1);
     for (const key of ['fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','tabSize','paddingLeft','paddingRight']) row.style[key] = style[key];
-    Object.assign(row.style, { top: `${top}px`, left: `${-codeField.scrollLeft}px`, width: `${codeField.clientWidth}px`, whiteSpace: editView.wrap ? 'pre-wrap' : 'pre', overflowWrap: editView.wrap ? 'break-word' : 'normal' });
+    Object.assign(row.style, { top: `${top}px`, left: `${-codeField.scrollLeft}px`, width: `${editMeasured.width}px`, whiteSpace: editView.wrap ? 'pre-wrap' : 'pre', overflowWrap: editView.wrap ? 'break-word' : 'normal' });
     const lineTokens = [];
     for (let j = tokenIndex; j < syntaxSnapshot.tokens.length && syntaxSnapshot.tokens[j].start < end; j++) {
       const token = syntaxSnapshot.tokens[j];
@@ -202,7 +202,8 @@ function drawCodeColors() {
       }
       row.append(span);
     }
-    row.append('\u200b'); rows.push(row);
+    if (start === end) row.append('\u200b');
+    rows.push(row);
   }
   syntaxLayer.replaceChildren(...rows); syntaxLayer.hidden = false; codeField.classList.add('has-colors');
   const caret = codeField.selectionStart, from = caret ? code.lastIndexOf('\n',caret-1)+1 : 0;
