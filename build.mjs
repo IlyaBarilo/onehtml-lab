@@ -12,7 +12,7 @@ template = template.replace(/^([ \t]*)<!-- APP_VERSION -->\r?\n/m, (_, indent) =
   releaseTag ? `${indent}<span class="app-version" aria-label="Версия ${releaseTag}">${releaseTag}</span>\n` : '');
 const appIcon = await readFile(join(root, 'src/icons/app.svg'), 'utf8');
 template = template.replace('<!-- APP_FAVICON -->', `data:image/svg+xml,${encodeURIComponent(appIcon)}`);
-for (const name of ['app', 'paste', 'clear', 'save', 'share', 'play', 'stop', 'expert', 'network-on', 'network-off', 'storage-on', 'storage-off', 'import', 'compare', 'restore', 'library-out', 'expand', 'edit', 'split', 'diagnostics']) {
+for (const name of ['app', 'paste', 'clear', 'save', 'share', 'play', 'stop', 'expert', 'network-on', 'network-off', 'storage-on', 'storage-off', 'import', 'compare', 'history', 'library-out', 'expand', 'edit', 'split', 'diagnostics']) {
   const icon = await readFile(join(root, 'src/icons', name + '.svg'), 'utf8');
   template = template.replace(`<!-- ICON:${name} -->`, () => icon.trim());
 }
