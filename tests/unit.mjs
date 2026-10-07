@@ -7,3 +7,4 @@ await import('./readiness-unit.mjs');
 await import('./syntax-unit.mjs');
 await import('./media-assets-unit.mjs');
 await import('./media-prompts-unit.mjs');
+await import('./ai-applications-unit.mjs');

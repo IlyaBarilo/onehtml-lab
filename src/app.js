@@ -435,6 +435,7 @@ function renderExamples() {
       if (!await confirmReplacement(example.code)) return;
       if (running) stopPreview();
       selectGameStorage(`example:${example.id}`);
+      setAiProject(example.category === 'media' ? 'application' : 'game');
       replaceOnNextPaste = false;
       replaceCode(example.code, true);
       inform(example.category === 'fix'
@@ -470,6 +471,7 @@ function setExampleCategory(category) {
 function setPlatform(platform) {
   if (!['mobile', 'desktop'].includes(platform)) return;
   selectedPlatform = platform;
+  saveAiPromptSettings();
   for (const tab of document.querySelectorAll('.platform-tab')) {
     tab.setAttribute('aria-selected', String(tab.dataset.platform === platform));
   }
@@ -1408,6 +1410,7 @@ async function restoreStartupDraft() {
     await loadLibraryCache();
     await loadMediaCache();
     loadPromptMediaState();
+    loadAiPromptSettings();
     modeBusy = false;
     codeField.disabled = false;
     resetCodeEdits();

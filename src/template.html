@@ -295,6 +295,7 @@
     <div class="panel-heading"><h2 id="ai-title">ИИ и запросы</h2><button id="ai-close" type="button" aria-label="Закрыть ИИ и запросы">✕</button></div>
     <div id="ai-compose" class="panel-body ai-compose">
     <div class="ai-task-section">
+    <div class="ai-project-types" role="group" aria-label="Тип работы"><button type="button" class="ai-project-button" data-ai-project="game" aria-pressed="true">Игра</button><button type="button" class="ai-project-button" data-ai-project="application" aria-pressed="false">Приложение</button></div>
     <div class="ai-modes" role="group" aria-label="Задача для ИИ">
       <button id="prompt-create" type="button" data-ai-mode="create" aria-pressed="true">Новая игра</button>
       <button id="prompt-change" type="button" data-ai-mode="change" aria-pressed="false">Изменить</button>
@@ -306,10 +307,12 @@
       <button class="platform-tab" type="button" role="tab" data-platform="mobile" aria-selected="true">Телефон</button>
       <button class="platform-tab" type="button" role="tab" data-platform="desktop" aria-selected="false">Компьютер</button>
     </div>
+    <div id="ai-starter-options" hidden><label for="ai-starter">Добавить заготовку задачи</label><select id="ai-starter"><option value="">Выберите основу…</option><option value="poster">Интерактивная афиша</option><option value="story">История с выбором</option><option value="infographic">Инфографика</option><option value="quiz">Викторина</option></select><p class="diagnostic-note">Заготовка допишется к пожеланиям. Замените текст в квадратных скобках своей идеей.</p></div>
     <label id="ai-task-label" for="ai-task">Тема игры и пожелания</label>
     <textarea id="ai-task" rows="3" aria-describedby="ai-summary" placeholder="Например: игра про космос, собирать звёзды и избегать метеоритов"></textarea>
     <div class="diagnostic-actions"><button id="ai-media-open" type="button">Медиа</button></div>
     <p id="ai-media-names" class="media-bindings" hidden></p>
+    <p id="ai-settings-note" class="diagnostic-note" hidden></p>
     <div id="ai-error-context" hidden><strong>Ошибка игры</strong><p id="ai-error"></p></div>
     <div id="ai-source-options" hidden>
       <label class="ai-shorten-label"><input id="ai-shorten" type="checkbox" checked>Сократить библиотеки и медиа</label>

@@ -33,6 +33,7 @@ async function createApp(clipboard) {
     initWorkspaceUI() {}, updateWorkspaceUI() {}, rememberEditorPosition() {}, restoreEditorPosition() {},
     initAlternativeEditor() {}, updateAlternativeEditor() {}, initCodeEditor() {}, updateCodeTools() {}, resetCodeEdits() {}, recordCodeEdit() {},
     initAiPrompts() {}, updateAiControls() {}, openAiPrompts() {},
+    setAiProject() {}, saveAiPromptSettings() {}, loadAiPromptSettings() {},
     updateExampleLessonControls() {},
     updateCodeGuide() {},
     initDesktopWorkspace() {}, sizeDesktopPreview() {}, isSplitWorkspace: () => false,

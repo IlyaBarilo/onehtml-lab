@@ -21,6 +21,7 @@
     "test:workspace": "node tests/workspace.mjs",
     "test:editor": "node tests/editor.mjs",
     "test:ai": "node tests/ai-prompts.mjs",
+    "test:ai-applications": "node tests/ai-applications.mjs",
     "test:desktop": "node tests/desktop.mjs",
     "test:diagnostics": "node tests/diagnostics.mjs",
     "test:workshop": "node tests/workshop.mjs",

@@ -728,9 +728,18 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 /* Prompt preparation and its preview share one workspace screen. */
 .ai-compose { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 22px; }
 .ai-task-section, .ai-services { min-width: 0; }
+.ai-project-types { display: flex; gap: 6px; margin-bottom: 12px; }
+.ai-project-button { flex: 1; min-width: 0; }
+#ai-starter-options label { display: block; margin: 12px 0 6px; font-size: 15px; }
+#ai-starter { width: 100%; min-height: 44px; padding: 8px 10px; font: inherit; font-size: 16px; border: 1px solid #b9cbe3; border-radius: 7px; background: #fff; color: #253d5a; }
+#ai-starter-options p { font-size: 14px; margin: 6px 0; }
 .ai-modes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-bottom: 14px; }
 .ai-modes button { grid-column: span 2; }
 .ai-modes button:nth-last-child(-n+2) { grid-column: span 3; }
+@media (max-width: 1099px) {
+  .is-application .ai-modes button { grid-column: span 2; }
+  .is-application .ai-modes button:nth-child(-n+2) { grid-column: span 3; }
+}
 @media (min-width: 1100px) { .ai-modes { grid-template-columns: repeat(5, minmax(0, 1fr)); } .ai-modes button, .ai-modes button:nth-last-child(-n+2) { grid-column: auto; } }
 #code-guide-list { list-style: none; padding: 0; margin: 12px 0 0; }
 #code-guide-list li { padding: 12px 0; border-top: 1px solid #d7e3f2; }
@@ -739,8 +748,8 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .theme-dark #code-guide-list li { border-color: #3b4b61; }
 #ai-dialog #ai-analysis-context { margin: 12px 0 0; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 .theme-dark #ai-dialog #ai-analysis-context { color: #a9b8cc; }
-.ai-modes button, .ai-footer button { min-height: 44px; padding: 9px 10px; border: 1px solid #b7cff0; border-radius: 7px; background: #edf4ff; color: #315c93; font: inherit; font-size: 15px; }
-.ai-modes button[aria-pressed="true"] { color: #2059bf; background: #dceaff; border-color: #8cb5ef; }
+.ai-modes button, .ai-footer button, .ai-project-button { min-height: 44px; padding: 9px 10px; border: 1px solid #b7cff0; border-radius: 7px; background: #edf4ff; color: #315c93; font: inherit; font-size: 15px; }
+.ai-modes button[aria-pressed="true"], .ai-project-button[aria-pressed="true"] { color: #2059bf; background: #dceaff; border-color: #8cb5ef; }
 .ai-modes button:disabled, .ai-footer button:disabled { opacity: .35; cursor: default; }
 #ai-task-label { display: block; margin: 14px 0 8px; font-size: 16px; }
 #ai-task { height: 100px; min-height: 88px; padding: 10px 12px; border: 1px solid #b9cbe3; border-radius: 7px; background: #fff; font: 16px/1.5 system-ui, sans-serif; }
