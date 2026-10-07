@@ -31,6 +31,7 @@ function describeRuntimeMessage(message) {
 }
 
 function beginDiagnosticRun(code, origin, preparedCode = code) {
+  qualityRequest = null; qualityFeedback = ''; clearTimeout(qualityTimer);
   diagnosticEntries.length = 0;
   diagnosticSelected = null;
   diagnosticRun = { code, origin, network: previewNetworkAllowed(), storage: gameStorageAllowed, time: Date.now() };
@@ -77,7 +78,7 @@ function selectDiagnosticEntry(entry) {
 
 function scheduleDiagnosticRender() {
   if (!diagnosticReady || diagnosticTimer) return;
-  diagnosticTimer = setTimeout(() => { diagnosticTimer = 0; renderDiagnosticErrors(); updateActivitySummary(); }, 100);
+  diagnosticTimer = setTimeout(() => { diagnosticTimer = 0; renderDiagnosticErrors(); renderQuality(); updateActivitySummary(); }, 100);
 }
 
 function renderDiagnosticErrors() {
@@ -224,8 +225,8 @@ async function deleteDiagnosticCache() {
 }
 
 function setDiagnosticTab(tab) {
-  diagnosticTab = expertMode && ['libraries', 'resources', 'speed'].includes(tab) ? tab : 'errors';
-  for (const name of ['errors', 'libraries', 'resources', 'speed']) document.querySelector(`#diagnostic-${name}`).hidden = diagnosticTab !== name;
+  diagnosticTab = expertMode && ['libraries', 'resources', 'speed', 'quality'].includes(tab) ? tab : 'errors';
+  for (const name of ['errors', 'libraries', 'resources', 'speed', 'quality']) document.querySelector(`#diagnostic-${name}`).hidden = diagnosticTab !== name;
   for (const button of document.querySelectorAll('[data-diagnostic-tab]')) button.setAttribute('aria-pressed', String(button.dataset.diagnosticTab === diagnosticTab));
 }
 
@@ -248,7 +249,7 @@ function diagnosticReport() {
   lines.push('Библиотеки текущего кода:');
   for (const row of diagnosticLibraries) lines.push(`${row.title}: ${diagnosticLibraryDescription(row)}`);
   if (!diagnosticLibraries.length) lines.push('Подключения в HTML не найдены.');
-  return [...lines, ...readinessReport()].join('\n');
+  return [...lines, ...readinessReport(), ...(expertMode ? [qualityReport()] : [])].join('\n');
 }
 
 function diagnosticAiContext() {
@@ -264,6 +265,7 @@ function updateDiagnostics() {
   document.querySelector('#diagnostic-tabs').hidden = !expertMode;
   if (!expertMode && diagnosticTab !== 'errors') setDiagnosticTab('errors');
   scheduleDiagnosticRender();
+  renderQuality();
   if (currentPanel() !== activityPanel) return;
   const code = codeField.value, entries = [...libraryCache.values()];
   const previous = diagnosticSnapshot;
@@ -282,6 +284,7 @@ function updateDiagnostics() {
     diagnosticLibraries = rows; diagnosticReportReady = true;
     renderDiagnosticLibraries(rows);
     renderResourceSource(code, rows);
+    renderQuality();
     document.querySelector('#diagnostic-copy').disabled = false;
   }).catch(() => {
     if (revision !== diagnosticRevision) return;
@@ -293,6 +296,7 @@ function updateDiagnostics() {
 function initDiagnostics() {
   diagnosticReady = true;
   initReadiness();
+  initQuality();
   document.querySelector('#diagnostic-open').addEventListener('click', () => {
     if (!expertMode || modeBusy) return;
     if (currentPanel() === activityPanel) closeWorkspacePanel(); else openDiagnostics();

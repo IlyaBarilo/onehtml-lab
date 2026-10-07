@@ -194,13 +194,22 @@
             <div class="library-request-actions"><button id="library-download" type="button">Скачать</button><button id="library-files-button" type="button" hidden>Выбрать JS и лицензию</button><button id="library-skip" type="button">Без подмены</button></div>
             <input id="library-files" type="file" multiple hidden aria-label="JS-файл библиотеки и её MIT-лицензия">
           </div>
-          <div id="diagnostic-tabs" class="platform-tabs" role="group" aria-label="Раздел диагностики"><button type="button" class="platform-tab" data-diagnostic-tab="errors" aria-pressed="true">Ошибки</button><button type="button" class="platform-tab" data-diagnostic-tab="libraries" aria-pressed="false">Библиотеки</button><button type="button" class="platform-tab" data-diagnostic-tab="resources" aria-pressed="false">Ресурсы</button><button type="button" class="platform-tab" data-diagnostic-tab="speed" aria-pressed="false">Скорость</button></div>
+          <div id="diagnostic-tabs" class="platform-tabs" role="group" aria-label="Раздел диагностики"><button type="button" class="platform-tab" data-diagnostic-tab="errors" aria-pressed="true">Ошибки</button><button type="button" class="platform-tab" data-diagnostic-tab="libraries" aria-pressed="false">Библиотеки</button><button type="button" class="platform-tab" data-diagnostic-tab="resources" aria-pressed="false">Ресурсы</button><button type="button" class="platform-tab" data-diagnostic-tab="speed" aria-pressed="false">Скорость</button><button type="button" class="platform-tab" data-diagnostic-tab="quality" aria-pressed="false">Проверка</button></div>
           <div class="diagnostic-actions diagnostic-report-actions"><button id="diagnostic-copy" type="button">Скопировать отчёт</button></div>
           <section id="diagnostic-errors">
             <div class="diagnostic-actions"><button id="diagnostic-clear" type="button" disabled>Очистить</button></div>
             <p id="diagnostic-run-note" class="diagnostic-note">Игра ещё не запускалась.</p>
             <div id="runtime-error" class="runtime-error" hidden><span id="runtime-error-message"></span><button id="error-line" type="button" hidden>Перейти к строке</button><button id="error-ai" type="button" hidden>Исправить с ИИ</button><button id="copy-error" type="button">Скопировать ошибку</button></div>
             <ol id="diagnostic-error-list" class="diagnostic-list"></ol>
+          </section>
+          <section id="diagnostic-quality" hidden aria-labelledby="quality-title">
+            <h3 id="quality-title">Перед показом и сдачей</h3>
+            <p class="diagnostic-note">Наблюдения помогают найти проблемы, но не подтверждают качество всего приложения.</p>
+            <h4>Наблюдения</h4><ul id="quality-findings" class="diagnostic-list"></ul>
+            <div class="diagnostic-actions"><button id="quality-measure" type="button" disabled>Снять размеры</button></div><p class="diagnostic-note">Кнопка кратко покажет запущенное приложение и вернёт сюда без перезапуска.</p><p id="quality-layout-note" class="diagnostic-note" role="status"></p>
+            <h4>Проверить вручную</h4><p id="quality-manual-note" class="diagnostic-note"></p><div id="quality-manual-list"></div>
+            <div class="diagnostic-actions"><button id="quality-manual-start" type="button">Начать заново для текущего кода</button><button id="quality-ai" type="button" disabled>Проверить с ИИ</button></div>
+            <p class="diagnostic-note">«Скопировать отчёт» включает наблюдения и отметки. Для показа сохраните файл, откройте его отдельно и продемонстрируйте основной сценарий.</p>
           </section>
           <section id="diagnostic-libraries" hidden>
             <h3>В текущем коде</h3><p id="diagnostic-library-note" class="diagnostic-note"></p><ul id="diagnostic-library-list" class="diagnostic-list"></ul>
@@ -278,6 +287,7 @@
     <div id="ai-source-options" hidden>
       <label class="ai-shorten-label"><input id="ai-shorten" type="checkbox" checked>Сократить код библиотек</label>
       <p id="ai-analysis-context" hidden></p>
+      <p id="ai-quality-context" hidden></p>
       <label id="ai-history-option" class="ai-shorten-label" hidden><input id="ai-history" type="checkbox" checked>Включить сравнение с прошлой версией</label>
       <p id="ai-libraries" hidden></p>
     </div>

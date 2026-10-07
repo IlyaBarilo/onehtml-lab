@@ -231,6 +231,7 @@ function makePreview(code, networkAllowed = true, storageEntries = null) {
     + (storageEntries ? virtualStorageProbe(storageEntries) : '')
     + localAccessProbe
     + readinessProbe
+    + '<script>(' + previewQuality.toString() + ')();</script>'
     + (networkAllowed ? trafficProbe : '');
   frame.previewOffset = { lines: prefix.split('\n').length - 1, column: prefix.length - prefix.lastIndexOf('\n') - 1 };
   frame.srcdoc = prefix + code;

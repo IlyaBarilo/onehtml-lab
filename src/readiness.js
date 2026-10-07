@@ -136,6 +136,7 @@ function renderReadiness() {
   document.querySelector('#resource-observed-note').textContent = `${diagnosticRun?.resources?.size ? 'Замеченные обращения; повторные загрузки объединены.' : 'Обращений пока не зарегистрировано.'}${diagnosticRun?.resourcesOverflow ? ' Показаны первые 200 адресов.' : ''}`;
   document.querySelector('#resource-observed-list').replaceChildren(...[...(diagnosticRun?.resources?.values() || [])].map(row => diagnosticRow(row.path, resourceText(row))));
   document.querySelector('#resource-bundled').textContent = diagnosticRun?.bundled?.length ? `Подставлены или уже встроены при запуске: ${[...new Set(diagnosticRun.bundled)].join(', ')}` : '';
+  renderQuality();
 }
 
 function renderResourceSource(code, libraries) {

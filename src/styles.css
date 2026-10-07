@@ -540,8 +540,8 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 }
 
 /* Diagnostics use the same full workspace as the other tools. */
-.activity-body > #diagnostic-tabs, .activity-body > #diagnostic-errors, .activity-body > #diagnostic-libraries, .activity-body > #diagnostic-resources, .activity-body > #diagnostic-speed, .activity-body > .diagnostic-report-actions { padding: 0; border: 0; border-radius: 0; }
-#diagnostic-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+.activity-body > #diagnostic-tabs, .activity-body > #diagnostic-errors, .activity-body > #diagnostic-libraries, .activity-body > #diagnostic-resources, .activity-body > #diagnostic-speed, .activity-body > #diagnostic-quality, .activity-body > .diagnostic-report-actions { padding: 0; border: 0; border-radius: 0; }
+#diagnostic-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
 #diagnostic-tabs button { min-width: 0; padding-inline: 5px; font-size: 14px; }
 #diagnostic-tabs button[aria-pressed="true"] { background: #dceaff; border-color: #9dbfea; color: #2059bf; }
 .speed-option { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 16px; }
@@ -549,7 +549,26 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 #speed-result { font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums; }
 #speed-strip { flex: 0 0 auto; margin: 0; padding: 5px 12px; background: #eaf3ff; color: #315c93; font-size: 13px; line-height: 1.4; font-variant-numeric: tabular-nums; }
 #diagnostic-resources h3, #diagnostic-speed h3 { margin: 12px 0; font-size: 17px; }
-@media (max-width: 380px) { #diagnostic-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { #diagnostic-tabs { grid-template-columns: repeat(6, minmax(0, 1fr)); } #diagnostic-tabs button { grid-column: span 2; } #diagnostic-tabs button:nth-child(n+4) { grid-column: span 3; } }
+.quality-check { display: grid; grid-template-columns: minmax(0, 1fr) 170px; align-items: center; gap: 10px 18px; padding: 14px 0; border-bottom: 1px solid #d7e2f0; }
+.quality-check strong { display: block; font-size: 16px; }
+.quality-check span span { display: block; margin-top: 5px; font-size: 14px; line-height: 1.45; color: #566e8d; }
+.quality-check select { width: 100%; min-height: 44px; padding: 8px; font: inherit; font-size: 16px; color: #285b9e; background: #f7faff; border: 1px solid #c6d7ee; border-radius: 7px; }
+.quality-check.is-stale { opacity: .65; }
+.quality-finding { border-bottom: 1px solid #d7e2f0; }
+.quality-finding summary { min-height: 48px; padding: 12px 0; cursor: pointer; font-size: 16px; font-weight: 600; }
+.quality-finding p { margin: 0 0 14px; font-size: 15px; line-height: 1.5; color: #566e8d; overflow-wrap: anywhere; }
+#diagnostic-quality > .diagnostic-note { font-size: 15px; }
+#diagnostic-quality h3 { margin: 16px 0 8px; font-size: 20px; }
+#diagnostic-quality h4 { margin: 22px 0 8px; font-size: 17px; }
+.theme-dark .quality-check { border-color: #3b4b61; }
+.theme-dark .quality-check span span { color: #a9b8cc; }
+.theme-dark #diagnostic-tabs { background: #171e2a; }
+.theme-dark #diagnostic-tabs button[aria-pressed="true"] { background: #284773; color: #c6dcff; border-color: #557ba9; }
+.theme-dark .quality-finding { border-color: #3b4b61; }
+.theme-dark #diagnostic-quality :is(.diagnostic-note, .quality-finding p, .quality-check span span) { color: #a9b8cc; }
+.theme-dark .activity-toggle.has-error { background: #482c31; color: #f4beb6; border-color: #82514d; }
+@media (max-width: 600px) { .quality-check { grid-template-columns: minmax(0, 1fr); gap: 8px; } }
 #diagnostic-tabs { position: sticky; top: -16px; z-index: 1; background: #fbfcff; padding-block: 6px; }
 #diagnostic-libraries h3 { margin: 8px 0; }
 #diagnostic-errors .runtime-error { flex-direction: row; flex-wrap: wrap; padding: 10px; margin: 8px 0; font-size: 14px; }

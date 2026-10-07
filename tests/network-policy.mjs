@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { runInNewContext } from 'node:vm';
 
-const source = await readFile(new URL('../src/sandbox.js', import.meta.url), 'utf8');
+const source = (await Promise.all(['quality.js', 'sandbox.js'].map(name => readFile(new URL('../src/' + name, import.meta.url), 'utf8')))).join('\n');
 const document = { createElement: () => ({ attributes: {}, setAttribute(name, value) { this.attributes[name] = value; } }) };
 const { online, offline } = runInNewContext(source + '\n({ online: makePreview("<p>Game</p>", true), offline: makePreview("<p>Game</p>", false) })', { document });
 assert.match(online.srcdoc, /connect-src https: wss:/);
