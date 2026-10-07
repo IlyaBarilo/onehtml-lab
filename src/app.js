@@ -84,11 +84,13 @@ let pendingLocalLibrarySource = null;
 let previewRequest = 0;
 let modeBusy = false;
 let draftAvailable = false;
+let draftConflict = false;
 let draftSaveTimer;
 let draftRevision = 0;
 let draftQueue = Promise.resolve();
 let historyState = { entries: [], verifiedCode: null };
-let historyQueue = Promise.resolve();
+let historyRevision = 0;
+let savedHistoryRevision = 0;
 let pendingNativePaste = null;
 let comparisonOpen = false;
 let historyOpen = false;
@@ -505,9 +507,8 @@ function latestHistory() {
 }
 
 function persistHistory() {
-  const snapshot = JSON.parse(JSON.stringify(historyState));
-  historyQueue = historyQueue.catch(() => {}).then(() => writeHistoryState(snapshot));
-  void historyQueue.catch(() => inform('История доступна сейчас, но не сохранена в браузере.', true, true));
+  historyRevision++;
+  scheduleDraftSave();
 }
 
 function archiveCode(before, after) {
@@ -1032,18 +1033,39 @@ comparisonScrollbar.addEventListener('keydown', event => {
   event.preventDefault();
 });
 
-function saveDraftNow() {
-  if (!draftAvailable) return Promise.resolve();
+function saveDraftNow(continueHere = false) {
+  if (!draftAvailable || (draftConflict && !continueHere)) return Promise.resolve();
   clearTimeout(draftSaveTimer);
   draftSaveTimer = undefined;
   const code = codeField.value;
+  const history = { entries: historyState.entries.map(entry => ({ ...entry })), verifiedCode: historyState.verifiedCode };
+  const historyVersion = historyRevision;
   const revision = ++draftRevision;
   setDraftStatus('Сохранение…');
-  const operation = draftQueue.catch(() => {}).then(() => writeWorkingDraft(code));
+  const operation = draftQueue.catch(() => {}).then(() => {
+    if (draftConflict && !continueHere) throw Object.assign(new Error('Draft conflict'), { name: 'DraftConflictError' });
+    return writeDraftSnapshot(code, history, continueHere, historyVersion !== savedHistoryRevision);
+  });
   draftQueue = operation;
   operation.then(
-    () => { if (revision === draftRevision) setDraftStatus('Сохранено'); },
-    () => {
+    savedHistory => {
+      savedHistoryRevision = historyVersion;
+      if (continueHere) {
+        historyState = savedHistory;
+        draftConflict = false;
+        document.querySelector('#draft-conflict').hidden = true;
+      }
+      if (revision === draftRevision) setDraftStatus('Сохранено');
+    },
+    error => {
+      if (error?.name === 'DraftConflictError') {
+        draftConflict = true;
+        clearTimeout(draftSaveTimer);
+        draftSaveTimer = undefined;
+        document.querySelector('#draft-conflict').hidden = false;
+        setDraftStatus('Другая вкладка', true);
+        return;
+      }
       if (revision === draftRevision) {
         setDraftStatus('Не сохранено', true);
         inform('Черновик не сохранён. Сохраните код HTML-файлом.', true, true);
@@ -1054,15 +1076,30 @@ function saveDraftNow() {
 }
 
 function scheduleDraftSave() {
-  if (!draftAvailable) return;
+  if (!draftAvailable || draftConflict) return;
   clearTimeout(draftSaveTimer);
   draftRevision += 1;
   setDraftStatus('Сохранение…');
-  draftSaveTimer = setTimeout(saveDraftNow, 700);
+  draftSaveTimer = setTimeout(() => { void saveDraftNow().catch(() => {}); }, 700);
 }
 
-window.addEventListener('pagehide', () => {
-  if (draftSaveTimer) void saveDraftNow();
+function flushPendingDraft() {
+  if (draftSaveTimer) void saveDraftNow().catch(() => {});
+}
+window.addEventListener('pagehide', flushPendingDraft);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushPendingDraft();
+});
+document.querySelector('#draft-continue').addEventListener('click', async () => {
+  if (!draftConflict || modeBusy) return;
+  modeBusy = true;
+  codeField.disabled = true;
+  updateControls();
+  try {
+    await saveDraftNow(true);
+    inform('Работа продолжена здесь. Автосохранение включено.');
+  } catch { /* The save handler keeps the conflict notice or reports storage failure. */ }
+  finally { modeBusy = false; codeField.disabled = false; updateControls(); }
 });
 
 function chooseDialog(dialog) {
@@ -1377,7 +1414,7 @@ async function restoreStartupDraft() {
   let timer;
   try {
     const [saved, state, previous] = await Promise.race([
-      Promise.all([readWorkingDraft(), readHistoryState(), readPreviousPaste()]),
+      readDraftSnapshot(),
       new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('draft-timeout')), 4000); })
     ]);
     draftAvailable = true;

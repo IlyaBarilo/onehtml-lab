@@ -104,6 +104,7 @@ function updateWorkspaceUI() {
 
 function updateActivitySummary() {
   const parts = [];
+  if (draftConflict) parts.push('Черновик изменён в другой вкладке');
   const diagnostics = diagnosticCounts();
   if (diagnostics.errors) parts.push(`Ошибка игры (${formatUIInteger(diagnostics.errors)})`);
   else if (!runtimeError.hidden && !runtimeError.classList.contains('is-warning')) parts.push(`Ошибка игры${runtimeErrorCount > 1 ? ` (${formatUIInteger(runtimeErrorCount)})` : ''}`);
@@ -116,7 +117,7 @@ function updateActivitySummary() {
   const message = parts.join(' · ');
   activityToggle.hidden = !message;
   activitySummary.textContent = message;
-  activityToggle.classList.toggle('has-error', diagnostics.errors > 0 || (!status.hidden && status.classList.contains('error')));
+  activityToggle.classList.toggle('has-error', draftConflict || diagnostics.errors > 0 || (!status.hidden && status.classList.contains('error')));
   activityToggle.setAttribute('aria-label', message ? `${message}. Открыть сообщения` : 'Открыть сообщения');
 }
 

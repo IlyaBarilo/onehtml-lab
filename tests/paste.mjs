@@ -26,7 +26,7 @@ async function createApp(clipboard) {
     return elements.get(selector);
   }
   const sandbox = {
-    document: { querySelector: element, querySelectorAll: () => [] },
+    document: { querySelector: element, querySelectorAll: () => [], addEventListener() {} },
     window: { addEventListener() {} },
     navigator: { clipboard },
     // Clipboard unit tests isolate layout; workspace transitions have browser coverage.
@@ -55,11 +55,8 @@ async function createApp(clipboard) {
     registerGameStorageFrame: () => {},
     handleGameStorageMessage: () => false,
     examples: [],
-    readWorkingDraft: async () => null,
-    writeWorkingDraft: async () => {},
-    readPreviousPaste: async () => null,
-    readHistoryState: async () => null,
-    writeHistoryState: async () => {}
+    readDraftSnapshot: async () => [null, null, null],
+    writeDraftSnapshot: async (_, history) => history
   };
   runInNewContext(source, sandbox);
   await new Promise(resolve => setImmediate(resolve));

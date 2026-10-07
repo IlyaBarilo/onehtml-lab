@@ -4,6 +4,11 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { chromium, webkit } from 'playwright';
 
+const args = process.argv.slice(2);
+assert(args.length <= 1 && (!args[0] || /^--engines=(chromium|webkit)(,(chromium|webkit))*$/.test(args[0])), 'Use: node tests/game-storage.mjs [--engines=chromium,webkit]');
+const selected = args[0]?.slice(10).split(',');
+const engines = [['chromium', chromium], ['webkit', webkit]].filter(([name]) => !selected || selected.includes(name));
+
 const fileUrl = new URL('../onehtml-lab.html', import.meta.url);
 const artifact = await readFile(fileUrl);
 const server = createServer((_, response) => response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(artifact));
@@ -20,7 +25,7 @@ document.querySelector('#result').textContent = String(score) + ':' + store.leng
 </script></body></html>`;
 
 try {
-  for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
+  for (const [name, engine] of engines) {
     const browser = await engine.launch();
     try {
       for (const url of [fileUrl.href, `http://127.0.0.1:${server.address().port}/`]) {

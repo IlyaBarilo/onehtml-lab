@@ -7,6 +7,8 @@
     "test:alternative-editor": "node tests/alternative-editor.mjs",
     "format:text": "node scripts/format-text.mjs",
     "test:build": "node tests/build.mjs",
+    "test:check": "node tests/check.mjs",
+    "test:reliability": "node tests/reliability.mjs",
     "test:pages": "node tests/pages.mjs",
     "test:network": "node tests/network.mjs",
     "test:draft": "node tests/draft.mjs",

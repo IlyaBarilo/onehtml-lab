@@ -204,6 +204,7 @@
       <section id="activity-panel" class="work-panel" aria-labelledby="activity-title" hidden>
         <div class="panel-heading"><h2 id="activity-title">Диагностика</h2><button id="activity-close" type="button" aria-label="Закрыть сообщения">✕</button></div>
         <div class="panel-body activity-body">
+          <div id="draft-conflict" class="runtime-error" hidden><p>Черновик изменён в другой вкладке. Автосохранение здесь приостановлено; ваш код остаётся в редакторе. Можно сохранить его HTML-файлом или продолжить здесь: версия другой вкладки попадёт в историю.</p><button id="draft-continue" type="button">Продолжить здесь</button></div>
           <div id="library-request" class="library-request" role="group" aria-label="Загрузка библиотеки" hidden>
             <span id="library-request-text"></span>
             <div class="library-request-actions"><button id="library-download" type="button">Скачать</button><button id="library-files-button" type="button" hidden>Выбрать JS и лицензию</button><button id="library-skip" type="button">Без подмены</button></div>
