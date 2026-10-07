@@ -64,7 +64,7 @@ h1 span { font-weight: 450; color: #637e9f; }
   background: #f5f8fd;
 }
 .expert-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
-.expert-resource-actions { display: flex; align-items: center; gap: 6px; padding-left: 12px; border-left: 1px solid #c9d9ed; }
+.expert-resource-actions { display: flex; flex-wrap: wrap; min-width: 0; align-items: center; gap: 6px; padding-left: 12px; border-left: 1px solid #c9d9ed; }
 .import-button {
   display: inline-flex;
   align-items: center;

@@ -11,6 +11,27 @@ await mkdir(output, { recursive: true });
 const engines = process.argv.includes('--engines=chromium') ? [['chromium', chromium]] : [['chromium', chromium], ['webkit', webkit]];
 const game = '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;min-height:100vh;display:grid;place-content:center;background:#eaf3ff;font:20px system-ui}button{padding:16px;font:inherit}</style></head><body><h1>Проверка игры</h1><button id="score">Счёт: 0</button><script>let n=0;document.querySelector("button").onclick=()=>document.querySelector("button").textContent="Счёт: "+(++n);window.ticks=0;setInterval(()=>window.ticks++,20);</script><!--\n' + 'Строка кода для проверки сохранения прокрутки и выделения.\n'.repeat(180) + '--></body></html>';
 
+async function assertFitsViewport(page, label) {
+  const bounds = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth }));
+  assert(bounds.document <= bounds.viewport, `${label}: horizontal overflow ${JSON.stringify(bounds)}`);
+}
+
+async function checkResourceToolbar(page, label) {
+  await assertFitsViewport(page, label);
+  const buttons = await page.locator('.expert-resource-actions button').evaluateAll(elements => elements.map(el => {
+    const rect = el.getBoundingClientRect();
+    return {
+      id: el.id, left: rect.left, right: rect.right, width: rect.width, height: rect.height,
+      fits: rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight,
+      reachable: el.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2))
+    };
+  }));
+  assert(buttons.every(button => button.fits && button.reachable && button.height >= 44), `${label}: resource buttons must fit and remain reachable ${JSON.stringify(buttons)}`);
+  await page.locator('#diagnostic-open').click();
+  assert(await page.locator('#activity-panel').isVisible());
+  await page.locator('#activity-close').click();
+}
+
 for (const [engineName, engine] of engines) {
   const browser = await engine.launch();
   try {
@@ -154,7 +175,16 @@ for (const [engineName, engine] of engines) {
         assert(await page.locator('#preview').isVisible());
         await page.locator('#run').click();
 
-        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        await assertFitsViewport(page, `${engineName} ${viewport.width}x${viewport.height}`);
+        if (viewport.width <= 390) {
+          // Font metrics differ across Windows, Linux and phones. Also exercise wider labels.
+          for (const font of ['system-ui', 'Arial, sans-serif', 'monospace']) {
+            const style = await page.addStyleTag({ content: `:root { font-family: ${font}; } .expert-resource-actions .import-button { font-size: 16px; }` });
+            try {
+              await checkResourceToolbar(page, `${engineName} ${viewport.width} ${font}`);
+            } finally { await style.evaluate(el => el.remove()); }
+          }
+        }
         assert.deepEqual(errors, []);
         console.log(`${engineName} ${viewport.width}x${viewport.height}: screens, visible expert tools, selection, save, messages and uninterrupted expansion passed.`);
       } catch (error) {
