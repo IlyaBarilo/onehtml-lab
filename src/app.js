@@ -694,6 +694,9 @@ async function refreshLibraryExtraction() {
         note.textContent = row.note;
         item.append(note);
       }
+      if (row.warning) {
+        const note = document.createElement('span'); note.className = 'extraction-note'; note.textContent = row.warning; item.append(note);
+      }
       extractionList.append(item);
     }
     extractionSummary.textContent = plan.count ? `${plan.removedBytes < 0 ? 'Увеличение' : 'Уменьшение'}: ${formatLibrarySize(Math.abs(plan.removedBytes))}`
@@ -718,7 +721,7 @@ function openLibraryExtraction(mode) {
   hideLibraryRequest();
   inform();
   extractionOpen = true;
-  extractionMode = ['embed', 'cdn', 'files'].includes(mode) ? mode : /data-onehtml-library\s*=/i.test(codeField.value) ? 'cdn' : 'embed';
+  extractionMode = ['embed', 'cdn', 'files'].includes(mode) ? mode : /data-onehtml-(?:library|modules)\s*=/i.test(codeField.value) ? 'cdn' : 'embed';
   extractionPlan = null;
   extractionPanel.hidden = false;
   codeField.hidden = true;
@@ -1124,7 +1127,7 @@ function updateControls() {
   importButton.disabled = modeBusy || extractionOpen;
   aiButton.disabled = modeBusy || extractionOpen;
   examplesButton.disabled = modeBusy || extractionOpen;
-  extractionButton.disabled = !expertMode || running || modeBusy || readingClipboard || codeField.readOnly || (!extractionOpen && !/data-onehtml-library\s*=/i.test(codeField.value) && !libraryMatches(codeField.value).length);
+  extractionButton.disabled = !expertMode || running || modeBusy || readingClipboard || codeField.readOnly || (!extractionOpen && !/data-onehtml-(?:library|modules)\s*=|<script\b[^>]*\btype\s*=\s*["']?(?:module|importmap)\b/i.test(codeField.value) && !libraryMatches(codeField.value).length);
   extractionButton.setAttribute('aria-pressed', String(extractionOpen));
   extractionButton.title = extractionOpen ? 'Вернуться к редактору' : 'Встроить библиотеки или заменить их ссылками';
   const baseline = latestHistory();
@@ -1439,7 +1442,7 @@ importFile.addEventListener('change', async () => {
 
 function updateSaveLibrariesDescription() {
   if (!saveLibrariesDescription) return;
-  const { available, addedBytes, missing } = saveLibrariesDescription;
+  const { available, addedBytes, missing, modules } = saveLibrariesDescription;
   const checked = available && saveLibrariesField.checked;
   const separate = saveLibrariesMode.value === 'files';
   saveLibrariesMode.hidden = !checked;
@@ -1447,6 +1450,7 @@ function updateSaveLibrariesDescription() {
   saveLibrariesLabel.textContent = separate ? 'Сохранить библиотеки рядом с HTML' : 'Встроить библиотеки в файл';
   if (checked && separate) {
     saveLibrariesHint.textContent = 'HTML и JS скачаются отдельными файлами. Сохраните их в одну папку. Лицензии включены в JS.'
+      + (modules ? ' Модульные файлы требуют HTTP: для запуска без сервера выберите встраивание в HTML.' : '')
       + (missing ? ' Неподготовленные библиотеки останутся по исходным ссылкам.' : '');
   } else if (checked) {
     const size = (addedBytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 });
@@ -1479,7 +1483,7 @@ saveButton.addEventListener('click', async () => {
   saveLibrariesField.checked = available && preference !== 'cdn';
   saveLibrariesMode.value = preference === 'files' ? 'files' : 'inline';
   saveLibrariesOption.classList.toggle('is-disabled', !available);
-  saveLibrariesDescription = { available, missing: Boolean(prepared.missingLibraries?.length),
+  saveLibrariesDescription = { available, missing: Boolean(prepared.missingLibraries?.length), modules: prepared.modules,
     addedBytes: Math.max(0, new Blob([prepared.html]).size - new Blob([code]).size) };
   updateSaveLibrariesDescription();
   filenameField.value = 'game.html';

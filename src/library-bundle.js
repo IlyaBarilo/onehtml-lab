@@ -117,6 +117,7 @@ async function librarySourceHash(source) {
 }
 
 function libraryCatalogReference(key) {
+  if (typeof moduleCatalog === 'function' && moduleCatalog(key)) return moduleCatalog(key);
   let match = /^three@0\.(\d{3})\.0$/.exec(key || '');
   if (match) return libraryReference(`https://cdn.jsdelivr.net/npm/three@0.${match[1]}.0/build/three.min.js`);
   match = /^(matter-js|phaser)@([\d.]+)$/.exec(key || '');
@@ -162,7 +163,9 @@ async function loadLibraryCache() {
       const extractedSource = entry && /^asset@[a-f\d]{64}$/.test(entry.key)
         && validLibraryAsset(entry.source, entry.license)
         && await librarySourceHash(entry.source + '\0' + entry.license) === entry.key.slice(6);
-      if ((knownSource || localSource || extractedSource)
+      let moduleSource = entry?.format === 'module' && typeof moduleEntryData === 'function' && moduleEntryData(entry);
+      if (moduleSource && entry.key.startsWith('module-asset@')) moduleSource = await librarySourceHash(entry.source + '\0' + entry.license) === entry.key.slice(13);
+      if ((knownSource || localSource || extractedSource || moduleSource)
         && validLibraryAsset(entry.source, entry.license)) {
         libraryCache.set(entry.key, entry);
         persistedLibraries.set(entry.key, entry);
@@ -297,6 +300,11 @@ async function prepareGameHtml(code, replaceLibraries = true) {
     bundledLibraryDetails.push({ title: reference.title, addedBytes: encoder.encode(embedded).length - encoder.encode(reference.tag).length });
   }
   html += code.slice(cursor);
+  if (typeof prepareModuleLibraries === 'function') {
+    const modules = await prepareModuleLibraries(html);
+    return { ...modules, bundledLibraries: [...bundledLibraries, ...modules.bundledLibraries],
+      bundledLibraryDetails: [...bundledLibraryDetails, ...modules.bundledLibraryDetails], missingLibraries: [...missingLibraries, ...modules.missingLibraries] };
+  }
   return { html, bundledLibraries, bundledLibraryDetails, missingLibraries };
 }
 
@@ -351,6 +359,7 @@ async function readLimitedResponse(response, maxBytes) {
 }
 
 async function downloadLibrary(reference) {
+  if (reference.format === 'module') return downloadModule(reference);
   const [sourceResponse, licenseResponse] = await Promise.all([
     fetch(reference.url, { credentials: 'omit', redirect: 'error' }),
     fetch(reference.licenseUrl, { credentials: 'omit', redirect: 'error' })

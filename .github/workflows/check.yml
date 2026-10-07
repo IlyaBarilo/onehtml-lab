@@ -40,4 +40,5 @@ jobs:
       - run: node tests/readiness.mjs --engines=chromium
       - run: npm run test:network
       - run: npm run test:libraries -- --engines=chromium
+      - run: npm run test:modules -- --engines=chromium
       - run: npm run test:draft

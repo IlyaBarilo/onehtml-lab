@@ -23,7 +23,7 @@ function inspectResources(code, libraries = []) {
       if (/\.(?:woff2?|ttf|otf|eot)(?:[?#]|$)/i.test(path)) kind = 'Шрифт';
       else if (/\.css(?:[?#]|$)/i.test(path)) kind = 'CSS';
     }
-    const copy = kind === 'Скрипт' && libraries.find(row => row.reference?.index === index && row.usedKey);
+    const copy = libraries.find(row => row.usedKey && (row.reference?.index === index || (kind === 'Импорт модуля' && row.path === path)));
     const state = copy ? 'Копия доступна для подмены' : /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(path) ? 'Внешний адрес' : 'Относительный или локальный путь';
     const key = JSON.stringify([kind, path, state]);
     if (rows.has(key)) { rows.get(key).count++; return; }
@@ -70,6 +70,12 @@ function inspectResources(code, libraries = []) {
     if (tag === 'object') add(attr('data'), 'Объект');
     if (tag === 'embed') add(attr('src'), 'Объект');
     if (attributes.has('style')) css(attr('style'));
+  }
+  if (typeof scanModules === 'function') {
+    const modules=scanModules(code);
+    for (const ref of modules.references) add(ref.moduleLocal ? ref.modulePath : ref.url,'Импорт модуля',ref.index);
+    for (const issue of modules.issues) add(issue.path,'Импорт модуля');
+    for (const row of libraries.filter(row=>row.reference?.format==='module' && row.filename)) add(row.path,'Файл модуля',row.reference.index);
   }
   for (const row of libraries.filter(item => item.state === 'Встроена в HTML')) {
     if (rows.size >= resourceLimit) { overflow = true; break; }
@@ -142,7 +148,7 @@ function renderReadiness() {
 function renderResourceSource(code, libraries) {
   const result = inspectResources(code, libraries);
   resourceRows = result.rows; resourceOverflow = result.overflow;
-  document.querySelector('#resource-source-note').textContent = `${resourceRows.length ? 'Ссылки в HTML и встроенных стилях; наличие ссылки не означает загрузку.' : 'Внешних ссылок в HTML и встроенных стилях не найдено.'} Импорты и адреса внутри JavaScript и внешнего CSS здесь не разбираются.${resourceOverflow ? ' Показаны первые 200 записей.' : ''}`;
+  document.querySelector('#resource-source-note').textContent = `${resourceRows.length ? 'Ссылки в HTML, стилях и статических импортах модулей; наличие ссылки не означает загрузку.' : 'Внешних ссылок не найдено.'} Динамические адреса и внешний CSS не разбираются.${resourceOverflow ? ' Показаны первые 200 записей.' : ''}`;
   document.querySelector('#resource-source-list').replaceChildren(...resourceRows.map(row => diagnosticRow(row.kind, `${row.state}${row.count > 1 ? ` · ${formatUIInteger(row.count)} подключений` : ''}\n${row.path}`)));
 }
 
@@ -165,7 +171,7 @@ function updateReadiness() {
 function readinessReport() {
   const lines = ['Ресурсы текущего кода:', ...resourceRows.map(row => `${row.kind}: ${row.state} · ${row.path}`)];
   if (!resourceRows.length) lines.push('Внешних ссылок в HTML и встроенных стилях не найдено.');
-  lines.push('Импорты и адреса в JavaScript и внешнем CSS статически не разбираются.');
+  lines.push('Статические импорты модулей учтены. Динамические адреса и внешний CSS не разбираются.');
   if (resourceOverflow) lines.push('Показаны первые 200 записей.');
   lines.push(readinessRunLabel(), 'Обращения при запуске:');
   for (const row of diagnosticRun?.resources?.values() || []) lines.push(`${row.path}: ${resourceText(row)}`);

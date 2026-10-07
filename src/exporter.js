@@ -53,6 +53,11 @@ async function prepareGameFiles(code, filename) {
     cursor = reference.index + reference.tag.length;
   }
   html += code.slice(cursor);
+  if (typeof prepareModuleLibraries === 'function') {
+    const modules = await prepareModuleLibraries(html, 'files', [...reservedNames]);
+    return { html: modules.html, files: [{ name: htmlName, content: modules.html }, ...assets.values(), ...modules.files],
+      missingLibraries: [...missingLibraries, ...modules.missingLibraries], modules: modules.modules };
+  }
   const files = [{ name: htmlName, content: html }, ...assets.values()];
   return { html, files, missingLibraries };
 }

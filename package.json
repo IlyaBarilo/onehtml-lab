@@ -16,6 +16,7 @@
     "test:stage7": "node tests/stage7.mjs",
     "test:game-storage": "node tests/game-storage.mjs",
     "test:libraries": "node tests/library-bundle.mjs",
+    "test:modules": "node tests/module-libraries.mjs",
     "test:e2e": "node tests/browser.mjs",
     "test:workspace": "node tests/workspace.mjs",
     "test:editor": "node tests/editor.mjs",

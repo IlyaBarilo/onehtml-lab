@@ -107,6 +107,7 @@ function renderDiagnosticErrors() {
 }
 
 function diagnosticBytes(source) { return new TextEncoder().encode(source || '').length; }
+function diagnosticCacheBytes(entry) { return (entry.format === 'module' ? moduleEntryData(entry)?.bytes || 0 : diagnosticBytes(entry.source)) + diagnosticBytes(entry.license); }
 function diagnosticSize(bytes) { return `${formatUIInteger(bytes)} байт`; }
 
 async function inspectDiagnosticLibraries(code) {
@@ -116,12 +117,28 @@ async function inspectDiagnosticLibraries(code) {
   const rows = embedded.map(row => ({ title: row.title, path: row.originalUrl || row.filename,
     state: 'Встроена в HTML', note: row.reason, bytes: diagnosticBytes(row.source),
     usedKey: libraryCache.has(row.key) ? row.key : row.assetKey && libraryCache.has(row.assetKey) ? row.assetKey : null }));
+  const modules = scanModules(code), copies = await embeddedModulePlan(code);
+  for (const ref of new Map(modules.references.map(item => [item.key, item])).values()) {
+    const entry=cachedLibrary(ref), data=entry && moduleEntryData(entry);
+    if(ref.moduleLocal && data) {
+      const targets=new Map(data.files.map(file=>[file.url,modules.imports[file.url]]));
+      for(const file of data.files) {
+        const path=targets.get(file.url) || ref.modulePath;
+        rows.push({title:ref.title,path,filename:decodeScriptUrl(path.split('/').pop()),state:'Есть сохранённая копия',
+          bytes:diagnosticBytes(moduleFileSource(file,entry,targets)),usedKey:entry.key,reference:ref,note:'Модульные файлы рядом требуют HTTP.'});
+      }
+      continue;
+    }
+    rows.push({title:ref.title,path:ref.moduleLocal?ref.modulePath:ref.url,filename:ref.filename,state:data?'Есть сохранённая копия':'Нужно скачать',
+      bytes:data?.bytes,usedKey:data?entry.key:null,reference:ref,note:ref.moduleLocal?'Модульные файлы рядом требуют HTTP.':''});
+  }
+  rows.push(...modules.issues, ...copies.rows.map(row => ({...row,state:'Встроена в HTML'})));
   for (const match of code.matchAll(libraryScriptTag)) {
     if (match[2] === undefined) continue;
     const attributes = scriptAttributes(match[2]);
+    if (['module','importmap'].includes(attributes.get('type')?.value.trim().toLowerCase())) continue;
     const path = decodeScriptUrl(attributes.get('src')?.value || '');
     if (!path) {
-      if (attributes.get('type')?.value === 'module') rows.push({ title: 'Модуль JavaScript', path: '', state: 'Подмена не поддерживается', note: 'Импорты внутри модулей не разбираются.' });
       continue;
     }
     const ref = supported.get(match.index);
@@ -176,7 +193,7 @@ function renderDiagnosticLibraries(rows) {
 
 function renderDiagnosticCache() {
   const entries = [...libraryCache.values()];
-  const total = entries.reduce((sum, entry) => sum + diagnosticBytes(entry.source) + diagnosticBytes(entry.license), 0);
+  const total = entries.reduce((sum, entry) => sum + diagnosticCacheBytes(entry), 0);
   document.querySelector('#diagnostic-cache-size').textContent = entries.length
     ? `${formatUIInteger(entries.length)} копий · JS и лицензии: ${diagnosticSize(total)}` : 'Сохранённых копий нет.';
   const blocked = diagnosticCacheBusy || Boolean(pendingLibraryAction) || !diagnosticReportReady;
@@ -185,7 +202,7 @@ function renderDiagnosticCache() {
     const used = diagnosticLibraries.some(row => row.usedKey === entry.key);
     const persisted = persistedLibraries.get(entry.key) === entry;
     const row = diagnosticRow(entry.title || entry.filename || 'Библиотека',
-      `${diagnosticSize(diagnosticBytes(entry.source) + diagnosticBytes(entry.license))} · ${persisted ? 'В браузере' : 'Только этот сеанс'}${used ? ' · Нужна текущему коду' : ''}\n${entry.sourceUrl || entry.localPath || entry.originalUrl || entry.filename || ''}`);
+      `${diagnosticSize(diagnosticCacheBytes(entry))} · ${persisted ? 'В браузере' : 'Только этот сеанс'}${used ? ' · Нужна текущему коду' : ''}\n${entry.sourceUrl || entry.localPath || entry.originalUrl || entry.filename || ''}`);
     const button = diagnosticButton('Удалить', () => confirmDiagnosticDelete([entry]));
     button.disabled = blocked; row.append(button); return row;
   }));

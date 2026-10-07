@@ -9,7 +9,7 @@ assert.match(online.srcdoc, /connect-src https: wss:/);
 assert.match(online.srcdoc, /script-src 'unsafe-inline' https:/);
 assert.match(online.srcdoc, /PerformanceObserver/);
 assert.match(offline.srcdoc, /connect-src 'none'/);
-assert.match(offline.srcdoc, /script-src 'unsafe-inline';/);
+assert.match(offline.srcdoc, /script-src 'unsafe-inline' data:;/);
 assert(!offline.srcdoc.includes('PerformanceObserver'));
 assert.equal(online.attributes.sandbox, 'allow-scripts');
 assert.equal(offline.attributes.sandbox, 'allow-scripts');

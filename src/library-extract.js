@@ -111,6 +111,11 @@ async function planLibraryExtraction(code, mode = 'cdn') {
     count += 1;
   }
   html += code.slice(cursor);
+  if (typeof embeddedModulePlan === 'function') {
+    const modules = await embeddedModulePlan(html, mode);
+    return { html: modules.html, rows: [...rows, ...modules.rows], assets: [...assets.values(), ...modules.assets],
+      count: count + modules.count, mode, removedBytes: new Blob([code]).size - new Blob([modules.html]).size };
+  }
   return { html, rows, assets: [...assets.values()], count, mode,
     removedBytes: new Blob([code]).size - new Blob([html]).size };
 }
@@ -134,11 +139,19 @@ async function planLibraryEmbedding(code) {
       note: reference.localPath ? `Выберите ${reference.filename} и MIT-лицензию.` : 'Нужна копия библиотеки с MIT-лицензией.',
       removedBytes: entry ? new Blob([reference.tag]).size - new Blob([await embeddedLibraryTag(reference, entry)]).size : 0 };
   }));
+  if (typeof scanModules === 'function') {
+    for (const reference of new Map(scanModules(code).references.map(ref => [ref.key, ref])).values()) {
+      const detail = prepared.bundledLibraryDetails.find(item => item.title === reference.title);
+      rows.push({ title: reference.title, removable: Boolean(detail), removedBytes: -(detail?.addedBytes || 0), note: 'Нужна модульная копия с MIT-лицензией.' });
+    }
+    rows.push(...scanModules(code).issues.map(row => ({ ...row, removable: false })));
+  }
   return { html: prepared.html, rows, libraryLabels: bundledLibraryLabels(prepared), missingLibraries: prepared.missingLibraries, assets: [],
     count: prepared.bundledLibraries.length, mode: 'embed', removedBytes: new Blob([code]).size - new Blob([prepared.html]).size };
 }
 
 function extractedSavePreference(code) {
+  if (typeof scanModules === 'function' && scanModules(code).map?.attrs.has('data-onehtml-module-links')) return scanModules(code).references.some(ref => ref.moduleLocal) ? 'files' : 'cdn';
   const refs = libraryMatches(code).filter(ref => ref.assetKey);
   return refs.length ? (refs.some(ref => ref.localPath) ? 'files' : 'cdn') : null;
 }
