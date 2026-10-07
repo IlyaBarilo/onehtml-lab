@@ -34,6 +34,7 @@ async function createApp(clipboard) {
     initAlternativeEditor() {}, updateAlternativeEditor() {}, initCodeEditor() {}, updateCodeTools() {}, resetCodeEdits() {}, recordCodeEdit() {},
     initAiPrompts() {}, updateAiControls() {}, openAiPrompts() {},
     updateExampleLessonControls() {},
+    updateCodeGuide() {},
     initDesktopWorkspace() {}, sizeDesktopPreview() {}, isSplitWorkspace: () => false,
     initDiagnostics() {}, updateDiagnostics() {}, beginDiagnosticRun() {},
     initComparisonGame() {},

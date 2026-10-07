@@ -131,6 +131,9 @@
         <div class="panel-body edit-body">
           <div class="edit-actions"><button id="edit-undo" type="button" disabled>↶ Отменить</button><button id="edit-redo" type="button" disabled>↷ Повторить</button></div>
           <div class="edit-actions"><button id="edit-panel-find" type="button">Поиск и замена в коде</button></div>
+          <section class="edit-section" aria-label="Помощь с текущим кодом"><div class="edit-actions"><button id="edit-explain" type="button">Объяснить код</button><button id="edit-check" type="button">Проверить изменение</button></div><p class="edit-note">Подготовить запрос внешнему ИИ. Для объяснения можно заранее выделить фрагмент в редакторе.</p></section>
+          <section id="code-guide" class="edit-section" aria-labelledby="code-guide-title" hidden><h3 id="code-guide-title">Разбор примера</h3><p class="edit-note">Нажмите на название участка, чтобы выделить его в текущем коде.</p><ul id="code-guide-list"></ul></section>
+          <p id="code-guide-note" class="edit-note">Разбор участков доступен для открытых копий «Поймай круг» и трёх мультимедийных примеров. Для другого HTML используйте поиск и объяснение кода.</p>
           <form id="edit-line-form" class="edit-section">
             <label for="edit-line">Перейти к строке</label>
             <div class="edit-line-row"><input id="edit-line" type="text" inputmode="numeric" pattern="[0-9]+" required autocomplete="off" placeholder="Номер строки"><button type="submit">Перейти</button></div>
@@ -262,6 +265,8 @@
       <button id="prompt-create" type="button" data-ai-mode="create" aria-pressed="true">Новая игра</button>
       <button id="prompt-change" type="button" data-ai-mode="change" aria-pressed="false">Изменить</button>
       <button id="prompt-fix" type="button" data-ai-mode="fix" aria-pressed="false">Исправить</button>
+      <button id="prompt-explain" type="button" data-ai-mode="explain" aria-pressed="false">Объяснить</button>
+      <button id="prompt-check" type="button" data-ai-mode="check" aria-pressed="false">Проверить</button>
     </div>
     <div class="platform-tabs" role="tablist" aria-label="Устройство для запроса">
       <button class="platform-tab" type="button" role="tab" data-platform="mobile" aria-selected="true">Телефон</button>
@@ -272,6 +277,8 @@
     <div id="ai-error-context" hidden><strong>Ошибка игры</strong><p id="ai-error"></p></div>
     <div id="ai-source-options" hidden>
       <label class="ai-shorten-label"><input id="ai-shorten" type="checkbox" checked>Сократить код библиотек</label>
+      <p id="ai-analysis-context" hidden></p>
+      <label id="ai-history-option" class="ai-shorten-label" hidden><input id="ai-history" type="checkbox" checked>Включить сравнение с прошлой версией</label>
       <p id="ai-libraries" hidden></p>
     </div>
     </div>

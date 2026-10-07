@@ -957,6 +957,7 @@ function openComparison(baseline = latestHistory()) {
   codeField.hidden = true;
   comparisonOpen = true;
   resetComparisonGame(baseline);
+  aiComparisonEntry = baseline;
   renderComparisonContent();
   updateControls();
 }
@@ -1163,6 +1164,7 @@ function updateControls() {
   updateAiControls();
   updateDiagnostics();
   updateExampleLessonControls();
+  updateCodeGuide();
 }
 
 codeField.addEventListener('input', event => {

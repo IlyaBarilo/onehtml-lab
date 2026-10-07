@@ -263,6 +263,7 @@ function openCodeTools() {
   document.querySelector('#edit-line-feedback').textContent = '';
   refreshEditSearch();
   showWorkspacePanel(editPanel);
+  updateCodeGuide();
 }
 
 function applyCodeView() {
@@ -533,6 +534,8 @@ function initCodeEditor() {
     scheduleCodeLayout();
   });
   document.querySelector('#edit-panel-find').addEventListener('click', () => openInlineSearch());
+  document.querySelector('#edit-explain').addEventListener('click', () => openAiPrompts('explain', true));
+  document.querySelector('#edit-check').addEventListener('click', () => openAiPrompts('check', true));
   document.querySelector('#edit-find').addEventListener('click', () => editFindOpen ? closeInlineSearch() : openInlineSearch());
   document.querySelector('#edit-find-close').addEventListener('click', closeInlineSearch);
   document.querySelector('#edit-replace-toggle').addEventListener('click', event => {
