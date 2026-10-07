@@ -41,4 +41,5 @@ jobs:
       - run: npm run test:network
       - run: npm run test:libraries -- --engines=chromium
       - run: npm run test:modules -- --engines=chromium
+      - run: npm run test:assets -- --engines=chromium
       - run: npm run test:draft

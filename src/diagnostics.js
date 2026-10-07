@@ -242,6 +242,7 @@ async function deleteDiagnosticCache() {
 }
 
 function setDiagnosticTab(tab) {
+  if (tab !== 'resources') releaseMediaPreviews();
   diagnosticTab = expertMode && ['libraries', 'resources', 'speed', 'quality'].includes(tab) ? tab : 'errors';
   for (const name of ['errors', 'libraries', 'resources', 'speed', 'quality']) document.querySelector(`#diagnostic-${name}`).hidden = diagnosticTab !== name;
   for (const button of document.querySelectorAll('[data-diagnostic-tab]')) button.setAttribute('aria-pressed', String(button.dataset.diagnosticTab === diagnosticTab));
@@ -276,6 +277,8 @@ function diagnosticAiContext() {
 
 function updateDiagnostics() {
   if (!diagnosticReady) return;
+  renderMediaAssets();
+  renderPromptMedia();
   updateReadiness();
   document.querySelector('#diagnostic-open').disabled = modeBusy;
   document.querySelector('#diagnostic-open').setAttribute('aria-pressed', String(currentPanel() === activityPanel));
@@ -314,6 +317,8 @@ function initDiagnostics() {
   diagnosticReady = true;
   initReadiness();
   initQuality();
+  initMediaAssets();
+  initPromptMedia();
   document.querySelector('#diagnostic-open').addEventListener('click', () => {
     if (!expertMode || modeBusy) return;
     if (currentPanel() === activityPanel) closeWorkspacePanel(); else openDiagnostics();

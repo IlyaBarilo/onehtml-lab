@@ -5,3 +5,5 @@ await import('./library-package.mjs');
 await import('./library-extract.mjs');
 await import('./readiness-unit.mjs');
 await import('./syntax-unit.mjs');
+await import('./media-assets-unit.mjs');
+await import('./media-prompts-unit.mjs');

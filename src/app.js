@@ -1075,7 +1075,8 @@ async function confirmReplacement(nextCode) {
   return await chooseDialog(replaceDialog) === 'replace';
 }
 
-function replaceCode(code, archive = false) {
+function replaceCode(code, archive = false, fromPrompt = false) {
+  if (fromPrompt) code = bindPromptMedia(code);
   closeWorkspacePanels(false);
   closeLibraryExtraction();
   closeHistory();
@@ -1171,6 +1172,15 @@ function updateControls() {
 }
 
 codeField.addEventListener('input', event => {
+  if (pendingNativePaste !== null || event?.inputType === 'insertFromPaste') {
+    const before=codeField.value, next=bindPromptMedia(before);
+    if(next!==before) {
+      const position=codeField.selectionStart, patch=editPatch(before,next);
+      codeField.value=next;
+      const caret=position<=patch.start?position:position+next.length-before.length;
+      codeField.setSelectionRange(caret,caret);
+    }
+  }
   recordCodeEdit(event);
   closeLibraryExtraction();
   hideLibraryRequest();
@@ -1190,6 +1200,7 @@ codeField.addEventListener('input', event => {
   } else clearRuntimeError();
   scheduleDraftSave();
   updateControls();
+  if (event?.inputType === 'insertFromPaste') promptMediaNotice();
 });
 // Native paste is intentionally left to the textarea and the browser. It
 // respects the selection/caret unless the Paste button requested replacement.
@@ -1207,8 +1218,9 @@ codeField.addEventListener('paste', event => {
     inform('В буфере обмена нет текста. Сначала скопируйте HTML-код.');
     return;
   }
-  replaceCode(text, true);
+  replaceCode(text, true, true);
   inform('Код вставлен. Можно запускать.');
+  promptMediaNotice();
 });
 pasteButton.addEventListener('click', async () => {
   const previous = codeField.value;
@@ -1238,8 +1250,9 @@ pasteButton.addEventListener('click', async () => {
       return;
     }
     replaceOnNextPaste = false;
-    replaceCode(text, true);
+    replaceCode(text, true, true);
     inform('Код вставлен. Можно запускать.');
+    promptMediaNotice();
   } catch {
     if (codeField.value === previous) {
       if (await confirmReplacement(null)) offerManualPaste();
@@ -1275,7 +1288,7 @@ async function startPreview(replaceLibraries = true) {
   const request = ++previewRequest;
   const code = codeField.value;
   try {
-    const prepared = await prepareGameHtml(code, replaceLibraries);
+    const prepared = await prepareApplicationHtml(code, replaceLibraries);
     if (request !== previewRequest || code !== codeField.value) return;
     if (requestLibraries(prepared, 'run')) return;
     hideLibraryRequest();
@@ -1296,6 +1309,7 @@ async function startPreview(replaceLibraries = true) {
     running = true;
     previewCode = code;
     activeBundledLibraries = bundledLibraryLabels(prepared);
+    mediaPreparationWarning(prepared);
     updateLocalAccessHint();
   } catch {
     if (request !== previewRequest) return;
@@ -1392,6 +1406,8 @@ async function restoreStartupDraft() {
   } finally {
     clearTimeout(timer);
     await loadLibraryCache();
+    await loadMediaCache();
+    loadPromptMediaState();
     modeBusy = false;
     codeField.disabled = false;
     resetCodeEdits();
@@ -1433,8 +1449,9 @@ importFile.addEventListener('change', async () => {
     if (running) stopPreview();
     selectGameStorage(`file:${file.name.slice(0, 170)}`);
     replaceOnNextPaste = false;
-    replaceCode(code, true);
+    replaceCode(code, true, true);
     inform('HTML-файл открыт в редакторе.');
+    promptMediaNotice();
   } catch {
     inform('Не удалось прочитать HTML-файл. Текущий код сохранён.', true);
   }
@@ -1463,8 +1480,39 @@ function updateSaveLibrariesDescription() {
   }
 }
 
-saveLibrariesField.addEventListener('change', updateSaveLibrariesDescription);
-saveLibrariesMode.addEventListener('change', updateSaveLibrariesDescription);
+saveLibrariesField.addEventListener('change', () => { updateSaveLibrariesDescription(); void updateSaveMediaDescription(); });
+saveLibrariesMode.addEventListener('change', () => { updateSaveLibrariesDescription(); void updateSaveMediaDescription(); });
+let saveMediaRevision = 0;
+async function updateSaveMediaDescription() {
+  const revision = ++saveMediaRevision;
+  const field = document.querySelector('#save-media'), hint = document.querySelector('#save-media-hint');
+  if (document.querySelector('#save-media-options').hidden) { confirmSaveButton.disabled = false; return; }
+  const code = codeField.value;
+  const refs = mediaBindings(codeField.value).filter(ref => ref.id);
+  const ids = [...new Set(refs.filter(ref => ref.entry).map(ref => ref.id))];
+  const bytes = ids.reduce((sum,id) => sum + mediaCache.get(id).blob.size,0);
+  hint.textContent = field.checked && !field.disabled
+    ? `Медиа будут внутри HTML: ${diagnosticSize(bytes)} исходных файлов. При встраивании объём данных увеличивается примерно на треть.`
+    : 'Изображения и звук сохранятся как в коде, без подстановки файлов из кэша.';
+  if (refs.some(ref => !ref.entry)) hint.textContent += ' Часть выбранных файлов отсутствует. Выберите их снова в «Ресурсах».';
+  if (scanMedia(codeField.value).reason) hint.textContent += ' ' + scanMedia(codeField.value).reason;
+  const result = document.querySelector('#save-result-size');
+  result.textContent = 'Считаю размер HTML…'; confirmSaveButton.disabled = true;
+  try {
+    const libraries = !saveLibrariesField.disabled && saveLibrariesField.checked;
+    const media = !field.disabled && field.checked;
+    const prepared = libraries && saveLibrariesMode.value === 'files'
+      ? await prepareApplicationFiles(code, filenameField.value, media) : await prepareApplicationHtml(code, libraries, media);
+    if (revision !== saveMediaRevision || code !== codeField.value || currentPanel() !== saveDialog) return;
+    result.textContent = `Размер HTML: ${diagnosticSize(new Blob([prepared.html]).size)}${prepared.files?.length > 1 ? '; JS скачаются отдельно.' : '.'}`;
+  } catch {
+    if (revision === saveMediaRevision) result.textContent = 'Размер не рассчитан. Попробуйте открыть сохранение ещё раз.';
+  } finally {
+    if (revision === saveMediaRevision) confirmSaveButton.disabled = false;
+  }
+}
+document.querySelector('#save-media').addEventListener('change', updateSaveMediaDescription);
+filenameField.addEventListener('input', () => { if (currentPanel() === saveDialog) void updateSaveMediaDescription(); });
 
 saveButton.addEventListener('click', async () => {
   if (currentPanel() === saveDialog) { closeWorkspacePanel(); return; }
@@ -1486,7 +1534,12 @@ saveButton.addEventListener('click', async () => {
   saveLibrariesDescription = { available, missing: Boolean(prepared.missingLibraries?.length), modules: prepared.modules,
     addedBytes: Math.max(0, new Blob([prepared.html]).size - new Blob([code]).size) };
   updateSaveLibrariesDescription();
+  const mediaRefs = mediaBindings(code).filter(ref => ref.id), mediaField = document.querySelector('#save-media');
+  document.querySelector('#save-media-options').hidden = !mediaRefs.length && !scanMedia(code).reason;
+  mediaField.disabled = !mediaRefs.some(ref => ref.entry);
+  mediaField.checked = !mediaField.disabled;
   filenameField.value = 'game.html';
+  void updateSaveMediaDescription();
   showWorkspacePanel(saveDialog);
   filenameField.focus();
   filenameField.select();
@@ -1511,10 +1564,11 @@ shareButton.addEventListener('click', async () => {
   inform();
   try {
     const code = codeField.value;
-    const prepared = await prepareGameHtml(code);
+    const prepared = await prepareApplicationHtml(code);
     if (code !== codeField.value) return;
     if (requestLibraries(prepared, 'share')) return;
     hideLibraryRequest();
+    mediaPreparationWarning(prepared);
     const result = await shareHtml(prepared.html, currentFilename);
     if (result === 'unsupported') {
       inform('Передача HTML-файла здесь недоступна. Сохраните его и отправьте через приложение «Файлы».');
@@ -1555,9 +1609,12 @@ document.querySelector('#save-form').addEventListener('submit', async event => {
     const code = codeField.value;
     const withLibraries = !saveLibrariesField.disabled && saveLibrariesField.checked;
     const separate = withLibraries && saveLibrariesMode.value === 'files';
-    const prepared = separate ? await prepareGameFiles(code, filename) : await prepareGameHtml(code, withLibraries);
+    const mediaField = document.querySelector('#save-media');
+    const withMedia = !mediaField.disabled && mediaField.checked;
+    const prepared = separate ? await prepareApplicationFiles(code, filename, withMedia) : await prepareApplicationHtml(code, withLibraries, withMedia);
     if (code !== codeField.value || currentPanel() !== saveDialog) return;
     hideLibraryRequest();
+    mediaPreparationWarning(prepared);
     if (separate) {
       showSaveFiles(prepared.files);
       downloadGameFiles(prepared.files);
@@ -1567,6 +1624,7 @@ document.querySelector('#save-form').addEventListener('submit', async event => {
       currentFilename = filename;
       closeWorkspacePanel();
       inform('Файл передан браузеру для сохранения.');
+      mediaPreparationWarning(prepared);
     }
   } catch {
     if (saveFilesPanel.hidden && currentPanel() === saveDialog) closeWorkspacePanel();

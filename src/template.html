@@ -63,6 +63,7 @@
       </div>
       <div class="expert-resource-actions">
         <button id="ai-open" class="import-button" type="button" title="ИИ-боты и готовые запросы">ИИ и запросы</button>
+        <button id="media-open" class="import-button" type="button" title="Добавить изображения и звук для запроса ИИ">Медиа</button>
         <button id="examples-open" class="import-button" type="button" title="Открыть примеры и задания">Примеры</button>
         <button id="diagnostic-open" class="expert-icon-button" type="button" title="Диагностика и библиотеки" aria-label="Диагностика и библиотеки" aria-pressed="false"><!-- ICON:diagnostics --></button>
       </div>
@@ -72,6 +73,20 @@
     <button id="activity-toggle" class="activity-toggle" type="button" aria-label="Открыть сообщения" aria-expanded="false" aria-controls="activity-panel" hidden><span id="activity-summary" role="status" aria-live="polite"></span><span aria-hidden="true">›</span></button>
     <p id="speed-strip" hidden></p>
     <section class="workspace" aria-label="Рабочая область">
+      <section id="media-panel" class="work-panel" aria-labelledby="media-prompt-title" hidden>
+        <div class="panel-heading"><h2 id="media-prompt-title">Медиа</h2><button id="media-prompt-close" type="button" aria-label="Закрыть медиа">✕</button></div>
+        <div class="panel-body">
+          <div class="diagnostic-actions media-prompt-actions"><button id="media-prompt-add" type="button">Добавить файлы</button><button id="media-prompt-paste" type="button">Вставить изображение</button><button id="media-prompt-ai" type="button">К запросу ИИ</button></div>
+          <div id="media-paste-fallback" hidden><label for="media-paste-field">Вставка изображения из буфера</label><textarea id="media-paste-field" rows="2" aria-describedby="media-paste-help" placeholder="Нажмите здесь и выберите «Вставить» или Ctrl+V"></textarea><p id="media-paste-help" class="diagnostic-note">Если браузер не поддерживает вставку картинки, используйте «Добавить файлы». Звук добавляется через выбор файла.</p></div>
+          <p class="media-prompt-help">Отметьте файлы для запроса. Используйте их имена в пожеланиях: например, cat.png — герой, win.mp3 — звук победы.</p>
+          <label for="media-prompt-names">Имена выбранных файлов</label><textarea id="media-prompt-names" readonly rows="1" placeholder="Добавьте изображения или звук"></textarea>
+          <div class="diagnostic-actions"><button id="media-prompt-copy" type="button" disabled>Копировать имена</button></div>
+          <p id="media-prompt-feedback" role="status" aria-live="polite" class="diagnostic-note"></p>
+          <div id="media-prompt-delete" class="diagnostic-confirm" hidden><p id="media-prompt-delete-text"></p><div class="diagnostic-actions"><button id="media-prompt-delete-yes" type="button">Удалить файл</button><button id="media-prompt-delete-no" type="button">Отмена</button></div></div>
+          <ul id="media-prompt-list" class="diagnostic-list"></ul>
+          <details class="media-help"><summary>Хранение и удаление</summary><p class="diagnostic-note">Файлы хранятся в браузере. Удалить копии и посмотреть привязки истории можно в «Диагностика и библиотеки» → «Ресурсы». Список имён не передаёт содержимое файлов ИИ-боту; для анализа картинки прикрепите её в чате бота.</p></details>
+        </div>
+      </section>
       <section id="help-panel" class="work-panel" aria-labelledby="help-title" hidden>
         <div class="panel-heading"><h2 id="help-title">Как пользоваться</h2><button id="help-close" type="button" aria-label="Закрыть памятку">✕</button></div>
         <div class="panel-body help-body">
@@ -85,7 +100,7 @@
               <li><strong>Сохраните свою игру</strong><p>Нажмите «Сохранить» и подтвердите имя game.html или задайте своё. Для подготовленных библиотек выберите встраивание «Внутри HTML», чтобы получить один файл. Откройте скачанную игру отдельно и проверьте её.</p></li>
               <li><strong>Поделитесь результатом</strong><p>Кнопка «Поделиться» открывает меню отправки файла. Если браузер его не поддерживает, отправьте сохранённый HTML через файловый менеджер.</p></li>
             </ol>
-            <details class="help-details"><summary>Без интернета</summary><p>Заранее скачайте onehtml-lab.html и откройте его в браузере. В экспертном режиме выберите «Примеры» → «Готовые игры» или «Мультимедиа»: они уже внутри редактора и не требуют сети.</p><p>Начните с «Поймай круг» на вкладке «Телефон» или выберите мультимедийный пример. Кнопка «Задание» раскрывает правку, подсказку и проверку результата. Откройте копию, измените код, запустите и сохраните результат. ИИ-боту потребуется отдельное подключение к интернету.</p><p>Библиотеки не входят в редактор. Игры с ними подготовьте заранее: загрузите нужные копии, сохраните с встраиванием и проверьте скачанный HTML без сети. Картинки, звук и другие внешние ресурсы автоматически не встраиваются.</p></details>
+            <details class="help-details"><summary>Без интернета</summary><p>Заранее скачайте onehtml-lab.html и откройте его в браузере. В экспертном режиме выберите «Примеры» → «Готовые игры» или «Мультимедиа»: они уже внутри редактора и не требуют сети.</p><p>Начните с «Поймай круг» на вкладке «Телефон» или выберите мультимедийный пример. Кнопка «Задание» раскрывает правку, подсказку и проверку результата. Откройте копию, измените код, запустите и сохраните результат. ИИ-боту потребуется отдельное подключение к интернету.</p><p>Библиотеки не входят в редактор. Игры с ними подготовьте заранее: загрузите нужные копии, сохраните с встраиванием и проверьте скачанный HTML без сети. Свои изображения и звук добавьте кнопкой «Медиа», укажите их имена в запросе ИИ и сохраните HTML с встраиванием. Другие внешние ресурсы автоматически не упаковываются.</p></details>
             <details class="help-details"><summary>Если не получается</summary><p><strong>Вставился только кусок:</strong> скопируйте весь HTML, выделите всё в поле и вставьте заново. Обычная вставка работает в позиции курсора.</p><p><strong>Ошибка или пустой экран:</strong> откройте строку сообщений. В экспертном режиме доступна «Диагностика и библиотеки»: скопируйте отчёт для ИИ. Если ошибок нет, опишите боту, что видите и что ожидали.</p><p><strong>Нужна библиотека:</strong> подключитесь к сети и подтвердите её загрузку в сообщениях. Для занятия без сети выберите готовый пример без библиотек.</p><p><strong>Не найти файл:</strong> проверьте загрузки браузера или папку «Загрузки». Если скачалось несколько файлов, соберите HTML и JS в одной папке с исходными именами.</p></details>
             <p class="help-note">Перед завершением сохраните HTML-файл. Черновик в браузере помогает продолжить работу, но не заменяет отдельную копию.</p>
           </div>
@@ -219,6 +234,15 @@
             <p id="diagnostic-cache-feedback" role="status" class="diagnostic-note"></p>
           </section>
           <section id="diagnostic-resources" hidden>
+            <h3>Свои изображения и звук</h3>
+            <div class="diagnostic-actions"><button id="media-add" type="button">Добавить файлы</button></div>
+            <input id="media-input" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.mp3,.ogg,.wav" aria-label="Изображения и звук" hidden>
+            <p id="media-summary" class="diagnostic-note"></p>
+            <details class="media-help"><summary>Как использовать файлы</summary><p class="diagnostic-note">«Вставить» добавляет img или audio на место курсора. «Привязать» использует точный относительный путь из HTML или встроенного CSS. Для изменения кода остановите игру и включите редактирование. До 8 МБ на файл, 16 МБ на документ, 32 МБ и 64 файла в кэше.</p></details>
+            <details id="media-binding-details" class="media-help"><summary>Привязки текущего кода</summary><p id="media-bindings" class="diagnostic-note media-bindings"></p></details>
+            <ul id="media-list" class="diagnostic-list"></ul>
+            <div id="media-delete-confirm" class="diagnostic-confirm" hidden><p id="media-delete-text"></p><div class="diagnostic-actions"><button id="media-delete-yes" type="button">Удалить файл</button><button id="media-delete-no" type="button">Отмена</button></div></div>
+            <p id="media-feedback" class="diagnostic-note" role="status" aria-live="polite"></p>
             <h3>В текущем коде</h3><p id="resource-source-note" class="diagnostic-note"></p><ul id="resource-source-list" class="diagnostic-list"></ul>
             <h3>Обращения при запуске</h3><p id="resources-run-note" class="diagnostic-note"></p><p id="resource-bundled" class="diagnostic-note"></p><p id="resource-observed-note" class="diagnostic-note"></p><ul id="resource-observed-list" class="diagnostic-list"></ul>
             <p class="diagnostic-note">Для проверки выключите сеть кнопкой с глобусом и попробуйте разные действия в игре. Открытие первого экрана ещё не подтверждает автономность всей игры.</p>
@@ -243,6 +267,7 @@
           <label id="save-libraries-option" class="save-library-option" for="save-libraries"><input id="save-libraries" type="checkbox" aria-describedby="save-libraries-hint"><span id="save-libraries-label">Встроить библиотеки в файл</span></label>
           <select id="save-libraries-mode" class="save-library-mode" aria-label="Как сохранить библиотеки" aria-describedby="save-libraries-hint" hidden><option value="inline">Внутри HTML</option><option value="files">Отдельные файлы</option></select>
           <p id="save-libraries-hint" class="save-library-hint"></p>
+          <div id="save-media-options" hidden><label class="save-library-option" for="save-media"><input id="save-media" type="checkbox" aria-describedby="save-media-hint"><span>Встроить изображения и звук</span></label><p id="save-media-hint" class="save-library-hint"></p><p id="save-result-size" class="save-library-hint" role="status"></p></div>
         </div>
         <div id="save-files" hidden>
           <p class="dialog-copy">Сохраните все файлы в одну папку, затем откройте HTML. Если скачались не все — нажмите на нужный файл.</p>
@@ -283,9 +308,11 @@
     </div>
     <label id="ai-task-label" for="ai-task">Тема игры и пожелания</label>
     <textarea id="ai-task" rows="3" aria-describedby="ai-summary" placeholder="Например: игра про космос, собирать звёзды и избегать метеоритов"></textarea>
+    <div class="diagnostic-actions"><button id="ai-media-open" type="button">Медиа</button></div>
+    <p id="ai-media-names" class="media-bindings" hidden></p>
     <div id="ai-error-context" hidden><strong>Ошибка игры</strong><p id="ai-error"></p></div>
     <div id="ai-source-options" hidden>
-      <label class="ai-shorten-label"><input id="ai-shorten" type="checkbox" checked>Сократить код библиотек</label>
+      <label class="ai-shorten-label"><input id="ai-shorten" type="checkbox" checked>Сократить библиотеки и медиа</label>
       <p id="ai-analysis-context" hidden></p>
       <p id="ai-quality-context" hidden></p>
       <label id="ai-history-option" class="ai-shorten-label" hidden><input id="ai-history" type="checkbox" checked>Включить сравнение с прошлой версией</label>

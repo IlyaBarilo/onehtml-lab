@@ -1,4 +1,4 @@
-// Preparing a prompt is read-only: no editor, history, cache or network writes.
+// Prompt copies do not change the editor/history or upload files to a bot.
 const aiTask = document.querySelector('#ai-task');
 const aiShorten = document.querySelector('#ai-shorten');
 const aiOutput = document.querySelector('#ai-output');
@@ -18,6 +18,7 @@ let aiSnapshot = null;
 let aiResult = null;
 let aiSourcePlan = null;
 let aiPastSourcePlan = null;
+let aiMediaSourcePlan = null;
 let aiQualityContext = null;
 
 function aiPromptSnapshot() {
@@ -26,7 +27,7 @@ function aiPromptSnapshot() {
     project: examples.some(example => example.category === 'media' && gameStorageScope === `example:${example.id}`) ? 'application' : 'game',
     libraryApplication: gameStorageScope === 'example:3d-showcase',
     quality: aiMode === 'check' && aiQualityContext?.code === codeField.value && aiQualityContext.scope === gameStorageScope ? aiQualityContext.text : '',
-    code: aiMode === 'create' ? '' : codeField.value,
+    code: aiMode === 'create' ? '' : codeField.value, media: JSON.stringify(promptMediaFiles()), mediaVersion: promptMediaVersion,
     selection: aiMode === 'explain' ? codeField.value.slice(codeField.selectionStart, codeField.selectionEnd) : '',
     selectionStart: aiMode === 'explain' ? codeField.selectionStart : 0,
     selectionEnd: aiMode === 'explain' ? codeField.selectionEnd : 0,
@@ -157,6 +158,10 @@ function updateAiControls() {
     return;
   }
   const snapshot = aiPromptSnapshot();
+  const mediaNames = document.querySelector('#ai-media-names');
+  const files = JSON.parse(snapshot.media);
+  mediaNames.hidden = !files.length;
+  mediaNames.textContent = files.length ? 'Медиа для запроса:\n' + files.map(file=>file.name).join('\n') : '';
   const qualityContext = document.querySelector('#ai-quality-context');
   qualityContext.hidden = snapshot.mode !== 'check' || !aiQualityContext;
   qualityContext.textContent = snapshot.quality ? 'В запрос добавлен отчёт «Проверка перед показом и сдачей».' : 'Код или работа изменены: прежний отчёт не включён. Вернитесь в «Проверку» и подготовьте запрос снова.';
@@ -199,6 +204,20 @@ async function prepareAiPrompt(snapshot, revision) {
   let pastCode = snapshot.pastCode;
   const shortened = [];
   let notes = [];
+  let mediaPlan;
+  try {
+    const key=JSON.stringify([code,snapshot.media,snapshot.shorten,snapshot.mediaVersion]);
+    if(aiMediaSourcePlan?.key!==key)aiMediaSourcePlan={key,promise:planPromptMedia(code,JSON.parse(snapshot.media),snapshot.shorten)};
+    mediaPlan=await aiMediaSourcePlan.promise;
+    code=mediaPlan.html;notes.push(...mediaPlan.notes);
+  } catch(error) {
+    if(revision===aiRevision){aiSummary.textContent=error.message;aiCopy.disabled=true;aiView.disabled=true;}
+    return;
+  }
+  if(pastCode!==null && snapshot.shorten) {
+    try{pastCode=(await planPromptMedia(pastCode,[],true)).html;}
+    catch(error){notes.push('Медиа прошлой версии не сокращены: '+error.message);}
+  }
   if (snapshot.mode !== 'create' && snapshot.shorten && /data-onehtml-library\s*=/i.test(code)) {
     try {
       if (aiSourcePlan?.code !== code) aiSourcePlan = { code, promise: planLibraryExtraction(code, 'cdn') };
@@ -210,7 +229,7 @@ async function prepareAiPrompt(snapshot, revision) {
       }
       if (shortened.length) notes.unshift('В копии для ИИ заменены ссылками: ' + shortened.join(', ') + '.');
     } catch {
-      code = snapshot.code;
+      code = mediaPlan.html;
       shortened.length = 0;
       notes = ['Не удалось проверить библиотеки. Код включён без сокращения.'];
     }
@@ -227,13 +246,14 @@ async function prepareAiPrompt(snapshot, revision) {
     } catch { notes.push('Библиотеки прошлой версии не удалось проверить; её код оставлен без сокращения.'); }
   }
   if (revision !== aiRevision || currentPanel() !== aiDialog || !sameAiSnapshot(snapshot, aiPromptSnapshot())) return;
-  const text = aiPromptText(snapshot, code, shortened, pastCode);
+  const mediaText = promptMediaIntro(mediaPlan.files).trim();
+  const text = aiPromptText(snapshot, code, shortened, pastCode) + (mediaText ? '\n\n' + mediaText : '');
   const saved = Math.max(0, symbolCount(snapshot.code) - symbolCount(code));
   aiOutput.value = text;
   aiSummary.textContent = `В запросе: ${formatSymbolCount(symbolCount(text))}` + (saved ? ` · убрано из кода: ${formatSymbolCount(saved)}` : '');
   aiLibraries.textContent = notes.join('\n');
   aiLibraries.hidden = !notes.length;
-  aiResult = { snapshot, text };
+  aiResult = { snapshot, text, mediaFiles: mediaPlan.files };
   aiCopy.disabled = false;
   aiView.disabled = false;
 }
@@ -246,9 +266,11 @@ function initAiPrompts() {
   aiShorten.addEventListener('change', updateAiControls);
   aiHistory.addEventListener('change', updateAiControls);
   aiView.addEventListener('click', () => setAiPreview(!aiShowingPreview));
+  aiOutput.addEventListener('copy', () => { if(aiResult && sameAiSnapshot(aiResult.snapshot,aiPromptSnapshot()))rememberPromptMedia(aiResult.mediaFiles); });
   aiCopy.addEventListener('click', () => {
     if (!aiResult || !sameAiSnapshot(aiResult.snapshot, aiPromptSnapshot())) { updateAiControls(); return; }
     // Compilation finished before this click, preserving clipboard user activation.
+    rememberPromptMedia(aiResult.mediaFiles);
     void copyOrSelect(aiResult.text, 'Запрос скопирован. Вставьте его в выбранного ИИ-бота.');
   });
   document.querySelector('#error-ai').addEventListener('click', () => openAiPrompts('fix'));

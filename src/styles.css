@@ -549,6 +549,36 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 #speed-result { font-size: 19px; font-weight: 650; font-variant-numeric: tabular-nums; }
 #speed-strip { flex: 0 0 auto; margin: 0; padding: 5px 12px; background: #eaf3ff; color: #315c93; font-size: 13px; line-height: 1.4; font-variant-numeric: tabular-nums; }
 #diagnostic-resources h3, #diagnostic-speed h3 { margin: 12px 0; font-size: 17px; }
+.media-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 12px 0; border-bottom: 1px solid #d8e5f7; }
+.media-details { min-width: 0; grid-column: 2; overflow-wrap: anywhere; }
+.media-details .diagnostic-note { margin: 4px 0; }
+.media-thumbnail { grid-column: 1; grid-row: 1; width: 72px; height: 72px; object-fit: contain; border: 1px solid #c9d9ed; border-radius: 6px; background: #eef3fa; }
+.media-row audio, .media-actions { grid-column: 1 / -1; min-width: 0; width: 100%; }
+.media-row audio { max-width: 420px; }
+.media-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.media-actions button { min-height: 44px; padding: 8px 12px; font: inherit; font-size: 14px; color: #285b9e; border: 1px solid #c6d7ee; border-radius: 7px; background: #edf4ff; }
+.media-actions button:disabled { opacity: .35; }
+.media-path { min-width: 120px; flex: 1; min-height: 44px; width: 160px; border: 1px solid #b9cbe3; border-radius: 6px; padding: 8px; font: inherit; background: #fcfdff; color: #253d5a; }
+.media-bindings { white-space: pre-wrap; overflow-wrap: anywhere; }
+.media-prompt-help { color: #47658a; line-height: 1.5; }
+#media-prompt-names, #media-paste-field { display: block; width: 100%; height: auto; min-height: 44px; max-height: 170px; margin: 8px 0; resize: none; font: inherit; line-height: 1.4; padding: 10px; border: 1px solid #c6d7ee; border-radius: 7px; background: #fcfdff; color: #253d5a; }
+.prompt-media-row { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 8px; padding: 12px 0; border-bottom: 1px solid #d8e5f7; }
+.prompt-media-row label { display: flex; align-items: center; gap: 10px; min-height: 44px; min-width: 0; cursor: pointer; }
+.prompt-media-row label span { min-width: 0; overflow-wrap: anywhere; }
+.prompt-media-row input { flex: 0 0 auto; width: 20px; height: 20px; accent-color: #2e6de9; }
+.prompt-media-row .diagnostic-note { display: block; margin-top: 4px; }
+.prompt-media-row .media-thumbnail { grid-column: 2; grid-row: 1; }
+.prompt-media-row .expert-icon-button { grid-column: 3; grid-row: 1; }
+.prompt-media-row audio { width: 100%; min-width: 0; grid-column: 1/-1; }
+.theme-dark #media-prompt-names, .theme-dark #media-paste-field { background: #202b3b; color: #dbe5f3; border-color: #3b4b61; }
+.theme-dark .media-prompt-help, .theme-dark #media-panel .diagnostic-note { color: #a9b8cc; }
+.theme-dark .prompt-media-row { border-color: #3b4b61; }
+.media-help { margin: 8px 0; font-size: 15px; }
+.media-help summary { cursor: pointer; min-height: 36px; display: list-item; padding-block: 8px; color: #47658a; }
+.theme-dark .media-help summary { color: #a9c4e7; }
+.theme-dark .media-row { border-color: #3b4b61; }
+.theme-dark #diagnostic-resources .diagnostic-note { color: #a9b8cc; }
+.theme-dark .media-thumbnail, .theme-dark .media-path { background: #202b3b; color: #dbe5f3; border-color: #3b4b61; }
 @media (max-width: 600px) { #diagnostic-tabs { grid-template-columns: repeat(6, minmax(0, 1fr)); } #diagnostic-tabs button { grid-column: span 2; } #diagnostic-tabs button:nth-child(n+4) { grid-column: span 3; } }
 .quality-check { display: grid; grid-template-columns: minmax(0, 1fr) 170px; align-items: center; gap: 10px 18px; padding: 14px 0; border-bottom: 1px solid #d7e2f0; }
 .quality-check strong { display: block; font-size: 16px; }
@@ -576,6 +606,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .diagnostic-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .diagnostic-actions button, #diagnostic-libraries button { min-height: 44px; padding: 8px 12px; font: inherit; font-size: 14px; color: #285b9e; border: 1px solid #c6d7ee; border-radius: 7px; background: #edf4ff; }
 .diagnostic-actions button:disabled, #diagnostic-libraries button:disabled { opacity: .35; }
+@media (max-width: 600px) { .media-prompt-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); } .media-prompt-actions button { min-width: 0; } #media-prompt-ai { grid-column: 1/-1; } }
 .diagnostic-note { margin: 10px 0; color: #566e8d; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 .diagnostic-list { list-style: none; padding: 0; margin: 0; }
 .diagnostic-error-row { display: grid; gap: 4px; width: 100%; min-height: 60px; padding: 10px 12px; text-align: left; background: transparent; border: 0; border-bottom: 1px solid #d7e2f0; color: #8a3434; font: inherit; font-size: 16px; overflow-wrap: anywhere; }

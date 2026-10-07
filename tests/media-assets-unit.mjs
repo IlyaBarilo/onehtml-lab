@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { runInNewContext } from 'node:vm';
+const source=(await Promise.all(['library-bundle.js','library-modules.js','media-assets.js'].map(name=>readFile(new URL('../src/'+name,import.meta.url),'utf8')))).join('\n');
+const api=runInNewContext(source+'\n({scanMedia,attachMedia,prepareMediaHtml,mediaCache,mediaSignature,mediaLimits})',{Blob,TextEncoder,TextDecoder,btoa,atob});
+const code=`<!doctype html><html><head><style>/*url(fake.png)*/.x{background:url('images/x.png');content:"url(fake2.png)"}</style></head><body><img src='images/x.png' title="x > y"><p style="background:url('images/x.png')">Текст</p><audio src="audio/x.wav"></audio><script>const html='<img src="js.png">';</script><!-- <img src="comment.png"> --><template><img src="template.png"></template></body></html>`;
+const png=new Uint8Array(24);png.set([137,80,78,71,13,10,26,10]);
+const entry={id:'a'.repeat(64),name:'x.png',type:'image/png',blob:new Blob([png],{type:'image/png'})};
+api.mediaCache.set(entry.id,entry);
+const scan=api.scanMedia(code);assert.deepEqual(Array.from(scan.refs,r=>r.path),['images/x.png','images/x.png','images/x.png','audio/x.wav']);
+for(const ref of scan.refs)assert(ref.from>=0 && ref.to>ref.from && ref.to<=code.length);
+const attached=api.attachMedia(code,'images/x.png',entry);assert(attached.startsWith('<!doctype html>'));
+assert.equal(api.scanMedia(attached).links.length,1);
+const embedded=await api.prepareMediaHtml(attached);assert.equal(embedded.media.length,1);assert.equal(embedded.missingMedia.length,0);
+assert.match(embedded.html,/src="data:image\/png;base64/);assert.match(embedded.html,/url\(&quot;data:image/);
+assert(embedded.html.includes("const html='<img src=\"js.png\">';"));assert(embedded.html.includes('url(fake.png)'));
+assert(!embedded.html.includes('onehtml-media:1:'));
+assert.equal((await api.prepareMediaHtml(attached,false)).html,attached);
+assert.throws(()=>api.attachMedia(code,'js.png',entry));
+assert.equal(api.scanMedia('<textarea>'+attached+'</textarea>').links.length,0);
+assert.equal(api.scanMedia('<template><template>'+attached+'</template></template>').links.length,0);
+assert(api.scanMedia('<img src="x.png">'.repeat(1001)).reason);
+assert.equal(api.scanMedia('<video><source src="x.wav"></video>').refs.length,0);
+assert.equal(api.scanMedia('<style>/*url(x.png)</style>').refs.length,0);
+assert.equal(api.scanMedia('<style>p{content:"url(x.png)</style>').refs.length,0);
+const styled='<style media="(width > 0px)">p{background:url(x.png)}</style>';
+const styledRef=api.scanMedia(styled).refs[0];assert.equal(styled.slice(styledRef.from,styledRef.to),'url(x.png)');
+assert(!api.mediaSignature(new TextEncoder().encode('<svg><script>alert(1)</script></svg>'),'image/png'));
+assert(!api.mediaSignature(new TextEncoder().encode('<html>'),'audio/mpeg'));
+for(const [type,header,size] of [['image/jpeg',[255,216,255,217],4],['image/webp',[82,73,70,70,0,0,0,0,87,69,66,80],16],['audio/ogg',[79,103,103,83],27],['audio/mpeg',[73,68,51],4],['audio/wav',[82,73,70,70,0,0,0,0,87,65,86,69],44]]) {
+  const bytes=new Uint8Array(size);bytes.set(header);assert(api.mediaSignature(bytes,type));
+}
+assert.throws(()=>api.attachMedia('<img src="https://example.test/x.png">','https://example.test/x.png',entry));
+const different=api.attachMedia(code,'images/x.png',{...entry,id:'b'.repeat(64)});
+assert.notEqual(different,attached,'Bindings are stored in their own version of the code');
+api.mediaCache.clear();assert.deepEqual(Array.from((await api.prepareMediaHtml(attached)).missingMedia),['images/x.png']);
+console.log('Local media: inert scans, exact ranges, MIME signatures, bindings, limits and unchanged export passed.');

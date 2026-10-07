@@ -78,7 +78,7 @@ async function startComparisonGame(replaceLibraries = true) {
   comparisonGameWarning.textContent = '';
   comparisonGameStatus.textContent = `${comparisonLabel()} · Подготовка…`;
   try {
-    const prepared = await prepareGameHtml(code, replaceLibraries);
+    const prepared = await prepareApplicationHtml(code, replaceLibraries);
     if (request !== comparisonRequest || !comparisonOpen || !comparisonGameMode || comparisonSession !== session) return;
     if (requestLibraries(prepared, 'compare', code)) {
       comparisonGameStatus.textContent = `${comparisonLabel()} · Нужны библиотеки.`;
@@ -92,6 +92,10 @@ async function startComparisonGame(replaceLibraries = true) {
     comparisonMetrics.libraries = bundledLibraryLabels(prepared);
     comparisonStage.replaceChildren(frame);
     updateComparisonGameStatus();
+    if (prepared.mediaReason || prepared.missingMedia.length) {
+      comparisonGameWarning.textContent = prepared.mediaReason || `Нет выбранных файлов: ${prepared.missingMedia.join(', ')}.`;
+      comparisonGameWarning.hidden = false;
+    }
   } catch {
     if (request !== comparisonRequest) return;
     comparisonGameStatus.textContent = comparisonLabel();

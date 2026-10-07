@@ -27,6 +27,7 @@
     "test:learning": "node tests/learning-examples.mjs",
     "test:guide": "node tests/code-guide.mjs",
     "test:media": "node tests/media-examples.mjs",
+    "test:assets": "node tests/media-assets.mjs",
     "test:quality": "node tests/quality.mjs",
     "test:readiness": "node tests/readiness.mjs",
     "test:syntax": "node tests/syntax.mjs",

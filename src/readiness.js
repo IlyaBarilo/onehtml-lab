@@ -148,6 +148,11 @@ function renderReadiness() {
 function renderResourceSource(code, libraries) {
   const result = inspectResources(code, libraries);
   resourceRows = result.rows; resourceOverflow = result.overflow;
+  const attached = mediaBindings(code);
+  for (const row of resourceRows) {
+    const ref = attached.find(ref => ref.path === row.path && ref.id);
+    if (ref) row.state = ref.entry ? `Выбран файл: ${ref.entry.name} · ${diagnosticSize(ref.entry.blob.size)}` : 'Выбранный файл отсутствует в кэше';
+  }
   document.querySelector('#resource-source-note').textContent = `${resourceRows.length ? 'Ссылки в HTML, стилях и статических импортах модулей; наличие ссылки не означает загрузку.' : 'Внешних ссылок не найдено.'} Динамические адреса и внешний CSS не разбираются.${resourceOverflow ? ' Показаны первые 200 записей.' : ''}`;
   document.querySelector('#resource-source-list').replaceChildren(...resourceRows.map(row => diagnosticRow(row.kind, `${row.state}${row.count > 1 ? ` · ${formatUIInteger(row.count)} подключений` : ''}\n${row.path}`)));
 }

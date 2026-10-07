@@ -46,6 +46,7 @@ jobs:
       - run: npm run test:network
       - run: npm run test:libraries -- --engines=chromium
       - run: npm run test:modules -- --engines=chromium
+      - run: npm run test:assets -- --engines=chromium
       - run: npm run test:draft
       - run: npm run test:previous
       - name: Прикрепить готовый HTML к выпуску
