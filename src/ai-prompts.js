@@ -23,6 +23,7 @@ function aiPromptSnapshot() {
   const baseline = aiMode === 'check' && aiHistory.checked ? aiCheckBaseline() : null;
   return { mode: aiMode, platform: selectedPlatform, task: aiTask.value.trim(), shorten: aiShorten.checked,
     project: examples.some(example => example.category === 'media' && gameStorageScope === `example:${example.id}`) ? 'application' : 'game',
+    libraryApplication: gameStorageScope === 'example:3d-showcase',
     code: aiMode === 'create' ? '' : codeField.value,
     selection: aiMode === 'explain' ? codeField.value.slice(codeField.selectionStart, codeField.selectionEnd) : '',
     selectionStart: aiMode === 'explain' ? codeField.selectionStart : 0,
@@ -83,7 +84,9 @@ function aiPromptText(snapshot, code, shortened, pastCode = snapshot.pastCode) {
   }
   const parts = [snapshot.mode === 'fix' ? `Исправь ошибку в ${application ? 'приложении' : 'игре'} ниже.` : `Измени ${application ? 'приложение' : 'игру'} ниже по моему описанию.`,
     `Верни полный HTML-файл, чтобы я мог целиком заменить прежний код. ${device}`];
-  if (application) parts.push('Сохрани автономный HTML со встроенными CSS и JavaScript. Не добавляй внешние файлы, шрифты или библиотеки. Сохрани доступное управление и учти предпочтение уменьшенного движения.');
+  if (application) parts.push(snapshot.libraryApplication
+    ? 'Сохрани HTML со встроенными CSS и кодом приложения. Сохрани существующее подключение Three.js r160 и способ его встраивания; не добавляй новые библиотеки, внешние модели, текстуры или шрифты. Сохрани доступное управление и учти предпочтение уменьшенного движения.'
+    : 'Сохрани автономный HTML со встроенными CSS и JavaScript. Не добавляй внешние файлы, шрифты или библиотеки. Сохрани доступное управление и учти предпочтение уменьшенного движения.');
   if (snapshot.task) parts.push(`${snapshot.mode === 'fix' ? 'Что не работает' : 'Что изменить'}:\n${snapshot.task}`);
   else if (snapshot.mode === 'change') parts.push('Если задача изменения ещё не указана, сначала спроси, что именно поменять.');
   if (snapshot.error) parts.push(`Сообщение об ошибке:\n${snapshot.error}`);

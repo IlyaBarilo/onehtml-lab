@@ -1,6 +1,20 @@
 // Prepared maps use syntax nodes in the current document, never stored line numbers.
 // Parsing is inert: no HTML is inserted and no user script is executed.
 const codeGuides = {
+  'sound-panel': [
+    ['Характеры звука', 'Массив sounds: названия, клавиши, частоты, длительность и цвета четырёх звуков.', 'VariableDeclaration', /const\s+sounds\s*=/g],
+    ['Визуальный отклик', 'Функция showSound связывает выбранный звук с формой, цветом и подписью.', 'FunctionDeclaration', /function\s+showSound\s*\(/g],
+    ['Создание звука', 'playSound создаёт аудиоконтекст после действия, затем осцилляторы и огибающую громкости.', 'FunctionDeclaration', /async\s+function\s+playSound\s*\(/g],
+    ['Громкость', 'Обработчик ползунка меняет общий уровень; нулевой уровень останавливает текущие звуки.', 'ExpressionStatement', /volume\.oninput\s*=/g],
+    ['Палитра панели', 'Переменные светлой темы. Ночная палитра находится в body.dark ниже.', 'RuleSet', /:root\s*\{/g]
+  ],
+  '3d-showcase': [
+    ['Геометрия предмета', 'makeLamp собирает основание, стойку, плафон и лампочку из геометрических деталей.', 'FunctionDeclaration', /function\s+makeLamp\s*\(/g],
+    ['Материалы и свет', 'updateScene применяет выбранный цвет, материал, яркость и состояние лампы.', 'FunctionDeclaration', /function\s+updateScene\s*\(/g],
+    ['Ракурсы', 'Положения камеры для трёх видов; lookAt задаёт точку, на которую она смотрит.', 'FunctionDeclaration', /function\s+setCamera\s*\(/g],
+    ['Сцена и тени', 'setupScene создаёт рендерер, пол и источники света; здесь включаются и настраиваются тени.', 'FunctionDeclaration', /function\s+setupScene\s*\(/g],
+    ['Автоповорот', 'tick меняет угол с учётом времени; вращение приостанавливается в фоне и при уменьшении движения.', 'FunctionDeclaration', /function\s+tick\s*\(/g]
+  ],
   'catch-circle': [
     ['Название', 'Надпись на экране. Название вкладки отдельно находится в title.', 'Element', /<h1\b[^>]*>/g],
     ['Вид цели', 'Цвет, размер и форма круга. После изменения размера проверьте края поля.', 'RuleSet', /\.target\s*\{/g],

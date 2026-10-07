@@ -18,9 +18,9 @@ const selected = process.argv.find(arg => arg.startsWith('--engines='))?.slice(1
 const engines = [['chromium', chromium], ['webkit', webkit]].filter(([name]) => !selected || selected.includes(name));
 const widths = process.argv.find(arg => arg.startsWith('--widths='))?.slice(9).split(',').map(Number);
 assert(engines.length);
-const samples = ['interactive-poster', 'branching-story', 'interactive-infographic', 'catch-circle'];
+const samples = ['interactive-poster', 'branching-story', 'interactive-infographic', 'catch-circle', 'sound-panel', '3d-showcase'];
 const originals = new Map(await Promise.all(samples.map(async id => [id, (await readFile(new URL(`../src/examples/${id}.html`, import.meta.url), 'utf8')).replace(/\r\n/g, '\n')])));
-const firstStarts = ['<h1', 'const scenes', 'const stages', '<h1'];
+const firstStarts = ['<h1', 'const scenes', 'const stages', '<h1', 'const sounds', 'function makeLamp'];
 const libraryHelpers = { TextEncoder, TextDecoder, Blob, crypto: webcrypto, window: {} };
 const librarySource = (await Promise.all(['library-bundle.js', 'exporter.js'].map(name => readFile(new URL(`../src/${name}`, import.meta.url), 'utf8')))).join('\n');
 runInNewContext(librarySource + '\nthis.api={libraryCache,prepareGameHtml};', libraryHelpers);

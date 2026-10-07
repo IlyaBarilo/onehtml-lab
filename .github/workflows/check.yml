@@ -35,6 +35,7 @@ jobs:
       - run: node tests/workshop.mjs --engines=chromium
       - run: npm run test:learning -- --engines=chromium
       - run: npm run test:guide -- --engines=chromium
+      - run: npm run test:media -- --engines=chromium
       - run: node tests/readiness.mjs --engines=chromium
       - run: npm run test:network
       - run: npm run test:libraries -- --engines=chromium

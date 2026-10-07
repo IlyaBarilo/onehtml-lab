@@ -26,3 +26,11 @@ OneHTML Lab включает CodeMirror 6 и его зависимости в с
 | w3c-keyname | 2.2.8 | MIT |
 
 Project / Проект: [CodeMirror](https://codemirror.net/). Build dependencies, including esbuild and Playwright, are not included in the application. / Зависимости сборки, включая esbuild и Playwright, не входят в приложение.
+
+## Three.js
+
+The 3D showcase references Three.js r160 (npm 0.160.0), licensed under MIT. Three.js is not bundled with the editor. When a user downloads a copy through the editor and embeds it in an exported HTML, the complete copyright and permission notice is included with that copy. Tests use the same exact version as a development dependency; its source and LICENSE are supplied by the npm package.
+
+3D-витрина ссылается на Three.js r160 (npm 0.160.0), распространяемую по MIT. Библиотека не включена в редактор. При получении копии через редактор и встраивании в сохраняемый HTML полный текст лицензии и сведения об авторских правах сохраняются вместе с ней. Тесты используют ту же точную версию как зависимость разработки; исходник и LICENSE поставляются npm-пакетом.
+
+Project / Проект: [Three.js](https://threejs.org/). License / Лицензия: [MIT for r160](https://github.com/mrdoob/three.js/blob/r160/LICENSE). No third-party sound recordings, models or textures are included in the new examples. / Сторонние аудиозаписи, модели и текстуры в новых примерах не используются.

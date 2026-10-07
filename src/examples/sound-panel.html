@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Звуковая панель — четыре характера</title>
+<style>
+:root { color-scheme:light; --paper:#f5f1e9; --ink:#302e35; --muted:#655f69; --line:#cdc5bb; --panel:#e7dfd4; --accent:#8c354b; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.5 system-ui,sans-serif; }
+body.dark { color-scheme:dark; --paper:#1e2029; --ink:#f4eee5; --muted:#bdb9c5; --line:#575562; --panel:#30323e; --accent:#ffabc0; }
+button,input { font:inherit; }
+button { min-height:44px; cursor:pointer; touch-action:manipulation; }
+button:focus-visible,input:focus-visible { outline:3px solid var(--accent); outline-offset:4px; }
+main { min-height:100vh; min-height:100dvh; padding:18px clamp(18px,4vw,64px); max-width:1600px; margin:auto; display:flex; flex-direction:column; gap:22px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid var(--line); padding-bottom:12px; }
+header p { margin:0; text-transform:uppercase; letter-spacing:.09em; font-size:13px; }
+#theme { width:44px; flex-shrink:0; border:1px solid var(--line); border-radius:50%; color:var(--ink); background:transparent; font-size:22px; }
+.layout { display:grid; gap:24px; flex:1; align-content:center; }
+h1 { margin:0 0 12px; font-size:clamp(38px,9vw,76px); line-height:1.04; letter-spacing:-.05em; }
+.intro { max-width:470px; margin:0; color:var(--muted); }
+.visual { position:relative; isolation:isolate; overflow:hidden; background:var(--panel); min-height:170px; height:clamp(170px,25vh,290px); border-radius:90px 90px 8px 8px; margin-top:22px; display:grid; place-items:center; }
+.orb { width:104px; height:104px; background:var(--tone,#b75268); border-radius:50%; position:relative; }
+.orb:after { content:""; position:absolute; inset:-20px; border:2px solid var(--tone,#b75268); border-radius:inherit; }
+.visual[data-shape=ray] .orb { border-radius:12px; transform:rotate(45deg); }
+.visual[data-shape=signal] .orb { border-radius:50% 50% 8px 8px; }
+.visual[data-shape=echo] .orb { border-radius:8px 70px 8px 70px; }
+.visual.flash .orb { animation:pulse .7s ease-out; }
+.visual small { position:absolute; bottom:14px; font-size:14px; color:var(--ink); }
+@keyframes pulse { 35% { scale:1.22; } }
+.pads { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.pad { text-align:left; min-height:130px; padding:18px; border:1px solid var(--line); border-radius:8px; background:transparent; color:var(--ink); display:flex; flex-direction:column; justify-content:space-between; gap:8px; }
+.pad.active { background:var(--panel); border-color:var(--ink); }
+.pad span { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; }
+.pad strong { font-size:20px; line-height:1.2; }
+.pad small { color:var(--muted); font-size:14px; }
+.pad kbd { font:14px/1 system-ui,sans-serif; padding:7px; border:1px solid var(--line); border-radius:4px; }
+.controls { margin-top:20px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.volume { display:grid; grid-template-columns:1fr auto; flex:1; min-width:160px; gap:4px 8px; }
+#volume { width:100%; min-width:0; grid-column:1/-1; height:44px; accent-color:var(--accent); margin:0; }
+#mute { border:1px solid var(--line); border-radius:6px; background:transparent; color:var(--ink); padding:10px 14px; }
+#mute[aria-pressed=true] { border-color:var(--accent); color:var(--accent); }
+#status { min-height:48px; margin:12px 0 0; color:var(--muted); overflow-wrap:anywhere; }
+footer { border-top:1px solid var(--line); padding-top:12px; color:var(--muted); font-size:14px; }
+@media (min-width:850px) { .layout { grid-template-columns:1fr 1.15fr; gap:clamp(30px,5vw,90px); align-items:center; } .visual { height:300px; } .pad { min-height:175px; } }
+@media (max-width:500px) { main { gap:16px; } .layout { gap:18px; } h1 { font-size:34px; } .visual { margin-top:14px; height:130px; min-height:130px; } .orb { width:70px; height:70px; } .orb:after { inset:-15px; } .pad { min-height:110px; padding:14px; } .pad kbd { display:none; } }
+@media (prefers-reduced-motion:reduce) { .visual.flash .orb { animation:none; } }
+</style>
+</head>
+<body>
+<main>
+  <header><p>Медиа / звук</p><button id="theme" aria-label="Включить тёмную тему" aria-pressed="false">◐</button></header>
+  <div class="layout">
+    <section aria-labelledby="title"><h1 id="title">Четыре<br>характера</h1><p class="intro">Нажмите на характер: звук, цвет и форма отвечают вместе.</p><div class="visual" id="visual" aria-hidden="true"><div class="orb"></div><small id="visual-label">Выберите характер</small></div></section>
+    <section aria-label="Звуки и громкость"><div class="pads" id="pads"></div><div class="controls"><label class="volume" for="volume"><span>Громкость</span><output id="volume-value">50%</output><input id="volume" type="range" min="0" max="100" value="50"></label><button id="mute" aria-pressed="false">Выключить звук</button></div><p id="status" role="status">Нажмите на звук. На компьютере также работают A, S, D, F.</p></section>
+  </div>
+  <footer>Звуки создаёт браузер. Без интернета и записей. При выключенном звуке остаётся визуальный отклик.</footer>
+</main>
+<script>
+// Меняйте частоты, длительность и форму волны вместе с характером отклика.
+const sounds = [
+  { name:"Импульс", key:"a", shape:"pulse", description:"Короткий упругий удар", type:"triangle", notes:[360], end:180, duration:.3, color:"#b75268" },
+  { name:"Луч", key:"s", shape:"ray", description:"Поднимающийся тон", type:"triangle", notes:[330], end:660, duration:.45, color:"#c18426" },
+  { name:"Сигнал", key:"d", shape:"signal", description:"Созвучие трёх нот", type:"sine", notes:[440,550,660], end:null, duration:.65, color:"#4d8778" },
+  { name:"Эхо", key:"f", shape:"echo", description:"Короткий падающий тон", type:"triangle", notes:[660], end:220, duration:.55, color:"#686cad" }
+];
+const pads = document.querySelector("#pads"), status = document.querySelector("#status"), volume = document.querySelector("#volume"), mute = document.querySelector("#mute"), visual = document.querySelector("#visual");
+let audio = null, master = null, muted = false, generation = 0, flashTimer;
+const voices = new Set();
+sounds.forEach((sound, index) => {
+  const button = document.createElement("button");
+  button.className = "pad"; button.dataset.sound = index;
+  const line = document.createElement("span"), title = document.createElement("strong"), key = document.createElement("kbd"), description = document.createElement("small");
+  title.textContent = sound.name; key.textContent = sound.key.toUpperCase(); description.textContent = sound.description;
+  line.append(title, key); button.append(line, description); pads.append(button);
+  button.onclick = () => playSound(index);
+});
+function showSound(index) {
+  const sound = sounds[index];
+  for (const button of pads.children) button.classList.toggle("active", Number(button.dataset.sound) === index);
+  visual.dataset.shape = sound.shape; visual.style.setProperty("--tone", sound.color);
+  document.querySelector("#visual-label").textContent = sound.name;
+  visual.classList.remove("flash"); void visual.offsetWidth; visual.classList.add("flash");
+  clearTimeout(flashTimer); flashTimer = setTimeout(() => visual.classList.remove("flash"), 750);
+}
+function silence() {
+  for (const oscillator of voices) { try { oscillator.stop(); } catch {} }
+  voices.clear();
+}
+async function playSound(index) {
+  const token = ++generation, sound = sounds[index];
+  showSound(index);
+  if (muted || Number(volume.value) === 0) { status.textContent = sound.name + " · визуальный отклик, звук выключен."; return; }
+  try {
+    const Audio = window.AudioContext || window.webkitAudioContext;
+    if (!Audio) throw new Error("Audio unavailable");
+    if (!audio || audio.state === "closed") {
+      audio = new Audio(); master = audio.createGain(); master.connect(audio.destination);
+    }
+    master.gain.setValueAtTime(Number(volume.value) / 100 * .3, audio.currentTime);
+    if (audio.state !== "running") {
+      let timer;
+      try { await Promise.race([audio.resume(), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("Audio suspended")), 1500); })]); }
+      finally { clearTimeout(timer); }
+    }
+    if (token !== generation || muted || document.hidden) return;
+    if (audio.state !== "running") throw new Error("Audio suspended");
+    if (voices.size > 8) silence();
+    const now = audio.currentTime;
+    for (const frequency of sound.notes) {
+      const oscillator = audio.createOscillator(), envelope = audio.createGain();
+      oscillator.type = sound.type; oscillator.frequency.setValueAtTime(frequency, now);
+      if (sound.end) oscillator.frequency.exponentialRampToValueAtTime(sound.end, now + sound.duration);
+      envelope.gain.setValueAtTime(0, now); envelope.gain.linearRampToValueAtTime(.6 / sound.notes.length, now + .015); envelope.gain.exponentialRampToValueAtTime(.001, now + sound.duration);
+      oscillator.connect(envelope); envelope.connect(master); voices.add(oscillator);
+      oscillator.onended = () => { voices.delete(oscillator); oscillator.disconnect(); envelope.disconnect(); };
+      oscillator.start(now); oscillator.stop(now + sound.duration + .02);
+    }
+    status.textContent = sound.name + " · " + sound.description.toLowerCase() + ".";
+  } catch {
+    if (token === generation) status.textContent = "Звук недоступен или заблокирован браузером. Визуальная панель работает; попробуйте нажать ещё раз или открыть файл в другом браузере.";
+  }
+}
+volume.oninput = () => {
+  document.querySelector("#volume-value").textContent = volume.value + "%";
+  if (master) master.gain.setTargetAtTime(muted ? 0 : Number(volume.value) / 100 * .3, audio.currentTime, .02);
+  if (Number(volume.value) === 0) { generation++; silence(); }
+};
+mute.onclick = () => {
+  muted = !muted; generation++; silence();
+  mute.setAttribute("aria-pressed", String(muted)); mute.textContent = muted ? "Включить звук" : "Выключить звук";
+  if (master) master.gain.setTargetAtTime(muted ? 0 : Number(volume.value) / 100 * .3, audio.currentTime, .02);
+  status.textContent = muted ? "Звук выключен. Формы и цвета продолжают реагировать." : "Звук включён. Нажмите на характер.";
+};
+document.addEventListener("keydown", event => {
+  if (event.repeat || event.ctrlKey || event.altKey || event.metaKey || /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
+  const index = sounds.findIndex(sound => sound.key === event.key.toLowerCase());
+  if (index >= 0) { event.preventDefault(); playSound(index); }
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { generation++; silence(); clearTimeout(flashTimer); visual.classList.remove("flash"); if (audio) audio.suspend().catch(() => {}); }
+});
+document.querySelector("#theme").onclick = event => {
+  const dark = document.body.classList.toggle("dark");
+  event.currentTarget.setAttribute("aria-pressed", String(dark)); event.currentTarget.setAttribute("aria-label", dark ? "Включить светлую тему" : "Включить тёмную тему");
+};
+</script>
+</body>
+</html>

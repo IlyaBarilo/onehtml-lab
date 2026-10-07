@@ -25,6 +25,8 @@ const exampleFiles = [
   { id: 'interactive-poster', category: 'media', platform: 'mobile', title: 'Интерактивная афиша', description: 'Анимация, программа мероприятия и смена темы.' },
   { id: 'branching-story', category: 'media', platform: 'mobile', title: 'История с выбором', description: 'Развилки, разные окончания и возврат к выбору.' },
   { id: 'interactive-infographic', category: 'media', platform: 'mobile', title: 'Интерактивная инфографика', description: 'Данные, диаграмма и пояснения по нажатию.' },
+  { id: 'sound-panel', category: 'media', platform: 'all', title: 'Звуковая панель', description: 'Четыре синтезируемых звука, формы и цвета. Работает без внешних ресурсов.' },
+  { id: '3d-showcase', category: 'media', platform: 'all', title: '3D-витрина', description: 'Лампа, материалы, свет и тени. Three.js r160 можно встроить при сохранении.' },
   { id: 'snake', platform: 'desktop', title: 'Змейка', description: 'Управляйте стрелками или WASD.' },
   { id: 'falling-stars', platform: 'desktop', title: 'Лови звёзды', description: 'Двигайте платформу мышью.' },
   { id: 'space-reaction', platform: 'desktop', title: 'Реакция на пробел', description: 'Нажмите пробел после сигнала.' },

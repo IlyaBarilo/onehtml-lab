@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3D-витрина — свет и предмет</title>
+<style>
+:root { color-scheme:light; --paper:#f2eee5; --ink:#293637; --muted:#596564; --line:#bfc6bf; --panel:#e0e5db; --accent:#29665e; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.5 system-ui,sans-serif; }
+body.dark { color-scheme:dark; --paper:#1c2428; --ink:#eef4e9; --muted:#b4c3be; --line:#4d625e; --panel:#293936; --accent:#9cd2bb; }
+button,input,select { font:inherit; }
+button { min-height:44px; cursor:pointer; touch-action:manipulation; }
+button:focus-visible,input:focus-visible,select:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+main { min-height:100vh; min-height:100dvh; padding:18px clamp(18px,4vw,64px); max-width:1600px; margin:auto; display:flex; flex-direction:column; gap:20px; }
+header { display:flex; justify-content:space-between; align-items:center; gap:12px; border-bottom:1px solid var(--line); padding-bottom:12px; }
+header p { margin:0; text-transform:uppercase; letter-spacing:.09em; font-size:13px; }
+#theme { width:44px; border:1px solid var(--line); border-radius:50%; background:transparent; color:var(--ink); font-size:22px; flex-shrink:0; }
+h1 { margin:0 0 10px; font-size:clamp(38px,9vw,72px); line-height:1; letter-spacing:-.05em; }
+.intro { color:var(--muted); margin:0; max-width:510px; }
+.layout { flex:1; display:grid; gap:22px; align-items:center; }
+.stage { position:relative; width:100%; height:clamp(260px,43vh,680px); overflow:hidden; border-radius:100px 100px 8px 8px; background:var(--panel); touch-action:pan-y; }
+.stage canvas { display:block; width:100%; height:100%; }
+.stage:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+.stage-note { position:absolute; left:16px; right:16px; bottom:12px; margin:0; pointer-events:none; font-size:13px; color:var(--ink); text-align:center; }
+#fallback { position:absolute; inset:0; display:grid; place-content:center; padding:24px; text-align:center; background:var(--panel); }
+#fallback p { margin:0; }
+.controls { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:22px; }
+.control { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.control.wide { grid-column:1/-1; }
+.control label { display:flex; justify-content:space-between; gap:8px; }
+select,input[type=range] { width:100%; min-width:0; min-height:44px; accent-color:var(--accent); }
+select { padding:8px; border:1px solid var(--line); border-radius:6px; background:var(--paper); color:var(--ink); }
+input[type=range] { margin:0; }
+.actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+.actions button { background:transparent; color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:10px 14px; }
+.actions button[aria-pressed=true] { border-color:var(--accent); color:var(--accent); }
+#status { color:var(--muted); margin:12px 0 0; min-height:48px; }
+footer { font-size:14px; color:var(--muted); border-top:1px solid var(--line); padding-top:12px; }
+[hidden] { display:none !important; }
+@media (min-width:900px) { .layout { grid-template-columns:1.25fr 1fr; gap:clamp(30px,4vw,70px); } .stage { height:min(68vh,720px); min-height:450px; } }
+</style>
+</head>
+<body>
+<main>
+  <header><p>Медиа / объём</p><button id="theme" aria-label="Включить тёмную тему" aria-pressed="false">◐</button></header>
+  <div class="layout">
+    <div class="stage" id="stage" tabindex="0" role="group" aria-label="Лампа в 3D. Стрелки влево и вправо поворачивают предмет, вверх и вниз меняют ракурс."><div id="fallback" role="status"><p id="fallback-text">Подготовка 3D-сцены…</p></div><p class="stage-note" id="stage-note" hidden>Тяните вбок для поворота · стрелки ↑↓ меняют ракурс</p></div>
+    <section aria-labelledby="title"><h1 id="title">Свет<br>и предмет</h1><p class="intro">Настольная лампа из простых деталей. Меняйте материал, ракурс и свет: объём, блики и тень меняются вместе с ними.</p>
+      <div class="controls">
+        <div class="control"><label for="color">Цвет корпуса</label><select id="color"><option value="#28786c">Зелёный</option><option value="#bb6647">Терракота</option><option value="#456ca6">Синий</option></select></div>
+        <div class="control"><label for="material">Материал</label><select id="material"><option value="matte">Матовый</option><option value="metal">Металл</option></select></div>
+        <div class="control"><label for="rotation">Поворот <output id="rotation-value">0°</output></label><input id="rotation" type="range" min="-180" max="180" step="0.1" value="0"></div>
+        <div class="control"><label for="view">Ракурс</label><select id="view"><option value="front">Спереди</option><option value="side">Сбоку</option><option value="above">Сверху</option></select></div>
+        <div class="control wide"><label for="light">Студийный свет <output id="light-value">70%</output></label><input id="light" type="range" min="0" max="100" value="70"></div>
+      </div>
+      <div class="actions"><button id="lamp" aria-pressed="true">Выключить лампу</button><button id="rotate" aria-pressed="false">Автоповорот</button><button id="reset">Сбросить</button></div><p id="status" role="status">Для сцены нужна Three.js r160. Предмет и материалы создаются кодом.</p>
+    </section>
+  </div>
+  <footer>Three.js строит объём, освещение и тени. В OneHTML Lab сохраните со встроенной библиотекой для запуска без интернета.</footer>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+const stage = document.querySelector("#stage"), status = document.querySelector("#status"), rotation = document.querySelector("#rotation"), view = document.querySelector("#view"), light = document.querySelector("#light"), lampButton = document.querySelector("#lamp"), rotateButton = document.querySelector("#rotate");
+let renderer, scene, camera, model, paint, keyLight, bulbLight, bulbMaterial, floorMaterial;
+let frame = 0, lastTime = null, automatic = false, lampOn = true, ready = false, drag = null;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+function fail(message) {
+  ready = false; automatic = false; cancelAnimationFrame(frame); frame = 0;
+  document.querySelector("#fallback").hidden = false; document.querySelector("#fallback-text").textContent = message;
+  document.querySelector("#stage-note").hidden = true; status.textContent = message;
+  rotateButton.setAttribute("aria-pressed", "false");
+  for (const control of document.querySelectorAll(".controls input,.controls select,.actions button")) control.disabled = true;
+}
+function makeLamp() {
+  const group = new THREE.Group();
+  const metal = new THREE.MeshStandardMaterial({ color:0x566468, metalness:.75, roughness:.28 });
+  const mesh = (geometry, material, x, y, z) => { const part = new THREE.Mesh(geometry, material); part.position.set(x,y,z); part.castShadow = true; part.receiveShadow = true; group.add(part); return part; };
+  mesh(new THREE.CylinderGeometry(.72,.8,.16,40), paint, 0,.08,0);
+  mesh(new THREE.CylinderGeometry(.075,.075,1.65,20), metal, 0,.98,0);
+  const arm = mesh(new THREE.CylinderGeometry(.065,.065,1.08,20), metal, .36,1.78,0); arm.rotation.z = -Math.PI / 3;
+  const shade = mesh(new THREE.CylinderGeometry(.23,.62,.55,40,1,true), paint, .82,1.8,0); shade.rotation.z = -.25;
+  const liner = new THREE.MeshStandardMaterial({ color:0xffe4b1, side:THREE.BackSide, roughness:.65 });
+  const inside = mesh(new THREE.CylinderGeometry(.22,.61,.53,40,1,true), liner, .82,1.8,0); inside.rotation.z = -.25;
+  bulbMaterial = new THREE.MeshStandardMaterial({ color:0xffe6b2, emissive:0xffc269, emissiveIntensity:1.5, roughness:.2 });
+  mesh(new THREE.SphereGeometry(.13,20,16), bulbMaterial, .88,1.59,0);
+  return group;
+}
+function setCamera() {
+  const positions = { front:[3.9,2.8,5.4], side:[5.6,2.5,.3], above:[.5,6,3.8] };
+  camera.position.set(...positions[view.value]); camera.lookAt(.15,1,0);
+}
+function applyRotation() {
+  model.rotation.y = Number(rotation.value) * Math.PI / 180;
+  bulbLight.position.set(.88,1.45,0).applyAxisAngle(new THREE.Vector3(0,1,0), model.rotation.y);
+  document.querySelector("#rotation-value").textContent = rotation.value + "°";
+}
+function updateScene() {
+  if (!ready) return;
+  applyRotation();
+  paint.color.set(document.querySelector("#color").value);
+  const metallic = document.querySelector("#material").value === "metal";
+  paint.metalness = metallic ? .85 : .12; paint.roughness = metallic ? .22 : .65;
+  keyLight.intensity = Number(light.value) / 100 * 4;
+  bulbLight.intensity = lampOn ? 5 : 0; bulbMaterial.emissiveIntensity = lampOn ? 1.5 : 0;
+  const dark = document.body.classList.contains("dark");
+  scene.background.set(dark ? 0x293936 : 0xe0e5db); floorMaterial.color.set(dark ? 0x35423a : 0xd0d2bb);
+  document.querySelector("#light-value").textContent = light.value + "%";
+  lampButton.setAttribute("aria-pressed", String(lampOn)); lampButton.textContent = lampOn ? "Выключить лампу" : "Включить лампу";
+  rotateButton.setAttribute("aria-pressed", String(automatic)); rotateButton.textContent = automatic ? "Остановить поворот" : "Автоповорот";
+  setCamera(); render();
+}
+function render() {
+  if (!ready || document.hidden) return;
+  renderer.render(scene, camera);
+}
+function tick(time) {
+  frame = 0;
+  if (!ready || !automatic || document.hidden || reduceMotion.matches) { lastTime = null; return; }
+  const delta = lastTime === null ? 0 : Math.min((time - lastTime) / 1000,.05); lastTime = time;
+  const degrees = (Number(rotation.value) + delta * 18 + 180) % 360 - 180;
+  rotation.value = String(Math.round(degrees * 100) / 100); applyRotation(); render();
+  frame = requestAnimationFrame(tick);
+}
+function scheduleRotation() {
+  cancelAnimationFrame(frame); frame = 0; lastTime = null;
+  if (automatic && ready && !document.hidden && !reduceMotion.matches) frame = requestAnimationFrame(tick);
+}
+function resize() {
+  if (!ready) return;
+  const rect = stage.getBoundingClientRect();
+  camera.aspect = rect.width / Math.max(1,rect.height); camera.updateProjectionMatrix(); renderer.setSize(rect.width,rect.height,false); render();
+}
+function setupScene() {
+  if (!window.THREE || THREE.REVISION !== "160") { fail("Three.js r160 не загрузилась. В OneHTML Lab получите библиотеку и сохраните её вместе с HTML; для первого получения нужен интернет."); return; }
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias:true }); renderer.setPixelRatio(Math.min(devicePixelRatio || 1,1.75));
+    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1;
+    stage.prepend(renderer.domElement); scene = new THREE.Scene(); scene.background = new THREE.Color(0xe0e5db);
+    camera = new THREE.PerspectiveCamera(38,1,.1,30);
+    paint = new THREE.MeshStandardMaterial({ color:0x28786c, side:THREE.DoubleSide, metalness:.12, roughness:.65 });
+    model = makeLamp(); scene.add(model);
+    floorMaterial = new THREE.MeshStandardMaterial({ color:0xd0d2bb, roughness:.9 });
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(200,200), floorMaterial); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; floor.position.y = -.015; scene.add(floor);
+    scene.add(new THREE.HemisphereLight(0xe2f0ff,0x5b6957,1.1));
+    keyLight = new THREE.DirectionalLight(0xfff0d6,2.8); keyLight.position.set(-3,6,4); keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024,1024); Object.assign(keyLight.shadow.camera,{ left:-3,right:3,top:4,bottom:-3,near:.5,far:20 }); keyLight.shadow.camera.updateProjectionMatrix(); keyLight.shadow.bias = -.0004; keyLight.shadow.normalBias = .025; scene.add(keyLight);
+    bulbLight = new THREE.PointLight(0xffbb65,5,8,2); bulbLight.castShadow = true; bulbLight.shadow.mapSize.set(512,512); bulbLight.shadow.bias = -.001; scene.add(bulbLight);
+    ready = true; document.querySelector("#fallback").hidden = true; document.querySelector("#stage-note").hidden = false;
+    status.textContent = reduceMotion.matches ? "Сцена готова. Автоповорот выключен по настройке уменьшения движения; доступны ручные действия." : "Сцена готова. Вращайте предмет, сравнивайте материал и свет.";
+    rotateButton.disabled = reduceMotion.matches; updateScene(); new ResizeObserver(resize).observe(stage);
+    renderer.domElement.addEventListener("webglcontextlost", event => { event.preventDefault(); fail("3D-контекст потерян. Запустите пример снова; на слабом устройстве закройте другие приложения."); });
+  } catch { fail("3D недоступно в этом браузере или устройстве. Попробуйте открыть файл в браузере с WebGL; код и задания остаются доступны."); }
+}
+for (const id of ["color","material","rotation","view","light"]) document.querySelector("#" + id).addEventListener("input", updateScene);
+lampButton.onclick = () => { lampOn = !lampOn; updateScene(); };
+rotateButton.onclick = () => { automatic = !automatic; updateScene(); scheduleRotation(); };
+document.querySelector("#reset").onclick = () => {
+  automatic = false; lampOn = true; rotation.value = "0"; view.value = "front"; light.value = "70";
+  document.querySelector("#color").value = "#28786c"; document.querySelector("#material").value = "matte"; updateScene(); scheduleRotation();
+};
+stage.addEventListener("pointerdown", event => { if (!ready || !event.isPrimary || event.button !== 0) return; drag = { id:event.pointerId, x:event.clientX, angle:Number(rotation.value) }; stage.setPointerCapture(event.pointerId); });
+stage.addEventListener("pointermove", event => {
+  if (!drag || event.pointerId !== drag.id) return;
+  automatic = false; rotation.value = String(Math.max(-180,Math.min(180,drag.angle + (event.clientX - drag.x) * .7))); updateScene(); scheduleRotation();
+});
+for (const name of ["pointerup","pointercancel","lostpointercapture"]) stage.addEventListener(name, () => { drag = null; });
+stage.addEventListener("keydown", event => {
+  if (!ready || event.ctrlKey || event.altKey || event.metaKey || !["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(event.key)) return;
+  event.preventDefault(); automatic = false;
+  if (event.key === "ArrowLeft" || event.key === "ArrowRight") rotation.value = String(Math.max(-180,Math.min(180,Number(rotation.value) + (event.key === "ArrowRight" ? 10 : -10))));
+  else { const views = ["front","side","above"], index = views.indexOf(view.value); view.value = views[(index + (event.key === "ArrowUp" ? 1 : 2)) % 3]; }
+  updateScene(); scheduleRotation();
+});
+document.querySelector("#theme").onclick = event => {
+  const dark = document.body.classList.toggle("dark"); event.currentTarget.setAttribute("aria-pressed", String(dark)); event.currentTarget.setAttribute("aria-label", dark ? "Включить светлую тему" : "Включить тёмную тему"); updateScene();
+};
+document.addEventListener("visibilitychange", () => { drag = null; scheduleRotation(); render(); });
+reduceMotion.addEventListener("change", () => { if (!ready) return; if (reduceMotion.matches) automatic = false; rotateButton.disabled = reduceMotion.matches; updateScene(); scheduleRotation(); });
+setupScene();
+</script>
+</body>
+</html>

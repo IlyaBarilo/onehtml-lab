@@ -41,6 +41,7 @@ jobs:
       - run: node tests/stage7.mjs --engines=chromium
       - run: npm run test:learning -- --engines=chromium
       - run: npm run test:guide -- --engines=chromium
+      - run: npm run test:media -- --engines=chromium
       - run: npm run test:network
       - run: npm run test:libraries -- --engines=chromium
       - run: npm run test:draft
