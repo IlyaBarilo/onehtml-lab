@@ -14,6 +14,29 @@ const parts = context.codeDiff(before, after);
 const full = parts.map(part => part.text).join('');
 const counts = type => Array.from(parts.filter(part => part.type === type).map(part => part.text).join('')).length;
 
+async function checkRenderedGaps(page, editor, expected) {
+  const region = page.locator(editor === 'codemirror' ? '#comparison-editor' : '#diff-content');
+  const gaps = region.locator('.comparison-gap');
+  if (editor === 'native') {
+    await page.waitForFunction(count => document.querySelectorAll('#diff-content .comparison-gap').length === count, expected.length);
+    assert.deepEqual(await gaps.evaluateAll(elements => elements.map(el => Number(el.dataset.lines))), expected);
+    return;
+  }
+  // CodeMirror virtualizes off-screen blocks. Inspect the rendered regions at
+  // both ends rather than demanding that every placeholder exists at once.
+  const scroller = region.locator('.cm-scroller');
+  const seen = new Set();
+  for (const end of [false, true, false]) {
+    await scroller.evaluate((element, end) => { element.scrollTop = end ? element.scrollHeight : 0; }, end);
+    const edge = end ? expected.at(-1) : expected[0];
+    await page.waitForFunction(edge => [...document.querySelectorAll('#comparison-editor .comparison-gap')].some(el => Number(el.dataset.lines) === edge), edge);
+    const values = await gaps.evaluateAll(elements => elements.map(el => Number(el.dataset.lines)));
+    for (const value of values) { assert(expected.includes(value), `Unexpected hidden region: ${value}`); seen.add(value); }
+  }
+  assert.deepEqual(expected.filter(value => seen.has(value)), expected, 'Every compact region renders when scrolled into view');
+  assert.deepEqual(await page.locator('#diff-content .comparison-gap').evaluateAll(elements => elements.map(el => Number(el.dataset.lines))), expected, 'The complete comparison retains every hidden region');
+}
+
 async function checkGutterAlignment(page, source = full) {
   const inspect = source => {
     const root = document.querySelector('#comparison-editor');
@@ -70,7 +93,7 @@ export async function checkCompactComparison(page, screenshotPrefix) {
       const gaps = region.locator('.comparison-gap');
       await gaps.first().waitFor();
       assert.equal(await page.locator('#comparison-compact').getAttribute('aria-pressed'), 'true', 'Every new comparison starts compact');
-      assert.deepEqual(await gaps.evaluateAll(elements => elements.map(el => Number(el.dataset.lines))), [10, 17, 14]);
+      await checkRenderedGaps(page, editor, [10, 17, 14]);
       assert(!(await region.innerText()).includes('Строка 00'));
       assert(!(await region.innerText()).includes('Строка 54'));
       assert((await region.innerText()).includes('Строка 10'));
@@ -98,7 +121,7 @@ export async function checkCompactComparison(page, screenshotPrefix) {
         assert.equal(copied, full, 'CodeMirror copy retains all hidden lines');
       }
       await gaps.first().click();
-      assert.deepEqual(await gaps.evaluateAll(elements => elements.map(el => Number(el.dataset.lines))), [17, 14], 'Opening one gap preserves the others');
+      await checkRenderedGaps(page, editor, [17, 14]);
       assert((await region.innerText()).includes('<img src=x onerror=alert(1)>'));
       const expandedLine = full.split('\n').findIndex(line => line.includes('Строка 10')) + 1;
       if (editor === 'codemirror') {
@@ -112,13 +135,12 @@ export async function checkCompactComparison(page, screenshotPrefix) {
       if (editor === 'native') assert.equal(await region.textContent(), full, 'Full comparison restores exact text');
       assert.equal(await code.inputValue(), after);
       await page.locator('#comparison-compact').click();
-      await page.waitForFunction(selector => document.querySelectorAll(`${selector} .comparison-gap`).length === 3, editor === 'codemirror' ? '#comparison-editor' : '#diff-content');
-      assert.deepEqual(await gaps.evaluateAll(elements => elements.map(el => Number(el.dataset.lines))), [10, 17, 14]);
+      await checkRenderedGaps(page, editor, [10, 17, 14]);
       await page.locator('#comparison-game-tab').click();
       assert(await page.locator('#comparison-compact').isHidden());
       await page.locator('#comparison-code-tab').click();
       assert(await page.locator('#comparison-compact').isVisible());
-      assert.equal(await gaps.count(), 3);
+      await checkRenderedGaps(page, editor, [10, 17, 14]);
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Compact comparison fits the phone');
       await page.locator('#comparison-close').click();
       assert.equal(await code.inputValue(), after);

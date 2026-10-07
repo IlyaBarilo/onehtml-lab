@@ -108,6 +108,38 @@ async function downloadHtml(page, embed = true) {
   return readFile(await (await event).path(), 'utf8');
 }
 
+async function checkPreviewLayout(page, name) {
+  const layout = await page.locator('html').evaluate(() => {
+    const footer = document.querySelector('footer').getBoundingClientRect();
+    return { top: document.querySelector('header').getBoundingClientRect().top,
+      bottom: footer.bottom, height: innerHeight, width: innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      scrollHeight: document.documentElement.scrollHeight,
+      overflow: getComputedStyle(document.body).overflowY,
+      stage: document.querySelector('#stage').getBoundingClientRect().height };
+  });
+  const detail = `${name}: ${JSON.stringify(layout)}`;
+  assert(layout.scrollWidth <= layout.width, 'The test must not overflow horizontally: ' + detail);
+  assert(layout.stage >= 64, 'Keep space for the test scene: ' + detail);
+  if (layout.height > 360) {
+    assert(layout.top >= 0 && layout.bottom <= layout.height + 1, 'Metrics and load controls must fit the phone preview together: ' + detail);
+  } else {
+    // The existing example uses scrolling below 360px to keep its scene and touch targets usable.
+    assert.equal(layout.overflow, 'auto', 'A very short preview must allow vertical scrolling: ' + detail);
+    assert(layout.scrollHeight > layout.height, 'The compact fallback must expose its full content: ' + detail);
+    await page.locator('footer').scrollIntoViewIfNeeded();
+    const controls = await page.locator('html').evaluate(() => Array.from(document.querySelectorAll('.controls button, .load label, #load')).map(element => {
+      const rect = element.getBoundingClientRect();
+      return { top: rect.top, bottom: rect.bottom, height: rect.height, button: element.tagName === 'BUTTON' };
+    }));
+    assert(controls.every(control => control.top >= 0 && control.bottom <= layout.height + 1 && (!control.button || control.height >= 44)),
+      'Scrolling must make all load and touch controls fully accessible: ' + JSON.stringify(controls));
+    await page.locator('header').scrollIntoViewIfNeeded();
+    const header = await page.locator('header').evaluate(element => ({ top: element.getBoundingClientRect().top, bottom: element.getBoundingClientRect().bottom }));
+    assert(header.top >= 0 && header.bottom <= layout.height + 1, 'Metrics and library selection must remain reachable');
+  }
+}
+
 async function checkCompactLayout(page, name) {
   await page.locator('#scenario').selectOption('load');
   await page.locator('#load').evaluate(field => {
@@ -143,8 +175,10 @@ async function checkCompactLayout(page, name) {
       assert(layout.controls.every(control => control.height >= 44 && control.left >= 0 && control.right <= layout.width && control.bottom <= layout.height + 1), 'Touch controls must stay fully visible: ' + detail);
       if (width === 320 && font.startsWith('Verdana')) await page.screenshot({ path: join(tmpdir(), `onehtml-lab-performance-compact-${name}.png`) });
     }
+    await page.setViewportSize({ width, height: 317 });
+    await checkPreviewLayout(page, name);
   }
-  console.log(`${name}: compact phone layout fits at 320/390 × 367 with three system fonts and full-sized touch controls.`);
+  console.log(`${name}: compact phone layout fits at 320/390 × 367 with three system fonts; 317px previews keep their controls accessible by scrolling.`);
 }
 
 try {
@@ -203,10 +237,8 @@ try {
         assert(await frame.locator('#library-info').isHidden());
         await frame.locator('#scenario').selectOption('load');
         await frame.locator('#fps').filter({ hasText: /^\d+$/ }).waitFor();
-        const initialLayout = await frame.locator('header').evaluate(header => ({ top: header.getBoundingClientRect().top,
-          bottom: document.querySelector('footer').getBoundingClientRect().bottom, height: innerHeight }));
+        await checkPreviewLayout(frame, name);
         if (name === 'chromium') await page.screenshot({ path: join(tmpdir(), 'onehtml-lab-performance-example.png') });
-        assert(initialLayout.top >= 0 && initialLayout.bottom <= initialLayout.height + 1, 'Metrics and load controls must fit the phone preview together: ' + JSON.stringify(initialLayout));
         assert.equal(await frame.locator('#load').getAttribute('max'), '10000');
         await frame.locator('#pause').click();
         await frame.locator('#load').evaluate(field => {
@@ -224,11 +256,8 @@ try {
         await frame.locator('#stage').tap({ position: { x: 45, y: 60 } });
         assert.equal(await frame.locator('#tap-count').innerText(), '2');
         await frame.locator('#input-time').filter({ hasText: /^До кадра: [\d\s,.]+ мс$/ }).waitFor();
-        const layout = await frame.locator('footer').evaluate(footer => ({ bottom: footer.getBoundingClientRect().bottom,
-          viewportHeight: innerHeight, viewportWidth: innerWidth, scrollWidth: document.documentElement.scrollWidth }));
+        await checkPreviewLayout(frame, name);
         if (name === 'chromium') await page.screenshot({ path: join(tmpdir(), 'onehtml-lab-performance-example.png') });
-        assert(layout.bottom <= layout.viewportHeight + 1, 'Load controls must remain visible inside the phone preview: ' + JSON.stringify(layout));
-        assert(layout.scrollWidth <= layout.viewportWidth, 'The test must not overflow horizontally');
         assert.match(await frame.locator('#library-description').innerText(), /Canvas 2D.*без игровой библиотеки/);
         await frame.locator('#scenario').selectOption('showcase');
         assert(await frame.locator('.load').isHidden());

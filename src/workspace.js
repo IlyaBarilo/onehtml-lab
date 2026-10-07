@@ -57,6 +57,7 @@ function closeWorkspacePanel(restoreFocus = true) {
   if (entry.panel === activityPanel) releaseMediaPreviews();
   if (entry.panel.id === 'media-panel') releasePromptMediaPreviews();
   if (entry.panel === saveDialog) saveFileList.replaceChildren();
+  if (entry.panel === copyDialog) pendingManualCopy = null;
   if (currentPanel()) currentPanel().hidden = false;
   else {
     workspaceElement.classList.remove('has-panel');

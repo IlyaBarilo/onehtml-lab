@@ -24,11 +24,15 @@ let aiProject = 'game';
 let aiSettingsLoaded = false;
 let aiSettingsPersistent = true;
 const aiSettingsKey = 'onehtml-lab-ai-settings';
+let aiSettingsTimer;
 
 function saveAiPromptSettings() {
   if (!aiSettingsLoaded) return;
-  try { localStorage.setItem(aiSettingsKey, JSON.stringify({ project: aiProject, platform: selectedPlatform })); aiSettingsPersistent = true; }
+  clearTimeout(aiSettingsTimer);
+  try { localStorage.setItem(aiSettingsKey, JSON.stringify({ project: aiProject, platform: selectedPlatform,
+    mode: aiMode, tasks: { ...aiTasks, [aiMode]: aiTask.value }, shorten: aiShorten.checked, history: aiHistory.checked })); aiSettingsPersistent = true; }
   catch { aiSettingsPersistent = false; }
+  updateAiProjectLabels();
 }
 
 function loadAiPromptSettings() {
@@ -38,9 +42,15 @@ function loadAiPromptSettings() {
   try { value = JSON.parse(raw); } catch { /* Ignore damaged preferences without disabling usable storage. */ }
   aiProject = ['game', 'application'].includes(value?.project) ? value.project
     : examples.some(example => example.category === 'media' && gameStorageScope === `example:${example.id}`) ? 'application' : 'game';
+  for (const mode of Object.keys(aiTasks)) if (typeof value?.tasks?.[mode] === 'string') aiTasks[mode] = value.tasks[mode];
+  aiTask.value = aiTasks[aiMode];
+  if (typeof value?.shorten === 'boolean') aiShorten.checked = value.shorten;
+  if (typeof value?.history === 'boolean') aiHistory.checked = value.history;
   if (['mobile', 'desktop'].includes(value?.platform)) setPlatform(value.platform);
   aiSettingsLoaded = true;
+  if (Object.hasOwn(aiTasks, value?.mode ?? '')) setAiMode(value.mode);
   updateAiProjectLabels();
+  void loadAiPromptHistory();
 }
 
 function updateAiProjectLabels() {
@@ -58,7 +68,7 @@ function updateAiProjectLabels() {
   if (aiMode === 'fix') aiTask.placeholder = application ? 'Например: кнопка не раскрывает программу мероприятия' : 'Например: после поворота змейка движется не в ту сторону';
   const note = document.querySelector('#ai-settings-note');
   note.hidden = aiSettingsPersistent;
-  note.textContent = aiSettingsPersistent ? '' : 'Тип работы и устройство запомнятся только в этом сеансе.';
+  note.textContent = aiSettingsPersistent ? '' : 'Пожелания и настройки запроса запомнятся только в этом сеансе.';
 }
 
 function setAiProject(project) {
@@ -83,7 +93,7 @@ function aiStarterTask(kind, files = []) {
 function aiPromptSnapshot() {
   const baseline = aiMode === 'check' && aiHistory.checked ? aiCheckBaseline() : null;
   return { mode: aiMode, platform: selectedPlatform, task: aiTask.value.trim(), shorten: aiShorten.checked,
-    project: aiProject,
+    project: aiProject, includePrevious: aiHistory.checked,
     libraryApplication: gameStorageScope === 'example:3d-showcase',
     quality: aiMode === 'check' && aiQualityContext?.code === codeField.value && aiQualityContext.scope === gameStorageScope ? aiQualityContext.text : '',
     code: aiMode === 'create' ? '' : codeField.value, media: JSON.stringify(promptMediaFiles()), mediaVersion: promptMediaVersion,
@@ -188,6 +198,7 @@ function setAiMode(mode) {
     : 'Скопируйте запрос и вставьте его в ИИ-бота. Полученный HTML-код вставьте в редактор.';
   for (const button of document.querySelectorAll('[data-ai-mode]')) button.setAttribute('aria-pressed', String(button.dataset.aiMode === mode));
   setAiPreview(false);
+  saveAiPromptSettings();
   updateAiControls();
 }
 
@@ -204,6 +215,7 @@ function openAiPrompts(mode, nested = false) {
 
 function updateAiControls() {
   if (!aiReady) return;
+  updateAiSessionControls();
   const empty = !codeField.value.trim();
   document.querySelector('#prompt-change').disabled = empty;
   document.querySelector('#prompt-fix').disabled = empty;
@@ -315,7 +327,7 @@ async function prepareAiPrompt(snapshot, revision) {
   aiSummary.textContent = `В запросе: ${formatSymbolCount(symbolCount(text))}` + (saved ? ` · убрано из кода: ${formatSymbolCount(saved)}` : '');
   aiLibraries.textContent = notes.join('\n');
   aiLibraries.hidden = !notes.length;
-  aiResult = { snapshot, text, mediaFiles: mediaPlan.files };
+  aiResult = { snapshot, text, mediaFiles: mediaPlan.files, scope: gameStorageScope };
   aiCopy.disabled = false;
   aiView.disabled = false;
 }
@@ -328,19 +340,26 @@ function initAiPrompts() {
     const text = aiStarterTask(event.target.value, promptMediaFiles()); event.target.value = '';
     if (!text || aiMode !== 'create' || aiProject !== 'application') return;
     aiTask.value = [aiTask.value.trim(), text].filter(Boolean).join('\n\n');
-    aiTasks.create = aiTask.value; updateAiControls(); aiTask.focus({ preventScroll: true });
+    aiTasks.create = aiTask.value; saveAiPromptSettings(); updateAiControls(); aiTask.focus({ preventScroll: true });
   });
   for (const button of document.querySelectorAll('[data-ai-mode]')) button.addEventListener('click', () => setAiMode(button.dataset.aiMode));
-  aiTask.addEventListener('input', () => { aiTasks[aiMode] = aiTask.value; updateAiControls(); });
-  aiShorten.addEventListener('change', updateAiControls);
-  aiHistory.addEventListener('change', updateAiControls);
+  aiTask.addEventListener('input', () => { aiTasks[aiMode] = aiTask.value; clearTimeout(aiSettingsTimer);
+    aiSettingsTimer = setTimeout(saveAiPromptSettings, 200); updateAiControls(); });
+  for (const field of [aiShorten, aiHistory]) field.addEventListener('change', () => { saveAiPromptSettings(); updateAiControls(); });
+  window.addEventListener('pagehide', saveAiPromptSettings);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveAiPromptSettings(); });
   aiView.addEventListener('click', () => setAiPreview(!aiShowingPreview));
-  aiOutput.addEventListener('copy', () => { if(aiResult && sameAiSnapshot(aiResult.snapshot,aiPromptSnapshot()))rememberPromptMedia(aiResult.mediaFiles); });
+  aiOutput.addEventListener('copy', event => {
+    const result = aiResult;
+    if (!result || !sameAiSnapshot(result.snapshot, aiPromptSnapshot()) || aiOutput.selectionStart !== 0 || aiOutput.selectionEnd !== result.text.length) return;
+    queueMicrotask(() => { if (!event.defaultPrevented) acceptCopiedAiPrompt(result); });
+  });
   aiCopy.addEventListener('click', () => {
     if (!aiResult || !sameAiSnapshot(aiResult.snapshot, aiPromptSnapshot())) { updateAiControls(); return; }
     // Compilation finished before this click, preserving clipboard user activation.
-    rememberPromptMedia(aiResult.mediaFiles);
-    void copyOrSelect(aiResult.text, 'Запрос скопирован. Вставьте его в выбранного ИИ-бота.');
+    const result = aiResult;
+    void copyOrSelect(result.text, 'Запрос скопирован. Вставьте его в выбранного ИИ-бота.', () => acceptCopiedAiPrompt(result));
   });
   document.querySelector('#error-ai').addEventListener('click', () => openAiPrompts('fix'));
+  initAiSession();
 }

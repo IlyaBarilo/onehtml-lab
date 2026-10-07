@@ -405,18 +405,32 @@ librarySkipButton.addEventListener('click', async () => {
   updateControls();
 });
 
-async function copyOrSelect(text, successMessage) {
+let pendingManualCopy = null;
+async function copyOrSelect(text, successMessage, onCopied = null) {
   try {
     if (!navigator.clipboard?.writeText) throw new Error('clipboard-unavailable');
     await navigator.clipboard.writeText(text);
+    pendingManualCopy = null;
+    onCopied?.();
     inform(successMessage);
   } catch {
+    pendingManualCopy = { text, onCopied };
     copyTextField.value = text;
     showWorkspacePanel(copyDialog, true);
     copyTextField.focus();
     copyTextField.select();
   }
 }
+
+copyTextField.addEventListener('copy', event => {
+  const pending = pendingManualCopy;
+  if (!pending?.onCopied || copyTextField.value !== pending.text || copyTextField.selectionStart !== 0 || copyTextField.selectionEnd !== pending.text.length) return;
+  queueMicrotask(() => {
+    if (event.defaultPrevented || pendingManualCopy !== pending) return;
+    pendingManualCopy = null;
+    pending.onCopied();
+  });
+});
 
 function renderExamples() {
   exampleList.replaceChildren();

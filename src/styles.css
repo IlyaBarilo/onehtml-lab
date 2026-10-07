@@ -773,6 +773,29 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
   .ai-footer-actions { flex: 0 0 300px; }
 }
 
+/* Prompt history and answer review use the existing workspace screens. */
+:where(#ai-prompts-panel, #ai-answer-panel) button { min-height: 44px; padding: 9px 12px; border: 1px solid #b7cff0; border-radius: 7px; background: #edf4ff; color: #315c93; font: inherit; font-size: 15px; }
+:where(#ai-prompts-panel, #ai-answer-panel) button:disabled { opacity: .35; }
+.ai-prompts-list { list-style: none; margin: 0; padding: 0; }
+.ai-prompts-list li { border-bottom: 1px solid #d7e3f2; }
+.ai-prompts-list button { display: block; width: 100%; min-height: 64px; padding: 12px 0; border: 0; border-radius: 0; background: transparent; text-align: left; }
+.ai-prompts-list strong, .ai-prompts-list span { display: block; font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+.ai-prompts-list span { margin-top: 4px; color: #526b8c; }
+#ai-prompts-detail label, #ai-answer-compose > label, #ai-answer-block-option label { display: block; margin: 12px 0 8px; font-size: 16px; }
+#ai-prompts-text, #ai-answer-text { height: 220px; min-height: 140px; padding: 12px; border: 1px solid #b9cbe3; border-radius: 7px; font-size: 16px; }
+#ai-answer-block { width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid #b9cbe3; border-radius: 7px; background: #fff; color: #253d5a; font: inherit; }
+#ai-answer-clean-option { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 16px; }
+.ai-answer-footer { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; padding: 8px 16px max(10px, env(safe-area-inset-bottom)); border-top: 1px solid #dbe5f3; background: #f5f8fd; }
+.ai-answer-footer button { min-height: 44px; padding: 9px 14px; font: inherit; }
+#ai-answer-apply { background: #2d6cdf; border-color: #2d6cdf; color: #fff; }
+#ai-answer-apply:disabled { opacity: .35; }
+.ai-answer-diff { margin: 14px 0; font: var(--editor-font-size, 16px)/1.6 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; color: #173c72; }
+.ai-answer-gap { color: #526b8c; }
+.theme-dark .ai-answer-footer { background: #202c3d; border-color: #3b4b61; }
+.theme-dark .ai-prompts-list li { border-color: #3b4b61; }
+.theme-dark .ai-prompts-list button { background: transparent; }
+.theme-dark .ai-prompts-list span, .theme-dark .ai-answer-gap { color: #a9b8cc; }
+.theme-dark .ai-answer-diff { color: #d9e2ef; }
 /* The optional editor uses the same workspace and source document. */
 #editor-engine { min-height: 44px; max-width: 166px; padding: 6px 9px; font: inherit; color: #315c93; background: #f0f5fc; border: 1px solid #c9d9ed; border-radius: 6px; }
 .alternative-active #code { visibility: hidden; pointer-events: none; }
