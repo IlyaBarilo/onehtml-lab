@@ -48,6 +48,7 @@
         <button id="expert-toggle" class="icon-button expert-button" type="button" aria-label="Экспертный режим" aria-pressed="false" title="Включить экспертный режим">
           <!-- ICON:expert -->
         </button>
+        <button id="preview-pick" class="icon-button" type="button" aria-label="Указать элемент для ИИ" aria-pressed="false" title="Указать элемент для изменения через ИИ" hidden><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5M9 8l2 12 3-4 4 4 2-2-4-4 4-3Z"/></svg></button>
         <button id="preview-expand" class="icon-button" type="button" aria-label="Развернуть игру" aria-pressed="false" title="Развернуть игру" hidden><!-- ICON:expand --></button>
       </div>
     </header>
@@ -72,6 +73,11 @@
     </div>
     <button id="activity-toggle" class="activity-toggle" type="button" aria-label="Открыть сообщения" aria-expanded="false" aria-controls="activity-panel" hidden><span id="activity-summary" role="status" aria-live="polite"></span><span aria-hidden="true">›</span></button>
     <p id="speed-strip" hidden></p>
+    <div id="picker-bar" hidden>
+      <span id="picker-description" role="status" aria-live="polite"></span>
+      <button id="picker-accept" class="import-button" type="button" disabled>К запросу</button>
+      <button id="picker-cancel" class="icon-button" type="button" aria-label="Отменить выбор элемента" title="Отменить выбор элемента">✕</button>
+    </div>
     <section class="workspace" aria-label="Рабочая область">
       <section id="media-panel" class="work-panel" aria-labelledby="media-prompt-title" hidden>
         <div class="panel-heading"><h2 id="media-prompt-title">Медиа</h2><button id="media-prompt-close" type="button" aria-label="Закрыть медиа">✕</button></div>
@@ -324,6 +330,10 @@
     <div id="ai-starter-options" hidden><label for="ai-starter">Добавить заготовку задачи</label><select id="ai-starter"><option value="">Выберите основу…</option><option value="poster">Интерактивная афиша</option><option value="story">История с выбором</option><option value="infographic">Инфографика</option><option value="quiz">Викторина</option></select><p class="diagnostic-note">Заготовка допишется к пожеланиям. Замените текст в квадратных скобках своей идеей.</p></div>
     <label id="ai-task-label" for="ai-task">Тема игры и пожелания</label>
     <textarea id="ai-task" rows="3" aria-describedby="ai-summary" placeholder="Например: игра про космос, собирать звёзды и избегать метеоритов"></textarea>
+    <section id="ai-element-card" aria-label="Выбранный элемент" hidden>
+      <strong id="ai-element-title"></strong><p id="ai-element-note"></p>
+      <div class="diagnostic-actions"><button id="ai-element-repick" type="button">Выбрать другой</button><button id="ai-element-remove" type="button">Убрать выбор</button></div>
+    </section>
     <div id="ai-game-options" class="ai-game-options">
       <div class="ai-game-grid"><label>Пространство<select id="ai-game-dimension"></select></label><label>Основа игры<select id="ai-game-basis"></select></label></div>
       <p id="ai-game-recommendation" class="diagnostic-note"></p>

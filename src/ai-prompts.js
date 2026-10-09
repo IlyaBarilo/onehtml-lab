@@ -98,6 +98,7 @@ function aiPromptSnapshot() {
     project: aiProject, includePrevious: aiHistory.checked, game: aiProject === 'game' && aiMode === 'create' ? JSON.stringify(aiGame) : '',
     libraryApplication: gameStorageScope === 'example:3d-showcase',
     quality: aiMode === 'check' && aiQualityContext?.code === codeField.value && aiQualityContext.scope === gameStorageScope ? aiQualityContext.text : '',
+    element: aiMode === 'change' && aiElementContext?.code === codeField.value && aiElementContext.scope === gameStorageScope ? JSON.stringify(aiElementContext.element) : '',
     code: aiMode === 'create' ? '' : codeField.value, media: JSON.stringify(promptMediaFiles()), mediaVersion: promptMediaVersion,
     selection: aiMode === 'explain' ? codeField.value.slice(codeField.selectionStart, codeField.selectionEnd) : '',
     selectionStart: aiMode === 'explain' ? codeField.selectionStart : 0,
@@ -158,14 +159,19 @@ function aiPromptText(snapshot, code, shortened, pastCode = snapshot.pastCode) {
     parts.push('Текущий код:\n' + code);
     return parts.join('\n\n');
   }
+  const targeted = snapshot.mode === 'change' && snapshot.element;
   const parts = [snapshot.mode === 'fix' ? `Исправь ошибку в ${application ? 'приложении' : 'игре'} ниже.` : `Измени ${application ? 'приложение' : 'игру'} ниже по моему описанию.`,
     `Верни полный HTML-файл, чтобы я мог целиком заменить прежний код. ${device}`];
   if (!application) parts.push('Сохрани механику, существующие подключения медиа, технологию и точные версии библиотек текущего кода, если я явно не попросил их изменить. Не переводи игру на другую основу по прежнему выбору для новой игры. Не добавляй внешние зависимости без моего запроса.');
   if (application) parts.push(snapshot.libraryApplication
     ? 'Сохрани HTML со встроенными CSS и кодом приложения. Сохрани существующее подключение Three.js r160 и способ его встраивания; не добавляй новые библиотеки, внешние модели, текстуры или шрифты. Сохрани доступное управление и учти предпочтение уменьшенного движения.'
     : 'Сохрани HTML со встроенными CSS и JavaScript, существующие подключения медиа и точные версии библиотек. Не добавляй новые внешние файлы, шрифты или библиотеки без моего запроса. Сохрани доступное управление и учти предпочтение уменьшенного движения.');
-  if (snapshot.task) parts.push(`${snapshot.mode === 'fix' ? 'Что не работает' : 'Что изменить'}:\n${snapshot.task}`);
+  if (snapshot.task) {
+    const task = `${snapshot.mode === 'fix' ? 'Что не работает' : 'Что изменить'}:\n${snapshot.task}`;
+    if (targeted) parts.unshift(task); else parts.push(task);
+  }
   else if (snapshot.mode === 'change') parts.push('Если задача изменения ещё не указана, сначала спроси, что именно поменять.');
+  if (targeted) parts.push(pickedElementPrompt(JSON.parse(snapshot.element)));
   if (snapshot.error) parts.push(`Сообщение об ошибке:\n${snapshot.error}`);
   if (shortened.length) parts.push(`Встроенные библиотеки заменены CDN-ссылками: ${shortened.join(', ')}. Сохрани эти ссылки и точные версии, не вставляй код библиотек в ответ.`);
   parts.push('Текущий код:\n' + code);
@@ -218,6 +224,7 @@ function openAiPrompts(mode, nested = false) {
 
 function updateAiControls() {
   if (!aiReady) return;
+  updateAiElementCard();
   updateAiSessionControls();
   const empty = !codeField.value.trim();
   document.querySelector('#prompt-change').disabled = empty;

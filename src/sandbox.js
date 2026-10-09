@@ -216,8 +216,101 @@ function previewReadiness(createClock) {
 
 const readinessProbe = '<script>(' + previewReadiness.toString() + ')(' + createFrameClock.toString() + ');</script>';
 
+// Runs before application listeners, in the opaque-origin frame only.
+function previewElementPicker(token) {
+  let enabled = false, generation = 0, selected = null, overlay = null, border = null, raf = 0, press = null;
+  const send = (type, element) => parent.postMessage({ type: 'onehtml-lab:' + type, token, generation, element }, '*');
+  const text = (value, limit) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, limit);
+  const describe = element => {
+    const tag = element.localName.toLowerCase(), path = [];
+    let node = element;
+    while (node && path.length < 12) {
+      let index = 1, sibling = node.previousElementSibling;
+      while (sibling) { if (sibling.localName === node.localName) index++; sibling = sibling.previousElementSibling; }
+      path.unshift(node.localName + ':nth-of-type(' + index + ')'); node = node.parentElement;
+    }
+    // Do not read form values, passwords, scripts or embedded resource bytes.
+    const parts = [], walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) { return node.parentElement?.closest('script,style,textarea,input,select,[contenteditable]') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; }
+    });
+    let length = 0, count = 0;
+    while (length < 240 && count++ < 1000 && walker.nextNode()) {
+      const part = text(walker.currentNode.textContent, 240 - length); parts.push(part); length += part.length;
+    }
+    const resource = element.getAttribute('src') || '';
+    return { tag, id: text(element.id, 100), classes: text(element.getAttribute('class'), 160),
+      label: text(element.getAttribute('aria-label') || element.getAttribute('alt') || element.getAttribute('title'), 160),
+      text: text(parts.join(' '), 240), path: path.join(' > ').slice(-700),
+      resource: /^(?:data:|blob:)/i.test(resource) ? '' : text(resource, 240), viewport: [innerWidth, innerHeight] };
+  };
+  const draw = () => {
+    raf = 0;
+    if (!enabled) return;
+    if (selected && !selected.isConnected) { selected = null; send('picked', null); }
+    if (selected) {
+      const rect = selected.getBoundingClientRect();
+      border.style.cssText = 'position:fixed;box-sizing:border-box;pointer-events:none;border:3px solid #4285ff;box-shadow:0 0 0 2px #fff;border-radius:3px;'
+        + 'left:' + rect.left + 'px;top:' + rect.top + 'px;width:' + rect.width + 'px;height:' + rect.height + 'px;';
+    } else border.style.display = 'none';
+    raf = requestAnimationFrame(draw);
+  };
+  const disable = () => {
+    enabled = false; selected = null; press = null;
+    if (raf) cancelAnimationFrame(raf); raf = 0;
+    overlay?.remove(); overlay = border = null;
+  };
+  const pick = target => {
+    if (!(target instanceof Element)) return;
+    const element = target.closest('button,a,input,select,textarea,[role="button"],svg') || target;
+    if (['html', 'head', 'script', 'style'].includes(element.localName) || element === overlay) return;
+    selected = element; send('picked', describe(element));
+  };
+  addEventListener('message', event => {
+    const data = event.data;
+    if (event.source !== parent || data?.type !== 'onehtml-lab:pick-control' || data.token !== token || !Number.isSafeInteger(data.generation)) return;
+    disable(); generation = data.generation;
+    if (data.enabled !== true) return;
+    enabled = true;
+    overlay = document.createElement('div');
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.style.cssText = 'all:initial!important;position:fixed!important;inset:0!important;pointer-events:none!important;z-index:2147483647!important;';
+    border = document.createElement('div');
+    overlay.attachShadow({ mode: 'closed' }).append(border);
+    document.documentElement.append(overlay); draw(); send('pick-armed');
+  });
+  const intercept = event => {
+    if (!enabled) return;
+    // Keep native scrolling and focus navigation, but block application handlers.
+    event.stopImmediatePropagation();
+    if (event.type === 'pointerdown') {
+      press = event.isPrimary && event.button === 0 ? { id: event.pointerId, x: event.clientX, y: event.clientY, target: event.target } : null;
+      if (event.target.closest?.('input,select,textarea,[contenteditable]')) event.preventDefault();
+    } else if (event.type === 'pointermove' && press && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 10) press = null;
+    else if (event.type === 'pointercancel' || event.type === 'wheel') press = null;
+    else if (event.type === 'pointerup') {
+      if (press && press.id === event.pointerId && Math.hypot(event.clientX - press.x, event.clientY - press.y) <= 10 && press.target.isConnected) pick(press.target);
+      press = null;
+    } else if (event.type === 'click') {
+      event.preventDefault();
+      // Pointer gestures are decided on pointerup. WebKit can still emit click after a drag.
+      if (!window.PointerEvent || event.detail === 0) pick(event.target);
+    }
+    else if (event.type === 'keydown') {
+      if (event.key === 'Escape') { event.preventDefault(); send('pick-cancel'); disable(); }
+      else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); pick(event.target); }
+    } else if (['dblclick', 'contextmenu', 'submit', 'dragstart', 'beforeinput', 'mousedown', 'mouseup'].includes(event.type)) event.preventDefault();
+  };
+  for (const type of ['pointerdown', 'pointerup', 'pointermove', 'pointercancel', 'touchstart', 'touchend', 'touchmove', 'touchcancel',
+    'mousedown', 'mouseup', 'mousemove', 'click', 'dblclick', 'contextmenu', 'keydown', 'keyup', 'keypress', 'beforeinput', 'submit', 'dragstart', 'wheel']) {
+    addEventListener(type, intercept, { capture: true, passive: false });
+  }
+  addEventListener('pagehide', disable, { once: true });
+  send('pick-ready');
+}
+
 function makePreview(code, networkAllowed = true, storageEntries = null) {
   const frame = document.createElement('iframe');
+  frame.pickerToken = Array.from(crypto.getRandomValues(new Uint32Array(4)), n => n.toString(36)).join('-');
   frame.title = 'Запущенная игра';
   frame.setAttribute('sandbox', 'allow-scripts');
   frame.setAttribute('referrerpolicy', 'no-referrer');
@@ -232,6 +325,7 @@ function makePreview(code, networkAllowed = true, storageEntries = null) {
     + localAccessProbe
     + readinessProbe
     + '<script>(' + previewQuality.toString() + ')();</script>'
+    + '<script>(' + previewElementPicker.toString() + ')(' + JSON.stringify(frame.pickerToken) + ');</script>'
     + (networkAllowed ? trafficProbe : '');
   frame.previewOffset = { lines: prefix.split('\n').length - 1, column: prefix.length - prefix.lastIndexOf('\n') - 1 };
   frame.srcdoc = prefix + code;

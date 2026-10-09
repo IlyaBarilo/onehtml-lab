@@ -1172,6 +1172,7 @@ async function readClipboardWithTimeout() {
 }
 
 function updateControls() {
+  updatePreviewPicker();
   const empty = !codeField.value.trim();
   pasteButton.disabled = running || readingClipboard || modeBusy || extractionOpen || Boolean(currentPanel());
   clearButton.disabled = !codeField.value || running || readingClipboard || modeBusy || extractionOpen || Boolean(currentPanel());
@@ -1322,6 +1323,7 @@ pasteButton.addEventListener('click', async () => {
 });
 
 function stopPreview() {
+  cancelPreviewPicker(false, true);
   rememberEditorPosition();
   closeWorkspacePanels(false);
   previewRequest += 1;
@@ -1693,6 +1695,7 @@ document.querySelector('#save-form').addEventListener('submit', async event => {
   }
 });
 initAiPrompts();
+initPreviewPicker();
 initCodeEditor();
 initAlternativeEditor();
 initWorkspaceUI();

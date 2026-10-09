@@ -118,6 +118,7 @@ function acceptCopiedAiPrompt(result) {
   const entry = { id: aiPromptId(), createdAt: Date.now(),
     mode: snapshot.mode, project: snapshot.project, platform: snapshot.platform, task: snapshot.task,
     shorten: snapshot.shorten, includePrevious: snapshot.includePrevious, text: result.text,
+    element: snapshot.element ? JSON.parse(snapshot.element) : null,
     mediaFiles: result.mediaFiles.map(file => ({ ...file })),
     profile: snapshot.game ? { version: 1, id: aiGameChoice(JSON.parse(snapshot.game)).id, settings: JSON.parse(snapshot.game) } : null,
     source: snapshot.mode === 'create' ? null : { hash: null, scope: result.scope ?? gameStorageScope, symbols: symbolCount(snapshot.code) } };
@@ -183,8 +184,9 @@ async function showAiPromptEntry(entry) {
     : 'Запрос относится к другой версии. Его исходник не найден в текущем коде и истории.';
 }
 
-function reuseAiPromptEntry(entry) {
+async function reuseAiPromptEntry(entry) {
   if (!entry || !expertMode || modeBusy) return;
+  aiElementContext = null;
   openAiPrompts(entry.mode);
   aiProject = entry.project;
   aiGame = normalizeAiGame(entry.profile?.version === 1 ? entry.profile.settings : null);
@@ -194,6 +196,14 @@ function reuseAiPromptEntry(entry) {
   aiHistory.checked = Boolean(entry.includePrevious);
   saveAiPromptSettings(); updateAiProjectLabels(); updateAiControls();
   aiTask.focus({ preventScroll: true });
+  const element = normalizePickedElement(entry.element);
+  if (!element || entry.mode !== 'change') return;
+  const code = codeField.value, scope = gameStorageScope, revision = aiRevision;
+  const hash = await aiCodeHash(code);
+  if (currentPanel() !== aiDialog || revision !== aiRevision || codeField.value !== code || gameStorageScope !== scope) return;
+  if (hash && entry.source?.hash === hash && entry.source.scope === scope) {
+    aiElementContext = { code, scope, element }; updateAiControls();
+  } else inform('Пожелания восстановлены. Исходник отличается или не проверен: выберите элемент заново.');
 }
 
 // Markdown is parsed as inert text. Never create a DOM from the returned code.

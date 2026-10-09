@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 const args = process.argv.slice(2);
 if (args.length > 1 || (args[0] && !/^--release-tag=v\d+(?:\.\d+){0,3}$/.test(args[0]))) throw new Error('Use: node tests/check.mjs [--release-tag=v1.2.3]');
 const tag = args[0]?.slice('--release-tag='.length);
-const browsers = ['browser', 'stage7', 'workspace', 'editor', 'alternative-editor', 'syntax', 'comparison-game', 'ai-prompts', 'ai-session', 'desktop', 'diagnostics', 'workshop', 'learning-examples', 'code-guide', 'media-examples', 'quality', 'readiness', 'network', 'library-bundle', 'module-libraries', 'media-assets', 'draft', 'previous', 'game-storage', 'reliability'];
+const browsers = ['browser', 'stage7', 'workspace', 'editor', 'alternative-editor', 'syntax', 'comparison-game', 'ai-prompts', 'ai-session', 'preview-picker', 'desktop', 'diagnostics', 'workshop', 'learning-examples', 'code-guide', 'media-examples', 'quality', 'readiness', 'network', 'library-bundle', 'module-libraries', 'media-assets', 'draft', 'previous', 'game-storage', 'reliability'];
 const commands = [
   ['build.mjs', ...args],
   ['tests/build.mjs', ...(tag ? [tag] : [])],
