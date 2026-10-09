@@ -40,7 +40,7 @@
     .metric strong { display: block; font-size: clamp(25px, 4vw, 34px); line-height: 1.1; font-variant-numeric: tabular-nums; }
     .metric span { display: block; margin-top: 4px; font-size: 13px; color: #a9bdd7; }
     #fps { color: #7cdbb0; }
-    .modes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+    .modes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
     .mode { padding: 7px 10px; text-align: left; }
     .mode b { display: block; font-size: 15px; }
     .mode small { display: block; margin-top: 3px; color: #b4c6de; font-size: 12px; }
@@ -77,6 +77,7 @@
     #load-value { font-variant-numeric: tabular-nums; }
     input[type="range"] { width: 100%; min-width: 30px; height: 44px; margin: 0; accent-color: #88bbff; }
     .controls button { padding: 0 14px; font-size: 14px; }
+    #phaser-effects[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; }
     .details { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 13px; color: #a9bdd7; font-variant-numeric: tabular-nums; }
     @media (max-width: 600px) {
       header, footer { padding: 10px; }
@@ -147,6 +148,7 @@
         <button class="mode" data-mode="three160" aria-pressed="false" disabled><b>Three.js r160</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="matter" aria-pressed="false" disabled><b>Matter.js 0.20</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="phaser" aria-pressed="false" disabled><b>Phaser 3.90</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
+        <button class="mode" data-mode="phaser4" aria-pressed="false" disabled><b>Phaser 4.2.1</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
       </nav>
       <div class="description-row"><p id="library-description" class="library-description"></p><button id="info-toggle" aria-label="Подробно о выбранной библиотеке" aria-expanded="false" aria-controls="library-info">i</button></div>
     </header>
@@ -185,13 +187,15 @@
         canvas: 'Движущиеся частицы · Canvas 2D',
         three160: 'Вращающиеся кубы · Three.js r160',
         matter: 'Физика падающих шаров · Matter.js',
-        phaser: 'Движущиеся частицы · Phaser'
+        phaser: 'Движущиеся частицы · Phaser 3',
+        phaser4: 'Движущиеся частицы · Phaser 4'
       };
       const descriptions = {
         canvas: 'Canvas 2D — рисование 2D без игровой библиотеки.',
         three160: 'Three.js — объёмные модели, камера, свет и тени.',
         matter: 'Matter.js — физика: масса, столкновения и связи.',
-        phaser: 'Phaser — готовый набор систем для 2D-игры.'
+        phaser: 'Phaser 3 — готовые системы 2D-игры; знакомая «Лесная станция».',
+        phaser4: 'Phaser 4 — та же игра со светом и фильтрами; кнопка «Эффекты» меняет оформление.'
       };
       const explanations = {
         canvas: [
@@ -215,11 +219,19 @@
           'Возможности: платформер «Лесная станция». Камера сопровождает робота через лес, переправу и станцию; дальний фон движется медленнее переднего. Arcade Physics рассчитывает прыжки, столкновения, перевозку на движущихся платформах и встречи с противниками. Анимации оживляют персонажей, таймер включает лазер, частицы и всплывающие очки отмечают сбор кристаллов. Есть двойной прыжок, здоровье, контрольная точка и завершение уровня. Демо проходит уровень автоматически; кнопки направления и прыжка либо стрелки/A/D и пробел передают управление вам. В низком поле робот бежит сам, касание вызывает прыжок. Сравнение: тот же шар и башня используют встроенную Matter-физику Phaser и частицы при ударе. Для вращающихся конструкций нужна Matter, а для прямоугольных платформ и персонажей подходит Arcade Physics.'
         ]
       };
+      explanations.phaser.push('Когда выбирать Phaser 3: продолжение существующей игры, использование примеров и плагинов третьей ветки. Здесь оставлен прежний Canvas-рендеринг. В WebGL Phaser 3 тоже поддерживает свет и FX, но использует другой API: Light2D, preFX и postFX. Сам по себе внешний эффект не является доказательством, что его нельзя сделать в Phaser 3.');
+      explanations.phaser4 = [
+        'Phaser 4.2.1 — новая ветка того же 2D-движка. В «Лесной станции» сохранены робот, карта, управление, двойной прыжок, противники, кристаллы, лазер, контрольная точка и выход. Разница показана на оформлении знакомой игры, а не на другой механике.',
+        'Возможности: WebGL-освещение платформ и персонажей, свет рядом с роботом и на станции, свечение ярких частей через фильтр камеры. «Эффекты» включает и выключает эти изменения без сброса прохождения. В Phaser 4 используются setLighting() и общая система Filters; в Phaser 3 для похожего результата нужны Light2D и FX. Нормальные карты и дополнительные текстуры не загружаются, объёмные тени в этом примере не моделируются.',
+        'Когда выбирать Phaser 4: новая 2D-игра с динамическим светом и сочетанием фильтров, когда вы готовы использовать API четвёртой ветки. При переносе игры отдельно проверяйте свои шейдеры, плагины и эффекты. Для готового проекта на Phaser 3 обновление не обязательно.',
+        'Эффекты требуют WebGL. Если он недоступен, этот же уровень работает через Canvas, а переключатель объясняет ограничение. В «Сравнении» обе версии используют одинаковую башню и Matter-физику; в «Нагрузке» — одинаковые частицы и Canvas. FPS относится к текущей сцене и устройству: расширенный вариант с эффектами выполняет больше графической работы, поэтому эти числа не являются общим рейтингом версий.'
+      ];
       const showcaseLabels = {
         canvas: 'Набережная · касание переключает день и ночь',
         three160: 'Марсоход · проведите по сцене, чтобы повернуть камеру',
         matter: 'Механизмы · перетаскивайте тела или толкните маятники',
-        phaser: 'Лесная станция · двойной прыжок'
+        phaser: 'Лесная станция · Phaser 3 · двойной прыжок',
+        phaser4: 'Лесная станция · Phaser 4 · свет и фильтры'
       };
       const pointers = new Map();
       let rings = [];
@@ -1082,13 +1094,27 @@
         };
       }
 
-      function phaserShowcase(Phaser, sceneGeneration) {
+      function phaserShowcase(Phaser, sceneGeneration, modern = false) {
         const worldWidth = 3200, groundY = 480;
         let compact = height < 190;
         let zoom = Math.max(.16, Math.min(1.25, (height - (compact ? 20 : 90)) / 390));
         const holes = [[700, 860], [1480, 1690], [2350, 2490]];
         const held = new Map();
         let game, current = null, demo = true, jumpQueued = false;
+        let effectsEnabled = true;
+        const effects = modern ? document.createElement('button') : null;
+        if (effects) {
+          effects.id = 'phaser-effects'; effects.textContent = 'Эффекты'; effects.disabled = true;
+          effects.setAttribute('aria-label', 'Свет и фильтры Phaser 4'); effects.setAttribute('aria-pressed', 'true');
+          effects.addEventListener('click', () => {
+            if (!current?.visuals) return;
+            effectsEnabled = !effectsEnabled; current.setVisuals(effectsEnabled);
+            if (paused) {
+              game.renderer.preRender(); game.scene.render(game.renderer); game.renderer.postRender();
+            }
+          });
+          document.querySelector('.controls').append(effects);
+        }
         const hud = document.createElement('div'); hud.className = 'phaser-hud';
         const totals = document.createElement('span'), area = document.createElement('span'); hud.append(totals, area);
         const pad = document.createElement('div'); pad.className = 'phaser-pad';
@@ -1137,7 +1163,7 @@
           create() {
             if (sceneGeneration !== generation) return;
             current = this; release(); result.hidden = true;
-            $('scene-name').textContent = compact ? 'Лесная станция · касание: прыжок' : showcaseLabels.phaser;
+            $('scene-name').textContent = compact ? 'Лесная станция · касание: прыжок' : showcaseLabels[modern ? 'phaser4' : 'phaser'];
             if (!paused && !infoOpen && !document.hidden) host.focus({ preventScroll: true });
             this.score = 0; this.collected = 0; this.health = 3; this.checkpoint = 110;
             this.jumps = 0; this.lastGrounded = -1000; this.immuneUntil = 0; this.finished = false; this.lastTrail = 0;
@@ -1291,9 +1317,35 @@
             this.cameras.main.setBounds(0, 0, worldWidth, 560).setZoom(zoom);
             this.cameras.main.centerOn(this.player.x + width * .15 / zoom, groundY - (height / 2 - (compact ? 12 : 66)) / zoom);
             this.cameras.main.roundPixels = true;
+            if (modern) {
+              if (this.game.renderer.type === Phaser.WEBGL) {
+                this.lights.enable().setAmbientColor(0x8896ad);
+                const follow = this.lights.addLight(this.player.x, this.player.y, 220, 0xffd69b, 1.4); follow.z = 100;
+                const station = this.lights.addLight(3080, 425, 290, 0x88f3cc, 1.6); station.z = 100;
+                const checkpointLight = this.lights.addLight(1320, 395, 170, 0x9ae9c2, 1.1); checkpointLight.z = 90;
+                const lit = this.children.list.filter(item => item.depth >= 2 && typeof item.setLighting === 'function' && ['Sprite', 'TileSprite', 'Rectangle', 'Graphics'].includes(item.type));
+                const bloom = Phaser.Actions.AddEffectBloom(this.cameras.main, { threshold: .7, blurRadius: 2, blurSteps: 3, blendAmount: .32 })[0];
+                this.visuals = { follow, station, lit, bloom };
+                effects.disabled = false;
+                this.setVisuals(effectsEnabled);
+              } else {
+                effects.disabled = true; effects.setAttribute('aria-pressed', 'false');
+                effects.title = 'Для света и фильтров нужен WebGL';
+                host.dataset.phaserRenderer = 'canvas'; host.dataset.phaserEffects = 'unavailable';
+                $('message').textContent = 'Phaser 4: Canvas. Свет и фильтры доступны при поддержке WebGL.';
+              }
+            } else { host.dataset.phaserRenderer = 'canvas'; host.dataset.phaserEffects = 'base'; }
             this.syncHud();
           },
           extend: {
+            setVisuals(enabled) {
+              if (!this.visuals) return;
+              for (const item of this.visuals.lit) item.setLighting(enabled);
+              this.visuals.bloom.parallelFilters.active = enabled;
+              effects.setAttribute('aria-pressed', String(enabled));
+              effects.title = enabled ? 'Выключить свет и фильтры, сохранив прохождение' : 'Включить свет и фильтры';
+              host.dataset.phaserRenderer = 'webgl'; host.dataset.phaserEffects = enabled ? 'on' : 'off';
+            },
             floatPoints(x, y, text) {
               const label = this.add.text(x, y - 22, text, { fontFamily: 'system-ui', fontSize: '18px', color: '#fff2bb', stroke: '#163b49', strokeThickness: 3 }).setOrigin(.5).setDepth(8);
               this.tweens.add({ targets: label, y: y - 65, alpha: 0, duration: 850, onComplete: () => label.destroy() });
@@ -1355,11 +1407,15 @@
               if (grounded && direction && time - this.lastTrail > 95) { this.lastTrail = time; this.particles.explode(2, player.x - direction * 16, player.y + 24); }
             }
             const camera = this.cameras.main, targetX = this.player.x + width * .15 / zoom;
+            if (this.visuals) {
+              this.visuals.follow.setPosition(this.player.x + 18, this.player.y - 12);
+              this.visuals.station.intensity = 1.5 + Math.sin(time / 600) * .2;
+            }
             camera.centerOn(Phaser.Math.Linear(camera.midPoint.x, targetX, .09), groundY - (height / 2 - (compact ? 12 : 66)) / zoom);
             this.syncHud();
           }
         };
-        game = new Phaser.Game({ type: Phaser.CANVAS, width, height, parent: host, backgroundColor: '#091321', banner: false,
+        game = new Phaser.Game({ type: modern ? Phaser.AUTO : Phaser.CANVAS, width, height, parent: host, backgroundColor: '#091321', banner: false,
           audio: { noAudio: true }, input: { mouse: false, touch: false, keyboard: false },
           physics: { default: 'arcade', arcade: { gravity: { y: 900 }, debug: false } }, fps: { target: 60, smoothStep: false }, scene,
           callbacks: { postBoot(booted) { booted.events.on('postrender', () => { if (!paused && !infoOpen && !document.hidden && sceneGeneration === generation) frameRendered(performance.now()); }); } }
@@ -1370,12 +1426,13 @@
             release(); compact = height < 190; zoom = Math.max(.16, Math.min(1.25, (height - (compact ? 20 : 90)) / 390));
             host.classList.toggle('phaser-compact', compact); game.scale.resize(width, height);
             current?.cameras.main.setZoom(zoom);
-            $('scene-name').textContent = compact ? 'Лесная станция · касание: прыжок' : showcaseLabels.phaser;
+            $('scene-name').textContent = compact ? 'Лесная станция · касание: прыжок' : showcaseLabels[modern ? 'phaser4' : 'phaser'];
             if (!paused && !infoOpen) host.focus({ preventScroll: true });
           },
           dispose() {
             current = null; release(); document.removeEventListener('keydown', keyDown); document.removeEventListener('keyup', keyUp); window.removeEventListener('blur', blur);
-            hud.remove(); pad.remove(); result.remove(); expand.remove(); host.removeAttribute('tabindex'); host.classList.remove('phaser-compact'); game.destroy(true); game.loop.wake();
+            hud.remove(); pad.remove(); result.remove(); expand.remove(); effects?.remove(); host.removeAttribute('tabindex'); host.classList.remove('phaser-compact');
+            delete host.dataset.phaserRenderer; delete host.dataset.phaserEffects; game.destroy(true); game.loop.wake();
           }
         };
       }
@@ -1398,7 +1455,7 @@
       }
 
       function startScene(nextMode = mode) {
-        if (nextMode !== 'phaser' || scenario !== 'showcase') {
+        if (!nextMode.startsWith('phaser') || scenario !== 'showcase') {
           phaserExpanded = false; document.querySelector('.app').classList.remove('phaser-expanded');
         }
         generation += 1;
@@ -1412,18 +1469,18 @@
             if (mode === 'canvas') activeScene = canvasComparison();
             else if (mode.startsWith('three')) activeScene = threeComparison(libraries[mode]);
             else if (mode === 'matter') activeScene = matterComparison(libraries.matter);
-            else activeScene = phaserComparison(libraries.phaser, generation);
+            else activeScene = phaserComparison(libraries[mode], generation);
           }
           else if (scenario === 'showcase') {
             if (mode === 'canvas') activeScene = canvasShowcase();
             else if (mode.startsWith('three')) activeScene = threeShowcase(libraries[mode]);
             else if (mode === 'matter') activeScene = matterShowcase(libraries.matter);
-            else activeScene = phaserShowcase(libraries.phaser, generation);
+            else activeScene = phaserShowcase(libraries[mode], generation, mode === 'phaser4');
           }
           else if (mode === 'canvas') activeScene = canvasScene();
           else if (mode.startsWith('three')) activeScene = threeScene(libraries[mode]);
           else if (mode === 'matter') activeScene = matterScene(libraries.matter);
-          else activeScene = phaserScene(libraries.phaser, generation);
+          else activeScene = phaserScene(libraries[mode], generation);
         } catch (error) {
           const failedMode = mode;
           mode = 'canvas';
@@ -1583,5 +1640,7 @@
   <script>registerLabLibrary('matter', window.Matter?.version === '0.20.0' ? window.Matter : null);</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.90.0/phaser.min.js"></script>
   <script>registerLabLibrary('phaser', window.Phaser?.VERSION === '3.90.0' ? window.Phaser : null);</script>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.min.js"></script>
+  <script>registerLabLibrary('phaser4', window.Phaser?.VERSION === '4.2.1' ? window.Phaser : null);</script>
 </body>
 </html>
