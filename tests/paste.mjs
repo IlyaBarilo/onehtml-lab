@@ -33,7 +33,7 @@ async function createApp(clipboard) {
     initWorkspaceUI() {}, updateWorkspaceUI() {}, rememberEditorPosition() {}, restoreEditorPosition() {},
     initAlternativeEditor() {}, updateAlternativeEditor() {}, requestSmartFold() {}, cancelSmartFold() {}, initCodeEditor() {}, updateCodeTools() {}, resetCodeEdits() {}, recordCodeEdit() {},
     initAiPrompts() {}, updateAiControls() {}, openAiPrompts() {},
-    initPreviewPicker() {}, updatePreviewPicker() {}, cancelPreviewPicker() {},
+    initPreviewPicker() {}, updatePreviewPicker() {}, cancelPreviewPicker() {}, updateQualityState() {},
     setAiProject() {}, saveAiPromptSettings() {}, loadAiPromptSettings() {},
     updateExampleLessonControls() {},
     updateCodeGuide() {},

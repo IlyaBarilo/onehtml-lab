@@ -75,7 +75,7 @@ try {
       await page.evaluate(() => window.postMessage({type:'onehtml-lab:picked',element:{tag:'evil'}},'*'));
       await frame.evaluate(() => {
         const control = [...document.scripts].map(script => script.textContent).find(text => text.includes('function previewElementPicker'));
-        const token = /\)\("([a-z0-9-]+)"\);/.exec(control)[1];
+        const token = /\)\("([a-z0-9-]+)",describe\);/.exec(control)[1];
         parent.postMessage({type:'onehtml-lab:picked',token,generation:-100,element:{tag:'evil'}},'*');
       });
       // Capture a fresh valid description rather than the deliberately stale message.

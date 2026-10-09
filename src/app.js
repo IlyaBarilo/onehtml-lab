@@ -1172,6 +1172,7 @@ async function readClipboardWithTimeout() {
 }
 
 function updateControls() {
+  updateQualityState();
   updatePreviewPicker();
   const empty = !codeField.value.trim();
   pasteButton.disabled = running || readingClipboard || modeBusy || extractionOpen || Boolean(currentPanel());

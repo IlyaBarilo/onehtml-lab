@@ -112,7 +112,7 @@ try {
               const unchanged = await state();
               await settings(); await page.locator('#edit-explain').click();
               let prompt = await prepared();
-              assert.match(await page.locator('.ai-instruction').innerText(), /Прочитайте объяснение/);
+              assert.match(await page.locator('.ai-instruction').innerText(), /Скопируйте его и отправьте ИИ-боту\. Прочитайте ответ и проверьте результат в браузере/);
               assert.match(prompt, /Выделенный фрагмент/); assert(prompt.includes(at.text)); assert(prompt.endsWith(current));
               assert(!prompt.includes('Верни полный HTML-файл'));
               assert.match(prompt, /не возвращай новый полный HTML/);

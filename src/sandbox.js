@@ -216,12 +216,9 @@ function previewReadiness(createClock) {
 
 const readinessProbe = '<script>(' + previewReadiness.toString() + ')(' + createFrameClock.toString() + ');</script>';
 
-// Runs before application listeners, in the opaque-origin frame only.
-function previewElementPicker(token) {
-  let enabled = false, generation = 0, selected = null, overlay = null, border = null, raf = 0, press = null;
-  const send = (type, element) => parent.postMessage({ type: 'onehtml-lab:' + type, token, generation, element }, '*');
+// Shared bounded description for visual selection and quality observations.
+function previewElementDescription(element) {
   const text = (value, limit) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, limit);
-  const describe = element => {
     const tag = element.localName.toLowerCase(), path = [];
     let node = element;
     while (node && path.length < 12) {
@@ -242,7 +239,12 @@ function previewElementPicker(token) {
       label: text(element.getAttribute('aria-label') || element.getAttribute('alt') || element.getAttribute('title'), 160),
       text: text(parts.join(' '), 240), path: path.join(' > ').slice(-700),
       resource: /^(?:data:|blob:)/i.test(resource) ? '' : text(resource, 240), viewport: [innerWidth, innerHeight] };
-  };
+}
+
+// Runs before application listeners, in the opaque-origin frame only.
+function previewElementPicker(token, describe) {
+  let enabled = false, generation = 0, selected = null, overlay = null, border = null, raf = 0, press = null;
+  const send = (type, element) => parent.postMessage({ type: 'onehtml-lab:' + type, token, generation, element }, '*');
   const draw = () => {
     raf = 0;
     if (!enabled) return;
@@ -324,8 +326,9 @@ function makePreview(code, networkAllowed = true, storageEntries = null) {
     + (storageEntries ? virtualStorageProbe(storageEntries) : '')
     + localAccessProbe
     + readinessProbe
-    + '<script>(' + previewQuality.toString() + ')();</script>'
-    + '<script>(' + previewElementPicker.toString() + ')(' + JSON.stringify(frame.pickerToken) + ');</script>'
+    + '<script>(()=>{const describe=' + previewElementDescription.toString() + ';('
+    + previewQuality.toString() + ')(' + JSON.stringify(frame.pickerToken) + ',describe);('
+    + previewElementPicker.toString() + ')(' + JSON.stringify(frame.pickerToken) + ',describe);})();</script>'
     + (networkAllowed ? trafficProbe : '');
   frame.previewOffset = { lines: prefix.split('\n').length - 1, column: prefix.length - prefix.lastIndexOf('\n') - 1 };
   frame.srcdoc = prefix + code;

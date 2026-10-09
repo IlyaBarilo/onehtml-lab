@@ -19,8 +19,8 @@ const profiles = [{ width: 320, native: false, dark: false }, { width: 390, nati
 const bad = `<!doctype html><html><head><title>Проверка</title><style>body{margin:0;font:18px system-ui}button{font:16px system-ui}#wide{width:3000px;height:12px}#tiny{width:28px;height:25px;padding:0}#large{width:100px;height:48px}.hidden{display:none}</style></head><body>
 <!-- <meta name="viewport" content="width=device-width"> --><textarea hidden><meta name="viewport" content="width=device-width"></textarea><template><meta name="viewport" content="width=device-width"></template>
 <script>window.demoHits=0;const fake='<meta name="viewport" content="width=device-width">';console.warn('Учебное предупреждение');</script>
-<div id="wide"></div><button id="tiny" aria-label="Малая">+</button><button id="large" onclick="demoHits++;this.textContent='Нажато '+demoHits">Нажать</button><div class="hidden"><button>Скрытая малая</button></div><canvas width="100" height="60"></canvas><img width="1" height="1" src="https://quality.onehtml.test/missing.svg"><p style="margin-top:2000px"><button>Вне экрана</button></p></body></html>`;
-const changed = bad.replace('<title>', '<meta name="viewport" content="width=device-width,initial-scale=1"><title>') + '\n<!-- правка -->';
+<div id="wide"></div><button id="tiny" aria-label="Малая">+</button><button id="large" onclick="demoHits++;this.textContent='Нажато '+demoHits">Нажать</button><button id="unnamed" style="width:48px;height:48px"></button><input id="unlabelled" placeholder="Введите текст"><input aria-label="Подписанное поле"><div class="hidden"><button>Скрытая малая</button></div><canvas width="100" height="60"></canvas><img width="30" height="30" src="https://quality.onehtml.test/missing.svg"><img width="30" height="30" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E"><p style="margin-top:2000px"><button>Вне экрана</button></p></body></html>`;
+const changed = bad.replace('<title>', '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>') + '\n<!-- правка -->';
 const good = `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font:18px system-ui}button{width:100px;height:48px;font:16px system-ui}label{display:flex;align-items:center;min-height:48px}</style><button id="good" onclick="this.textContent='Готово'">Нажать</button><label><input type="checkbox">Удобная область касания</label><button disabled style="width:20px;height:20px">–</button><canvas width="100" height="60"></canvas>`;
 async function source(page, code) {
   if (await page.locator('#code').isVisible()) await page.locator('#code').fill(code);
@@ -78,6 +78,9 @@ try {
           await page.locator('#quality-touch').selectOption('ok');
           assert.equal(await page.locator('#quality-touch').inputValue(), 'ok', 'First manual answer must survive initialization');
           await page.locator('#quality-offline').selectOption('issue');
+          await page.locator('#quality-note-offline').fill('Не загружается изображение после отключения сети.');
+          assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+          await page.screenshot({path:join(output,`${prefix}-notes.png`)});
           const firstHistory = await history(page);
           await page.locator('#activity-close').click(); await open(page);
           assert.equal(await page.locator('#quality-touch').inputValue(), 'ok');
@@ -88,6 +91,7 @@ try {
           let text = await report(page);
           assert.match(text, /Прежняя версия: эти отметки не подтверждают текущий код/);
           assert.match(text, /Касания: Проверено/);
+          assert.match(text,/Заметка участника: Не загружается изображение/);
           const before = await history(page);
           await page.locator('#quality-ai').click();
           await page.waitForFunction(() => !document.querySelector('#ai-copy').disabled);
@@ -115,10 +119,29 @@ try {
           await open(page); await page.locator('#quality-measure').click(); await page.waitForFunction(() => document.querySelector('#quality-layout-note').textContent.startsWith('Снимок'));
           findings = await page.locator('#quality-findings').textContent();
           assert.match(findings, /Содержимое шире экрана/); assert.match(findings, /Малая \(28 × 25\)/);
+          assert.match(findings,/Масштабирование страницы ограничено/);assert.match(findings,/Элемент без понятного названия.*unnamed/);
+          assert.match(findings,/Поле без подписи.*unlabelled/);assert.match(findings,/Изображение без описания/);
+          assert.equal(await page.locator('.quality-finding').filter({hasText:'Изображение без описания'}).count(),1,'Explicit decorative alt must not be reported');
           assert(!findings.includes('Скрытая малая')); assert(!findings.includes('Вне экрана'));
           assert.match(findings, /Есть Canvas или 3D/); assert.match(findings, /предупреждений 1/);
           await page.waitForFunction(() => document.querySelector('#quality-findings').textContent.includes('Проблемы с ресурсами'));
           const hits = await frame.evaluate(() => window.demoHits); assert.equal(hits, 0);
+          const unnamed=page.locator('.quality-finding').filter({hasText:'Элемент без понятного названия'});
+          await unnamed.locator('summary').click();await unnamed.scrollIntoViewIfNeeded();
+          await page.screenshot({path:join(output,`${prefix}-actions.png`)});
+          await unnamed.getByRole('button',{name:'Показать',exact:true}).click();
+          await page.locator('#quality-show-bar').waitFor();assert(await page.locator('#activity-panel').isHidden());
+          assert.match(await page.locator('#quality-show-description').innerText(),/unnamed/);
+          assert.equal(await frame.evaluate(()=>window.demoHits),hits);assert.equal(await page.locator('#code').inputValue(),changed);
+          await page.screenshot({path:join(output,`${prefix}-highlight.png`)});
+          await page.locator('#quality-show-back').click();assert(await page.locator('#diagnostic-quality').isVisible());
+          await unnamed.getByRole('button',{name:'Исправить с ИИ',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('#ai-copy').disabled);
+          const targeted=await page.locator('#ai-output').inputValue();assert(targeted.startsWith('Что изменить:\nИсправь замечание проверки: Элемент без понятного названия'));assert(targeted.includes('"id": "unnamed"'));assert(targeted.endsWith(changed));
+          assert.equal(await frame.evaluate(()=>window.demoHits),hits);assert.equal(await page.locator('#code').inputValue(),changed);
+          await page.locator('#ai-close').click();assert(await page.locator('#diagnostic-quality').isVisible());
+          await unnamed.getByRole('button',{name:'Показать',exact:true}).click();await frame.locator('#unnamed').evaluate(node=>node.remove());
+          await page.waitForFunction(()=>!document.querySelector('#activity-panel').hidden && document.querySelector('#quality-layout-note').textContent.includes('больше не доступен'));
+          assert(await page.locator('#quality-show-bar').isHidden());
           await page.evaluate(() => window.postMessage({ type: 'onehtml-lab:quality-result', id: 9999, width: 1, height: 1, scrollWidth: 999999, small: [] }, '*'));
           await page.locator('#quality-measure').click(); await page.waitForFunction(() => document.querySelector('#quality-layout-note').textContent.startsWith('Снимок'));
           text = await report(page); assert(!text.includes('999999')); assert.match(text, /Звук: Не применимо/); assert.match(text, /Касания: Нужна правка/);
@@ -144,7 +167,7 @@ try {
             window.unavailableReply = false;
             addEventListener('message', event => {
               if (event.data?.type !== 'onehtml-lab:quality-request') return;
-              parent.postMessage({ type: 'onehtml-lab:quality-result', id: event.data.id, unavailable: window.unavailableReply ? true : 'invalid', width: -1, height: 'bad', small: [] }, '*');
+              parent.postMessage({ type: 'onehtml-lab:quality-result', token:event.data.token, id: event.data.id, unavailable: window.unavailableReply ? true : 'invalid', width: -1, height: 'bad', small: [] }, '*');
             });
           });
           await page.locator('#quality-measure').click(); await page.waitForFunction(() => document.querySelector('#quality-layout-note').textContent.startsWith('Нет ответа.'));
@@ -160,6 +183,8 @@ try {
           findings = await page.locator('#quality-findings').textContent(); assert.match(findings, /малые кнопки не замечены/); assert(!findings.includes('Малая (28')); assert(!findings.includes('предупреждений 1'));
           assert.match(await page.locator('#quality-manual-note').innerText(), /Отметки прежней версии/);
           await page.locator('#quality-manual-start').click(); await page.locator('#quality-reading').selectOption('ok');
+          await page.locator('#quality-reading').locator('..').locator('details summary').click();await page.locator('#quality-note-reading').fill('На узком экране текст читается.');
+          await page.waitForFunction(()=>document.querySelector('#quality-manual-note').textContent.includes('заметки сохранены'));
           await page.locator('#quality-ai').click(); await page.waitForFunction(() => !document.querySelector('#ai-copy').disabled);
           assert((await page.locator('#ai-output').inputValue()).endsWith(good));
           await page.locator('#ai-close').click(); await page.locator('#activity-close').click(); await page.locator('#run').click();
@@ -176,7 +201,9 @@ try {
           assert.equal(await page.locator('#quality-reading').inputValue(), 'ok', 'Mode changes retain manual state');
           await page.locator('#activity-close').click(); await page.waitForFunction(() => document.querySelector('#draft-status').textContent === 'Сохранено');
           await page.reload(); await page.waitForFunction(() => !document.querySelector('#code').disabled); await open(page);
-          assert.equal(await page.locator('#quality-reading').inputValue(), '', 'Session-only manual answers must not pretend a new run was tested');
+          await page.waitForFunction(()=>document.querySelector('#quality-reading').value === 'ok' && !document.querySelector('#quality-reading').disabled);
+          assert.equal(await page.locator('#quality-reading').inputValue(), 'ok', 'Persisted manual answers belong to the exact checked source, not to a new run');
+          assert.equal(await page.locator('#quality-note-reading').inputValue(),'На узком экране текст читается.');
           assert.deepEqual(errors, []);
           console.log(`${prefix}: inert observations, sizes, source-bound answers, reports/AI, stale runs, no writes, exact export and layout passed.`);
         } catch (error) { await page.screenshot({ path: join(output, `${prefix}-failure.png`) }); throw error; }
@@ -186,3 +213,4 @@ try {
   }
 } finally { server.close(); }
 console.log(`Quality screenshots: ${output}`);
+await import('./quality-persistence.mjs');
