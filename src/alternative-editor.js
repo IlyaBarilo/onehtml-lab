@@ -268,10 +268,11 @@ function expressionFoldRange(node) {
 
 // Keep nested ranges: unfolding a parent reveals the next level of structure.
 function structureFoldRanges(doc, tree) {
-  const ranges = [], seen = new Set();
+  const ranges = [], trivia = [], seen = new Set();
   const containers = new Set(['main', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'div', 'form', 'table', 'ul', 'ol', 'svg', 'template', 'dialog', 'canvas']);
   tree.iterate({ enter(ref) {
     const node = ref.node, open = node.firstChild, close = node.lastChild;
+    if (['Comment', 'LineComment', 'BlockComment', ';', ','].includes(node.name)) trivia.push({ from: node.from, to: node.to });
     let range = null;
     if (node.name === 'Element' && open?.name === 'OpenTag' && close?.name === 'CloseTag') {
       const name = open.getChild('TagName'), endName = close.getChild('TagName');
@@ -294,10 +295,38 @@ function structureFoldRanges(doc, tree) {
     }
     if (range && range.to > range.from) {
       const key = `${range.from}:${range.to}`;
-      if (!seen.has(key)) { ranges.push(range); seen.add(key); }
+      if (!seen.has(key)) { ranges.push({ ...range, node, children: [] }); seen.add(key); }
     }
   } });
-  return ranges.sort((a, b) => a.from - b.from || b.to - a.to);
+  ranges.sort((a, b) => a.from - b.from || b.to - a.to);
+  trivia.sort((a, b) => a.from - b.from);
+  const empty = (from, to) => {
+    let low = 0, high = trivia.length;
+    while (low < high) { const mid = (low + high) >> 1; if (trivia[mid].from < from) low = mid + 1; else high = mid; }
+    for (let i = low; i < trivia.length && trivia[i].from < to; i++) {
+      const part = trivia[i];
+      if (part.to > to || /\S/.test(doc.sliceString(from, part.from))) return false;
+      from = part.to;
+    }
+    return !/\S/.test(doc.sliceString(from, to));
+  };
+  const stack = [], redundant = new Set();
+  for (const range of ranges) {
+    while (stack.length && !(range.from >= stack.at(-1).from && range.to <= stack.at(-1).to)) stack.pop();
+    stack.at(-1)?.children.push(range);
+    stack.push(range);
+  }
+  // Skip a sole inner wrapper, not a useful block with other content beside it.
+  // Keep the original hierarchy so consecutive wrappers are skipped together.
+  for (const parent of ranges) {
+    if (parent.children.length !== 1) continue;
+    const child = parent.children[0];
+    let unit = child.node;
+    while (unit.parent && unit.parent.from >= parent.from && unit.parent.to <= parent.to
+      && !(unit.parent.from === parent.from && unit.parent.to === parent.to)) unit = unit.parent;
+    if (unit.from >= parent.from && unit.to <= parent.to && empty(parent.from, unit.from) && empty(unit.to, parent.to)) redundant.add(child);
+  }
+  return ranges.filter(range => !redundant.has(range)).map(({ from, to }) => ({ from, to }));
 }
 
 let structureFoldRevision = 0;

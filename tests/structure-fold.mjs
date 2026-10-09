@@ -71,21 +71,18 @@ export async function checkStructureFolding(page, prefix) {
     await page.screenshot({ path: prefix + '-structure-' + (dark ? 'dark' : 'light') + '.png' });
     await open('id="world"');
     let opened = await overview();
-    assert(opened.text.includes('id="nested"')); assert(!opened.text.includes('ВНУТРЕННИЙ'), 'Nested HTML remains folded');
-    await open('id="nested"'); assert((await overview()).text.includes('ВНУТРЕННИЙ'));
+    assert(opened.text.includes('id="nested"')); assert(opened.text.includes('ВНУТРЕННИЙ'), 'A sole nested section adds no extra fold');
     await open('id="logic"'); opened = await overview();
     for (const header of ['function outer', 'const arrow', 'const blockArrow', 'class Player', 'const points', 'const options', 'if (points.length)']) assert(opened.text.includes(header), header);
     for (const hidden of ['function inner', 'value * 2', 'ТЕЛО СТРЕЛКИ', 'ТЕЛО ВЫРАЖЕНИЯ', 'ТЕЛО МЕТОДА', '[1, 2]', 'speed: 5', 'const active']) assert(!opened.text.includes(hidden), 'Nested code remains folded: ' + hidden);
     await open('function outer'); opened = await overview();
     assert(opened.text.includes('function inner')); assert(!opened.text.includes('ТЕЛО ВЛОЖЕННОЙ'));
     await open('function inner'); assert((await overview()).text.includes('ТЕЛО ВЛОЖЕННОЙ'));
-    await open('class Player'); assert(!(await overview()).text.includes('ТЕЛО МЕТОДА'));
-    await open('update()'); assert((await overview()).text.includes('ТЕЛО МЕТОДА'));
+    await open('class Player'); assert((await overview()).text.includes('ТЕЛО МЕТОДА'), 'A class with one method opens together');
     await open('const points'); assert((await overview()).text.includes('[1, 2]'), 'Small coordinate arrays stay open');
     await open('const options'); assert(!(await overview()).text.includes('ТЕЛО ОБЪЕКТА'));
     await open('start()'); assert((await overview()).text.includes('ТЕЛО ОБЪЕКТА'));
-    await open('<style>'); assert(!(await overview()).text.includes('background:'));
-    await open('body {'); assert((await overview()).text.includes('background:'));
+    await open('<style>'); assert((await overview()).text.includes('background:'), 'One CSS rule does not add an extra fold');
     await expand(); assert.equal((await overview()).labels.size, 0, 'Expand all reveals every nested level');
     assert.equal(await toggle.getAttribute('aria-pressed'), 'true', 'Expand all keeps the mode for the next paste');
   }
@@ -98,15 +95,31 @@ export async function checkStructureFolding(page, prefix) {
   assert.equal(await code.inputValue(), source.replace('ТЕЛО ВЛОЖЕННОЙ', 'НОВЫЙ'));
   assert(await content.innerText().then(text => text.includes('НОВЫЙ')), 'Typing stays visible');
   await page.locator('#edit-quick-undo').click(); assert.equal(await code.inputValue(), source);
+  // A script's sole IIFE (and chains of wrappers) must not hide the overview again.
+  const body = 'const ready = true;\nfunction first() { return "ПЕРВОЕ"; }\nfunction second() { return "ВТОРОЕ"; }';
+  const wrappers = ['(() => {\n' + body + '\n})();', '(function () {\n' + body + '\n})();', '(() => {\n(() => {\n' + body + '\n})();\n})();'];
+  for (const wrapper of wrappers) {
+    const wrapped = '<script>\n/* before */\n' + wrapper + '\n// after\n</script>';
+    await set(wrapped); await fold(); await open('<script>');
+    const text = (await overview()).text;
+    assert(text.includes('const ready'), 'Opening the script reveals its sole wrapper contents');
+    assert(text.includes('function first') && text.includes('function second'));
+    assert(!text.includes('ПЕРВОЕ') && !text.includes('ВТОРОЕ'), 'Useful sibling function folds remain');
+    assert.equal(await code.inputValue(), wrapped);
+  }
+  // A real neighboring statement, even a comment-like string, keeps separate folding useful.
+  for (const neighbor of ['boot();', '"/* not a comment */";']) {
+    await set('<script>\n' + neighbor + '\n' + wrappers[0] + '\n</script>'); await fold(); await open('<script>');
+    assert((await content.innerText()).includes(neighbor)); assert(!(await content.innerText()).includes('const ready'));
+    await open('(() =>'); assert((await overview()).text.includes('const ready'));
+  }
   // Two folds on one line: the second placeholder must open only the second function.
   const siblings = '<script>\nfunction first() { return "ПЕРВОЕ"; } function second() { return "ВТОРОЕ"; }\n</script>';
   await set(siblings); await fold(); await open('<script>'); await open('function first', 1);
   assert(!(await content.innerText()).includes('ПЕРВОЕ')); assert((await content.innerText()).includes('ВТОРОЕ'));
   const json = '<script type="importmap">\n{\n  "imports": {\n    "one": "./one.js",\n    "two": "./two.js"\n  }\n}\n</script>';
   await set(json); await fold(); await open('<script');
-  assert(!(await content.innerText()).includes('imports'));
-  await open('{'); assert(!(await content.innerText()).includes('./one.js'));
-  await open('imports'); assert((await content.innerText()).includes('./one.js'));
+  assert((await content.innerText()).includes('./one.js'), 'A chain of single JSON wrappers opens together');
   // Gutter folding works with the mode on and off, including expression arrows.
   const arrow = '<script>\nconst double = value => value * 2;\n</script>';
   await mode(false); await set(arrow);

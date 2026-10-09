@@ -52,7 +52,7 @@ async function checkEditorTextSize(page, prefix) {
       const rect = await panel.boundingBox(), anchor = await toggle.boundingBox(), engine = await page.locator('#editor-toggle').boundingBox();
       assert(rect.x >= 0 && rect.x + rect.width <= (await page.viewportSize()).width && rect.y >= 0 && rect.y + rect.height <= anchor.y && anchor.x + anchor.width <= engine.x, 'Popover fits above the pinned text-size button left of the editor');
       const range = page.locator('#edit-size-range');
-      for (const value of [14, 22]) {
+      for (const value of [10, 26]) {
         await range.evaluate((el, value) => { el.value = String(value); el.dispatchEvent(new Event('input', { bubbles: true })); }, value);
         await page.waitForFunction(({ editor, value }) => getComputedStyle(document.querySelector(editor === 'native' ? '#code' : '#alternative-editor .cm-editor')).fontSize === `${value}px`, { editor, value });
         assert.equal(await page.locator('#edit-size-value').innerText(), `${value} px`);
@@ -62,13 +62,13 @@ async function checkEditorTextSize(page, prefix) {
         assert.deepEqual(await code.evaluate(el => [el.selectionStart, el.selectionEnd]), selection, 'Scaling preserves the selected code');
       }
       assert(await page.locator('#edit-size-increase').isDisabled());
-      for (const value of [20, 18, 16, 14]) {
+      for (const value of [24, 22, 20, 18, 16, 14, 12, 10]) {
         await page.locator('#edit-size-decrease').click();
         assert.equal(await range.inputValue(), String(value));
       }
       assert(await page.locator('#edit-size-decrease').isDisabled());
       await page.locator('#edit-size-increase').click();
-      assert.equal(await range.inputValue(), '16');
+      assert.equal(await range.inputValue(), '12');
       await page.screenshot({ path: `${prefix}-size-${editor}-${dark ? 'dark' : 'light'}.png` });
       await range.press('Escape'); assert(await panel.isHidden());
       await toggle.click(); await page.locator('h1').first().click(); assert(await panel.isHidden(), 'Clicking outside closes the size controls');
