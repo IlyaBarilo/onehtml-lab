@@ -41,8 +41,8 @@ async function scene(page, mode) {
   });
 }
 async function geometry(page) {
-  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-  const controls = await page.locator('.controls button, #phaser-renderer').evaluateAll(buttons => buttons.map(button => {
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), await page.locator('.controls button').evaluateAll(nodes => JSON.stringify(nodes.map(n => ({ id: n.id, text: n.textContent, width: n.getBoundingClientRect().width, right: n.getBoundingClientRect().right })))));
+  const controls = await page.locator('.controls button:visible, #phaser-renderer button:visible').evaluateAll(buttons => buttons.map(button => {
     const r = button.getBoundingClientRect(); return { left: r.left, right: r.right, height: r.height };
   }));
   assert(controls.every(r => r.left >= 0 && r.right <= (page.viewportSize()?.width || 0) + 1 && r.height >= 44), JSON.stringify(controls));
@@ -50,7 +50,7 @@ async function geometry(page) {
     const time = await page.locator('#phaser-time').boundingBox(), hud = await page.locator('.phaser-hud').boundingBox();
     const field = await page.locator('#scene').boundingBox();
     assert(time && hud && field && time.width >= 44 && time.height >= 44 && time.x >= hud.x + hud.width &&
-      time.x + time.width <= field.x + field.width && time.y + time.height <= field.y + field.height, 'Time switch must be touch-sized and separate from the HUD');
+      time.x + time.width <= field.x + field.width && time.y + time.height <= field.y + field.height, 'Time switch must be touch-sized and separate from the HUD: ' + JSON.stringify({ time, hud, field }));
   }
 }
 async function controls(page, touch) {
@@ -91,7 +91,7 @@ async function renderedFrame(page) {
 async function worldState(page) {
   return page.evaluate(() => {
     const game = window.testGames.at(-1), s = game.scene.getScenes(true)[0];
-    return { games: window.testGames.length, x: s.player.x, y: s.player.y, vx: s.player.body.velocity.x, vy: s.player.body.velocity.y,
+    return { games: window.testGames.length, width: game.canvas.width, height: game.canvas.height, x: s.player.x, y: s.player.y, vx: s.player.body.velocity.x, vy: s.player.body.velocity.y,
       score: s.score, health: s.health, checkpoint: s.checkpoint, collected: s.collected, jumps: s.jumps };
   });
 }
@@ -116,11 +116,20 @@ async function unchangedSky(page, before, after) {
     const ctx = canvas.getContext('2d'), pixels = frames.map(frame => {
       ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(frame, 0, 0); return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     });
-    let changed = 0;
-    for (let i = 0; i < pixels[0].length; i += 4) if ([0,1,2].some(c => pixels[0][i+c] !== pixels[1][i+c])) changed++;
-    return changed;
+    let changed = 0; const samples = [];
+    // Repeated GPU blending may round a channel by one 8-bit step, especially in WebKit.
+    // Changes larger than that still fail, including a filter applied over the sky.
+    for (let i = 0; i < pixels[0].length; i += 4) if ([0,1,2].some(c => Math.abs(pixels[0][i+c] - pixels[1][i+c]) > 1)) {
+      changed++;
+      if (samples.length < 5) samples.push({ x: i / 4 % canvas.width, y: Math.floor(i / 4 / canvas.width), before: Array.from(pixels[0].slice(i, i + 4)), after: Array.from(pixels[1].slice(i, i + 4)) });
+    }
+    return { changed, samples };
   }, [before, after].map(buffer => 'data:image/png;base64,' + buffer.toString('base64')));
-  assert.equal(changed, 0, 'Local effects must preserve the sky colors and avoid a filter over the whole scene');
+  if (changed.changed) {
+    await writeFile(join(tmpdir(), 'onehtml-phaser-sky-before.png'), before);
+    await writeFile(join(tmpdir(), 'onehtml-phaser-sky-after.png'), after);
+  }
+  assert.equal(changed.changed, 0, 'Local effects must preserve the sky colors and avoid a filter over the whole scene: ' + JSON.stringify(changed.samples));
 }
 async function visibleNightLighting(page, before, after) {
   const result = await page.evaluate(async sources => {
@@ -164,12 +173,110 @@ async function lightingInputs(page) {
 }
 async function chooseRenderer(page, value) {
   const before = await page.evaluate(() => window.testGames.length);
-  await page.locator('#phaser-renderer').selectOption(value);
+  const button = page.locator(`#phaser-renderer [data-renderer="${value}"]`);
+  if (page.viewportSize().width === 320) await button.tap(); else await button.click();
   await page.waitForFunction(before => window.testGames.length > before && window.testGames.at(-1).scene.getScenes(true)[0], before);
   assert.equal(await page.locator('#scene').getAttribute('data-phaser-renderer'), value);
-  assert.equal(await page.locator('#phaser-renderer').inputValue(), value);
+  assert.equal(await rendererChoice(page), value);
   assert.equal(await page.evaluate(() => window.testGames.at(-1).renderer.type), value === 'canvas' ? 1 : 2);
+  const active = await page.evaluate(() => window.testGames.length);
+  await button.click();
+  assert.equal(await page.evaluate(() => window.testGames.length), active, 'Pressing the already selected renderer must preserve the running level');
   await geometry(page);
+}
+async function rendererChoice(page) {
+  return page.locator('#phaser-renderer [aria-pressed="true"]').getAttribute('data-renderer');
+}
+async function visibleSurfaceShadows(page, before, after, label = 'Native self-shadowing') {
+  const ratio = await page.evaluate(async sources => {
+    const s = window.testGames.at(-1).scene.getScenes(true)[0], camera = s.cameras.main;
+    const wall = s.surfaces[0].getBounds(), a = { x: (wall.x - camera.worldView.x) * camera.zoom, y: (wall.y - camera.worldView.y) * camera.zoom };
+    const b = { x: (wall.right - camera.worldView.x) * camera.zoom, y: (wall.bottom - camera.worldView.y) * camera.zoom };
+    const frames = await Promise.all(sources.map(src => new Promise(resolve => {
+      const image = new Image(); image.onload = () => resolve(image); image.src = src;
+    })));
+    const canvas = document.createElement('canvas'); canvas.width = frames[0].width; canvas.height = frames[0].height;
+    const ctx = canvas.getContext('2d'), pixels = frames.map(frame => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(frame, 0, 0); return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    });
+    let count = 0, changed = 0;
+    for (let y = Math.max(0, Math.ceil(a.y)); y < Math.min(canvas.height, b.y); y++) for (let x = Math.max(0, Math.ceil(a.x)); x < Math.min(canvas.width, b.x); x++) {
+      const i = (y * canvas.width + x) * 4;
+      if ([0, 1, 2].reduce((sum, c) => sum + Math.abs(pixels[0][i + c] - pixels[1][i + c]), 0) >= 24) changed++;
+      count++;
+    }
+    return count ? changed / count : 0;
+  }, [before, after].map(buffer => 'data:image/png;base64,' + buffer.toString('base64')));
+  assert(ratio >= .1, `${label} must visibly change the actual panel: ${(ratio * 100).toFixed(1)}%`);
+  console.log(`  ${label} changes ${(ratio * 100).toFixed(1)}% of visible panel pixels.`);
+}
+async function hintView(page, name, protocol, width) {
+  await scene(page, 'phaser');
+  if (await page.locator('#pause').getAttribute('aria-pressed') !== 'true') await page.locator('#pause').click();
+  const before = await worldState(page);
+  const cameraBefore = await page.evaluate(() => {
+    const c = window.testGames.at(-1).scene.getScenes(true)[0].cameras.main;
+    return { x: c.scrollX, y: c.scrollY, zoom: c.zoom, bounds: c.useBounds };
+  });
+  await page.locator('#phaser-hints').click();
+  assert.equal(await page.locator('#phaser-hints').getAttribute('aria-pressed'), 'true');
+  assert.deepEqual(await worldState(page), before, 'Hint mode must preserve physics, score, selected pause and the game instance');
+  assert(await page.locator('.phaser-hint-overlay').isVisible());
+  assert.match(await page.locator('.phaser-hint-caption').innerText(), /Phaser 3.*пазы светлее/);
+  const inputs3 = await lightingInputs(page), frame3 = await renderedFrame(page);
+  await geometry(page);
+  assert(await page.locator('.phaser-hint-overlay ellipse').evaluate(node => {
+    const r = node.getBoundingClientRect(), stage = document.querySelector('#stage').getBoundingClientRect();
+    return r.width >= 40 && r.left >= stage.left && r.right <= stage.right && r.top >= stage.top && r.bottom <= stage.bottom;
+  }), 'The annotation must point to a large visible part of the real panel');
+  await page.screenshot({ path: join(tmpdir(), `onehtml-phaser3-${name}-${protocol}-${width}-hints.png`) });
+  await page.locator('#phaser-hints').click();
+  assert.deepEqual(await worldState(page), before);
+  assert.deepEqual(await page.evaluate(() => {
+    const c = window.testGames.at(-1).scene.getScenes(true)[0].cameras.main;
+    return { x: c.scrollX, y: c.scrollY, zoom: c.zoom, bounds: c.useBounds };
+  }), cameraBefore, 'Leaving hint mode must restore the exact original camera');
+  assert(await page.locator('.phaser-hint-overlay').isHidden());
+  await page.locator('#phaser-hints').click();
+  await scene(page, 'phaser4');
+  assert.equal(await page.locator('#phaser-hints').getAttribute('aria-pressed'), 'true', 'Hints must carry over between engines');
+  assert.match(await page.locator('.phaser-hint-caption').innerText(), /Phaser 4.*тень в пазу/);
+  assert.deepEqual(await lightingInputs(page), inputs3, 'Both magnified views must use the same materials, fixed lights, ambient light and decorations');
+  const frame4 = await renderedFrame(page);
+  await writeFile(join(tmpdir(), `onehtml-phaser3-${name}-${width}-detail.png`), frame3);
+  await writeFile(join(tmpdir(), `onehtml-phaser4-${name}-${width}-detail.png`), frame4);
+  await page.screenshot({ path: join(tmpdir(), `onehtml-phaser4-${name}-${protocol}-${width}-hints.png`) });
+  await visibleSurfaceShadows(page, frame3, frame4, 'Phaser 3 vs 4');
+  const held = await worldState(page);
+  await page.locator('#scene').focus(); await page.keyboard.press('ArrowRight'); await page.keyboard.press('Space');
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  assert.deepEqual(await worldState(page), held, 'Hint mode must keep the game frozen and ignore movement/jump input');
+  await page.locator('#phaser-time').click();
+  assert.match(await page.locator('.phaser-hint-caption').innerText(), /Днём.*разница мала/);
+  assert(await page.locator('.phaser-hint-overlay > svg').evaluate(node => getComputedStyle(node).visibility === 'hidden'));
+  await page.locator('#phaser-time').click();
+  await chooseRenderer(page, 'canvas');
+  assert.match(await page.locator('.phaser-hint-caption').innerText(), /Canvas.*почти одинаково/);
+  assert.equal(await page.locator('#phaser-hints').getAttribute('aria-pressed'), 'true');
+  await chooseRenderer(page, 'webgl');
+  await page.locator('#info-toggle').click();
+  const guide = await page.locator('#info-body').innerText();
+  assert.match(guide, /WebGL.*видеоускоритель/);
+  assert.match(guide, /Canvas.*небольшой игры.*WebGL недоступен/s);
+  assert.match(guide, /Рекомендация.*Phaser 4 \+ WebGL.*Phaser 3.*оставить на 3/s);
+  await page.locator('#info-close').click();
+  assert.equal(await page.locator('#phaser-hints').getAttribute('aria-pressed'), 'true');
+  await page.locator('#scene').focus(); await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#phaser-hints').getAttribute('aria-pressed'), 'false');
+  assert.equal(await page.locator('#pause').getAttribute('aria-pressed'), 'true', 'Closing hints must respect the existing pause');
+  await page.locator('#pause').click();
+  await page.locator('#phaser-hints').click();
+  assert.equal(await page.locator('#pause').getAttribute('aria-pressed'), 'false', 'Hints must not change the user pause setting');
+  const live = await worldState(page);
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  assert.deepEqual(await worldState(page), live, 'Hints must stop a running game as well as a manually paused game');
+  await page.locator('#phaser-hints').click();
+  await page.waitForFunction(x => window.testGames.at(-1).scene.getScenes(true)[0].player.x !== x, live.x);
 }
 try {
   for (const [name, engine] of engines) {
@@ -183,23 +290,29 @@ try {
         try {
           await page.goto(url);
           assert.equal(await page.locator('.mode').count(), 5);
+          assert.equal(await page.locator('#info-toggle').innerText(), '?');
           const base = await scene(page, 'phaser');
           assert.equal(base.coins, 25); assert.equal(base.enemies, 5); assert.equal(base.health, 3); assert.equal(base.checkpoint, 110);
           assert.equal(base.renderer, 2, 'Both versions start with the same WebGL renderer');
           assert.equal(await page.locator('#phaser-effects').count(), 1);
-          assert.equal(await page.locator('#phaser-renderer').inputValue(), 'webgl');
+          assert.equal(await rendererChoice(page), 'webgl');
+          assert.equal(await page.locator('#phaser-renderer button').count(), 2);
+          assert.equal(await page.locator('#phaser-renderer select').count(), 0);
+          assert.match(await page.locator('#library-description').innerText(), /панелей/);
           assert.equal(await page.locator('#scene').getAttribute('data-phaser-time'), 'night', 'Both versions start at night');
           await geometry(page);
           await controls(page, width === 320);
           await page.locator('#pause').click();
           const baseNight = await renderedFrame(page);
           await page.locator('#phaser-effects').click();
+          assert.match(await page.locator('#library-description').innerText(), /включите эффекты/i);
           const baseWithoutEffects = await renderedFrame(page);
           await unchangedSky(page, baseNight, baseWithoutEffects);
           await visibleNightLighting(page, baseNight, baseWithoutEffects);
           await page.locator('#phaser-effects').click();
           const baseInputs = await lightingInputs(page);
           const baseDay = await changeTime(page, 'day', width === 320);
+          assert.match(await page.locator('#library-description').innerText(), /включите ночь/i);
           if (url === urls[0]) {
             await writeFile(join(tmpdir(), `onehtml-phaser3-${name}-${width}-night.png`), baseNight);
             await writeFile(join(tmpdir(), `onehtml-phaser3-${name}-${width}-day.png`), baseDay);
@@ -240,6 +353,7 @@ try {
             await page.evaluate(() => window.testGames.at(-1).scene.getScenes(true)[0].surfaces.forEach(item => item.setSelfShadow(false)));
             const withoutSelfShadow = await renderedFrame(page);
             assert(!withSelfShadow.equals(withoutSelfShadow), 'Native self-shadowing must actually change the paused frame without changing lights or decorative effects');
+            await visibleSurfaceShadows(page, withSelfShadow, withoutSelfShadow);
             await unchangedSky(page, withSelfShadow, withoutSelfShadow);
             await page.evaluate(() => window.testGames.at(-1).scene.getScenes(true)[0].surfaces.forEach(item => item.setSelfShadow(true)));
             if (url === urls[0]) {
@@ -308,7 +422,7 @@ try {
           assert.equal(await page.locator('#scene').getAttribute('data-phaser-time'), 'night');
           await controls(page, width === 320);
           await scene(page, 'phaser');
-          assert.equal(await page.locator('#phaser-renderer').inputValue(), 'canvas');
+          assert.equal(await rendererChoice(page), 'canvas');
           assert.equal(await page.evaluate(() => window.testGames.at(-1).renderer.type), 1);
           await controls(page, width === 320);
           await page.locator('#pause').click();
@@ -317,7 +431,7 @@ try {
           assert.deepEqual(canvasInputs.objects, baseInputs.objects);
           const canvas3 = await renderedFrame(page);
           await scene(page, 'phaser4');
-          assert.equal(await page.locator('#phaser-renderer').inputValue(), 'canvas');
+          assert.equal(await rendererChoice(page), 'canvas');
           const canvas4Inputs = await lightingInputs(page);
           assert.deepEqual(canvas4Inputs, canvasInputs, 'Both Canvas variants use the same scene, textures and drawn effects');
           if (url === urls[0]) {
@@ -351,14 +465,20 @@ try {
           assert.equal(await page.locator('#scene').getAttribute('data-phaser-time'), 'night', 'The time of day also carries back to Phaser 3');
           await scene(page, 'phaser4');
           assert.equal(await page.locator('#phaser-time').count(), 1, 'Scene changes must not duplicate the time switch');
+          await hintView(page, name, new URL(url).protocol.replace(':', ''), width);
           await page.screenshot({ path: join(tmpdir(), `onehtml-phaser-${name}-${new URL(url).protocol.replace(':','')}-${width}.png`) });
           if (width === 320) {
             await page.setViewportSize({ width, height: 367 });
             await page.waitForFunction(() => document.querySelector('#scene').clientHeight < 190);
             await geometry(page);
+            await page.locator('#phaser-hints').click();
+            assert.match(await page.locator('.phaser-hint-caption').innerText(), /Разверните сцену/);
             assert(await page.locator('.controls').evaluate(node => node.getBoundingClientRect().bottom <= innerHeight + 1), 'Controls must fit a low phone preview');
             await page.locator('#phaser-expand').click();
             assert(await page.locator('#scene').evaluate(node => node.clientHeight > 190), 'Expanded phone level must have room for its controls');
+            await page.locator('.phaser-hint-caption').filter({ hasText: /Phaser 4.*тень/ }).waitFor();
+            await geometry(page);
+            await page.locator('#phaser-hints').click();
             await page.locator('#phaser-expand').click();
           }
           assert.deepEqual(errors, []); assert.deepEqual(requests, [], 'Real engines must work in the standalone offline fixture');
@@ -376,13 +496,13 @@ try {
           await page.goto(urls[0]); const fallback = await scene(page, 'phaser4');
           assert.equal(fallback.renderer, 1); assert(await page.locator('#phaser-effects').isEnabled());
           assert.match(await page.locator('#message').innerText(), /WebGL недоступен.*Canvas/);
-          assert.equal(await page.locator('#phaser-renderer').inputValue(), 'canvas');
-          assert(await page.locator('#phaser-renderer option[value="webgl"]').isDisabled());
+          assert.equal(await rendererChoice(page), 'canvas');
+          assert(await page.locator('#phaser-renderer [data-renderer="webgl"]').isDisabled());
           assert.equal(await page.locator('#scene').getAttribute('data-phaser-time'), 'night');
           await page.locator('#pause').click();
           await changeTime(page, 'day'); await changeTime(page, 'night');
           const base = await scene(page, 'phaser'); assert.equal(base.renderer, 1);
-          assert.equal(await page.locator('#phaser-renderer').inputValue(), 'canvas');
+          assert.equal(await rendererChoice(page), 'canvas');
           await geometry(page); assert.deepEqual(errors, []);
           console.log('chromium: disabled WebGL keeps the same level playable with an explained Canvas fallback.');
         } finally { await context.close(); }

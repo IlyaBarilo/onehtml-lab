@@ -19,10 +19,12 @@
     #scenario { width: 140px; min-height: 36px; padding: 5px 8px; border: 1px solid #3b5676; border-radius: 8px; background: #17283e; color: #eaf2ff; font: inherit; font-size: 14px; }
     .library-description { margin: 8px 0 0; color: #b8cce5; font-size: 13px; line-height: 1.4; }
     .description-row { display: flex; align-items: center; gap: 8px; }
-    .description-row p { flex: 1; }
-    #phaser-renderer { flex: none; width: 94px; min-height: 44px; margin-top: 8px; padding: 5px 8px; border: 1px solid #3b5676; border-radius: 8px; background: #17283e; color: #eaf2ff; font: inherit; font-size: 14px; }
+    .description-row p { flex: 1; min-width: 0; }
+    #phaser-renderer { flex: none; display: flex; gap: 4px; margin-top: 8px; }
     #phaser-renderer[hidden] { display: none; }
-    #phaser-renderer:focus-visible { outline: 3px solid #82bdff; outline-offset: 2px; }
+    #phaser-renderer button { min-height: 44px; padding: 5px 8px; font-size: 14px; }
+    #phaser-renderer button[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; color: #eaf2ff; }
+    #phaser-renderer button:focus-visible { outline: 3px solid #82bdff; outline-offset: 2px; }
     #info-toggle { flex: none; width: 32px; min-height: 32px; margin-top: 8px; padding: 0; font-size: 20px; }
     .info-panel { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; background: #101e30; touch-action: auto; }
     .info-panel[hidden] { display: none; }
@@ -31,11 +33,27 @@
     #info-close { width: 44px; font-size: 24px; }
     .info-body { overflow-y: auto; padding: 0 14px 16px; font-size: 15px; line-height: 1.5; }
     .info-body p { margin: 12px 0; }
+    .info-body .recommendation { padding: 10px 12px; border-left: 3px solid #88bbff; background: #17283e; }
     .app.info-open .metrics, .app.info-open .modes, .app.info-open .description-row, .app.info-open footer { display: none; }
     .app.info-open .heading { margin-bottom: 0; }
     .app.phaser-expanded header, .app.phaser-expanded .details { display: none; }
     #phaser-expand { width: 44px; padding: 0; display: grid; place-items: center; }
     #phaser-expand svg { width: 22px; height: 22px; }
+    #phaser-hints { width: 44px; padding: 0; display: grid; place-items: center; }
+    #phaser-hints svg { width: 22px; height: 22px; }
+    #phaser-effects { width: 44px; padding: 0; display: grid; place-items: center; flex: none; }
+    #phaser-effects svg { width: 22px; height: 22px; }
+    #phaser-hints[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; }
+    .phaser-hint-overlay { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+    .phaser-hint-overlay[hidden] { display: none; }
+    .phaser-hint-caption { position: absolute; top: 8px; left: 10px; right: 66px; width: fit-content; max-width: calc(100% - 76px); padding: 7px 10px; border: 1px solid #88bbff; border-radius: 8px; background: #091e31; font-size: 14px; line-height: 1.35; }
+    .phaser-hint-caption b { display: block; margin-bottom: 3px; color: #a9d0ff; }
+    .phaser-hint-overlay > svg { width: 100%; height: 100%; overflow: hidden; filter: drop-shadow(0 1px 2px #091321); }
+    .phaser-hint-view .phaser-hud, .phaser-hint-view .phaser-pad { visibility: hidden; }
+    #stage:has(.phaser-hint-view) #paused { visibility: hidden; }
+    #stage:has(.phaser-hint-view) .stage-note { visibility: hidden; }
+    .phaser-hint-view.phaser-compact .phaser-hint-caption { top: 2px; left: 6px; padding: 3px 6px; font-size: 12px; }
+    .phaser-hint-view.phaser-compact .phaser-hint-caption b { display: none; }
     #scene-stats { position: absolute; bottom: 8px; left: 10px; padding: 5px 8px; border-radius: 6px; background: #091321cc; pointer-events: none; font-size: 14px; }
     .load[hidden] { display: none; }
     .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
@@ -96,11 +114,15 @@
       .mode { flex: 0 0 150px; min-height: 70px; }
       .mode:first-child { flex-basis: 110px; }
       .mode:first-child small { margin-top: 3px; }
+      .phaser-description .library-description { min-height: 2.8em; }
       .load { flex-wrap: wrap; gap: 0; }
       .load label { width: 100%; }
       input[type="range"] { height: 34px; }
       .controls { gap: 8px; }
       .controls button { padding: 0 10px; }
+      .controls:has(#phaser-hints) { gap: 4px; }
+      .controls:has(#phaser-hints) button { padding: 0 4px; }
+      .controls #phaser-hints, .controls #phaser-expand, .controls #phaser-effects { padding: 0; flex: none; }
       .details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; }
       .details span { white-space: nowrap; }
       .details span:last-child { grid-column: 1 / -1; }
@@ -156,7 +178,7 @@
         <button class="mode" data-mode="phaser" aria-pressed="false" disabled><b>Phaser 3.90</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="phaser4" aria-pressed="false" disabled><b>Phaser 4.2.1</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
       </nav>
-      <div class="description-row"><p id="library-description" class="library-description"></p><select id="phaser-renderer" aria-label="Отрисовка Phaser" title="Отрисовка Phaser" hidden><option value="canvas">Canvas</option><option value="webgl" selected>WebGL</option></select><button id="info-toggle" aria-label="Подробно о выбранной библиотеке" aria-expanded="false" aria-controls="library-info">i</button></div>
+      <div class="description-row"><p id="library-description" class="library-description"></p><div id="phaser-renderer" role="group" aria-label="Отрисовка Phaser" hidden><button data-renderer="canvas" aria-pressed="false">Canvas</button><button data-renderer="webgl" aria-pressed="true">WebGL</button></div><button id="info-toggle" title="Какую библиотеку и отрисовку выбрать" aria-label="Подробно о выбранной библиотеке" aria-expanded="false" aria-controls="library-info">?</button></div>
     </header>
     <section id="stage" aria-label="Поле теста: нажимайте или касайтесь несколькими пальцами">
       <div id="scene"></div>
@@ -240,6 +262,7 @@
       let phaserExpanded = false;
       let phaserNight = true;
       let phaserEffectsEnabled = true;
+      let phaserHintsEnabled = false;
       let phaserRenderer = 'webgl', phaserWebglUnavailable = false;
       let paused = false, tapCount = 0, peakPointers = 0, pendingInput = null;
       let frameStart = 0, frames = 0, lastFrame = null;
@@ -249,7 +272,18 @@
       function phaserRenderType(Phaser) { return phaserRenderer === 'canvas' ? Phaser.CANVAS : Phaser.AUTO; }
 
       function phaserRenderingDescription() {
-        return phaserRenderer === 'canvas' ? 'Canvas · рисованные эффекты' : mode === 'phaser4' ? 'WebGL · самозатенение' : 'WebGL · свет и рельеф';
+        if (scenario !== 'showcase') return phaserRenderer === 'canvas' ? 'Canvas · 2D-графика' : 'WebGL · 2D-графика';
+        if (phaserRenderer === 'canvas') return 'Canvas · без шейдеров';
+        if (!phaserNight) return 'Включите ночь';
+        if (!phaserEffectsEnabled) return 'Включите эффекты';
+        return mode === 'phaser4' ? 'Тени в пазах панелей' : 'Свет на гранях панелей';
+      }
+
+      function syncRendererButtons() {
+        $('phaser-renderer').querySelectorAll('button').forEach(button => {
+          button.setAttribute('aria-pressed', String(button.dataset.renderer === phaserRenderer));
+          button.disabled = button.dataset.renderer === 'webgl' && phaserWebglUnavailable;
+        });
       }
 
       function reportPhaserRenderer(game) {
@@ -259,8 +293,8 @@
           $('message').textContent = 'WebGL недоступен — используется Canvas.';
         }
         host.dataset.phaserRenderer = actual;
-        $('phaser-renderer').value = actual;
-        $('phaser-renderer').querySelector('[value="webgl"]').disabled = phaserWebglUnavailable;
+        phaserRenderer = actual;
+        syncRendererButtons();
         $('library-description').textContent = phaserRenderingDescription();
         updateInfo();
       }
@@ -1122,9 +1156,9 @@
         let zoom = Math.max(.16, Math.min(1.25, (height - (compact ? 20 : 90)) / 390));
         const holes = [[700, 860], [1480, 1690], [2350, 2490]];
         const held = new Map();
-        let game, current = null, demo = true, jumpQueued = false;
+        let game, current = null, demo = true, jumpQueued = false, savedCamera = null;
         const repaint = () => {
-          if (paused && current) { game.renderer.preRender(); game.scene.render(game.renderer); game.renderer.postRender(); }
+          if ((paused || phaserHintsEnabled) && current) { game.renderer.preRender(); game.scene.render(game.renderer); game.renderer.postRender(); drawHint(); }
         };
         const effects = document.createElement('button');
         {
@@ -1152,6 +1186,56 @@
         const result = document.createElement('div'); result.className = 'phaser-result'; result.hidden = true;
         const expand = document.createElement('button'); expand.id = 'phaser-expand';
         const svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+        effects.innerHTML = svg + '<path d="M9 18h6m-5 3h4M8.5 14.5a6 6 0 1 1 7 0C14.5 15.3 14 16 14 18h-4c0-2-.5-2.7-1.5-3.5Z"/></svg>';
+        const hints = document.createElement('button'); hints.id = 'phaser-hints';
+        hints.innerHTML = svg + '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>';
+        const hintOverlay = document.createElement('div'); hintOverlay.className = 'phaser-hint-overlay'; hintOverlay.hidden = true;
+        const hintCaption = document.createElement('div'); hintCaption.className = 'phaser-hint-caption'; hintCaption.setAttribute('role', 'status');
+        const hintTitle = document.createElement('b'), hintText = document.createElement('span'); hintTitle.textContent = 'Подсказки · пауза'; hintCaption.append(hintTitle, hintText);
+        const hintSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); hintSvg.setAttribute('aria-hidden', 'true');
+        const hintCircle = document.createElementNS(hintSvg.namespaceURI, 'ellipse'), hintArrow = document.createElementNS(hintSvg.namespaceURI, 'path');
+        for (const shape of [hintCircle, hintArrow]) { shape.setAttribute('fill', 'none'); shape.setAttribute('stroke', '#9dccff'); shape.setAttribute('stroke-width', '2'); }
+        hintSvg.append(hintCircle, hintArrow); hintOverlay.append(hintSvg, hintCaption);
+        const drawHint = () => {
+          if (!current || !phaserHintsEnabled) return;
+          hintText.textContent = compact ? 'Разверните сцену для подсказок' : !current.visuals.webgl
+            ? 'Canvas: рисованные эффекты. Версии выглядят почти одинаково.' : !phaserNight
+              ? 'Днём разница мала. Включите ночь кнопкой справа.' : !phaserEffectsEnabled
+                ? 'Включите свет кнопкой лампочки внизу.' : modern
+                  ? 'Phaser 4: тень в пазу под ребром панели.' : 'Phaser 3: свет на рёбрах; пазы светлее.';
+          const showArrow = !compact && current.visuals.webgl && phaserNight && phaserEffectsEnabled;
+          hintSvg.style.visibility = showArrow ? 'visible' : 'hidden';
+          if (!showArrow) return;
+          const camera = current.cameras.main, point = { x: (276 - camera.worldView.x) * camera.zoom, y: (394 - camera.worldView.y) * camera.zoom };
+          const rx = 24 * camera.zoom, ry = 7 * camera.zoom;
+          hintCircle.setAttribute('cx', point.x); hintCircle.setAttribute('cy', point.y); hintCircle.setAttribute('rx', rx); hintCircle.setAttribute('ry', ry);
+          const top = hintCaption.offsetTop + hintCaption.offsetHeight + 8, tipY = point.y - ry - 4;
+          hintArrow.setAttribute('d', `M${point.x - 45},${top} L${point.x - 45},${tipY - 20} L${point.x},${tipY} m-9,-9 l9,9 l-13,1`);
+        };
+        const setHintView = () => {
+          const label = phaserHintsEnabled ? 'Выключить подсказки и вернуться к игре' : 'Показать отличия крупно со стрелкой';
+          hints.title = label; hints.setAttribute('aria-label', label); hints.setAttribute('aria-pressed', String(phaserHintsEnabled));
+          hintOverlay.hidden = !phaserHintsEnabled; host.classList.toggle('phaser-hint-view', phaserHintsEnabled);
+          if (!current) return;
+          const camera = current.cameras.main;
+          if (phaserHintsEnabled) {
+            if (!savedCamera) savedCamera = { x: camera.scrollX, y: camera.scrollY, zoom: camera.zoom, bounds: camera.useBounds, width, height };
+            camera.useBounds = false;
+            camera.setZoom(Math.max(.16, Math.min(2.8, (width - 24) / 272, Math.max(24, height - 100) / 190)));
+            camera.centerOn(240, 405 - (compact ? 0 : 24 / camera.zoom));
+            // Inspect the same fixed station light in both versions, without the moving robot light.
+            current.updateNightEffects(0); current.visuals.follow?.setIntensity(0);
+          } else if (savedCamera) {
+            camera.useBounds = savedCamera.bounds; camera.setZoom(savedCamera.zoom).setScroll(savedCamera.x, savedCamera.y); savedCamera = null;
+          }
+        };
+        hints.addEventListener('click', () => {
+          phaserHintsEnabled = !phaserHintsEnabled; release(); setHintView();
+          if (current?.visuals) current.setVisuals(phaserEffectsEnabled);
+          if (phaserHintsEnabled || paused || infoOpen || document.hidden) game.loop.sleep(); else game.loop.wake();
+          pendingInput = null; resetFps(); repaint();
+        });
+        document.querySelector('.controls').append(hints);
         const timeToggle = document.createElement('button'); timeToggle.id = 'phaser-time';
         for (const name of ['pointerdown', 'pointerup', 'pointercancel']) timeToggle.addEventListener(name, event => event.stopPropagation());
         timeToggle.addEventListener('click', () => {
@@ -1166,10 +1250,11 @@
         const toggleExpand = () => { phaserExpanded = !phaserExpanded; document.querySelector('.app').classList.toggle('phaser-expanded', phaserExpanded); updateExpand(); };
         expand.addEventListener('click', toggleExpand); updateExpand(); document.querySelector('.controls').append(expand);
         host.tabIndex = 0;
-        host.classList.toggle('phaser-compact', compact); host.append(hud, pad, result, timeToggle);
+        host.classList.toggle('phaser-compact', compact); host.append(hud, pad, result, timeToggle, hintOverlay);
+        setHintView();
         const setDemo = value => { demo = value; held.clear(); jumpQueued = false; pad.querySelector('[data-phaser-action="demo"]').setAttribute('aria-pressed', String(value)); };
         const act = (action, id) => {
-          if (!current || sceneGeneration !== generation) return;
+          if (!current || phaserHintsEnabled || sceneGeneration !== generation) return;
           if (current.finished) { current.scene.restart(); return; }
           if (action === 'demo') { setDemo(!demo); return; }
           if (demo) setDemo(false);
@@ -1178,6 +1263,7 @@
         };
         const keyAction = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'jump', KeyW: 'jump', Space: 'jump' };
         const keyDown = event => {
+          if (event.code === 'Escape' && phaserHintsEnabled && !infoOpen) { hints.click(); return; }
           if (event.code === 'Escape' && phaserExpanded) { toggleExpand(); return; }
           if (!keyAction[event.code] || paused || infoOpen || document.hidden || event.target.closest('button, select, input') || sceneGeneration !== generation) return;
           event.preventDefault();
@@ -1213,7 +1299,7 @@
                 const i = (y * w + x) * 4, value = relief(x, y);
                 const nx = (relief(x - 1, y) - relief(x + 1, y)) * 2;
                 const ny = (relief(x, y + 1) - relief(x, y - 1)) * 2, length = Math.hypot(nx, ny, 1);
-                const shade = .55 + value * .42;
+                const shade = .28 + value * .68;
                 for (let c = 0; c < 3; c++) image.data[i + c] = color[c] * shade;
                 image.data[i + 3] = name === 'station-stone' && value <= .015 ? 0 : 255;
                 normals.data[i + 3] = 255;
@@ -1225,11 +1311,11 @@
               this.textures.addCanvas(name, diffuse).setDataSource(normal);
             };
             surface('station-metal', 128, 128, (x, y) => {
-              const cellX = ((x % 64) + 64) % 64, cellY = ((y % 64) + 64) % 64;
-              const edge = Math.min(cellX - 5, 59 - cellX, cellY - 5, 59 - cellY);
-              const plate = Math.max(0, Math.min(1, edge / 5));
-              const rib = Math.max(0, 1 - Math.abs(cellX - 31) / 4) * (cellY > 16 && cellY < 48 ? .3 : 0);
-              return plate * .7 + rib;
+              const edge = Math.min(x - 6, 121 - x, y - 6, 121 - y);
+              const plate = Math.max(0, Math.min(1, edge / 3));
+              const rib = Math.max(0, 1 - Math.abs(((y % 28) + 28) % 28 - 14) / 6);
+              const side = Math.max(0, 1 - Math.abs(x - 17) / 4);
+              return plate * Math.max(.18 + rib * .82, side);
             }, [180, 200, 205]);
             surface('station-stone', 96, 72, (x, y) => {
               const a = Math.max(0, 1 - Math.hypot((x - 27) / 28, (y - 29) / 25));
@@ -1444,6 +1530,10 @@
               effects.disabled = false;
             }
             this.setTimeOfDay(); this.syncHud();
+            if (phaserHintsEnabled) {
+              setHintView();
+              this.game.events.once('postrender', () => { if (phaserHintsEnabled) { game.loop.sleep(); drawHint(); } });
+            }
           },
           extend: {
             setTimeOfDay() {
@@ -1480,7 +1570,7 @@
               if (!this.visuals) return;
               const { webgl } = this.visuals;
               if (webgl) {
-                this.lights.setAmbientColor(phaserNight ? 0x657c93 : 0xe8edf2);
+                this.lights.setAmbientColor(phaserNight ? (phaserHintsEnabled ? 0x263646 : 0x657c93) : 0xe8edf2);
                 this.visuals.follow.setRadius(phaserNight ? 180 : 115).setIntensity(phaserNight ? 1 : .18);
                 this.visuals.station.setRadius(phaserNight ? 230 : 150).setIntensity(phaserNight ? 1.6 : .22);
                 this.visuals.checkpointLight.setIntensity(phaserNight ? 1.1 : .15);
@@ -1495,7 +1585,7 @@
                 }
                 if (phaserNight && (!enabled || !webgl)) item.setTint(0x879eaf); else item.clearTint();
               }
-              if (modern && webgl) for (const item of this.surfaces) item.setSelfShadow(enabled && phaserNight);
+              if (modern && webgl) for (const item of this.surfaces) item.setSelfShadow(enabled && phaserNight, .65, .85);
               for (const lamp of this.visuals.lamps) lamp.setVisible(enabled).setAlpha(phaserNight ? .85 : .65);
               for (const halo of this.visuals.halos) halo.setVisible(enabled).setAlpha(phaserNight ? .28 : .035);
               for (const item of [...this.visuals.lanternEffects, this.visuals.beam, this.visuals.shadow, ...this.visuals.motes]) item.setVisible(enabled && phaserNight);
@@ -1503,6 +1593,9 @@
               effects.setAttribute('aria-pressed', String(enabled));
               effects.title = enabled ? 'Выключить эффекты освещения' : 'Включить эффекты освещения';
               host.dataset.phaserRenderer = webgl ? 'webgl' : 'canvas'; host.dataset.phaserEffects = enabled ? 'on' : 'off';
+              $('library-description').textContent = phaserRenderingDescription();
+              updateInfo();
+              if (phaserHintsEnabled) { setHintView(); drawHint(); }
             },
             updateNightEffects(time) {
               const v = this.visuals;
@@ -1555,7 +1648,7 @@
             },
           },
           update(time) {
-            if (paused || infoOpen || document.hidden || sceneGeneration !== generation || !this.player) return;
+            if (paused || phaserHintsEnabled || infoOpen || document.hidden || sceneGeneration !== generation || !this.player) return;
             for (const lift of this.platforms.getChildren()) {
               const p = lift.path, target = p[p.axis] + Math.sin(time / p.speed) * p.range;
               lift.setVelocity(p.axis === 'x' ? (target - lift.x) * 9 : 0, p.axis === 'y' ? (target - lift.y) * 9 : 0);
@@ -1598,21 +1691,27 @@
         game = new Phaser.Game({ type: phaserRenderType(Phaser), width, height, parent: host, backgroundColor: '#091321', banner: false, render: { maxLights: 12 },
           audio: { noAudio: true }, input: { mouse: false, touch: false, keyboard: false },
           physics: { default: 'arcade', arcade: { gravity: { y: 900 }, debug: false } }, fps: { target: 60, smoothStep: false }, scene,
-          callbacks: { postBoot(booted) { reportPhaserRenderer(booted); booted.events.on('postrender', () => { if (!paused && !infoOpen && !document.hidden && sceneGeneration === generation) frameRendered(performance.now()); }); } }
+          callbacks: { postBoot(booted) { reportPhaserRenderer(booted); booted.events.on('postrender', () => { if (!paused && !phaserHintsEnabled && !infoOpen && !document.hidden && sceneGeneration === generation) frameRendered(performance.now()); }); } }
         });
         return { ownLoop: true, tap(_x, _y, id, action) { host.focus({ preventScroll: true }); act(action || 'jump', id); }, release,
-          pause(value) { if (value) { release(); game.loop.sleep(); } else game.loop.wake(); },
+          pause(value) { if (value || phaserHintsEnabled) { release(); game.loop.sleep(); } else game.loop.wake(); },
           resize() {
             release(); compact = height < 190; zoom = Math.max(.16, Math.min(1.25, (height - (compact ? 20 : 90)) / 390));
             host.classList.toggle('phaser-compact', compact); game.scale.resize(width, height);
             current?.cameras.main.setZoom(zoom);
+            if (savedCamera) {
+              savedCamera.x += savedCamera.width / (2 * savedCamera.zoom) - width / (2 * zoom);
+              savedCamera.y += savedCamera.height / (2 * savedCamera.zoom) - height / (2 * zoom);
+              Object.assign(savedCamera, { zoom, width, height });
+            }
             if (current?.visuals) current.setVisuals(phaserEffectsEnabled);
+            repaint();
             $('scene-name').textContent = compact ? 'Лесная станция · касание: прыжок' : showcaseLabels[modern ? 'phaser4' : 'phaser'];
             if (!paused && !infoOpen) host.focus({ preventScroll: true });
           },
           dispose() {
             current = null; release(); document.removeEventListener('keydown', keyDown); document.removeEventListener('keyup', keyUp); window.removeEventListener('blur', blur);
-            hud.remove(); pad.remove(); result.remove(); expand.remove(); timeToggle.remove(); effects?.remove(); host.removeAttribute('tabindex'); host.classList.remove('phaser-compact');
+            hud.remove(); pad.remove(); result.remove(); expand.remove(); timeToggle.remove(); effects?.remove(); hints.remove(); hintOverlay.remove(); host.removeAttribute('tabindex'); host.classList.remove('phaser-compact', 'phaser-hint-view');
             delete host.dataset.phaserRenderer; delete host.dataset.phaserEffects; delete host.dataset.phaserTime; game.destroy(true); game.loop.wake();
           }
         };
@@ -1622,13 +1721,19 @@
         $('info-title').textContent = document.querySelector(`[data-mode="${mode}"] b`).textContent;
         const paragraphs = explanations[mode].map(text => { const paragraph = document.createElement('p'); paragraph.textContent = text; return paragraph; });
         if (mode.startsWith('phaser')) {
-          const renderer = document.createElement('p');
-          renderer.textContent = phaserRenderer === 'canvas'
-            ? 'Canvas — простая 2D-графика и рисованные эффекты. Подходит для игры без световых шейдеров и как запасной вариант. Phaser 3 и 4 здесь выглядят почти одинаково.'
-            : 'WebGL — свет и рельеф панелей и камней. В Phaser 4 ночью детали поверхности затеняют себя. Сцена и настройки света общие; днём разница может быть незаметна.';
-          paragraphs.push(renderer);
-          const performance = document.createElement('p'); performance.textContent = 'FPS зависит от сцены и устройства: Canvas не обязательно быстрее WebGL, а Phaser 4 — Phaser 3.';
-          paragraphs.push(performance);
+          paragraphs.splice(0, paragraphs.length);
+          for (const [title, text] of [
+            ['WebGL', '— рисует через видеоускоритель: много игровых объектов, динамический свет и эффекты. Обычно основной вариант для телефона и компьютера.'],
+            ['Canvas', '— для небольшой игры без световых шейдеров или если WebGL недоступен. Phaser 3 и 4 здесь выглядят почти одинаково.'],
+            ['Phaser 4', '— для новых 2D-игр: новый рендерер, фильтры и тени на поверхности.'],
+            ['Phaser 3', '— готовый код, уроки и плагины версии 3. Переход на 4 может потребовать правок.'],
+            ['Рекомендация', '— с нуля: Phaser 4 + WebGL. Работающую игру на Phaser 3 можно оставить на 3. FPS зависит от игры и устройства.'],
+            ['На что смотреть', '— включите прицел внизу: панель крупно со стрелкой. Ночью в WebGL у Phaser 4 темнее пазы. Днём и в Canvas разница мала.']
+          ]) {
+            const paragraph = document.createElement('p'), heading = document.createElement('b'); heading.textContent = title;
+            paragraph.append(heading, ' ' + text); if (title === 'Рекомендация') paragraph.className = 'recommendation'; paragraphs.push(paragraph);
+          }
+          const input = document.createElement('p'); input.textContent = explanations.phaser[1]; paragraphs.push(input);
         }
         $('info-body').replaceChildren(...paragraphs);
       }
@@ -1652,7 +1757,8 @@
         host.replaceChildren();
         mode = nextMode;
         $('phaser-renderer').hidden = !mode.startsWith('phaser');
-        $('phaser-renderer').value = phaserRenderer;
+        document.querySelector('.description-row').classList.toggle('phaser-description', mode.startsWith('phaser'));
+        syncRendererButtons();
         $('message').textContent = '';
         try {
           if (scenario === 'compare') {
@@ -1675,6 +1781,7 @@
           const failedMode = mode;
           mode = 'canvas';
           $('phaser-renderer').hidden = true;
+          document.querySelector('.description-row').classList.remove('phaser-description');
           delete host.dataset.phaserRenderer;
           host.replaceChildren();
           activeScene = scenario === 'compare' ? canvasComparison() : scenario === 'showcase' ? canvasShowcase() : canvasScene();
@@ -1783,7 +1890,10 @@
       $('info-close').addEventListener('click', () => showInfo(false));
       document.addEventListener('keydown', event => { if (event.key === 'Escape' && infoOpen) showInfo(false); });
       $('scenario').addEventListener('change', event => { scenario = event.target.value; startScene(); });
-      $('phaser-renderer').addEventListener('change', event => { phaserRenderer = event.target.value; startScene(); });
+      $('phaser-renderer').querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
+        if (button.dataset.renderer === phaserRenderer) return;
+        phaserRenderer = button.dataset.renderer; startScene();
+      }));
       $('load').addEventListener('input', event => { $('load-value').textContent = integer(Number(event.target.value)); });
       $('load').addEventListener('change', event => { objectCount = Number(event.target.value); startScene(); });
       $('pause').addEventListener('click', () => {
