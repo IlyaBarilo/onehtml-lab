@@ -31,6 +31,28 @@ async function open(page, tab = 'errors') {
 async function close(page) { await page.locator('#activity-close').click(); }
 async function cacheCount(page, count) { await page.waitForFunction(n => document.querySelectorAll('#diagnostic-cache-list > li').length === n, count); }
 async function source(page, text) { if (await page.locator('#activity-panel').isVisible()) await close(page); await page.locator('#code').fill(text); }
+async function checkToolbarLayout(page, width) {
+  const layout = await page.evaluate(() => {
+    const status = document.querySelector('#draft-status').getBoundingClientRect();
+    const buttons = [...document.querySelectorAll('#expert-tools button')].filter(el => el.getClientRects().length).map(el => el.getBoundingClientRect());
+    const resources = document.querySelector('.expert-resource-actions').getBoundingClientRect();
+    const actions = document.querySelector('.expert-actions').getBoundingClientRect();
+    const sameRow = resources.top < actions.bottom && resources.bottom > actions.top;
+    return {
+      overlap: buttons.some(rect => rect.left < status.right && rect.right > status.left && rect.top < status.bottom && rect.bottom > status.top),
+      scroll: document.documentElement.scrollWidth,
+      sameRow,
+      gap: sameRow ? resources.left - actions.right : resources.top - actions.bottom,
+      leftOffset: resources.left - actions.left
+    };
+  });
+  const details = `${width}px: ${JSON.stringify(layout)}`;
+  assert(!layout.overlap, `Draft error cannot cover toolbar buttons at ${details}`);
+  assert(layout.scroll <= width, `Toolbar must fit the viewport at ${details}`);
+  assert(layout.gap >= 0 && layout.gap <= 16, `Resource buttons follow editing buttons with a small separator at ${details}`);
+  if (!layout.sameRow) assert(Math.abs(layout.leftOffset) <= 1, `Wrapped resource buttons stay aligned to the left at ${details}`);
+  return layout;
+}
 
 try {
   for (const [name, engine] of engines) {
@@ -164,18 +186,15 @@ try {
         await page.locator('#draft-status.error').waitFor();
         for (const width of [320, 390, 600, 800, 801, 1365]) {
           await page.setViewportSize({ width, height: 844 });
-          const layout = await page.evaluate(() => {
-            const status = document.querySelector('#draft-status').getBoundingClientRect();
-            const buttons = [...document.querySelectorAll('#expert-tools button')].filter(el => el.getClientRects().length).map(el => el.getBoundingClientRect());
-            const resources = document.querySelector('.expert-resource-actions').getBoundingClientRect();
-            const actions = document.querySelector('.expert-actions').getBoundingClientRect();
-            return { overlap: buttons.some(rect => rect.left < status.right && rect.right > status.left && rect.top < status.bottom && rect.bottom > status.top), scroll: document.documentElement.scrollWidth, joined: resources.left - actions.right };
-          });
-          assert(!layout.overlap, `Draft error cannot cover toolbar buttons at ${width}px`);
-          assert(layout.scroll <= width);
-          if (width >= 801) assert(layout.joined >= 0 && layout.joined <= 16, 'Resource buttons follow editing buttons with a small separator');
+          await checkToolbarLayout(page, width);
           await open(page, 'libraries'); await close(page);
         }
+        // Exercise wrapping above the mobile breakpoint regardless of installed font metrics.
+        await page.setViewportSize({ width: 801, height: 844 });
+        await page.locator('.expert-actions').evaluate(el => { el.style.flexBasis = '100%'; });
+        assert.equal((await checkToolbarLayout(page, 801)).sameRow, false, 'The regression case must exercise a wrapped toolbar');
+        await open(page, 'libraries'); await close(page);
+        await page.locator('.expert-actions').evaluate(el => { el.style.flexBasis = ''; });
         await page.setViewportSize({ width: 390, height: 844 });
         await open(page, 'libraries');
         await page.locator('#diagnostic-library-list button').click();
