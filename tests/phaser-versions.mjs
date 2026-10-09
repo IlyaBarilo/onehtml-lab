@@ -69,6 +69,22 @@ async function renderedFrame(page) {
   }));
   return Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
 }
+async function unchangedSky(page, before, after) {
+  const changed = await page.evaluate(async sources => {
+    const image = src => new Promise((resolve, reject) => {
+      const value = new Image(); value.onload = () => resolve(value); value.onerror = reject; value.src = src;
+    });
+    const frames = await Promise.all(sources.map(image));
+    const canvas = document.createElement('canvas'); canvas.width = frames[0].width; canvas.height = Math.floor(frames[0].height * .2);
+    const ctx = canvas.getContext('2d'), pixels = frames.map(frame => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(frame, 0, 0); return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    });
+    let changed = 0;
+    for (let i = 0; i < pixels[0].length; i += 4) if ([0,1,2].some(c => pixels[0][i+c] !== pixels[1][i+c])) changed++;
+    return changed;
+  }, [before, after].map(buffer => 'data:image/png;base64,' + buffer.toString('base64')));
+  assert.equal(changed, 0, 'Local effects must preserve the sky colors and avoid a filter over the whole scene');
+}
 try {
   for (const [name, engine] of engines) {
     const browser = await engine.launch(name === 'chromium' ? { args: ['--use-angle=swiftshader'] } : {});
@@ -108,7 +124,8 @@ try {
             assert.equal(await page.locator('#scene').getAttribute('data-phaser-effects'), 'off');
             assert(await page.evaluate(() => {
               const s = window.testGames.at(-1).scene.getScenes(true)[0];
-              return !s.visuals.bloom.parallelFilters.active && s.visuals.lit.every(item => !item.lighting);
+              return s.visuals.blooms.every(bloom => !bloom.parallelFilters.active && bloom.item !== s.cameras.main) &&
+                s.visuals.lamps.every(lamp => !lamp.visible) && s.visuals.lit.every(item => !item.lighting);
             }));
             assert.deepEqual(await page.evaluate(() => {
               const s = window.testGames.at(-1).scene.getScenes(true)[0];
@@ -127,6 +144,7 @@ try {
               }));
             }
             assert(!withEffects.equals(withoutEffects), 'Effects must visibly change the paused scene without advancing physics');
+            await unchangedSky(page, withEffects, withoutEffects);
             await page.locator('#phaser-effects').click();
             assert.equal(await page.locator('#scene').getAttribute('data-phaser-effects'), 'on');
             await page.locator('#pause').click();
@@ -135,7 +153,7 @@ try {
             assert.match(await page.locator('#message').innerText(), /Canvas.*WebGL/);
           }
           await page.locator('#info-toggle').click();
-          assert.match(await page.locator('#info-body').innerText(), /Когда выбирать Phaser 4/);
+          assert.match(await page.locator('#info-body').innerText(), /для новых 2D-игр/);
           await page.locator('#info-close').click();
           await page.locator('#phaser-expand').click(); assert(await page.locator('header').isHidden());
           await page.locator('#phaser-expand').click(); assert(await page.locator('header').isVisible());
