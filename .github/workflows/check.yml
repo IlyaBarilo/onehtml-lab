@@ -10,7 +10,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -19,7 +19,7 @@ jobs:
           package-manager-cache: false
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:check
+      - run: npm run test:quick
         env:
           ONEHTML_TEST_RESULTS: ${{ runner.temp }}/onehtml-check-results
       - name: Сохранить диагностику сбоя проверок

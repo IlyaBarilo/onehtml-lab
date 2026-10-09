@@ -8,13 +8,12 @@ permissions:
   contents: read
 
 jobs:
-  publish:
+  verify:
     if: github.event.release.draft == false
     runs-on: ubuntu-latest
-    timeout-minutes: 35
-    environment: release
-    permissions:
-      contents: write
+    timeout-minutes: 5
+    outputs:
+      source_sha: ${{ steps.source.outputs.sha }}
     env:
       RELEASE_TAG: ${{ github.event.release.tag_name }}
     steps:
@@ -23,20 +22,79 @@ jobs:
           ref: ${{ github.event.release.tag_name }}
           fetch-depth: 0
       - name: Проверить тег и происхождение исходников
+        id: source
         shell: bash
         run: |
           [[ "$RELEASE_TAG" =~ ^v[0-9]+(\.[0-9]+){0,3}$ ]] || { echo 'Нужен числовой тег вида v1.2.3'; exit 1; }
           git fetch origin main:refs/remotes/origin/main
           git merge-base --is-ancestor HEAD origin/main || { echo 'Тег должен указывать на коммит из main'; exit 1; }
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  check:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        group: [core, ai, libraries, media]
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      CHECK_GROUP: ${{ matrix.group }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.verify.outputs.source_sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
           package-manager-cache: false
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: node tests/check.mjs --release-tag="$RELEASE_TAG"
+      - run: node tests/check.mjs --group="$CHECK_GROUP" --release-tag="$RELEASE_TAG"
         env:
           ONEHTML_TEST_RESULTS: ${{ runner.temp }}/onehtml-check-results
+      - name: Сохранить проверенный HTML
+        if: matrix.group == 'core'
+        uses: actions/upload-artifact@v7
+        with:
+          name: verified-release-html
+          path: onehtml-lab.html
+          if-no-files-found: error
+          retention-days: 7
+      - name: Сохранить диагностику сбоя проверок
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-check-failure-${{ matrix.group }}
+          path: ${{ runner.temp }}/onehtml-check-results
+          if-no-files-found: ignore
+          retention-days: 7
+
+  publish:
+    needs: [verify, check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.verify.outputs.source_sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: verified-release-html
+          path: .
+      - name: Проверить полученный HTML
+        run: node tests/build.mjs "$RELEASE_TAG"
       - name: Прикрепить готовый HTML к выпуску
         run: gh release upload "$RELEASE_TAG" onehtml-lab.html
         env:
@@ -48,14 +106,6 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist/pages
-      - name: Сохранить диагностику сбоя проверок
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-check-failure
-          path: ${{ runner.temp }}/onehtml-check-results
-          if-no-files-found: ignore
-          retention-days: 7
 
   deploy:
     needs: publish

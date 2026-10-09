@@ -15,16 +15,16 @@ if (mode) {
       const page = await context.newPage();
       await page.setContent('<h1>Browser capture probe</h1><button>Ready</button>');
       await page.getByRole('button').click();
-      if (mode === 'failure') throw new Error('Expected artifact probe failure');
+      if (mode === 'failure' || (mode === 'failure-once' && process.env.ONEHTML_DIAGNOSTIC_RETRY !== '1')) throw new Error('Expected artifact probe failure');
     } finally { await context.close(); }
   } finally { await browser.close(); }
 } else {
   const output = await mkdtemp(join(tmpdir(), 'onehtml-artifact-probe-'));
   try {
-    async function probe(value) {
+    async function probe(value, trace = false) {
       return new Promise(resolve => {
         const child = spawn(process.execPath, ['tests/run-browser.mjs', 'tests/artifacts-test.mjs', `--probe=${value}`], {
-          cwd: fileURLToPath(new URL('../', import.meta.url)), env: { ...process.env, ONEHTML_TEST_RESULTS: output }, stdio: ['ignore', 'pipe', 'pipe']
+          cwd: fileURLToPath(new URL('../', import.meta.url)), env: { ...process.env, ONEHTML_TEST_RESULTS: output, ONEHTML_CAPTURE_TRACE: trace ? '1' : '0' }, stdio: ['ignore', 'pipe', 'pipe']
         });
         let logs = '';
         child.stdout.on('data', data => { logs += data; });
@@ -39,13 +39,27 @@ if (mode) {
     const [folder] = await readdir(output);
     const [context] = (await readdir(join(output, folder))).filter(name => name.startsWith('context-'));
     assert(context, failed.logs);
-    assert((await readFile(join(output, folder, context, 'trace.zip'))).length > 1000);
+    assert(!(await readdir(join(output, folder, context))).includes('trace.zip'), 'Normal execution must not record expensive traces');
+    const retryFolder = join(output, folder, 'trace-retry');
+    const [retryContext] = (await readdir(retryFolder)).filter(name => name.startsWith('context-'));
+    assert((await readFile(join(retryFolder, retryContext, 'trace.zip'))).length > 1000);
     assert.equal((await readFile(join(output, folder, context, 'page-1.png'))).subarray(1, 4).toString(), 'PNG');
     assert.match(await readFile(join(output, folder, 'output.log'), 'utf8'), /Expected artifact probe failure/);
     const passed = await probe('success');
     assert.equal(passed.code, 0, passed.logs);
     assert.deepEqual(await readdir(output), [folder], 'A successful suite removes its temporary captures');
-    console.log('Failed browser checks preserve screenshots, trace and logs; successful checks clean their captures.');
+    const transient = await probe('failure-once');
+    assert.equal(transient.code, 1, 'A passing diagnostic retry must not hide the original failure');
+    assert.match(transient.logs, /Diagnostic retry passed; original exit code: 1/);
+    assert.match(transient.logs, /Expected artifact probe failure/);
+    const beforeTrace = await readdir(output);
+    const traced = await probe('failure', true);
+    assert.equal(traced.code, 1, traced.logs);
+    assert(!traced.logs.includes('Diagnostic retry'), 'A fully traced initial failure must not run again');
+    const [traceFolder] = (await readdir(output)).filter(name => !beforeTrace.includes(name));
+    const [traceContext] = (await readdir(join(output, traceFolder))).filter(name => name.startsWith('context-'));
+    assert((await readFile(join(output, traceFolder, traceContext, 'trace.zip'))).length > 1000);
+    console.log('Light captures, failed-check traces, original failure status and successful cleanup passed.');
   } finally {
     assert(resolve(output).startsWith(resolve(tmpdir()) + sep) && output.includes('onehtml-artifact-probe-'));
     await rm(output, { recursive: true, force: true });

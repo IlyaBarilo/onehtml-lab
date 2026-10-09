@@ -19,8 +19,10 @@ try {
   await cp(join(root, 'src'), join(scratch, 'src'), { recursive: true });
   await mkdir(join(scratch, 'tests'));
   for (const file of ['build.mjs', 'package.json', 'LICENSE']) await cp(join(root, file), join(scratch, file));
-  for (const file of ['paste.mjs', 'share.mjs', 'build.mjs', 'library-paths.mjs', 'library-package.mjs', 'library-extract.mjs', 'media-assets-unit.mjs', 'media-prompts-unit.mjs', 'media-images-unit.mjs', 'ai-applications-unit.mjs', 'ai-session-unit.mjs', 'ai-profiles-unit.mjs']) await cp(join(root, 'tests', file), join(scratch, 'tests', file));
-  const scripts = [['build.mjs'], ['tests/build.mjs'], ['tests/paste.mjs'], ['tests/share.mjs'], ['tests/library-paths.mjs'], ['tests/library-package.mjs'], ['tests/library-extract.mjs'], ['tests/media-assets-unit.mjs'], ['tests/media-prompts-unit.mjs'], ['tests/media-images-unit.mjs'], ['tests/ai-applications-unit.mjs'], ['tests/ai-session-unit.mjs'], ['tests/ai-profiles-unit.mjs']];
+  for (const file of (await readdir(join(root, 'tests'))).filter(file => file.endsWith('.mjs'))) await cp(join(root, 'tests', file), join(scratch, 'tests', file));
+  await mkdir(join(scratch, '.github', 'workflows'), { recursive: true });
+  await cp(join(root, '.github', 'workflows', 'release.yml'), join(scratch, '.github', 'workflows', 'release.yml'));
+  const scripts = [['build.mjs'], ['tests/build.mjs'], ['tests/paste.mjs'], ['tests/share.mjs'], ['tests/library-paths.mjs'], ['tests/library-package.mjs'], ['tests/library-extract.mjs'], ['tests/media-assets-unit.mjs'], ['tests/media-prompts-unit.mjs'], ['tests/media-images-unit.mjs'], ['tests/ai-applications-unit.mjs'], ['tests/ai-session-unit.mjs'], ['tests/ai-profiles-unit.mjs'], ['tests/check-plan-test.mjs']];
   for (const script of scripts) {
     const result = spawnSync(process.execPath, script, { cwd: scratch, encoding: 'utf8' });
     assert.equal(result.status, 0, `${script[0]} failed in clean copy:\n${result.stdout}\n${result.stderr}`);

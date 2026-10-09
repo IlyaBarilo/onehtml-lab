@@ -12,20 +12,34 @@ if (!/^tests\/[a-z0-9-]+\.mjs$/.test(script || '')) throw new Error('Use: node t
 const base = resolve(process.env.ONEHTML_TEST_RESULTS || join(tmpdir(), 'onehtml-lab-checks'));
 await mkdir(base, { recursive: true });
 const output = await mkdtemp(join(base, basename(script, '.mjs') + '-'));
-const log = createWriteStream(join(output, 'output.log'));
-const child = spawn(process.execPath, ['--import', new URL('./capture.mjs', import.meta.url).href, script, ...args], {
-  cwd: root, env: { ...process.env, ONEHTML_ARTIFACT_DIR: output, TEST_RESULTS_DIR: output }, stdio: ['ignore', 'pipe', 'pipe']
-});
-child.stdout.on('data', data => { process.stdout.write(data); log.write(data); });
-child.stderr.on('data', data => { process.stderr.write(data); log.write(data); });
-const code = await new Promise(resolve => {
-  child.on('error', error => { console.error(error); resolve(1); });
-  child.on('close', value => resolve(value ?? 1));
-});
-log.end();
-await finished(log);
+const fullTrace = process.env.ONEHTML_CAPTURE_TRACE === '1';
+async function run(folder, retry = false) {
+  await mkdir(folder, { recursive: true });
+  const log = createWriteStream(join(folder, 'output.log'));
+  const child = spawn(process.execPath, ['--import', new URL('./capture.mjs', import.meta.url).href, script, ...args], {
+    cwd: root, env: { ...process.env, ONEHTML_ARTIFACT_DIR: folder, TEST_RESULTS_DIR: folder,
+      ONEHTML_CAPTURE_TRACE: fullTrace || retry ? '1' : '0', ONEHTML_DIAGNOSTIC_RETRY: retry ? '1' : '0' },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  child.stdout.on('data', data => { process.stdout.write(data); log.write(data); });
+  child.stderr.on('data', data => { process.stderr.write(data); log.write(data); });
+  const result = await new Promise(resolve => {
+    child.on('error', error => { const message = String(error); console.error(message); log.write(message); resolve({ code: 1, signal: null }); });
+    child.on('close', (code, signal) => resolve({ code: code ?? 1, signal }));
+  });
+  log.end(); await finished(log);
+  return result;
+}
+const { code, signal } = await run(output);
 if (code === 0) {
   if (!resolve(output).startsWith(base + sep)) throw new Error('Unexpected artifact path');
   await rm(output, { recursive: true, force: true });
-} else console.error(`Browser failure artifacts: ${output}`);
+} else {
+  if (!fullTrace && !signal && code > 0 && code < 128) {
+    console.error('Diagnostic retry with full trace; the original failure remains the result.');
+    const retry = await run(join(output, 'trace-retry'), true);
+    console.error(`Diagnostic retry ${retry.code ? 'failed' : 'passed'}; original exit code: ${code}.`);
+  }
+  console.error(`Browser failure artifacts: ${output}`);
+}
 process.exitCode = code;

@@ -20,7 +20,7 @@ if (output) {
     };
     context.on('page', record);
     let tracing = false, saved;
-    try { await context.tracing.start({ screenshots: true, snapshots: true, sources: false }); tracing = true; }
+    try { if (process.env.ONEHTML_CAPTURE_TRACE === '1') { await context.tracing.start({ screenshots: true, snapshots: true, sources: false }); tracing = true; } }
     catch (error) { errors.push(`Trace setup: ${error.message}`); }
     const save = () => saved ||= (async () => {
       const pages = context.pages().slice(-2);
