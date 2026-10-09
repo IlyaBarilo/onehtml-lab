@@ -20,6 +20,9 @@
     .library-description { margin: 8px 0 0; color: #b8cce5; font-size: 13px; line-height: 1.4; }
     .description-row { display: flex; align-items: center; gap: 8px; }
     .description-row p { flex: 1; }
+    #phaser-renderer { flex: none; width: 94px; min-height: 44px; margin-top: 8px; padding: 5px 8px; border: 1px solid #3b5676; border-radius: 8px; background: #17283e; color: #eaf2ff; font: inherit; font-size: 14px; }
+    #phaser-renderer[hidden] { display: none; }
+    #phaser-renderer:focus-visible { outline: 3px solid #82bdff; outline-offset: 2px; }
     #info-toggle { flex: none; width: 32px; min-height: 32px; margin-top: 8px; padding: 0; font-size: 20px; }
     .info-panel { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; background: #101e30; touch-action: auto; }
     .info-panel[hidden] { display: none; }
@@ -115,7 +118,7 @@
       .heading { gap: 6px; margin-bottom: 2px; }
       .heading h1 { flex-shrink: 0; white-space: nowrap; }
       #scenario { min-height: 32px; }
-      .library-description, #info-toggle { margin-top: 4px; }
+      .library-description, #info-toggle, #phaser-renderer { margin-top: 4px; }
       .metric { padding: 3px 6px; }
       .metrics { grid-template-columns: 1fr 1fr 1.3fr; }
       .metric strong { font-size: 21px; }
@@ -153,7 +156,7 @@
         <button class="mode" data-mode="phaser" aria-pressed="false" disabled><b>Phaser 3.90</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="phaser4" aria-pressed="false" disabled><b>Phaser 4.2.1</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
       </nav>
-      <div class="description-row"><p id="library-description" class="library-description"></p><button id="info-toggle" aria-label="Подробно о выбранной библиотеке" aria-expanded="false" aria-controls="library-info">i</button></div>
+      <div class="description-row"><p id="library-description" class="library-description"></p><select id="phaser-renderer" aria-label="Отрисовка Phaser" title="Отрисовка Phaser" hidden><option value="canvas">Canvas</option><option value="webgl" selected>WebGL</option></select><button id="info-toggle" aria-label="Подробно о выбранной библиотеке" aria-expanded="false" aria-controls="library-info">i</button></div>
     </header>
     <section id="stage" aria-label="Поле теста: нажимайте или касайтесь несколькими пальцами">
       <div id="scene"></div>
@@ -214,20 +217,20 @@
           'Перетаскивайте тела, толкайте маятники и мост. В «Сравнении» блоки башни наклоняются и вращаются после удара.'
         ],
         phaser: [
-          'Phaser 3 — движок для 2D-аркад и платформеров: персонажи, камеры, анимация и физика. Удобен для существующих игр и примеров на Phaser 3.',
-          'Стрелки или A/D — движение, пробел — прыжок; повторное нажатие — двойной прыжок. На телефоне есть экранные кнопки, в низком поле — касание. «Демо» включает автоматическое прохождение.'
+          'Phaser 3 — для 2D-игр, существующих проектов и плагинов третьей версии.',
+          'Стрелки или A/D — движение, пробел — прыжок; повторное нажатие — двойной прыжок. На телефоне — экранные кнопки. Солнце/луна меняет день и ночь.'
         ]
       };
       explanations.phaser4 = [
-        'Phaser 4 — для новых 2D-игр с динамическим светом и графическими эффектами. При переносе игры с Phaser 3 проверьте совместимость плагинов.',
-        'Ночью «Эффекты» показывает луч фонаря робота, свет фонарей, тень и пульсацию выхода. Нужен WebGL; днём разница меньше. День/ночь — значок солнца или луны. Такие эффекты можно сделать и в Phaser 3.'
+        'Phaser 4 — для новых 2D-игр с возможностями нового рендерера. Совместимость плагинов Phaser 3 нужно проверить.',
+        explanations.phaser[1]
       ];
       const showcaseLabels = {
         canvas: 'Набережная · касание переключает день и ночь',
         three160: 'Марсоход · проведите по сцене, чтобы повернуть камеру',
         matter: 'Механизмы · перетаскивайте тела или толкните маятники',
-        phaser: 'Лесная станция · Phaser 3 · двойной прыжок',
-        phaser4: 'Лесная станция · Phaser 4 · свет и фильтры'
+        phaser: 'Лесная станция · Phaser 3',
+        phaser4: 'Лесная станция · Phaser 4'
       };
       const pointers = new Map();
       let rings = [];
@@ -236,10 +239,31 @@
       let scenario = 'showcase', infoOpen = false;
       let phaserExpanded = false;
       let phaserNight = true;
+      let phaserEffectsEnabled = true;
+      let phaserRenderer = 'webgl', phaserWebglUnavailable = false;
       let paused = false, tapCount = 0, peakPointers = 0, pendingInput = null;
       let frameStart = 0, frames = 0, lastFrame = null;
       let generation = 0;
       let resizeRequest = null;
+
+      function phaserRenderType(Phaser) { return phaserRenderer === 'canvas' ? Phaser.CANVAS : Phaser.AUTO; }
+
+      function phaserRenderingDescription() {
+        return phaserRenderer === 'canvas' ? 'Canvas · рисованные эффекты' : mode === 'phaser4' ? 'WebGL · самозатенение' : 'WebGL · свет и рельеф';
+      }
+
+      function reportPhaserRenderer(game) {
+        const actual = game.renderer.type === 2 ? 'webgl' : 'canvas';
+        if (phaserRenderer === 'webgl' && actual === 'canvas') {
+          phaserWebglUnavailable = true; phaserRenderer = 'canvas';
+          $('message').textContent = 'WebGL недоступен — используется Canvas.';
+        }
+        host.dataset.phaserRenderer = actual;
+        $('phaser-renderer').value = actual;
+        $('phaser-renderer').querySelector('[value="webgl"]').disabled = phaserWebglUnavailable;
+        $('library-description').textContent = phaserRenderingDescription();
+        updateInfo();
+      }
 
       function resetFps() {
         frameStart = performance.now();
@@ -449,11 +473,12 @@
           }
         };
         game = new Phaser.Game({
-          type: Phaser.CANVAS, width, height, parent: host,
+          type: phaserRenderType(Phaser), width, height, parent: host,
           backgroundColor: '#091321', banner: false,
           audio: { noAudio: true }, input: { mouse: false, touch: false, keyboard: false },
           fps: { target: 60, smoothStep: false }, scene,
           callbacks: { postBoot(bootedGame) {
+            reportPhaserRenderer(bootedGame);
             bootedGame.events.on('postrender', () => {
               if (!paused && !infoOpen && !document.hidden && sceneGeneration === generation) frameRendered(performance.now());
             });
@@ -469,7 +494,7 @@
             });
           },
           pause(value) { if (value) game.loop.sleep(); else game.loop.wake(); },
-          dispose() { game.destroy(true); game.loop.wake(); }
+          dispose() { delete host.dataset.phaserRenderer; game.destroy(true); game.loop.wake(); }
         };
       }
 
@@ -665,15 +690,15 @@
             this.blocks.forEach((body, index) => Object.assign(model.blocks[index], { x: body.x, y: body.y, angle: body.rotation })); comparisonStats(model);
           }
         };
-        game = new Phaser.Game({ type: Phaser.CANVAS, width, height, parent: host, banner: false, audio: { noAudio: true },
+        game = new Phaser.Game({ type: phaserRenderType(Phaser), width, height, parent: host, banner: false, audio: { noAudio: true },
           input: { mouse: false, touch: false, keyboard: false }, physics: { default: 'matter', matter: { gravity: { y: model.gravity / 1000 } } },
           fps: { target: 60, smoothStep: false }, scene,
-          callbacks: { postBoot(booted) { booted.events.on('postrender', () => { if (!paused && !infoOpen && !document.hidden && sceneGeneration === generation) frameRendered(performance.now()); }); } }
+          callbacks: { postBoot(booted) { reportPhaserRenderer(booted); booted.events.on('postrender', () => { if (!paused && !infoOpen && !document.hidden && sceneGeneration === generation) frameRendered(performance.now()); }); } }
         });
         return { ownLoop: true,
           tap(x, y) { if (!ball) return; comparisonShot(model, x, y); ball.setPosition(model.ball.x, model.ball.y); ball.setVelocity(model.ball.vx / 60, model.ball.vy / 60); ball.setAngularVelocity(0); },
           pause(value) { if (value) game.loop.sleep(); else game.loop.wake(); },
-          dispose() { ball = null; game.destroy(true); game.loop.wake(); }
+          dispose() { ball = null; delete host.dataset.phaserRenderer; game.destroy(true); game.loop.wake(); }
         };
       }
 
@@ -1098,17 +1123,16 @@
         const holes = [[700, 860], [1480, 1690], [2350, 2490]];
         const held = new Map();
         let game, current = null, demo = true, jumpQueued = false;
-        let effectsEnabled = true;
         const repaint = () => {
           if (paused && current) { game.renderer.preRender(); game.scene.render(game.renderer); game.renderer.postRender(); }
         };
-        const effects = modern ? document.createElement('button') : null;
-        if (effects) {
+        const effects = document.createElement('button');
+        {
           effects.id = 'phaser-effects'; effects.textContent = 'Эффекты'; effects.disabled = true;
-          effects.setAttribute('aria-label', 'Свет и фильтры Phaser 4'); effects.setAttribute('aria-pressed', 'true');
+          effects.setAttribute('aria-label', 'Освещение и эффекты'); effects.setAttribute('aria-pressed', String(phaserEffectsEnabled));
           effects.addEventListener('click', () => {
             if (!current?.visuals) return;
-            effectsEnabled = !effectsEnabled; current.setVisuals(effectsEnabled);
+            phaserEffectsEnabled = !phaserEffectsEnabled; current.setVisuals(phaserEffectsEnabled);
             repaint();
           });
           document.querySelector('.controls').append(effects);
@@ -1178,6 +1202,41 @@
               for (let f = 0; f < (frames || 1); f += 1) { ctx.save(); ctx.translate(w * f, 0); draw(ctx, f); ctx.restore(); }
               if (frames) this.textures.addSpriteSheet(name, canvas, { frameWidth: w, frameHeight: h }); else this.textures.addCanvas(name, canvas);
             };
+            // Both engines receive the same diffuse texture and normal map.
+            const surface = (name, w, h, relief, color) => {
+              if (this.textures.exists(name)) return;
+              const diffuse = document.createElement('canvas'), normal = document.createElement('canvas');
+              diffuse.width = normal.width = w; diffuse.height = normal.height = h;
+              const ctx = diffuse.getContext('2d'), nctx = normal.getContext('2d');
+              const image = ctx.createImageData(w, h), normals = nctx.createImageData(w, h);
+              for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+                const i = (y * w + x) * 4, value = relief(x, y);
+                const nx = (relief(x - 1, y) - relief(x + 1, y)) * 2;
+                const ny = (relief(x, y + 1) - relief(x, y - 1)) * 2, length = Math.hypot(nx, ny, 1);
+                const shade = .55 + value * .42;
+                for (let c = 0; c < 3; c++) image.data[i + c] = color[c] * shade;
+                image.data[i + 3] = name === 'station-stone' && value <= .015 ? 0 : 255;
+                normals.data[i + 3] = 255;
+                normals.data[i] = 127.5 + nx / length * 127.5;
+                normals.data[i + 1] = 127.5 + ny / length * 127.5;
+                normals.data[i + 2] = 127.5 + 1 / length * 127.5;
+              }
+              ctx.putImageData(image, 0, 0); nctx.putImageData(normals, 0, 0);
+              this.textures.addCanvas(name, diffuse).setDataSource(normal);
+            };
+            surface('station-metal', 128, 128, (x, y) => {
+              const cellX = ((x % 64) + 64) % 64, cellY = ((y % 64) + 64) % 64;
+              const edge = Math.min(cellX - 5, 59 - cellX, cellY - 5, 59 - cellY);
+              const plate = Math.max(0, Math.min(1, edge / 5));
+              const rib = Math.max(0, 1 - Math.abs(cellX - 31) / 4) * (cellY > 16 && cellY < 48 ? .3 : 0);
+              return plate * .7 + rib;
+            }, [180, 200, 205]);
+            surface('station-stone', 96, 72, (x, y) => {
+              const a = Math.max(0, 1 - Math.hypot((x - 27) / 28, (y - 29) / 25));
+              const b = Math.max(0, 1 - Math.hypot((x - 70) / 24, (y - 40) / 22));
+              const crack = Math.max(0, 1 - Math.abs(x - 47 - Math.sin(y / 9) * 5) / 3);
+              return Math.max(0, Math.max(a, b) - crack * .45);
+            }, [165, 182, 172]);
             texture('forest-sky', 64, 560, ctx => {
               const gradient = ctx.createLinearGradient(0, 0, 0, 560); gradient.addColorStop(0, '#143d58'); gradient.addColorStop(.6, '#577f8b'); gradient.addColorStop(1, '#b2b9a1');
               ctx.fillStyle = gradient; ctx.fillRect(0, 0, 64, 560);
@@ -1250,13 +1309,20 @@
             const forest = this.add.graphics().setScrollFactor(.7, 1);
             const water = this.add.graphics();
             this.scenery = { sky, stars, halo, orb, mountains, forest, water };
-            this.streetLamps = [70, 940, 1390, 1770, 2290, 2585, 3020].map(x => {
-              const pole = this.add.graphics().setDepth(2);
-              pole.lineStyle(6, 0x456970, 1); pole.lineBetween(x, groundY, x, 315); pole.lineBetween(x, 315, x + 25, 315);
-              pole.lineStyle(2, 0x819b9c, 1); pole.lineBetween(x - 1, 480, x - 1, 320);
-              pole.fillStyle(0x344f59, 1); pole.fillRect(x - 10, groundY - 5, 20, 5); pole.fillRect(x + 11, 312, 24, 5);
-              const bulb = this.add.rectangle(x + 23, 324, 15, 16, 0xffdb98, .8).setStrokeStyle(2, 0x344f59).setDepth(6);
-              return { x: x + 23, y: 331, bulb };
+            this.surfaces = [];
+            this.stationLamps = [240, 1080, 1370, 1830, 2220, 2600, 2960].map((x, i) => {
+              const wall = this.add.image(x, 405, 'station-metal').setDisplaySize(256, 150).setDepth(1.8);
+              this.surfaces.push(wall);
+              const frame = this.add.graphics().setDepth(2);
+              frame.fillStyle(0x263e49, 1); frame.fillRect(x - 136, 321, 272, 10); frame.fillRect(x - 136, 331, 9, 149); frame.fillRect(x + 127, 331, 9, 149);
+              frame.lineStyle(2, 0x6a9090, .9); frame.lineBetween(x - 136, 323, x + 136, 323);
+              frame.fillStyle(0x172d38, 1); frame.fillRect(x - 36, 342, 72, 12);
+              const bulb = this.add.rectangle(x, 349, 56, 5, 0xffdb98, .8).setDepth(6);
+              const marker = this.add.image(x + 102, 463, 'forest-spark').setDisplaySize(5, 5).setTint(0x9ae9c2).setDepth(5);
+              const stone = this.add.image(x - 106, 464, 'station-stone').setDisplaySize(58, 32).setDepth(2.2);
+              this.surfaces.push(stone);
+              this.add.text(x - 117, 355, `ЛАБ ${i + 1}`, { fontFamily: 'system-ui', fontSize: '11px', color: '#b1d2d0' }).setDepth(2);
+              return { x, y: 357, bulb, marker };
             });
             this.ground = this.physics.add.staticGroup();
             const platform = (x, top, w, h, ground = false) => {
@@ -1351,41 +1417,32 @@
             this.cameras.main.setBounds(0, 0, worldWidth, 560).setZoom(zoom);
             this.cameras.main.centerOn(this.player.x + width * .15 / zoom, groundY - (height / 2 - (compact ? 12 : 66)) / zoom);
             this.cameras.main.roundPixels = true;
-            if (modern) {
-              if (this.game.renderer.type === Phaser.WEBGL) {
-                this.lights.enable();
-                const follow = this.lights.addLight(this.player.x, this.player.y, 115, 0xffc88a, .18); follow.z = 80;
-                const station = this.lights.addLight(3080, 425, 150, 0xa6e8ce, .22); station.z = 80;
-                const checkpointLight = this.lights.addLight(1320, 395, 95, 0x9ae9c2, .15); checkpointLight.z = 70;
-                const streetLights = this.streetLamps.map(lamp => {
-                  const light = this.lights.addLight(lamp.x, lamp.y + 85, 200, 0xffd195, 1.3); light.z = 60; return light;
-                });
-                const lit = [...this.ground.getChildren(), ...this.platforms.getChildren()];
-                const lamp = (x, y, color) => this.add.image(x, y, 'forest-spark').setDisplaySize(8, 8).setTint(color).setAlpha(.65).setBlendMode(Phaser.BlendModes.ADD).setDepth(7);
-                const lamps = [lamp(this.player.x, this.player.y - 26, 0xffc88a), lamp(1320, 377, 0x9ae9c2), lamp(3080, 375, 0xa6e8ce)];
-                const halos = lamps.map(lamp => this.add.image(lamp.x, lamp.y, 'forest-lamp-halo').setTint(lamp.tintTopLeft).setBlendMode(Phaser.BlendModes.ADD).setDepth(7));
-                const cone = (x, y) => this.add.image(x, y, 'forest-light-cone').setOrigin(.5, 0).setTint(0xffd7a0).setBlendMode(Phaser.BlendModes.ADD);
-                const lanternEffects = this.streetLamps.flatMap(lamp => [
-                  cone(lamp.x, lamp.y).setDisplaySize(190, groundY - lamp.y + 10).setDepth(2.5).setAlpha(.85),
-                  this.add.image(lamp.x, groundY + 8, 'forest-light-pool').setTint(0xffd295).setAlpha(.32).setBlendMode(Phaser.BlendModes.ADD).setDepth(4.2),
-                  this.add.image(lamp.x, lamp.y - 7, 'forest-lamp-halo').setDisplaySize(72, 72).setTint(0xffd295).setAlpha(.6).setBlendMode(Phaser.BlendModes.ADD).setDepth(7)
-                ]);
-                const beam = cone(this.player.x, this.player.y).setTint(0xe4efff).setDisplaySize(120, 200).setDepth(2.8).setAlpha(.8);
-                const shadow = this.add.image(this.player.x, groundY + 4, 'forest-contact-shadow').setDepth(4.5).setAlpha(.7);
-                const motes = this.streetLamps.flatMap(lamp => Array.from({ length: 3 }, (_, i) => {
-                  const mote = this.add.image(lamp.x, lamp.y + 45 + i * 30, 'forest-spark').setDisplaySize(2, 2).setTint(0xffdfa7).setBlendMode(Phaser.BlendModes.ADD).setDepth(5.5);
-                  mote.anchor = { x: lamp.x, y: lamp.y + 45 + i * 30, phase: lamp.x + i * 2 }; return mote;
-                }));
-                const blooms = Phaser.Actions.AddEffectBloom(lamps, { threshold: .85, blurRadius: 1, blurSteps: 2, blendAmount: .18 });
-                this.visuals = { follow, station, checkpointLight, streetLights, lit, lamps, halos, blooms, lanternEffects, beam, shadow, motes };
-                effects.disabled = false;
-              } else {
-                effects.disabled = true; effects.setAttribute('aria-pressed', 'false');
-                effects.title = 'Для света и фильтров нужен WebGL';
-                host.dataset.phaserRenderer = 'canvas'; host.dataset.phaserEffects = 'unavailable';
-                $('message').textContent = 'Phaser 4: Canvas. Свет и фильтры доступны при поддержке WebGL.';
-              }
-            } else { host.dataset.phaserRenderer = 'canvas'; host.dataset.phaserEffects = 'base'; }
+            {
+              const webgl = this.game.renderer.type === Phaser.WEBGL;
+              if (webgl) this.lights.enable();
+              const follow = webgl ? this.lights.addLight(this.player.x, this.player.y, 115, 0xcbdcff, .18) : null;
+              const station = webgl ? this.lights.addLight(3080, 425, 150, 0xa6e8ce, .22) : null;
+              const checkpointLight = webgl ? this.lights.addLight(1320, 395, 95, 0x9ae9c2, .15) : null;
+              const stationLights = webgl ? this.stationLamps.map(lamp => this.lights.addLight(lamp.x, lamp.y + 35, 180, 0xffd195, .85)) : [];
+              const lit = [...this.ground.getChildren(), ...this.platforms.getChildren(), ...this.surfaces];
+              const lamp = (x, y, color) => this.add.image(x, y, 'forest-spark').setDisplaySize(8, 8).setTint(color).setAlpha(.65).setBlendMode(Phaser.BlendModes.ADD).setDepth(7);
+              const lamps = [lamp(this.player.x, this.player.y - 26, 0xffc88a), lamp(1320, 377, 0x9ae9c2), lamp(3080, 375, 0xa6e8ce)];
+              const halos = lamps.map(lamp => this.add.image(lamp.x, lamp.y, 'forest-lamp-halo').setTint(lamp.tintTopLeft).setBlendMode(Phaser.BlendModes.ADD).setDepth(7));
+              const cone = (x, y) => this.add.image(x, y, 'forest-light-cone').setOrigin(.5, 0).setTint(0xffd7a0).setBlendMode(Phaser.BlendModes.ADD);
+              const lanternEffects = this.stationLamps.flatMap(lamp => [
+                cone(lamp.x, lamp.y).setDisplaySize(150, groundY - lamp.y + 10).setDepth(2.5).setAlpha(.4),
+                this.add.image(lamp.x, groundY + 8, 'forest-light-pool').setTint(0xffd295).setAlpha(.18).setBlendMode(Phaser.BlendModes.ADD).setDepth(4.2),
+                this.add.image(lamp.x, lamp.y - 7, 'forest-lamp-halo').setDisplaySize(72, 36).setTint(0xffd295).setAlpha(.4).setBlendMode(Phaser.BlendModes.ADD).setDepth(7)
+              ]);
+              const beam = cone(this.player.x, this.player.y).setTint(0xe4efff).setDisplaySize(120, 200).setDepth(2.8).setAlpha(.4);
+              const shadow = this.add.image(this.player.x, groundY + 4, 'forest-contact-shadow').setDepth(4.5).setAlpha(.7);
+              const motes = this.stationLamps.flatMap(lamp => Array.from({ length: 3 }, (_, i) => {
+                const mote = this.add.image(lamp.x, lamp.y + 25 + i * 28, 'forest-spark').setDisplaySize(2, 2).setTint(0xffdfa7).setBlendMode(Phaser.BlendModes.ADD).setDepth(5.5);
+                mote.anchor = { x: lamp.x, y: lamp.y + 25 + i * 28, phase: lamp.x + i * 2 }; return mote;
+              }));
+              this.visuals = { webgl, follow, station, checkpointLight, stationLights, lit, lamps, halos, lanternEffects, beam, shadow, motes };
+              effects.disabled = false;
+            }
             this.setTimeOfDay(); this.syncHud();
           },
           extend: {
@@ -1408,9 +1465,12 @@
               water.lineStyle(2, 0x8ed9d7, phaserNight ? .17 : .35);
               for (let x = 0; x < worldWidth; x += 38) water.lineBetween(x, 510 + x % 29, x + 21, 510 + x % 29);
               for (const item of [this.player, ...this.enemies.getChildren()]) phaserNight ? item.setTint(0xc5d3e0) : item.clearTint();
-              for (const lamp of this.streetLamps) lamp.bulb.setFillStyle(phaserNight ? 0xffdb98 : 0xb2bcac, phaserNight ? .9 : .5);
-              if (this.visuals) this.setVisuals(effectsEnabled);
-              else for (const item of [...this.ground.getChildren(), ...this.platforms.getChildren()]) phaserNight ? item.setTint(0x879eaf) : item.clearTint();
+              for (const lamp of this.stationLamps) {
+                lamp.bulb.setFillStyle(phaserNight ? 0xffdb98 : 0xb2bcac, phaserNight ? .9 : .5);
+                lamp.marker.setAlpha(phaserNight ? .8 : .45);
+              }
+              if (this.visuals) this.setVisuals(phaserEffectsEnabled);
+              else for (const item of [...this.ground.getChildren(), ...this.platforms.getChildren(), ...this.surfaces]) phaserNight ? item.setTint(0x879eaf) : item.clearTint();
               host.dataset.phaserTime = phaserNight ? 'night' : 'day';
               const label = phaserNight ? 'Ночь. Переключить на день' : 'День. Переключить на ночь';
               timeToggle.title = label; timeToggle.setAttribute('aria-label', label); timeToggle.setAttribute('aria-pressed', String(phaserNight));
@@ -1418,39 +1478,47 @@
             },
             setVisuals(enabled) {
               if (!this.visuals) return;
-              this.lights.setAmbientColor(phaserNight ? 0x657c93 : 0xe8edf2);
-              this.visuals.follow.setRadius(phaserNight ? 180 : 115).setIntensity(phaserNight ? 1 : .18);
-              this.visuals.station.setRadius(phaserNight ? 230 : 150).setIntensity(phaserNight ? 1.6 : .22);
-              this.visuals.checkpointLight.setIntensity(phaserNight ? 1.1 : .15);
-              for (const light of this.visuals.streetLights) light.setIntensity(phaserNight ? .85 : 0);
-              for (const item of this.visuals.lit) {
-                item.setLighting(enabled);
-                if (phaserNight && !enabled) item.setTint(0x879eaf); else item.clearTint();
+              const { webgl } = this.visuals;
+              if (webgl) {
+                this.lights.setAmbientColor(phaserNight ? 0x657c93 : 0xe8edf2);
+                this.visuals.follow.setRadius(phaserNight ? 180 : 115).setIntensity(phaserNight ? 1 : .18);
+                this.visuals.station.setRadius(phaserNight ? 230 : 150).setIntensity(phaserNight ? 1.6 : .22);
+                this.visuals.checkpointLight.setIntensity(phaserNight ? 1.1 : .15);
+                for (const light of this.visuals.stationLights) light.setIntensity(phaserNight ? .85 : 0);
               }
-              for (const bloom of this.visuals.blooms) bloom.parallelFilters.active = enabled;
+              // Phaser 3's Light2D shader uses an implicit height of 5% of the smaller renderer dimension.
+              // Match that height in Phaser 4, rather than choosing a more flattering light position.
+              if (modern && webgl) for (const light of this.lights.lights) light.setZ(Math.min(width, height) * .05);
+              for (const item of this.visuals.lit) {
+                if (webgl) {
+                  if (modern) item.setLighting(enabled); else enabled ? item.setPipeline('Light2D') : item.resetPipeline();
+                }
+                if (phaserNight && (!enabled || !webgl)) item.setTint(0x879eaf); else item.clearTint();
+              }
+              if (modern && webgl) for (const item of this.surfaces) item.setSelfShadow(enabled && phaserNight);
               for (const lamp of this.visuals.lamps) lamp.setVisible(enabled).setAlpha(phaserNight ? .85 : .65);
               for (const halo of this.visuals.halos) halo.setVisible(enabled).setAlpha(phaserNight ? .28 : .035);
               for (const item of [...this.visuals.lanternEffects, this.visuals.beam, this.visuals.shadow, ...this.visuals.motes]) item.setVisible(enabled && phaserNight);
               this.updateNightEffects(this.time.now);
               effects.setAttribute('aria-pressed', String(enabled));
-              effects.title = enabled ? 'Выключить свет и подсветку огней' : 'Включить свет и подсветку огней';
-              host.dataset.phaserRenderer = 'webgl'; host.dataset.phaserEffects = enabled ? 'on' : 'off';
+              effects.title = enabled ? 'Выключить эффекты освещения' : 'Включить эффекты освещения';
+              host.dataset.phaserRenderer = webgl ? 'webgl' : 'canvas'; host.dataset.phaserEffects = enabled ? 'on' : 'off';
             },
             updateNightEffects(time) {
               const v = this.visuals;
               if (!v) return;
               const direction = this.player.flipX ? -1 : 1;
-              v.follow.setPosition(this.player.x + direction * (phaserNight ? 65 : 18), this.player.y + (phaserNight ? 35 : -12));
+              v.follow?.setPosition(this.player.x + direction * (phaserNight ? 65 : 18), this.player.y + (phaserNight ? 35 : -12));
               v.beam.setPosition(this.player.x + direction * 14, this.player.y - 5).setRotation(direction * -.98);
               v.lamps[0].setPosition(this.player.x, this.player.y - 26); v.halos[0].setPosition(this.player.x, this.player.y - 26);
-              v.station.setIntensity(phaserNight ? 1.6 + Math.sin(time / 700) * .3 : .22 + Math.sin(time / 900) * .02);
+              v.station?.setIntensity(phaserNight ? 1.6 + Math.sin(time / 700) * .3 : .22 + Math.sin(time / 900) * .02);
               v.halos[2].setDisplaySize(phaserNight ? 150 : 96, phaserNight ? 150 : 96).setAlpha(phaserNight ? .45 + Math.sin(time / 700) * .12 : .035);
               const beneath = [...this.ground.getChildren(), ...this.platforms.getChildren()].filter(item =>
                 this.player.x >= item.x - item.displayWidth / 2 && this.player.x <= item.x + item.displayWidth / 2 && item.y - item.displayHeight / 2 >= this.player.body.bottom - 5);
               const top = beneath.length ? Math.min(...beneath.map(item => item.y - item.displayHeight / 2)) : null;
-              v.shadow.setVisible(effectsEnabled && phaserNight && top !== null);
+              v.shadow.setVisible(phaserEffectsEnabled && phaserNight && top !== null);
               if (top !== null) {
-                const distance = Math.max(0, top - this.player.body.bottom), nearest = this.streetLamps.reduce((a, b) => Math.abs(a.x - this.player.x) < Math.abs(b.x - this.player.x) ? a : b);
+                const distance = Math.max(0, top - this.player.body.bottom), nearest = this.stationLamps.reduce((a, b) => Math.abs(a.x - this.player.x) < Math.abs(b.x - this.player.x) ? a : b);
                 const away = this.player.x < nearest.x ? -1 : 1;
                 v.shadow.setPosition(this.player.x + away * 16, top + 4).setDisplaySize(Math.max(30, 70 - distance * .16), 14).setAlpha(Math.max(.15, .65 - distance * .002));
               }
@@ -1527,10 +1595,10 @@
             this.syncHud();
           }
         };
-        game = new Phaser.Game({ type: modern ? Phaser.AUTO : Phaser.CANVAS, width, height, parent: host, backgroundColor: '#091321', banner: false,
+        game = new Phaser.Game({ type: phaserRenderType(Phaser), width, height, parent: host, backgroundColor: '#091321', banner: false, render: { maxLights: 12 },
           audio: { noAudio: true }, input: { mouse: false, touch: false, keyboard: false },
           physics: { default: 'arcade', arcade: { gravity: { y: 900 }, debug: false } }, fps: { target: 60, smoothStep: false }, scene,
-          callbacks: { postBoot(booted) { booted.events.on('postrender', () => { if (!paused && !infoOpen && !document.hidden && sceneGeneration === generation) frameRendered(performance.now()); }); } }
+          callbacks: { postBoot(booted) { reportPhaserRenderer(booted); booted.events.on('postrender', () => { if (!paused && !infoOpen && !document.hidden && sceneGeneration === generation) frameRendered(performance.now()); }); } }
         });
         return { ownLoop: true, tap(_x, _y, id, action) { host.focus({ preventScroll: true }); act(action || 'jump', id); }, release,
           pause(value) { if (value) { release(); game.loop.sleep(); } else game.loop.wake(); },
@@ -1538,6 +1606,7 @@
             release(); compact = height < 190; zoom = Math.max(.16, Math.min(1.25, (height - (compact ? 20 : 90)) / 390));
             host.classList.toggle('phaser-compact', compact); game.scale.resize(width, height);
             current?.cameras.main.setZoom(zoom);
+            if (current?.visuals) current.setVisuals(phaserEffectsEnabled);
             $('scene-name').textContent = compact ? 'Лесная станция · касание: прыжок' : showcaseLabels[modern ? 'phaser4' : 'phaser'];
             if (!paused && !infoOpen) host.focus({ preventScroll: true });
           },
@@ -1552,6 +1621,15 @@
       function updateInfo() {
         $('info-title').textContent = document.querySelector(`[data-mode="${mode}"] b`).textContent;
         const paragraphs = explanations[mode].map(text => { const paragraph = document.createElement('p'); paragraph.textContent = text; return paragraph; });
+        if (mode.startsWith('phaser')) {
+          const renderer = document.createElement('p');
+          renderer.textContent = phaserRenderer === 'canvas'
+            ? 'Canvas — простая 2D-графика и рисованные эффекты. Подходит для игры без световых шейдеров и как запасной вариант. Phaser 3 и 4 здесь выглядят почти одинаково.'
+            : 'WebGL — свет и рельеф панелей и камней. В Phaser 4 ночью детали поверхности затеняют себя. Сцена и настройки света общие; днём разница может быть незаметна.';
+          paragraphs.push(renderer);
+          const performance = document.createElement('p'); performance.textContent = 'FPS зависит от сцены и устройства: Canvas не обязательно быстрее WebGL, а Phaser 4 — Phaser 3.';
+          paragraphs.push(performance);
+        }
         $('info-body').replaceChildren(...paragraphs);
       }
 
@@ -1573,6 +1651,8 @@
         activeScene = null;
         host.replaceChildren();
         mode = nextMode;
+        $('phaser-renderer').hidden = !mode.startsWith('phaser');
+        $('phaser-renderer').value = phaserRenderer;
         $('message').textContent = '';
         try {
           if (scenario === 'compare') {
@@ -1594,13 +1674,15 @@
         } catch (error) {
           const failedMode = mode;
           mode = 'canvas';
+          $('phaser-renderer').hidden = true;
+          delete host.dataset.phaserRenderer;
           host.replaceChildren();
           activeScene = scenario === 'compare' ? canvasComparison() : scenario === 'showcase' ? canvasShowcase() : canvasScene();
           $('message').textContent = `${failedMode}: ${error.message}. Продолжаем в Canvas 2D.`;
         }
         activeScene.pause?.(paused || infoOpen || document.hidden);
         $('scene-name').textContent = scenario === 'compare' ? 'Шар и башня · коснитесь цели для выстрела' : scenario === 'showcase' ? showcaseLabels[mode] : labels[mode];
-        $('library-description').textContent = descriptions[mode];
+        $('library-description').textContent = mode.startsWith('phaser') ? phaserRenderingDescription() : descriptions[mode];
         $('scene-stats').hidden = scenario !== 'compare';
         if (scenario === 'compare') $('scene-stats').textContent = 'Сдвинуто: 0/12 · Выстрелов: 0';
         updateInfo();
@@ -1701,6 +1783,7 @@
       $('info-close').addEventListener('click', () => showInfo(false));
       document.addEventListener('keydown', event => { if (event.key === 'Escape' && infoOpen) showInfo(false); });
       $('scenario').addEventListener('change', event => { scenario = event.target.value; startScene(); });
+      $('phaser-renderer').addEventListener('change', event => { phaserRenderer = event.target.value; startScene(); });
       $('load').addEventListener('input', event => { $('load-value').textContent = integer(Number(event.target.value)); });
       $('load').addEventListener('change', event => { objectCount = Number(event.target.value); startScene(); });
       $('pause').addEventListener('click', () => {

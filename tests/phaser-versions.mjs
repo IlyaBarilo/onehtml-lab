@@ -30,18 +30,19 @@ const server = createServer((_, response) => response.writeHead(200, { 'Content-
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const urls = [pathToFileURL(file).href, `http://127.0.0.1:${server.address().port}/`];
 async function scene(page, mode) {
+  const before = await page.evaluate(() => window.testGames?.length || 0);
   await page.locator(`[data-mode="${mode}"]`).click();
-  await page.waitForFunction(() => window.testGames?.at(-1)?.scene.getScenes(true)[0]?.player?.body);
+  await page.waitForFunction(before => window.testGames?.length > before && window.testGames.at(-1).scene.getScenes(true)[0]?.children.list.length, before);
   assert.equal(await page.locator(`[data-mode="${mode}"]`).getAttribute('aria-pressed'), 'true');
   return page.evaluate(() => {
     const game = window.testGames.at(-1), s = game.scene.getScenes(true)[0];
-    return { x: s.player.x, coins: s.coins.getLength(), enemies: s.enemies.getLength(),
+    return { x: s.player?.x, coins: s.coins?.getLength(), enemies: s.enemies?.getLength(),
       health: s.health, checkpoint: s.checkpoint, renderer: game.renderer.type };
   });
 }
 async function geometry(page) {
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-  const controls = await page.locator('.controls button').evaluateAll(buttons => buttons.map(button => {
+  const controls = await page.locator('.controls button, #phaser-renderer').evaluateAll(buttons => buttons.map(button => {
     const r = button.getBoundingClientRect(); return { left: r.left, right: r.right, height: r.height };
   }));
   assert(controls.every(r => r.left >= 0 && r.right <= (page.viewportSize()?.width || 0) + 1 && r.height >= 44), JSON.stringify(controls));
@@ -140,6 +141,36 @@ async function visibleNightLighting(page, before, after) {
   }, [before, after].map(buffer => 'data:image/png;base64,' + buffer.toString('base64')));
   assert(result >= .05, `Night lighting must clearly change the foreground, not just a few tiny bulbs: ${(result * 100).toFixed(1)}%`);
 }
+async function lightingInputs(page) {
+  return page.evaluate(() => {
+    const s = window.testGames.at(-1).scene.getScenes(true)[0], v = s.visuals;
+    s.updateNightEffects(0);
+    const surface = key => {
+      const t = s.textures.get(key);
+      return [t.source[0].image.toDataURL(), t.dataSource[0].image.toDataURL()];
+    };
+    return {
+      materials: ['station-metal', 'station-stone'].map(surface),
+      objects: s.surfaces.map(item => [item.x, item.y, item.displayWidth, item.displayHeight, item.texture.key]),
+      fixtures: s.stationLamps.map(item => [item.x, item.y, item.bulb.width, item.bulb.height, item.bulb.fillColor]),
+      lights: v.webgl ? [v.follow, v.station, v.checkpointLight, ...v.stationLights].map((light, index) => [
+        index === 0 ? 'robot' : light.x, index === 0 ? 'robot' : light.y, light.radius, light.color.r, light.color.g, light.color.b, light.intensity]) : [],
+      ambient: v.webgl ? [s.lights.ambientColor.r, s.lights.ambientColor.g, s.lights.ambientColor.b] : [],
+      counts: [v.lamps.length, v.halos.length, v.lanternEffects.length, v.motes.length],
+      beam: [v.beam.displayWidth, v.beam.displayHeight, v.beam.tintTopLeft, v.beam.alpha],
+      ground: s.ground.getChildren().map(item => [item.x, item.y, item.displayWidth, item.displayHeight])
+    };
+  });
+}
+async function chooseRenderer(page, value) {
+  const before = await page.evaluate(() => window.testGames.length);
+  await page.locator('#phaser-renderer').selectOption(value);
+  await page.waitForFunction(before => window.testGames.length > before && window.testGames.at(-1).scene.getScenes(true)[0], before);
+  assert.equal(await page.locator('#scene').getAttribute('data-phaser-renderer'), value);
+  assert.equal(await page.locator('#phaser-renderer').inputValue(), value);
+  assert.equal(await page.evaluate(() => window.testGames.at(-1).renderer.type), value === 'canvas' ? 1 : 2);
+  await geometry(page);
+}
 try {
   for (const [name, engine] of engines) {
     const browser = await engine.launch(name === 'chromium' ? { args: ['--use-angle=swiftshader'] } : {});
@@ -154,13 +185,20 @@ try {
           assert.equal(await page.locator('.mode').count(), 5);
           const base = await scene(page, 'phaser');
           assert.equal(base.coins, 25); assert.equal(base.enemies, 5); assert.equal(base.health, 3); assert.equal(base.checkpoint, 110);
-          assert.equal(base.renderer, 1, 'Phaser 3 keeps its original Canvas renderer');
-          assert.equal(await page.locator('#phaser-effects').count(), 0);
+          assert.equal(base.renderer, 2, 'Both versions start with the same WebGL renderer');
+          assert.equal(await page.locator('#phaser-effects').count(), 1);
+          assert.equal(await page.locator('#phaser-renderer').inputValue(), 'webgl');
           assert.equal(await page.locator('#scene').getAttribute('data-phaser-time'), 'night', 'Both versions start at night');
           await geometry(page);
           await controls(page, width === 320);
           await page.locator('#pause').click();
           const baseNight = await renderedFrame(page);
+          await page.locator('#phaser-effects').click();
+          const baseWithoutEffects = await renderedFrame(page);
+          await unchangedSky(page, baseNight, baseWithoutEffects);
+          await visibleNightLighting(page, baseNight, baseWithoutEffects);
+          await page.locator('#phaser-effects').click();
+          const baseInputs = await lightingInputs(page);
           const baseDay = await changeTime(page, 'day', width === 320);
           if (url === urls[0]) {
             await writeFile(join(tmpdir(), `onehtml-phaser3-${name}-${width}-night.png`), baseNight);
@@ -190,12 +228,24 @@ try {
             return !v.beam.visible && !v.shadow.visible && v.lanternEffects.every(item => !item.visible);
           }), 'Extra night effects must not cover the daytime scene');
           const modernNight = await changeTime(page, 'night', width === 320);
+          assert.deepEqual(await lightingInputs(page), baseInputs, 'Textures, normal maps, scene objects, fixtures, colors, light settings and shared effects must match between engines');
           if (url === urls[0]) {
             await writeFile(join(tmpdir(), `onehtml-phaser4-${name}-${width}-day.png`), modernDay);
             await writeFile(join(tmpdir(), `onehtml-phaser4-${name}-${width}-night.png`), modernNight);
           }
           if (available) {
             assert.equal(await page.locator('#scene').getAttribute('data-phaser-effects'), 'on');
+            assert(await page.evaluate(() => window.testGames.at(-1).scene.getScenes(true)[0].surfaces.every(item => item.selfShadow.enabled)), 'Phaser 4 must use its native self-shadowing on the shared materials');
+            const withSelfShadow = await renderedFrame(page);
+            await page.evaluate(() => window.testGames.at(-1).scene.getScenes(true)[0].surfaces.forEach(item => item.setSelfShadow(false)));
+            const withoutSelfShadow = await renderedFrame(page);
+            assert(!withSelfShadow.equals(withoutSelfShadow), 'Native self-shadowing must actually change the paused frame without changing lights or decorative effects');
+            await unchangedSky(page, withSelfShadow, withoutSelfShadow);
+            await page.evaluate(() => window.testGames.at(-1).scene.getScenes(true)[0].surfaces.forEach(item => item.setSelfShadow(true)));
+            if (url === urls[0]) {
+              await writeFile(join(tmpdir(), `onehtml-phaser4-${name}-${width}-self-shadow-on.png`), withSelfShadow);
+              await writeFile(join(tmpdir(), `onehtml-phaser4-${name}-${width}-self-shadow-off.png`), withoutSelfShadow);
+            }
             await geometry(page);
             const before = await page.evaluate(() => {
               const s = window.testGames.at(-1).scene.getScenes(true)[0];
@@ -214,8 +264,8 @@ try {
             assert.equal(await page.locator('#scene').getAttribute('data-phaser-effects'), 'off');
             assert(await page.evaluate(() => {
               const s = window.testGames.at(-1).scene.getScenes(true)[0];
-              return s.visuals.blooms.every(bloom => !bloom.parallelFilters.active && bloom.item !== s.cameras.main) &&
-                [...s.visuals.lamps, ...s.visuals.halos, ...s.visuals.lanternEffects, ...s.visuals.motes, s.visuals.beam, s.visuals.shadow].every(item => !item.visible) && s.visuals.lit.every(item => !item.lighting);
+              return [...s.visuals.lamps, ...s.visuals.halos, ...s.visuals.lanternEffects, ...s.visuals.motes, s.visuals.beam, s.visuals.shadow].every(item => !item.visible) &&
+                s.visuals.lit.every(item => !item.lighting) && s.surfaces.every(item => !item.selfShadow.enabled);
             }));
             assert.deepEqual(await page.evaluate(() => {
               const s = window.testGames.at(-1).scene.getScenes(true)[0];
@@ -253,6 +303,31 @@ try {
           await page.locator('#info-toggle').click();
           assert.match(await page.locator('#info-body').innerText(), /для новых 2D-игр/);
           await page.locator('#info-close').click();
+          // The same Canvas choice must carry over between versions and every scenario.
+          await chooseRenderer(page, 'canvas');
+          assert.equal(await page.locator('#scene').getAttribute('data-phaser-time'), 'night');
+          await controls(page, width === 320);
+          await scene(page, 'phaser');
+          assert.equal(await page.locator('#phaser-renderer').inputValue(), 'canvas');
+          assert.equal(await page.evaluate(() => window.testGames.at(-1).renderer.type), 1);
+          await controls(page, width === 320);
+          await page.locator('#pause').click();
+          const canvasInputs = await lightingInputs(page);
+          assert.deepEqual(canvasInputs.materials, baseInputs.materials);
+          assert.deepEqual(canvasInputs.objects, baseInputs.objects);
+          const canvas3 = await renderedFrame(page);
+          await scene(page, 'phaser4');
+          assert.equal(await page.locator('#phaser-renderer').inputValue(), 'canvas');
+          const canvas4Inputs = await lightingInputs(page);
+          assert.deepEqual(canvas4Inputs, canvasInputs, 'Both Canvas variants use the same scene, textures and drawn effects');
+          if (url === urls[0]) {
+            await writeFile(join(tmpdir(), `onehtml-phaser3-${name}-${width}-canvas.png`), canvas3);
+            await writeFile(join(tmpdir(), `onehtml-phaser4-${name}-${width}-canvas.png`), await renderedFrame(page));
+          }
+          await page.locator('#info-toggle').click();
+          assert.match(await page.locator('#info-body').innerText(), /Canvas.*почти одинаково/s);
+          await page.locator('#info-close').click();
+          await page.locator('#pause').click();
           await page.locator('#phaser-expand').click(); assert(await page.locator('header').isHidden());
           await page.locator('#phaser-expand').click(); assert(await page.locator('header').isVisible());
           await page.locator('#scenario').selectOption('compare');
@@ -262,6 +337,16 @@ try {
           await page.locator('#scenario').selectOption('load');
           await page.locator('#load').fill('200'); await page.locator('#load').dispatchEvent('change');
           await page.locator('#fps').filter({ hasText: /^\d+$/ }).waitFor();
+          await chooseRenderer(page, 'webgl');
+          await scene(page, 'phaser');
+          assert.equal(await page.evaluate(() => window.testGames.at(-1).renderer.type), 2);
+          await page.locator('#scenario').selectOption('compare');
+          await page.waitForFunction(() => window.testGames.at(-1).scene.getScenes(true)[0]?.blocks?.length === 12);
+          assert.equal(await page.evaluate(() => window.testGames.at(-1).renderer.type), 2);
+          await chooseRenderer(page, 'canvas');
+          await scene(page, 'phaser4');
+          assert.equal(await page.evaluate(() => window.testGames.at(-1).renderer.type), 1);
+          await chooseRenderer(page, 'webgl');
           await page.locator('#scenario').selectOption('showcase'); await scene(page, 'phaser');
           assert.equal(await page.locator('#scene').getAttribute('data-phaser-time'), 'night', 'The time of day also carries back to Phaser 3');
           await scene(page, 'phaser4');
@@ -289,11 +374,15 @@ try {
           });
           const page = await context.newPage(), errors = []; page.on('pageerror', error => errors.push(error.message));
           await page.goto(urls[0]); const fallback = await scene(page, 'phaser4');
-          assert.equal(fallback.renderer, 1); assert(await page.locator('#phaser-effects').isDisabled());
-          assert.match(await page.locator('#message').innerText(), /Canvas.*WebGL/);
+          assert.equal(fallback.renderer, 1); assert(await page.locator('#phaser-effects').isEnabled());
+          assert.match(await page.locator('#message').innerText(), /WebGL недоступен.*Canvas/);
+          assert.equal(await page.locator('#phaser-renderer').inputValue(), 'canvas');
+          assert(await page.locator('#phaser-renderer option[value="webgl"]').isDisabled());
           assert.equal(await page.locator('#scene').getAttribute('data-phaser-time'), 'night');
           await page.locator('#pause').click();
           await changeTime(page, 'day'); await changeTime(page, 'night');
+          const base = await scene(page, 'phaser'); assert.equal(base.renderer, 1);
+          assert.equal(await page.locator('#phaser-renderer').inputValue(), 'canvas');
           await geometry(page); assert.deepEqual(errors, []);
           console.log('chromium: disabled WebGL keeps the same level playable with an explained Canvas fallback.');
         } finally { await context.close(); }
