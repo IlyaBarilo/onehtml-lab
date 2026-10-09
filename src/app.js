@@ -1146,6 +1146,7 @@ function replaceCode(code, archive = false, fromPrompt = false) {
   codeField.scrollLeft = 0;
   scheduleDraftSave();
   updateControls();
+  requestSmartFold();
 }
 
 function offerManualPaste() {
@@ -1225,7 +1226,9 @@ function updateControls() {
 }
 
 codeField.addEventListener('input', event => {
-  if (pendingNativePaste !== null || event?.inputType === 'insertFromPaste') {
+  const pasted = pendingNativePaste !== null || event?.inputType === 'insertFromPaste';
+  cancelSmartFold();
+  if (pasted) {
     const before=codeField.value, next=bindPromptMedia(before);
     if(next!==before) {
       const position=codeField.selectionStart, patch=editPatch(before,next);
@@ -1254,6 +1257,7 @@ codeField.addEventListener('input', event => {
   scheduleDraftSave();
   updateControls();
   if (event?.inputType === 'insertFromPaste') promptMediaNotice();
+  if (pasted) requestSmartFold();
 });
 // Native paste is intentionally left to the textarea and the browser. It
 // respects the selection/caret unless the Paste button requested replacement.
@@ -1466,6 +1470,7 @@ async function restoreStartupDraft() {
     codeField.disabled = false;
     resetCodeEdits();
     updateControls();
+    requestSmartFold();
   }
 }
 

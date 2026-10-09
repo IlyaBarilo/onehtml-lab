@@ -190,6 +190,8 @@ try { for (const [name, engine] of engines) {
       await page.locator('#edit-find-close').click();
       await page.locator('#edit-quick-undo').click();
       assert.equal(await source(), sample);
+      await page.locator('#edit-fold-structure').click();
+      assert.equal(await page.locator('#edit-fold-structure').getAttribute('aria-pressed'), 'false');
       // Ordinary paste participates in full-source history without using visible folded DOM.
       await content.evaluate(el => {
         const transfer = new DataTransfer(); transfer.setData('text/plain', '\n<!-- Вставка -->');

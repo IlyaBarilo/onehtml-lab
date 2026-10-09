@@ -135,11 +135,27 @@ function createAlternativeEditor() {
     cm.html(), alternativeOptions.of(alternativeExtensions()), cm.drawSelection(), cm.highlightActiveLine(), accents,
     cm.EditorView.contentAttributes.of({ 'aria-label': 'HTML-код CodeMirror', spellcheck: 'false', autocapitalize: 'off', autocorrect: 'off' }),
     cm.foldGutter({ markerDOM(open) { const marker = document.createElement('span'); marker.textContent = open ? '−' : '+'; marker.title = open ? 'Свернуть блок' : 'Развернуть блок'; return marker; } }),
+    cm.foldService.of((state, from, to) => {
+      let found = null;
+      for (let node = cm.syntaxTree(state).resolveInner(to, -1); node; node = node.parent) {
+        const range = expressionFoldRange(node);
+        if (range && range.from >= from && range.from <= to && range.to > range.from) found = range;
+      }
+      return found;
+    }),
     cm.codeFolding({ placeholderDOM(view, onclick, prepared) {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'cm-foldPlaceholder';
       const count = prepared.lines, last = count % 10, lastTwo = count % 100;
       const unit = lastTwo >= 11 && lastTwo <= 14 ? 'строк' : last === 1 ? 'строка' : last >= 2 && last <= 4 ? 'строки' : 'строк';
-      button.textContent = `+ … ${count ? formatUIInteger(count) + ' ' + unit : formatSymbolCount(prepared.characters)}`; button.setAttribute('aria-label', 'Развернуть скрытый код'); button.onclick = onclick; return button;
+      button.textContent = `+ … ${count ? formatUIInteger(count) + ' ' + unit : formatSymbolCount(prepared.characters)}`; button.setAttribute('aria-label', 'Развернуть скрытый код');
+      button.onclick = event => {
+        cancelSmartFold();
+        const position = view.posAtDOM(button); let range = null;
+        cm.foldedRanges(view.state).between(position, position, (from, to) => { if (from === position && (!range || to > range.to)) range = { from, to }; });
+        if (range) { view.dispatch({ effects: cm.unfoldEffect.of(range) }); event.preventDefault(); }
+        else onclick(event);
+      };
+      return button;
     }, preparePlaceholder(state, range) { const lines = state.doc.lineAt(range.to).number - state.doc.lineAt(range.from).number; return { lines, characters: lines ? 0 : symbolCount(state.doc.sliceString(range.from, range.to)) }; } }),
     cm.keymap.of([
       { key: 'Mod-Enter', run() { if (!expertMode) return false; if (isSplitWorkspace()) void restartDesktopPreview(); else document.querySelector('#run').click(); return true; } },
@@ -175,6 +191,7 @@ function createAlternativeEditor() {
         finally { alternativeBusy = false; }
         queueMicrotask(() => { updateAlternativeEditor(); updateInlineEditor(); });
       } else if (update.selectionSet) {
+        if (update.transactions.some(transaction => transaction.isUserEvent('select'))) cancelSmartFold();
         alternativeBusy = true; codeField.setSelectionRange(selection.from, selection.to, selection.anchor > selection.head ? 'backward' : 'forward'); alternativeBusy = false;
         alternativeCaption();
         document.querySelector('#edit-copy-selection').disabled = selection.empty;
@@ -182,10 +199,12 @@ function createAlternativeEditor() {
     })
   ] }) });
   alternativeView.scrollDOM.addEventListener('scroll', () => { codeField.scrollTop = alternativeView.scrollDOM.scrollTop; codeField.scrollLeft = alternativeView.scrollDOM.scrollLeft; });
+  alternativeHost.addEventListener('pointerdown', cancelSmartFold);
 }
 
 function selectAlternativeRange(start, end = start, direction = 'none', scroll = false) {
   if (!alternativeActive() || alternativeBusy) return;
+  cancelSmartFold();
   const cm = OneHTMLCodeMirror, effects = [];
   updateAlternativeEditor();
   start = Math.min(start, alternativeView.state.doc.length); end = Math.min(end, alternativeView.state.doc.length);
@@ -225,6 +244,7 @@ function updateAlternativeEditor() {
     if (selection.anchor !== anchor || selection.head !== head) alternativeView.dispatch({ selection: OneHTMLCodeMirror.EditorSelection.single(anchor, head) });
   } finally { alternativeBusy = false; }
   alternativeCaption();
+  scheduleSmartFold();
 }
 
 function cmUnfoldAll() {
@@ -233,13 +253,26 @@ function cmUnfoldAll() {
   return effects;
 }
 
-// Keep the document shell and short labels visible. Never nest automatic folds:
-// opening a section should show its content, not another layer of placeholders.
+function expressionFoldRange(node) {
+  if (node.name === 'ArrowFunction' && node.lastChild?.name !== 'Block') {
+    const arrow = node.getChild('Arrow');
+    return arrow && node.lastChild && !node.lastChild.type.isError ? { from: arrow.to, to: node.to } : null;
+  }
+  // JSON data uses a mounted parser without CodeMirror's fold properties.
+  if (['Array', 'Object'].includes(node.name)) {
+    const first = node.firstChild, last = node.lastChild;
+    if ((first?.name === '[' && last?.name === ']') || (first?.name === '{' && last?.name === '}')) return { from: first.to, to: last.from };
+  }
+  return null;
+}
+
+// Keep nested ranges: unfolding a parent reveals the next level of structure.
 function structureFoldRanges(doc, tree) {
-  const ranges = [], nodes = [tree.topNode];
+  const ranges = [], seen = new Set();
   const containers = new Set(['main', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'div', 'form', 'table', 'ul', 'ol', 'svg', 'template', 'dialog', 'canvas']);
-  while (nodes.length) {
-    const node = nodes.pop(), open = node.firstChild, close = node.lastChild;
+  tree.iterate({ enter(ref) {
+    const node = ref.node, open = node.firstChild, close = node.lastChild;
+    let range = null;
     if (node.name === 'Element' && open?.name === 'OpenTag' && close?.name === 'CloseTag') {
       const name = open.getChild('TagName'), endName = close.getChild('TagName');
       const tag = name ? doc.sliceString(name.from, name.to).toLowerCase() : '';
@@ -247,22 +280,51 @@ function structureFoldRanges(doc, tree) {
       const lines = doc.lineAt(close.from).number - doc.lineAt(open.to).number;
       const size = close.from - open.to, code = tag === 'script' || tag === 'style';
       if (matched && (code ? lines >= 2 || size >= 120 : containers.has(tag) && (lines >= 8 || size >= 600))) {
-        ranges.push({ from: open.to, to: close.from });
-        continue;
+        range = { from: open.to, to: close.from };
+      }
+    } else if (node.name === 'ArrowFunction') range = expressionFoldRange(node);
+    else if (['Block', 'ClassBody', 'SwitchBody', 'EnumBody', 'ArrayExpression', 'ObjectExpression', 'ObjectType', 'KeyframeList', 'Array', 'Object'].includes(node.name)) {
+      const candidate = node.type.prop(OneHTMLCodeMirror.foldNodeProp)?.(node) || expressionFoldRange(node);
+      const matched = (open?.name === '{' && close?.name === '}') || (open?.name === '[' && close?.name === ']');
+      if (candidate && matched) {
+        const lines = doc.lineAt(candidate.to).number - doc.lineAt(candidate.from).number;
+        const functionBody = node.name === 'Block' && (['FunctionDeclaration', 'FunctionExpression', 'ArrowFunction', 'MethodDeclaration'].includes(node.parent?.name) || (node.parent?.name === 'Property' && node.parent.getChild('ParamList')));
+        if (functionBody || node.name === 'ClassBody' || lines >= 2 || candidate.to - candidate.from >= 120) range = candidate;
       }
     }
-    // Only HTML elements: ignore JavaScript/CSS subtrees, comments and raw text.
-    for (let child = node.lastChild; child; child = child.prevSibling) if (child.name === 'Element') nodes.push(child);
-  }
-  return ranges;
+    if (range && range.to > range.from) {
+      const key = `${range.from}:${range.to}`;
+      if (!seen.has(key)) { ranges.push(range); seen.add(key); }
+    }
+  } });
+  return ranges.sort((a, b) => a.from - b.from || b.to - a.to);
 }
 
 let structureFoldRevision = 0;
+let smartFoldEnabled = false;
+let smartFoldPending = false;
+let smartFoldFrame = 0;
+function cancelSmartFold() {
+  structureFoldRevision++;
+  smartFoldPending = false;
+  cancelAnimationFrame(smartFoldFrame); smartFoldFrame = 0;
+  document.querySelector('#edit-fold-structure').removeAttribute('aria-busy');
+}
+function requestSmartFold() {
+  cancelSmartFold();
+  smartFoldPending = smartFoldEnabled;
+  scheduleSmartFold();
+}
+function scheduleSmartFold() {
+  if (!smartFoldPending || smartFoldFrame || !smartFoldEnabled || !alternativeActive() || alternativeBusy || modeBusy || readingClipboard || currentPanel() || historyOpen || comparisonOpen) return;
+  smartFoldFrame = requestAnimationFrame(() => { smartFoldFrame = 0; if (smartFoldPending) void foldEditorStructure(); });
+}
 async function foldEditorStructure() {
-  if (!alternativeActive() || modeBusy || readingClipboard) return;
+  if (!smartFoldEnabled || !alternativeActive() || modeBusy || readingClipboard || currentPanel() || historyOpen || comparisonOpen) return;
+  smartFoldPending = false;
   const view = alternativeView, doc = view.state.doc, revision = ++structureFoldRevision;
   const button = document.querySelector('#edit-fold-structure');
-  button.disabled = true; button.setAttribute('aria-busy', 'true');
+  button.setAttribute('aria-busy', 'true');
   try {
     const parse = OneHTMLCodeMirror.html().language.parser.startParse(doc.toString());
     let tree;
@@ -270,16 +332,16 @@ async function foldEditorStructure() {
       const until = performance.now() + 25;
       do { tree = parse.advance(); } while (!tree && performance.now() < until);
       if (!tree) await new Promise(resolve => requestAnimationFrame(resolve));
-      if (revision !== structureFoldRevision || !alternativeActive() || view.state.doc !== doc || modeBusy || currentPanel() || historyOpen || comparisonOpen) return;
+      if (revision !== structureFoldRevision || !smartFoldEnabled || !alternativeActive() || view.state.doc !== doc || modeBusy || currentPanel() || historyOpen || comparisonOpen) return;
     } while (!tree);
     const ranges = structureFoldRanges(doc, tree);
-    if (!ranges.length) { inform('Нет крупных блоков для сворачивания.'); return; }
+    if (!ranges.length) return;
     view.dispatch({ effects: [...cmUnfoldAll(), ...ranges.map(range => OneHTMLCodeMirror.foldEffect.of(range))] });
     view.scrollDOM.scrollTop = 0;
     view.scrollDOM.scrollLeft = 0;
     view.requestMeasure();
   } catch { inform('Не удалось свернуть структуру. Код сохранён без изменений.', true); }
-  finally { if (revision === structureFoldRevision) { button.disabled = false; button.removeAttribute('aria-busy'); } }
+  finally { if (revision === structureFoldRevision) button.removeAttribute('aria-busy'); }
 }
 
 function initAlternativeEditor() {
@@ -291,6 +353,7 @@ function initAlternativeEditor() {
     const saved = localStorage.getItem('onehtml-lab-editor-engine');
     if (['native', 'codemirror'].includes(saved)) alternativeChoice = saved;
     editorDark = localStorage.getItem('onehtml-lab-theme') === 'dark';
+    smartFoldEnabled = localStorage.getItem('onehtml-lab-smart-fold') === 'true';
   } catch {}
   const applyTheme = () => {
     document.documentElement.classList.toggle('theme-dark', editorDark);
@@ -307,6 +370,8 @@ function initAlternativeEditor() {
   prepare();
   const choose = choice => {
     rememberEditorPosition();
+    const changedForCM = choice === 'codemirror' && (!alternativeView || alternativeView.state.doc.toString() !== codeField.value);
+    cancelSmartFold();
     alternativeChoice = choice;
     prepare();
     try { localStorage.setItem('onehtml-lab-editor-engine', alternativeChoice); } catch { inform('Выбор редактора действует в этом сеансе.'); }
@@ -316,6 +381,7 @@ function initAlternativeEditor() {
     codeField.focus({ preventScroll: true });
     if (alternativeActive()) selectAlternativeRange(codeField.selectionStart, codeField.selectionEnd, codeField.selectionDirection, 'nearest');
     else { editRevealCaret = true; scheduleCodeLayout(); }
+    if (changedForCM) requestSmartFold();
   };
   alternativeSelect.addEventListener('change', () => choose(alternativeSelect.value));
   alternativeToggle.addEventListener('click', () => choose(alternativeActive() ? 'native' : 'codemirror'));
@@ -325,10 +391,22 @@ function initAlternativeEditor() {
     applyTheme();
   });
   applyTheme();
-  document.querySelector('#edit-fold-structure').addEventListener('click', foldEditorStructure);
+  const smartButton = document.querySelector('#edit-fold-structure');
+  const updateSmartButton = () => {
+    smartButton.setAttribute('aria-pressed', String(smartFoldEnabled));
+    smartButton.title = smartFoldEnabled ? 'Умное сворачивание включено — выключить и раскрыть код' : 'Включить умное сворачивание';
+  };
+  updateSmartButton();
+  smartButton.addEventListener('click', () => {
+    smartFoldEnabled = !smartFoldEnabled;
+    cancelSmartFold(); updateSmartButton();
+    try { localStorage.setItem('onehtml-lab-smart-fold', String(smartFoldEnabled)); }
+    catch { inform('Умное сворачивание запомнится только в этом сеансе.'); }
+    if (smartFoldEnabled) requestSmartFold();
+    else if (alternativeActive()) OneHTMLCodeMirror.unfoldAll(alternativeView);
+  });
   document.querySelector('#edit-unfold-all').addEventListener('click', () => {
-    structureFoldRevision++;
-    const button = document.querySelector('#edit-fold-structure'); button.disabled = false; button.removeAttribute('aria-busy');
+    cancelSmartFold();
     if (alternativeActive()) OneHTMLCodeMirror.unfoldAll(alternativeView);
   });
   new MutationObserver(() => { updateAlternativeEditor(); scheduleCodeLayout(); }).observe(codeField, { attributes: true, attributeFilter: ['readonly', 'disabled', 'hidden'] });

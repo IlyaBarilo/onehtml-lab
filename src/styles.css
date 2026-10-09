@@ -661,6 +661,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 #edit-inline input[type="text"] { min-width: 0; width: 100%; height: 44px; padding: 8px; font-size: 16px; border: 1px solid #b9cbe3; border-radius: 5px; background: white; }
 #edit-inline button, #edit-quick button { flex: 0 0 auto; min-width: 44px; min-height: 44px; padding: 6px 10px; border: 0; border-radius: 5px; color: #315c93; background: transparent; font: inherit; }
 #edit-inline button:hover, #edit-quick button:hover { background: #dceaff; }
+#edit-quick #edit-fold-structure[aria-pressed="true"] { background: #dceaff; color: #185ad4; box-shadow: inset 0 0 0 1px #a6c5f5; }
 #edit-inline button:disabled, #edit-quick button:disabled { opacity: .28; }
 .edit-find-options { display: flex; align-items: center; gap: 8px; min-height: 38px; font-size: 13px; }
 .edit-find-options output { flex: 1; min-width: 0; }
@@ -861,6 +862,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .theme-dark :is(#alternative-editor, #comparison-editor) .cm-cursor { border-left-color: #c6dcff; }
 .theme-dark :is(#edit-inline button, #edit-quick button) { background: transparent; color: #afc9ed; }
 .theme-dark :is(#edit-inline button, #edit-quick button):hover:not(:disabled) { background: #344965; }
+.theme-dark #edit-quick #edit-fold-structure[aria-pressed="true"] { background: #344965; color: #c3d9ff; box-shadow: inset 0 0 0 1px #668ab9; }
 .theme-dark #edit-size-popover { background: #202c3d; border-color: #50627d; color: #c5d8f3; box-shadow: 0 5px 20px #0005; }
 .theme-dark #edit-size-range { accent-color: #91baff; }
 .theme-dark #edit-size-toggle[aria-expanded="true"] { background: #344965; }
