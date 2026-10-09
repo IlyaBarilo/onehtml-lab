@@ -293,7 +293,8 @@ function structureFoldRanges(doc, tree) {
         if (functionBody || node.name === 'ClassBody' || lines >= 2 || candidate.to - candidate.from >= 120) range = candidate;
       }
     }
-    if (range && range.to > range.from) {
+    // Use source lines, not visual wrapping: even a long one-line block stays open.
+    if (range && range.to > range.from && doc.lineAt(range.to).number > doc.lineAt(range.from).number) {
       const key = `${range.from}:${range.to}`;
       if (!seen.has(key)) { ranges.push({ ...range, node, children: [] }); seen.add(key); }
     }

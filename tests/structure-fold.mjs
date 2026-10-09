@@ -47,15 +47,15 @@ export async function checkStructureFolding(page, prefix) {
     '<h1>Видимый заголовок</h1>', '<main id="world">', '<section id="nested">', rows('ВНУТРЕННИЙ'),
     '</section>', '</main>', '<section id="controls">', rows('УПРАВЛЕНИЕ'), '</section>',
     '<script src="./library.js"></script>', '<script id="logic">',
-    'function outer() {', '  function inner() { return "ТЕЛО ВЛОЖЕННОЙ"; }', '  return inner();', '}',
-    'const arrow = value => value * 2;', 'const blockArrow = () => { return "ТЕЛО СТРЕЛКИ"; };',
-    'const expression = function() { return "ТЕЛО ВЫРАЖЕНИЯ"; };',
-    'class Player {', '  update() { return "ТЕЛО МЕТОДА"; }', '}',
+    'function outer() {', '  function inner() {', '    return "ТЕЛО ВЛОЖЕННОЙ";', '  }', '  return inner();', '}',
+    'const arrow = value => value * 2;', 'const blockArrow = () => {', '  return "ТЕЛО СТРЕЛКИ";', '};',
+    'const expression = function() {', '  return "ТЕЛО ВЫРАЖЕНИЯ";', '};',
+    'class Player {', '  update() {', '    return "ТЕЛО МЕТОДА";', '  }', '}',
     'const points = [', '  [1, 2],', '  [3, 4]', '];',
-    'const options = {', '  speed: 5,', '  start() { return "ТЕЛО ОБЪЕКТА"; }', '};',
+    'const options = {', '  speed: 5,', '  start() {', '    return "ТЕЛО ОБЪЕКТА";', '  }', '};',
     'if (points.length) {', '  const active = true;', '  console.log(active);', '}',
     'const markup = "<section>Не HTML-узел</section>";', '</script>',
-    '<script>const bundled = "' + 'x'.repeat(10000) + '";</script>', '</body>', '</html>'
+    '<script>const bundled = "' + 'x'.repeat(300) + '";</script>', '</body>', '</html>'
   ].join('\n');
   await mode(false); await set(source);
   for (const dark of [false, true]) {
@@ -65,7 +65,8 @@ export async function checkStructureFolding(page, prefix) {
     const { text, labels } = await overview();
     for (const label of ['<head>', '<body>', 'Видимый заголовок', 'id="world"', 'id="controls"', './library.js', '</html>']) assert(text.includes(label), 'Visible structure: ' + label);
     for (const hidden of ['ВНУТРЕННИЙ', 'УПРАВЛЕНИЕ', 'function outer', 'background:']) assert(!text.includes(hidden), 'Hidden block: ' + hidden);
-    assert([...labels].some(label => label.includes('символов')), 'Minified single-line scripts have a useful count');
+    assert(![...labels].some(label => label.includes('символов')), 'Smart folding never hides a single source line');
+    assert(text.includes('const bundled'), 'Long one-line scripts stay visible');
     assert.equal(await code.inputValue(), source);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.screenshot({ path: prefix + '-structure-' + (dark ? 'dark' : 'light') + '.png' });
@@ -74,7 +75,8 @@ export async function checkStructureFolding(page, prefix) {
     assert(opened.text.includes('id="nested"')); assert(opened.text.includes('ВНУТРЕННИЙ'), 'A sole nested section adds no extra fold');
     await open('id="logic"'); opened = await overview();
     for (const header of ['function outer', 'const arrow', 'const blockArrow', 'class Player', 'const points', 'const options', 'if (points.length)']) assert(opened.text.includes(header), header);
-    for (const hidden of ['function inner', 'value * 2', 'ТЕЛО СТРЕЛКИ', 'ТЕЛО ВЫРАЖЕНИЯ', 'ТЕЛО МЕТОДА', '[1, 2]', 'speed: 5', 'const active']) assert(!opened.text.includes(hidden), 'Nested code remains folded: ' + hidden);
+    assert(opened.text.includes('value * 2'), 'An expression arrow on one source line stays open');
+    for (const hidden of ['function inner', 'ТЕЛО СТРЕЛКИ', 'ТЕЛО ВЫРАЖЕНИЯ', 'ТЕЛО МЕТОДА', '[1, 2]', 'speed: 5', 'const active']) assert(!opened.text.includes(hidden), 'Nested code remains folded: ' + hidden);
     await open('function outer'); opened = await overview();
     assert(opened.text.includes('function inner')); assert(!opened.text.includes('ТЕЛО ВЛОЖЕННОЙ'));
     await open('function inner'); assert((await overview()).text.includes('ТЕЛО ВЛОЖЕННОЙ'));
@@ -96,7 +98,7 @@ export async function checkStructureFolding(page, prefix) {
   assert(await content.innerText().then(text => text.includes('НОВЫЙ')), 'Typing stays visible');
   await page.locator('#edit-quick-undo').click(); assert.equal(await code.inputValue(), source);
   // A script's sole IIFE (and chains of wrappers) must not hide the overview again.
-  const body = 'const ready = true;\nfunction first() { return "ПЕРВОЕ"; }\nfunction second() { return "ВТОРОЕ"; }';
+  const body = 'const ready = true;\nfunction first() {\n  return "ПЕРВОЕ";\n}\nfunction second() {\n  return "ВТОРОЕ";\n}';
   const wrappers = ['(() => {\n' + body + '\n})();', '(function () {\n' + body + '\n})();', '(() => {\n(() => {\n' + body + '\n})();\n})();'];
   for (const wrapper of wrappers) {
     const wrapped = '<script>\n/* before */\n' + wrapper + '\n// after\n</script>';
@@ -113,10 +115,26 @@ export async function checkStructureFolding(page, prefix) {
     assert((await content.innerText()).includes(neighbor)); assert(!(await content.innerText()).includes('const ready'));
     await open('(() =>'); assert((await overview()).text.includes('const ready'));
   }
-  // Two folds on one line: the second placeholder must open only the second function.
+  // Functions on one source line stay visible after opening their script.
   const siblings = '<script>\nfunction first() { return "ПЕРВОЕ"; } function second() { return "ВТОРОЕ"; }\n</script>';
-  await set(siblings); await fold(); await open('<script>'); await open('function first', 1);
-  assert(!(await content.innerText()).includes('ПЕРВОЕ')); assert((await content.innerText()).includes('ВТОРОЕ'));
+  await set(siblings); await fold(); await open('<script>');
+  assert((await content.innerText()).includes('ПЕРВОЕ')); assert((await content.innerText()).includes('ВТОРОЕ'));
+  assert.equal(await placeholders.count(), 0);
+  const oneLineJS = [
+    'const materials = colors.map(color => new Three.MeshBasicMaterial({ color }));',
+    'const shortArrow = () => { return 1; };',
+    'const longObject = { text: "' + 'x'.repeat(150) + '" };',
+    'const longArray = [' + Array.from({ length: 80 }, (_, index) => index).join(',') + '];',
+    'class Small { update() { return 1; } }'
+  ];
+  const oneLineCSS = 'body { --long-value: "' + 'x'.repeat(150) + '"; }';
+  const oneLineHTML = '<section>' + 'x'.repeat(650) + '</section>';
+  const mixed = ['<style>', oneLineCSS, 'p { color: red; }', '</style>', oneLineHTML, '<script>', ...oneLineJS, body, '</script>'].join('\n');
+  await set(mixed); await fold(); await open('<style>'); await open('<script>');
+  const mixedView = await overview();
+  for (const line of [...oneLineJS, oneLineCSS, oneLineHTML]) assert(mixedView.text.includes(line), 'One-line code remains intact despite visual wrapping: ' + line.slice(0, 80));
+  assert(!mixedView.text.includes('ПЕРВОЕ') && !mixedView.text.includes('ВТОРОЕ'), 'Multiline functions still fold');
+  assert.equal(await code.inputValue(), mixed);
   const json = '<script type="importmap">\n{\n  "imports": {\n    "one": "./one.js",\n    "two": "./two.js"\n  }\n}\n</script>';
   await set(json); await fold(); await open('<script');
   assert((await content.innerText()).includes('./one.js'), 'A chain of single JSON wrappers opens together');
