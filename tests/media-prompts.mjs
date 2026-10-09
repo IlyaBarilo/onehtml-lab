@@ -85,7 +85,16 @@ try {
     await paste(page,unicode,true);assert((await page.locator('#code').inputValue()).includes('onehtml-media:1:'));await page.locator('#run').click();await frame.locator('#hero').waitFor();assert.equal(await frame.locator('#hero').getAttribute('src'),'data:image/png;base64,'+red.toString('base64'));await page.locator('#run').click();
     await ai(page);await page.locator('#ai-media-open').click();await page.getByRole('button',{name:'Удалить Герой 1.png',exact:true}).click();await page.locator('#media-prompt-delete-yes').click();await page.waitForFunction(()=>document.querySelector('#media-prompt-feedback').textContent.startsWith('Файл удалён'));
     await page.locator('#media-prompt-ai').click();await page.waitForFunction(()=>document.querySelector('#ai-summary').textContent.includes('отсутствует'));assert(await page.locator('#ai-copy').isDisabled());
-    await page.locator('#ai-media-open').click();await add(page,[{name:'Герой 1.png',mimeType:'image/png',buffer:red}]);await page.locator('#media-prompt-ai').click();await page.waitForFunction(()=>!document.querySelector('#ai-copy').disabled);await page.locator('#ai-close').click();
+    assert.match(await page.locator('#ai-next-status').innerText(),/Герой 1.png/);assert(await page.locator('#ai-copy-next').isDisabled());
+    assert(await page.locator('#ai-media-repair').isVisible());assert(await page.locator('#ai-copy-next').isHidden());
+    assert.match(await page.locator('#ai-media-names').innerText(),/Герой 1.png — файл отсутствует/);
+    await page.locator('#ai-next-step').scrollIntoViewIfNeeded();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await page.screenshot({path:join(scratch,`${engineName}-${width}-${editor}-missing.png`)});
+    const blockedTask=await page.locator('#ai-task').inputValue(),blockedCode=await page.locator('#code').inputValue();
+    await page.locator('#ai-media-repair').click();await add(page,[{name:'Герой 1.png',mimeType:'image/png',buffer:red}]);await page.locator('#media-prompt-close').click();await page.waitForFunction(()=>!document.querySelector('#ai-copy').disabled);
+    assert.equal(await page.locator('#ai-task').inputValue(),blockedTask);assert.equal(await page.locator('#code').inputValue(),blockedCode);
+    assert(await page.locator('#ai-media-repair').isHidden());assert(await page.locator('#ai-copy-next').isEnabled());
+    assert.match(await page.locator('#ai-next-status').innerText(),/готов к отправке/);await page.locator('#ai-close').click();
      await paste(page,'<!doctype html><img src="wrong.png">');assert.match(await page.locator('#status').innerText(),/wrong.png/);
      // Clipboard images use actual format, keep text/code separate and support a native fallback.
      const beforeClipboard=await page.locator('#code').inputValue();await page.locator('#media-open').click();

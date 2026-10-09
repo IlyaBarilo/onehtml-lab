@@ -79,10 +79,11 @@ function renderPreviewPicker() {
   pickerButton.setAttribute('aria-pressed', String(pickerActive));
   pickerButton.setAttribute('aria-busy', String(pickerActive && !pickerArmed));
   pickerButton.title = pickerActive ? 'Отменить выбор элемента' : previewCode !== codeField.value && running
-    ? 'Перезапустите изменённый код перед выбором' : 'Указать элемент для изменения через ИИ';
+    ? 'Перезапустите изменённый код перед выбором' : 'Выбрать элемент нажатием для запроса ИИ';
   pickerBar.hidden = !pickerActive;
   document.querySelector('#picker-description').textContent = pickerCandidate
-    ? pickedElementTitle(pickerCandidate) : pickerArmed ? 'Коснитесь элемента. Прокрутка доступна.' : 'Включение выбора…';
+    ? 'Выбрано: ' + pickedElementTitle(pickerCandidate) + '. Нажмите «К запросу».'
+    : pickerArmed ? 'Нажмите на элемент один раз. Обводить область не нужно; страницу можно прокручивать.' : 'Включение выбора…';
   document.querySelector('#picker-accept').disabled = !pickerCandidate;
 }
 
@@ -99,7 +100,7 @@ function updateAiElementCard() {
   card.hidden = aiMode !== 'change' || !element;
   document.querySelector('#ai-element-title').textContent = element ? pickedElementTitle(element) : '';
   document.querySelector('#ai-element-note').textContent = element?.tag === 'canvas'
-    ? 'Выбрано всё игровое поле. Уточните в пожелании, какой объект или поведение изменить.' : 'В запрос будут добавлены признаки элемента. Опишите, что изменить.';
+    ? 'Выбрано всё игровое поле. Уточните в пожелании, какой объект или поведение изменить.' : 'Элемент добавлен в запрос. Опишите, что изменить, и скопируйте запрос для ИИ-бота.';
   document.querySelector('#ai-element-repick').disabled = !running || pickerReadyFrame !== activeFrame || previewCode !== codeField.value || modeBusy;
 }
 

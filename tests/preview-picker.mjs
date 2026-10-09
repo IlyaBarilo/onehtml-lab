@@ -33,6 +33,8 @@ async function begin(page) {
   await page.locator('#preview-pick').click();
   await page.locator('#picker-bar').waitFor();
   await page.waitForFunction(() => document.querySelector('#preview-pick').getAttribute('aria-busy') === 'false');
+  assert.match(await page.locator('#picker-description').innerText(), /Нажмите на элемент один раз.*Обводить область не нужно/);
+  assert(await page.locator('#picker-description').evaluate(node => node.scrollHeight <= node.clientHeight + 1), 'Selection instructions must not be clipped');
 }
 async function geometry(page) {
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
@@ -61,6 +63,7 @@ try {
       assert(await page.locator('#preview-pick').isHidden(), 'Simple mode is unchanged');
       await page.locator('#run').click(); await page.locator('#expert-toggle').click();
       await page.locator('#run').click(); await begin(page); await geometry(page);
+      await page.screenshot({path:join(output,`${name}-${new URL(url).protocol.slice(0,-1)}-${width}-instructions.png`)});
       const frame = await (await page.locator('#preview iframe').elementHandle()).contentFrame();
       const click = async selector => width === 320 ? frame.locator(selector).tap() : frame.locator(selector).click();
       await click('#play span');
@@ -94,7 +97,13 @@ try {
       assert(prompt.includes('"id": "play"')); assert(prompt.includes('button:nth-of-type(1)')); assert(prompt.endsWith(source));
       assert(!prompt.slice(0,prompt.indexOf('Текущий код:')).includes('secret-value'));
       assert.equal(await page.locator('#code').inputValue(),source);
-      await page.locator('#ai-copy').click(); assert.equal(await page.evaluate(() => window.copied),prompt);
+      assert.match(await page.locator('#ai-next-status').innerText(), /готов к отправке/);
+      assert.match(await page.locator('#ai-next-help').innerText(), /внешнего ИИ.*Принять ответ/);
+      await page.locator('#ai-copy-next').click(); assert.equal(await page.evaluate(() => window.copied),prompt);
+      assert.match(await page.locator('#ai-next-status').innerText(), /Теперь отправьте/);
+      assert.match(await page.locator('#ai-next-help').innerText(), /Откройте ИИ-бота/);
+      assert.equal(await page.locator('#code').inputValue(),source,'Copying the request does not edit the game');
+      await page.screenshot({path:join(output,`${name}-${new URL(url).protocol.slice(0,-1)}-${width}-next-step.png`)});
       await page.locator('#ai-prompts-open').click(); await page.locator('#ai-prompts-list button').first().click();
       assert.equal(await page.locator('#ai-prompts-text').inputValue(),prompt);
       await page.waitForFunction(() => document.querySelector('#ai-prompts-source').textContent.includes('совпадает'));

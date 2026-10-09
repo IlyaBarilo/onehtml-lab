@@ -125,7 +125,8 @@ async function planPromptMedia(code,selected,shorten) {
     }
   }
   const result=[...files].map(([name,id])=>({name,id}));
-  if(result.some(file=>!mediaCache.has(file.id)))throw Error('Выбранный файл отсутствует. Выберите его снова в «Медиа».');
+  const unavailable=result.filter(file=>!mediaCache.has(file.id));
+  if(unavailable.length)throw Object.assign(Error('Файл отсутствует: '+unavailable.map(file=>file.name).join(', ')+'. В «Медиа» добавьте его снова или снимите отметку включения в запрос.'),{missingMedia:true});
   if([...new Set(result.map(file=>file.id))].reduce((sum,id)=>sum+mediaCache.get(id).blob.size,0)>mediaLimits.document)throw Error('Медиа запроса должны занимать не больше 16 МБ.');
   return {html:moduleReplace(code,changes),files:result,notes:[...new Set(notes)]};
 }

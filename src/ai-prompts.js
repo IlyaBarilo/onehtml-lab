@@ -188,6 +188,34 @@ function setAiPreview(value) {
   if (value) aiOutput.scrollTop = 0;
 }
 
+function setAiNextStep(message, state = 'waiting', missingMedia = false) {
+  document.querySelector('#ai-next-step').dataset.state = state;
+  document.querySelector('#ai-next-status').textContent = message;
+  const copy = document.querySelector('#ai-copy-next');
+  copy.disabled = !['ready', 'copied'].includes(state);
+  copy.hidden = missingMedia;
+  document.querySelector('#ai-media-repair').hidden = !missingMedia;
+  const help = document.querySelector('#ai-next-help');
+  help.hidden = state === 'error';
+  help.textContent = (state === 'copied'
+    ? 'Откройте ИИ-бота по ссылке в этом экране и отправьте текст из буфера.'
+    : 'Редактор готовит запрос для внешнего ИИ. Скопируйте его и отправьте ИИ-боту.')
+    + (['explain', 'check'].includes(aiMode) ? ' Прочитайте ответ и проверьте результат в браузере.'
+      : ' Полученный HTML добавьте здесь через «Принять ответ».');
+}
+
+function onAiPromptCopied(result) {
+  acceptCopiedAiPrompt(result);
+  if (aiResult === result && sameAiSnapshot(result.snapshot, aiPromptSnapshot())) setAiNextStep('Запрос скопирован. Теперь отправьте его ИИ-боту.', 'copied');
+}
+
+function copyAiPrompt() {
+  if (!aiResult || !sameAiSnapshot(aiResult.snapshot, aiPromptSnapshot())) { updateAiControls(); return; }
+  // Compilation finished before this click, preserving clipboard user activation.
+  const result = aiResult;
+  void copyOrSelect(result.text, 'Запрос скопирован. Вставьте его в выбранного ИИ-бота.', () => onAiPromptCopied(result));
+}
+
 function setAiMode(mode) {
   if (!Object.hasOwn(aiTasks, mode)) return;
   aiTasks[aiMode] = aiTask.value;
@@ -202,9 +230,6 @@ function setAiMode(mode) {
   aiTask.placeholder = placeholders[mode];
   updateAiProjectLabels();
   document.querySelector('#ai-source-options').hidden = mode === 'create';
-  document.querySelector('.ai-instruction').textContent = ['explain', 'check'].includes(mode)
-    ? 'Скопируйте запрос и вставьте его в ИИ-бота. Прочитайте объяснение или замечания и проверьте результат в браузере.'
-    : 'Скопируйте запрос и вставьте его в ИИ-бота. Полученный HTML-код вставьте в редактор.';
   for (const button of document.querySelectorAll('[data-ai-mode]')) button.setAttribute('aria-pressed', String(button.dataset.aiMode === mode));
   setAiPreview(false);
   saveAiPromptSettings();
@@ -245,7 +270,7 @@ function updateAiControls() {
   const mediaNames = document.querySelector('#ai-media-names');
   const files = JSON.parse(snapshot.media);
   mediaNames.hidden = !files.length;
-  mediaNames.textContent = files.length ? 'Медиа для запроса:\n' + files.map(file=>file.name).join('\n') : '';
+  mediaNames.textContent = files.length ? 'Медиа для запроса:\n' + files.map(file=>file.name + (mediaCache.has(file.id) ? '' : ' — файл отсутствует')).join('\n') : '';
   const qualityContext = document.querySelector('#ai-quality-context');
   qualityContext.hidden = snapshot.mode !== 'check' || !aiQualityContext;
   qualityContext.textContent = snapshot.quality ? 'В запрос добавлен отчёт «Проверка перед показом и сдачей».' : 'Код или работа изменены: прежний отчёт не включён. Вернитесь в «Проверку» и подготовьте запрос снова.';
@@ -262,6 +287,7 @@ function updateAiControls() {
   aiSnapshot = snapshot;
   aiResult = null;
   aiCopy.disabled = true;
+  setAiNextStep('Подготовка запроса…');
   aiView.disabled = !aiShowingPreview;
   aiOutput.value = '';
   aiLibraries.textContent = '';
@@ -275,10 +301,12 @@ function updateAiControls() {
   clearTimeout(aiTimer);
   if (snapshot.mode !== 'create' && !snapshot.code.trim()) {
     aiSummary.textContent = 'Сначала вставьте или откройте HTML-код.';
+    setAiNextStep(aiSummary.textContent);
     return;
   }
   if (snapshot.mode === 'fix' && !snapshot.task && !snapshot.error) {
     aiSummary.textContent = 'Опишите, что не работает.';
+    setAiNextStep(aiSummary.textContent);
     return;
   }
   aiSummary.textContent = 'Подготовка запроса…';
@@ -297,7 +325,7 @@ async function prepareAiPrompt(snapshot, revision) {
     mediaPlan=await aiMediaSourcePlan.promise;
     code=mediaPlan.html;notes.push(...mediaPlan.notes);
   } catch(error) {
-    if(revision===aiRevision){aiSummary.textContent=error.message;aiCopy.disabled=true;aiView.disabled=true;}
+    if(revision===aiRevision){aiSummary.textContent=error.missingMedia?'Медиафайл отсутствует. Проверьте список рядом с пожеланием.':error.message;aiCopy.disabled=true;aiView.disabled=true;setAiNextStep(error.message,'error',Boolean(error.missingMedia));}
     return;
   }
   if(pastCode!==null && snapshot.shorten) {
@@ -349,6 +377,7 @@ async function prepareAiPrompt(snapshot, revision) {
   aiResult = { snapshot, text, mediaFiles: mediaPlan.files, scope: gameStorageScope };
   aiCopy.disabled = false;
   aiView.disabled = false;
+  setAiNextStep('Запрос готов к отправке ИИ-боту.', 'ready');
 }
 
 function initAiPrompts() {
@@ -372,14 +401,11 @@ function initAiPrompts() {
   aiOutput.addEventListener('copy', event => {
     const result = aiResult;
     if (!result || !sameAiSnapshot(result.snapshot, aiPromptSnapshot()) || aiOutput.selectionStart !== 0 || aiOutput.selectionEnd !== result.text.length) return;
-    queueMicrotask(() => { if (!event.defaultPrevented) acceptCopiedAiPrompt(result); });
+    queueMicrotask(() => { if (!event.defaultPrevented) onAiPromptCopied(result); });
   });
-  aiCopy.addEventListener('click', () => {
-    if (!aiResult || !sameAiSnapshot(aiResult.snapshot, aiPromptSnapshot())) { updateAiControls(); return; }
-    // Compilation finished before this click, preserving clipboard user activation.
-    const result = aiResult;
-    void copyOrSelect(result.text, 'Запрос скопирован. Вставьте его в выбранного ИИ-бота.', () => acceptCopiedAiPrompt(result));
-  });
+  aiCopy.addEventListener('click', copyAiPrompt);
+  document.querySelector('#ai-copy-next').addEventListener('click', copyAiPrompt);
+  document.querySelector('#ai-media-repair').addEventListener('click', () => openPromptMedia(true));
   document.querySelector('#error-ai').addEventListener('click', () => openAiPrompts('fix'));
   initAiSession();
 }

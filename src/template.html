@@ -328,12 +328,18 @@
       <button class="platform-tab" type="button" role="tab" data-platform="desktop" aria-selected="false">Компьютер</button>
     </div>
     <div id="ai-starter-options" hidden><label for="ai-starter">Добавить заготовку задачи</label><select id="ai-starter"><option value="">Выберите основу…</option><option value="poster">Интерактивная афиша</option><option value="story">История с выбором</option><option value="infographic">Инфографика</option><option value="quiz">Викторина</option></select><p class="diagnostic-note">Заготовка допишется к пожеланиям. Замените текст в квадратных скобках своей идеей.</p></div>
-    <label id="ai-task-label" for="ai-task">Тема игры и пожелания</label>
-    <textarea id="ai-task" rows="3" aria-describedby="ai-summary" placeholder="Например: игра про космос, собирать звёзды и избегать метеоритов"></textarea>
     <section id="ai-element-card" aria-label="Выбранный элемент" hidden>
       <strong id="ai-element-title"></strong><p id="ai-element-note"></p>
       <div class="diagnostic-actions"><button id="ai-element-repick" type="button">Выбрать другой</button><button id="ai-element-remove" type="button">Убрать выбор</button></div>
     </section>
+    <label id="ai-task-label" for="ai-task">Тема игры и пожелания</label>
+    <textarea id="ai-task" rows="3" aria-describedby="ai-next-status ai-next-help" placeholder="Например: игра про космос, собирать звёзды и избегать метеоритов"></textarea>
+    <div id="ai-next-step">
+      <p id="ai-next-status" role="status" aria-live="polite"></p>
+      <p id="ai-next-help" class="ai-instruction">Скопируйте запрос и отправьте его ИИ-боту. Полученный HTML добавьте через «Принять ответ».</p>
+      <button id="ai-copy-next" type="button" disabled>Копировать запрос</button>
+      <button id="ai-media-repair" type="button" hidden>Проверить медиа</button>
+    </div>
     <div id="ai-game-options" class="ai-game-options">
       <div class="ai-game-grid"><label>Пространство<select id="ai-game-dimension"></select></label><label>Основа игры<select id="ai-game-basis"></select></label></div>
       <p id="ai-game-recommendation" class="diagnostic-note"></p>
@@ -367,7 +373,6 @@
       <li><strong>DeepSeek</strong><span class="service-links"><a href="https://chat.deepseek.com/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=com.deepseek.chat" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/deepseek-ai-%D0%B0%D1%81%D1%81%D0%B8%D1%81%D1%82%D0%B5%D0%BD%D1%82/id6737597349" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
       <li><strong>Qwen Studio</strong><span class="service-links"><a href="https://qwen.ai/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=ai.qwenlm.chat.android" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/qwen-studio/id6743778442" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
     </ul>
-    <p class="ai-instruction">Скопируйте запрос и вставьте его в ИИ-бота. Полученный HTML-код вставьте в редактор.</p>
     </div>
     </div>
     <div id="ai-preview-body" class="ai-preview-body" hidden><textarea id="ai-output" readonly spellcheck="false" aria-label="Готовый запрос для ИИ"></textarea></div>
