@@ -51,8 +51,11 @@
     #stage { flex: 1; position: relative; overflow: hidden; min-height: 120px; touch-action: none; background: #091321; }
     #scene, #touches { position: absolute; inset: 0; }
     #scene canvas { display: block; }
-    .phaser-hud { position: absolute; top: 36px; left: 10px; right: 10px; z-index: 1; display: flex; justify-content: space-between; gap: 6px; pointer-events: none; font-size: 14px; font-weight: 650; text-shadow: 0 1px 3px #071b29; }
+    .phaser-hud { position: absolute; top: 36px; left: 10px; right: 66px; z-index: 1; display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 6px; pointer-events: none; font-size: 14px; font-weight: 650; text-shadow: 0 1px 3px #071b29; }
     .phaser-hud span { padding: 4px 8px; border-radius: 7px; background: #071b29c9; }
+    #phaser-time { position: absolute; top: 36px; right: 10px; z-index: 1; width: 44px; padding: 0; display: grid; place-items: center; background: #10293de8; border-color: #83cbb6; }
+    #phaser-time svg { width: 22px; height: 22px; }
+    .phaser-compact #phaser-time { top: 30px; }
     .phaser-pad { position: absolute; bottom: 8px; left: 10px; right: 10px; z-index: 1; display: flex; gap: 6px; }
     .phaser-pad button { width: 48px; min-height: 44px; background: #10293de8; border-color: #83cbb6; font-size: 22px; user-select: none; touch-action: none; }
     .phaser-pad button[data-phaser-action="jump"] { margin-left: auto; width: 94px; font-size: 15px; }
@@ -217,7 +220,7 @@
       };
       explanations.phaser4 = [
         'Phaser 4 — для новых 2D-игр с динамическим светом и графическими эффектами. При переносе игры с Phaser 3 проверьте совместимость плагинов.',
-        '«Эффекты» включает мягкий свет фонарей и подсветку огней. Требуется WebGL; без него игра работает без этих эффектов. Управление — экранные кнопки, стрелки/A/D и пробел.'
+        'Ночью «Эффекты» показывает луч фонаря робота, свет фонарей, тень и пульсацию выхода. Нужен WebGL; днём разница меньше. День/ночь — значок солнца или луны. Такие эффекты можно сделать и в Phaser 3.'
       ];
       const showcaseLabels = {
         canvas: 'Набережная · касание переключает день и ночь',
@@ -232,6 +235,7 @@
       let mode = 'canvas', objectCount = 120, activeScene = null;
       let scenario = 'showcase', infoOpen = false;
       let phaserExpanded = false;
+      let phaserNight = true;
       let paused = false, tapCount = 0, peakPointers = 0, pendingInput = null;
       let frameStart = 0, frames = 0, lastFrame = null;
       let generation = 0;
@@ -1095,6 +1099,9 @@
         const held = new Map();
         let game, current = null, demo = true, jumpQueued = false;
         let effectsEnabled = true;
+        const repaint = () => {
+          if (paused && current) { game.renderer.preRender(); game.scene.render(game.renderer); game.renderer.postRender(); }
+        };
         const effects = modern ? document.createElement('button') : null;
         if (effects) {
           effects.id = 'phaser-effects'; effects.textContent = 'Эффекты'; effects.disabled = true;
@@ -1102,9 +1109,7 @@
           effects.addEventListener('click', () => {
             if (!current?.visuals) return;
             effectsEnabled = !effectsEnabled; current.setVisuals(effectsEnabled);
-            if (paused) {
-              game.renderer.preRender(); game.scene.render(game.renderer); game.renderer.postRender();
-            }
+            repaint();
           });
           document.querySelector('.controls').append(effects);
         }
@@ -1123,6 +1128,12 @@
         const result = document.createElement('div'); result.className = 'phaser-result'; result.hidden = true;
         const expand = document.createElement('button'); expand.id = 'phaser-expand';
         const svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+        const timeToggle = document.createElement('button'); timeToggle.id = 'phaser-time';
+        for (const name of ['pointerdown', 'pointerup', 'pointercancel']) timeToggle.addEventListener(name, event => event.stopPropagation());
+        timeToggle.addEventListener('click', () => {
+          if (!current) return;
+          phaserNight = !phaserNight; current.setTimeOfDay(); repaint();
+        });
         const updateExpand = () => {
           const label = phaserExpanded ? 'Вернуть панель теста' : 'Развернуть игровую сцену';
           expand.setAttribute('aria-label', label); expand.title = label; expand.setAttribute('aria-pressed', String(phaserExpanded));
@@ -1131,7 +1142,7 @@
         const toggleExpand = () => { phaserExpanded = !phaserExpanded; document.querySelector('.app').classList.toggle('phaser-expanded', phaserExpanded); updateExpand(); };
         expand.addEventListener('click', toggleExpand); updateExpand(); document.querySelector('.controls').append(expand);
         host.tabIndex = 0;
-        host.classList.toggle('phaser-compact', compact); host.append(hud, pad, result);
+        host.classList.toggle('phaser-compact', compact); host.append(hud, pad, result, timeToggle);
         const setDemo = value => { demo = value; held.clear(); jumpQueued = false; pad.querySelector('[data-phaser-action="demo"]').setAttribute('aria-pressed', String(value)); };
         const act = (action, id) => {
           if (!current || sceneGeneration !== generation) return;
@@ -1171,6 +1182,32 @@
               const gradient = ctx.createLinearGradient(0, 0, 0, 560); gradient.addColorStop(0, '#143d58'); gradient.addColorStop(.6, '#577f8b'); gradient.addColorStop(1, '#b2b9a1');
               ctx.fillStyle = gradient; ctx.fillRect(0, 0, 64, 560);
             });
+            texture('forest-night-sky', 64, 560, ctx => {
+              const gradient = ctx.createLinearGradient(0, 0, 0, 560); gradient.addColorStop(0, '#0b172c'); gradient.addColorStop(.6, '#203747'); gradient.addColorStop(1, '#416061');
+              ctx.fillStyle = gradient; ctx.fillRect(0, 0, 64, 560);
+            });
+            texture('forest-lamp-halo', 96, 96, ctx => {
+              const gradient = ctx.createRadialGradient(48, 48, 0, 48, 48, 48);
+              gradient.addColorStop(0, '#fff4d9aa'); gradient.addColorStop(.25, '#fff4d940'); gradient.addColorStop(1, '#fff4d900');
+              ctx.fillStyle = gradient; ctx.fillRect(0, 0, 96, 96);
+            });
+            texture('forest-light-cone', 192, 208, ctx => {
+              const gradient = ctx.createLinearGradient(0, 0, 0, 208);
+              gradient.addColorStop(0, '#ffffff80'); gradient.addColorStop(.35, '#ffffff28'); gradient.addColorStop(1, '#ffffff00');
+              ctx.fillStyle = gradient; ctx.beginPath(); ctx.moveTo(92, 0); ctx.lineTo(100, 0); ctx.lineTo(188, 208); ctx.lineTo(4, 208); ctx.closePath(); ctx.fill();
+            });
+            texture('forest-light-pool', 192, 64, ctx => {
+              ctx.save(); ctx.scale(1, 1 / 3);
+              const gradient = ctx.createRadialGradient(96, 96, 4, 96, 96, 92);
+              gradient.addColorStop(0, '#ffffffa0'); gradient.addColorStop(.45, '#ffffff50'); gradient.addColorStop(1, '#ffffff00');
+              ctx.fillStyle = gradient; ctx.fillRect(0, 0, 192, 192); ctx.restore();
+            });
+            texture('forest-contact-shadow', 128, 32, ctx => {
+              ctx.save(); ctx.scale(1, 1 / 4);
+              const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+              gradient.addColorStop(0, '#000000a0'); gradient.addColorStop(1, '#00000000');
+              ctx.fillStyle = gradient; ctx.fillRect(0, 0, 128, 128); ctx.restore();
+            });
             texture('robot', 48, 56, (ctx, frame) => {
               const step = [0, 4, 0, -4][frame];
               ctx.fillStyle = '#182e40'; ctx.fillRect(13, 41 + step, 9, 12 - step); ctx.fillRect(28, 41 - step, 9, 12 + step);
@@ -1203,20 +1240,24 @@
               ctx.strokeStyle = '#d99a46'; ctx.stroke();
             });
             texture('forest-spark', 12, 12, ctx => { ctx.fillStyle = '#e7ffe2'; ctx.beginPath(); ctx.arc(6, 6, 5, 0, Math.PI * 2); ctx.fill(); });
-            this.add.image(worldWidth / 2, 280, 'forest-sky').setDisplaySize(worldWidth, 560);
-            this.add.circle(420, 175, 70, 0xf6e6b5, .08).setScrollFactor(.2, 1);
-            this.add.circle(420, 175, 43, 0xf6e6b5, .65).setScrollFactor(.2, 1);
-            for (const [factor, tint, base] of [[.2, 0x355e70, 360], [.45, 0x2d6470, 425]]) {
-              const mountains = this.add.graphics().setScrollFactor(factor, 1); mountains.fillStyle(tint, 1);
-              for (let x = -200; x < worldWidth + 700; x += 210) mountains.fillTriangle(x, 560, x + 160, base - (x / 210 % 3) * 28, x + 390, 560);
-            }
+            const sky = this.add.image(worldWidth / 2, 280, 'forest-sky').setDisplaySize(worldWidth, 560);
+            const stars = this.add.graphics().setScrollFactor(.2, 1);
+            stars.fillStyle(0xc4dced, .65);
+            for (let i = 0; i < 100; i += 1) stars.fillCircle((i * 173 + 53) % (worldWidth + 700), 35 + (i * 47) % 210, i % 4 ? 1 : 1.6);
+            const halo = this.add.circle(420, 175, 70, 0xf6e6b5, .08).setScrollFactor(.2, 1);
+            const orb = this.add.circle(420, 175, 43, 0xf6e6b5, .65).setScrollFactor(.2, 1);
+            const mountains = [.2, .45].map(factor => this.add.graphics().setScrollFactor(factor, 1));
             const forest = this.add.graphics().setScrollFactor(.7, 1);
-            for (let x = 40; x < worldWidth + 400; x += 85) {
-              const y = 290 + x % 73; forest.fillStyle(0x245459, .8); forest.fillRect(x - 4, y, 8, 190);
-              forest.fillTriangle(x - 46, y + 50, x, y - 25, x + 46, y + 50); forest.fillTriangle(x - 60, y + 98, x, y + 18, x + 60, y + 98);
-            }
-            const water = this.add.graphics(); water.fillStyle(0x173f5e, 1); water.fillRect(0, groundY + 8, worldWidth, 80);
-            water.lineStyle(2, 0x8ed9d7, .35); for (let x = 0; x < worldWidth; x += 38) water.lineBetween(x, 510 + x % 29, x + 21, 510 + x % 29);
+            const water = this.add.graphics();
+            this.scenery = { sky, stars, halo, orb, mountains, forest, water };
+            this.streetLamps = [70, 940, 1390, 1770, 2290, 2585, 3020].map(x => {
+              const pole = this.add.graphics().setDepth(2);
+              pole.lineStyle(6, 0x456970, 1); pole.lineBetween(x, groundY, x, 315); pole.lineBetween(x, 315, x + 25, 315);
+              pole.lineStyle(2, 0x819b9c, 1); pole.lineBetween(x - 1, 480, x - 1, 320);
+              pole.fillStyle(0x344f59, 1); pole.fillRect(x - 10, groundY - 5, 20, 5); pole.fillRect(x + 11, 312, 24, 5);
+              const bulb = this.add.rectangle(x + 23, 324, 15, 16, 0xffdb98, .8).setStrokeStyle(2, 0x344f59).setDepth(6);
+              return { x: x + 23, y: 331, bulb };
+            });
             this.ground = this.physics.add.staticGroup();
             const platform = (x, top, w, h, ground = false) => {
               const tile = this.add.tileSprite(x + w / 2, top + h / 2, w, h, ground ? 'forest-ground' : 'forest-platform').setDepth(3);
@@ -1312,17 +1353,32 @@
             this.cameras.main.roundPixels = true;
             if (modern) {
               if (this.game.renderer.type === Phaser.WEBGL) {
-                this.lights.enable().setAmbientColor(0xe8edf2);
+                this.lights.enable();
                 const follow = this.lights.addLight(this.player.x, this.player.y, 115, 0xffc88a, .18); follow.z = 80;
                 const station = this.lights.addLight(3080, 425, 150, 0xa6e8ce, .22); station.z = 80;
                 const checkpointLight = this.lights.addLight(1320, 395, 95, 0x9ae9c2, .15); checkpointLight.z = 70;
+                const streetLights = this.streetLamps.map(lamp => {
+                  const light = this.lights.addLight(lamp.x, lamp.y + 85, 200, 0xffd195, 1.3); light.z = 60; return light;
+                });
                 const lit = [...this.ground.getChildren(), ...this.platforms.getChildren()];
                 const lamp = (x, y, color) => this.add.image(x, y, 'forest-spark').setDisplaySize(8, 8).setTint(color).setAlpha(.65).setBlendMode(Phaser.BlendModes.ADD).setDepth(7);
                 const lamps = [lamp(this.player.x, this.player.y - 26, 0xffc88a), lamp(1320, 377, 0x9ae9c2), lamp(3080, 375, 0xa6e8ce)];
-                const blooms = Phaser.Actions.AddEffectBloom(lamps, { threshold: .85, blurRadius: 1, blurSteps: 2, blendAmount: .12 });
-                this.visuals = { follow, station, lit, lamps, blooms };
+                const halos = lamps.map(lamp => this.add.image(lamp.x, lamp.y, 'forest-lamp-halo').setTint(lamp.tintTopLeft).setBlendMode(Phaser.BlendModes.ADD).setDepth(7));
+                const cone = (x, y) => this.add.image(x, y, 'forest-light-cone').setOrigin(.5, 0).setTint(0xffd7a0).setBlendMode(Phaser.BlendModes.ADD);
+                const lanternEffects = this.streetLamps.flatMap(lamp => [
+                  cone(lamp.x, lamp.y).setDisplaySize(190, groundY - lamp.y + 10).setDepth(2.5).setAlpha(.85),
+                  this.add.image(lamp.x, groundY + 8, 'forest-light-pool').setTint(0xffd295).setAlpha(.32).setBlendMode(Phaser.BlendModes.ADD).setDepth(4.2),
+                  this.add.image(lamp.x, lamp.y - 7, 'forest-lamp-halo').setDisplaySize(72, 72).setTint(0xffd295).setAlpha(.6).setBlendMode(Phaser.BlendModes.ADD).setDepth(7)
+                ]);
+                const beam = cone(this.player.x, this.player.y).setTint(0xe4efff).setDisplaySize(120, 200).setDepth(2.8).setAlpha(.8);
+                const shadow = this.add.image(this.player.x, groundY + 4, 'forest-contact-shadow').setDepth(4.5).setAlpha(.7);
+                const motes = this.streetLamps.flatMap(lamp => Array.from({ length: 3 }, (_, i) => {
+                  const mote = this.add.image(lamp.x, lamp.y + 45 + i * 30, 'forest-spark').setDisplaySize(2, 2).setTint(0xffdfa7).setBlendMode(Phaser.BlendModes.ADD).setDepth(5.5);
+                  mote.anchor = { x: lamp.x, y: lamp.y + 45 + i * 30, phase: lamp.x + i * 2 }; return mote;
+                }));
+                const blooms = Phaser.Actions.AddEffectBloom(lamps, { threshold: .85, blurRadius: 1, blurSteps: 2, blendAmount: .18 });
+                this.visuals = { follow, station, checkpointLight, streetLights, lit, lamps, halos, blooms, lanternEffects, beam, shadow, motes };
                 effects.disabled = false;
-                this.setVisuals(effectsEnabled);
               } else {
                 effects.disabled = true; effects.setAttribute('aria-pressed', 'false');
                 effects.title = 'Для света и фильтров нужен WebGL';
@@ -1330,17 +1386,78 @@
                 $('message').textContent = 'Phaser 4: Canvas. Свет и фильтры доступны при поддержке WebGL.';
               }
             } else { host.dataset.phaserRenderer = 'canvas'; host.dataset.phaserEffects = 'base'; }
-            this.syncHud();
+            this.setTimeOfDay(); this.syncHud();
           },
           extend: {
+            setTimeOfDay() {
+              const { sky, stars, halo, orb, mountains, forest, water } = this.scenery;
+              sky.setTexture(phaserNight ? 'forest-night-sky' : 'forest-sky'); stars.setVisible(phaserNight);
+              halo.setFillStyle(phaserNight ? 0xb6d8ec : 0xf6e6b5, phaserNight ? .04 : .08);
+              orb.setRadius(phaserNight ? 30 : 43).setFillStyle(phaserNight ? 0xb6d8ec : 0xf6e6b5, phaserNight ? .8 : .65);
+              mountains.forEach((layer, i) => {
+                layer.clear().fillStyle((phaserNight ? [0x192e3d, 0x24424b] : [0x355e70, 0x2d6470])[i], 1);
+                const base = i ? 425 : 360;
+                for (let x = -200; x < worldWidth + 700; x += 210) layer.fillTriangle(x, 560, x + 160, base - (x / 210 % 3) * 28, x + 390, 560);
+              });
+              forest.clear().fillStyle(phaserNight ? 0x1a3c3e : 0x245459, .8);
+              for (let x = 40; x < worldWidth + 400; x += 85) {
+                const y = 290 + x % 73; forest.fillRect(x - 4, y, 8, 190);
+                forest.fillTriangle(x - 46, y + 50, x, y - 25, x + 46, y + 50); forest.fillTriangle(x - 60, y + 98, x, y + 18, x + 60, y + 98);
+              }
+              water.clear().fillStyle(phaserNight ? 0x102c40 : 0x173f5e, 1).fillRect(0, groundY + 8, worldWidth, 80);
+              water.lineStyle(2, 0x8ed9d7, phaserNight ? .17 : .35);
+              for (let x = 0; x < worldWidth; x += 38) water.lineBetween(x, 510 + x % 29, x + 21, 510 + x % 29);
+              for (const item of [this.player, ...this.enemies.getChildren()]) phaserNight ? item.setTint(0xc5d3e0) : item.clearTint();
+              for (const lamp of this.streetLamps) lamp.bulb.setFillStyle(phaserNight ? 0xffdb98 : 0xb2bcac, phaserNight ? .9 : .5);
+              if (this.visuals) this.setVisuals(effectsEnabled);
+              else for (const item of [...this.ground.getChildren(), ...this.platforms.getChildren()]) phaserNight ? item.setTint(0x879eaf) : item.clearTint();
+              host.dataset.phaserTime = phaserNight ? 'night' : 'day';
+              const label = phaserNight ? 'Ночь. Переключить на день' : 'День. Переключить на ночь';
+              timeToggle.title = label; timeToggle.setAttribute('aria-label', label); timeToggle.setAttribute('aria-pressed', String(phaserNight));
+              timeToggle.innerHTML = svg + (phaserNight ? '<path d="M20.8 13.1A9 9 0 0 1 10.9 3.2 9 9 0 1 0 20.8 13.1Z"/>' : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5"/>') + '</svg>';
+            },
             setVisuals(enabled) {
               if (!this.visuals) return;
-              for (const item of this.visuals.lit) item.setLighting(enabled);
+              this.lights.setAmbientColor(phaserNight ? 0x657c93 : 0xe8edf2);
+              this.visuals.follow.setRadius(phaserNight ? 180 : 115).setIntensity(phaserNight ? 1 : .18);
+              this.visuals.station.setRadius(phaserNight ? 230 : 150).setIntensity(phaserNight ? 1.6 : .22);
+              this.visuals.checkpointLight.setIntensity(phaserNight ? 1.1 : .15);
+              for (const light of this.visuals.streetLights) light.setIntensity(phaserNight ? .85 : 0);
+              for (const item of this.visuals.lit) {
+                item.setLighting(enabled);
+                if (phaserNight && !enabled) item.setTint(0x879eaf); else item.clearTint();
+              }
               for (const bloom of this.visuals.blooms) bloom.parallelFilters.active = enabled;
-              for (const lamp of this.visuals.lamps) lamp.setVisible(enabled);
+              for (const lamp of this.visuals.lamps) lamp.setVisible(enabled).setAlpha(phaserNight ? .85 : .65);
+              for (const halo of this.visuals.halos) halo.setVisible(enabled).setAlpha(phaserNight ? .28 : .035);
+              for (const item of [...this.visuals.lanternEffects, this.visuals.beam, this.visuals.shadow, ...this.visuals.motes]) item.setVisible(enabled && phaserNight);
+              this.updateNightEffects(this.time.now);
               effects.setAttribute('aria-pressed', String(enabled));
               effects.title = enabled ? 'Выключить свет и подсветку огней' : 'Включить свет и подсветку огней';
               host.dataset.phaserRenderer = 'webgl'; host.dataset.phaserEffects = enabled ? 'on' : 'off';
+            },
+            updateNightEffects(time) {
+              const v = this.visuals;
+              if (!v) return;
+              const direction = this.player.flipX ? -1 : 1;
+              v.follow.setPosition(this.player.x + direction * (phaserNight ? 65 : 18), this.player.y + (phaserNight ? 35 : -12));
+              v.beam.setPosition(this.player.x + direction * 14, this.player.y - 5).setRotation(direction * -.98);
+              v.lamps[0].setPosition(this.player.x, this.player.y - 26); v.halos[0].setPosition(this.player.x, this.player.y - 26);
+              v.station.setIntensity(phaserNight ? 1.6 + Math.sin(time / 700) * .3 : .22 + Math.sin(time / 900) * .02);
+              v.halos[2].setDisplaySize(phaserNight ? 150 : 96, phaserNight ? 150 : 96).setAlpha(phaserNight ? .45 + Math.sin(time / 700) * .12 : .035);
+              const beneath = [...this.ground.getChildren(), ...this.platforms.getChildren()].filter(item =>
+                this.player.x >= item.x - item.displayWidth / 2 && this.player.x <= item.x + item.displayWidth / 2 && item.y - item.displayHeight / 2 >= this.player.body.bottom - 5);
+              const top = beneath.length ? Math.min(...beneath.map(item => item.y - item.displayHeight / 2)) : null;
+              v.shadow.setVisible(effectsEnabled && phaserNight && top !== null);
+              if (top !== null) {
+                const distance = Math.max(0, top - this.player.body.bottom), nearest = this.streetLamps.reduce((a, b) => Math.abs(a.x - this.player.x) < Math.abs(b.x - this.player.x) ? a : b);
+                const away = this.player.x < nearest.x ? -1 : 1;
+                v.shadow.setPosition(this.player.x + away * 16, top + 4).setDisplaySize(Math.max(30, 70 - distance * .16), 14).setAlpha(Math.max(.15, .65 - distance * .002));
+              }
+              for (const mote of v.motes) {
+                const a = mote.anchor, phase = time / 1300 + a.phase;
+                mote.setPosition(a.x + Math.sin(phase) * 17, a.y + Math.cos(phase * .7) * 12).setAlpha(.25 + (Math.sin(phase * 1.8) + 1) * .22);
+              }
             },
             floatPoints(x, y, text) {
               const label = this.add.text(x, y - 22, text, { fontFamily: 'system-ui', fontSize: '18px', color: '#fff2bb', stroke: '#163b49', strokeThickness: 3 }).setOrigin(.5).setDepth(8);
@@ -1404,9 +1521,7 @@
             }
             const camera = this.cameras.main, targetX = this.player.x + width * .15 / zoom;
             if (this.visuals) {
-              this.visuals.follow.setPosition(this.player.x + 18, this.player.y - 12);
-              this.visuals.lamps[0].setPosition(this.player.x, this.player.y - 26);
-              this.visuals.station.intensity = .22 + Math.sin(time / 900) * .02;
+              this.updateNightEffects(time);
             }
             camera.centerOn(Phaser.Math.Linear(camera.midPoint.x, targetX, .09), groundY - (height / 2 - (compact ? 12 : 66)) / zoom);
             this.syncHud();
@@ -1428,8 +1543,8 @@
           },
           dispose() {
             current = null; release(); document.removeEventListener('keydown', keyDown); document.removeEventListener('keyup', keyUp); window.removeEventListener('blur', blur);
-            hud.remove(); pad.remove(); result.remove(); expand.remove(); effects?.remove(); host.removeAttribute('tabindex'); host.classList.remove('phaser-compact');
-            delete host.dataset.phaserRenderer; delete host.dataset.phaserEffects; game.destroy(true); game.loop.wake();
+            hud.remove(); pad.remove(); result.remove(); expand.remove(); timeToggle.remove(); effects?.remove(); host.removeAttribute('tabindex'); host.classList.remove('phaser-compact');
+            delete host.dataset.phaserRenderer; delete host.dataset.phaserEffects; delete host.dataset.phaserTime; game.destroy(true); game.loop.wake();
           }
         };
       }
