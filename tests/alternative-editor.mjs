@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
 import { checkCompactComparison } from './comparison-compact.mjs';
+import { checkStructureFolding } from './structure-fold.mjs';
 
 const output = join(tmpdir(), 'onehtml-lab-alternative-editor');
 await mkdir(output, { recursive: true });
@@ -130,7 +131,8 @@ try { for (const [name, engine] of engines) {
       await code.evaluate(el => el.setSelectionRange(0, 0));
       await page.locator('#expert-toggle').click();
       assert.equal(await page.locator('[data-edit-indent], [data-edit-pair], #edit-quick-settings').count(), 0);
-      for (const id of ['edit-copy-selection', 'edit-fold', 'edit-unfold-all']) {
+      assert.equal(await page.locator('#edit-fold').count(), 0, 'The cursor-block button is removed');
+      for (const id of ['edit-copy-selection', 'edit-fold-structure', 'edit-unfold-all']) {
         assert.equal(await page.locator('#' + id + ' svg').count(), 1);
         assert.equal(await page.locator('#' + id).innerText(), '');
         assert(await page.locator('#' + id).getAttribute('aria-label'));
@@ -152,10 +154,10 @@ try { for (const [name, engine] of engines) {
       await code.press('Control+z');
       assert.equal(await source(), sample, 'Undo survives changing editors');
       await choose('codemirror');
-      // Fold a JS function, preserving its hidden text in copy, export and search.
+      // Fold the document structure, preserving hidden text in copy, export and search.
       await code.evaluate((el, at) => el.setSelectionRange(at, at), sample.indexOf('function'));
-      await page.locator('#edit-fold').click();
-      await page.locator('.cm-foldPlaceholder').waitFor();
+      await page.locator('#edit-fold-structure').click();
+      await page.locator('#alternative-editor .cm-foldPlaceholder').first().waitFor();
       assert.equal(await source(), sample);
       assert(!await content.innerText().then(text => text.includes('Скрытый текст')));
       await content.press('Control+a');
@@ -166,10 +168,10 @@ try { for (const [name, engine] of engines) {
       });
       assert.equal(copied, sample, 'Copy includes folded code, not placeholder text');
       await code.evaluate((el, at) => el.setSelectionRange(at, at), sample.indexOf('function'));
-      await page.locator('#edit-fold').click();
+      await page.locator('#edit-fold-structure').click();
       await page.locator('#edit-unfold-all').click();
-      assert(await page.locator('.cm-foldPlaceholder').isHidden());
-      await page.locator('#edit-fold').click();
+      assert.equal(await page.locator('#alternative-editor .cm-foldPlaceholder').count(), 0);
+      await page.locator('#edit-fold-structure').click();
       await page.screenshot({ path: join(output, `${name}-${width}-fold.png`) });
       await page.locator('#save').click();
       const downloading = page.waitForEvent('download');
@@ -179,7 +181,7 @@ try { for (const [name, engine] of engines) {
       await page.locator('#edit-find').click();
       await page.locator('#edit-query').fill('Скрытый текст');
       assert.equal(await page.locator('#edit-result').innerText(), '1 из 1');
-      assert(await page.locator('.cm-foldPlaceholder').isHidden(), 'Search unfolds the matching block');
+      assert(await content.innerText().then(text => text.includes('Скрытый текст')), 'Search unfolds the matching block');
       assert.equal(await code.evaluate(el => el.value.slice(el.selectionStart, el.selectionEnd)), 'Скрытый текст');
       await page.locator('#edit-replace-toggle').click();
       await page.locator('#edit-replacement').fill('Другой текст');
@@ -362,6 +364,7 @@ try { for (const [name, engine] of engines) {
         assert.equal(await page.locator('.workspace').evaluate(el => el.scrollTop), 0, 'Outer workspace cannot be scrolled by cursor reveal');
         assert.equal(await page.locator('#alternative-editor').evaluate(el => el.getBoundingClientRect().top), workspaceTop, 'Editor stays under the toolbar');
       }
+      await checkStructureFolding(page, join(output, `${name}-${width}`));
       await checkCompactComparison(page, join(output, `${name}-${width}`));
       await checkEditorTextSize(page, join(output, `${name}-${width}`));
       if (width === 390 && url === fileURL) {

@@ -137,8 +137,10 @@ function createAlternativeEditor() {
     cm.foldGutter({ markerDOM(open) { const marker = document.createElement('span'); marker.textContent = open ? '−' : '+'; marker.title = open ? 'Свернуть блок' : 'Развернуть блок'; return marker; } }),
     cm.codeFolding({ placeholderDOM(view, onclick, prepared) {
       const button = document.createElement('button'); button.type = 'button'; button.className = 'cm-foldPlaceholder';
-      button.textContent = `+ … ${prepared} строк`; button.setAttribute('aria-label', 'Развернуть скрытый код'); button.onclick = onclick; return button;
-    }, preparePlaceholder(state, range) { return state.doc.lineAt(range.to).number - state.doc.lineAt(range.from).number; } }),
+      const count = prepared.lines, last = count % 10, lastTwo = count % 100;
+      const unit = lastTwo >= 11 && lastTwo <= 14 ? 'строк' : last === 1 ? 'строка' : last >= 2 && last <= 4 ? 'строки' : 'строк';
+      button.textContent = `+ … ${count ? formatUIInteger(count) + ' ' + unit : formatSymbolCount(prepared.characters)}`; button.setAttribute('aria-label', 'Развернуть скрытый код'); button.onclick = onclick; return button;
+    }, preparePlaceholder(state, range) { const lines = state.doc.lineAt(range.to).number - state.doc.lineAt(range.from).number; return { lines, characters: lines ? 0 : symbolCount(state.doc.sliceString(range.from, range.to)) }; } }),
     cm.keymap.of([
       { key: 'Mod-Enter', run() { if (!expertMode) return false; if (isSplitWorkspace()) void restartDesktopPreview(); else document.querySelector('#run').click(); return true; } },
       { key: 'Mod-f', run() { if (!expertMode) return false; openInlineSearch(); return true; } },
@@ -209,7 +211,7 @@ function updateAlternativeEditor() {
   workspaceElement.classList.toggle('alternative-active', active);
   alternativeHost.hidden = !active || codeField.hidden || Boolean(currentPanel());
   alternativeHost.classList.toggle('is-locked', codeField.readOnly);
-  for (const id of ['edit-fold', 'edit-unfold-all']) document.querySelector('#' + id).hidden = !active;
+  for (const id of ['edit-fold-structure', 'edit-unfold-all']) document.querySelector('#' + id).hidden = !active;
   if (!active || alternativeBusy) return;
   const config = JSON.stringify([editView, codeField.readOnly, codeField.disabled, editorDark]);
   alternativeBusy = true;
@@ -229,6 +231,55 @@ function cmUnfoldAll() {
   const effects = [];
   OneHTMLCodeMirror.foldedRanges(alternativeView.state).between(0, alternativeView.state.doc.length, (from, to) => effects.push(OneHTMLCodeMirror.unfoldEffect.of({ from, to })));
   return effects;
+}
+
+// Keep the document shell and short labels visible. Never nest automatic folds:
+// opening a section should show its content, not another layer of placeholders.
+function structureFoldRanges(doc, tree) {
+  const ranges = [], nodes = [tree.topNode];
+  const containers = new Set(['main', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'div', 'form', 'table', 'ul', 'ol', 'svg', 'template', 'dialog', 'canvas']);
+  while (nodes.length) {
+    const node = nodes.pop(), open = node.firstChild, close = node.lastChild;
+    if (node.name === 'Element' && open?.name === 'OpenTag' && close?.name === 'CloseTag') {
+      const name = open.getChild('TagName'), endName = close.getChild('TagName');
+      const tag = name ? doc.sliceString(name.from, name.to).toLowerCase() : '';
+      const matched = endName && tag === doc.sliceString(endName.from, endName.to).toLowerCase();
+      const lines = doc.lineAt(close.from).number - doc.lineAt(open.to).number;
+      const size = close.from - open.to, code = tag === 'script' || tag === 'style';
+      if (matched && (code ? lines >= 2 || size >= 120 : containers.has(tag) && (lines >= 8 || size >= 600))) {
+        ranges.push({ from: open.to, to: close.from });
+        continue;
+      }
+    }
+    // Only HTML elements: ignore JavaScript/CSS subtrees, comments and raw text.
+    for (let child = node.lastChild; child; child = child.prevSibling) if (child.name === 'Element') nodes.push(child);
+  }
+  return ranges;
+}
+
+let structureFoldRevision = 0;
+async function foldEditorStructure() {
+  if (!alternativeActive() || modeBusy || readingClipboard) return;
+  const view = alternativeView, doc = view.state.doc, revision = ++structureFoldRevision;
+  const button = document.querySelector('#edit-fold-structure');
+  button.disabled = true; button.setAttribute('aria-busy', 'true');
+  try {
+    const parse = OneHTMLCodeMirror.html().language.parser.startParse(doc.toString());
+    let tree;
+    do {
+      const until = performance.now() + 25;
+      do { tree = parse.advance(); } while (!tree && performance.now() < until);
+      if (!tree) await new Promise(resolve => requestAnimationFrame(resolve));
+      if (revision !== structureFoldRevision || !alternativeActive() || view.state.doc !== doc || modeBusy || currentPanel() || historyOpen || comparisonOpen) return;
+    } while (!tree);
+    const ranges = structureFoldRanges(doc, tree);
+    if (!ranges.length) { inform('Нет крупных блоков для сворачивания.'); return; }
+    view.dispatch({ effects: [...cmUnfoldAll(), ...ranges.map(range => OneHTMLCodeMirror.foldEffect.of(range))] });
+    view.scrollDOM.scrollTop = 0;
+    view.scrollDOM.scrollLeft = 0;
+    view.requestMeasure();
+  } catch { inform('Не удалось свернуть структуру. Код сохранён без изменений.', true); }
+  finally { if (revision === structureFoldRevision) { button.disabled = false; button.removeAttribute('aria-busy'); } }
 }
 
 function initAlternativeEditor() {
@@ -274,7 +325,11 @@ function initAlternativeEditor() {
     applyTheme();
   });
   applyTheme();
-  document.querySelector('#edit-fold').addEventListener('click', () => { if (alternativeActive()) { OneHTMLCodeMirror.foldCode(alternativeView); alternativeView.focus(); } });
-  document.querySelector('#edit-unfold-all').addEventListener('click', () => { if (alternativeActive()) OneHTMLCodeMirror.unfoldAll(alternativeView); });
+  document.querySelector('#edit-fold-structure').addEventListener('click', foldEditorStructure);
+  document.querySelector('#edit-unfold-all').addEventListener('click', () => {
+    structureFoldRevision++;
+    const button = document.querySelector('#edit-fold-structure'); button.disabled = false; button.removeAttribute('aria-busy');
+    if (alternativeActive()) OneHTMLCodeMirror.unfoldAll(alternativeView);
+  });
   new MutationObserver(() => { updateAlternativeEditor(); scheduleCodeLayout(); }).observe(codeField, { attributes: true, attributeFilter: ['readonly', 'disabled', 'hidden'] });
 }

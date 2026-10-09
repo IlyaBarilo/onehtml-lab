@@ -3,6 +3,10 @@ import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {dirname,join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const thirdPartyPath=join(root,'docs/THIRD_PARTY.md');
+const previousNotices=await readFile(thirdPartyPath,'utf8').catch(error=>{if(error.code==='ENOENT')return '';throw error;});
+const manualNotices=previousNotices.match(/^## /m);
+const preservedNotices=manualNotices?previousNotices.slice(manualNotices.index).replace(/\r\n/g,'\n'):'';
 const result=await build({absWorkingDir:root,entryPoints:['src/codemirror-entry.js'],bundle:true,minify:true,format:'iife',globalName:'OneHTMLCodeMirror',target:'es2020',write:false,metafile:true,legalComments:'none'});
 const packages=new Map();
 for(const input of Object.keys(result.metafile.inputs)){
@@ -20,5 +24,6 @@ const normalize=text=>text.replace(/\r?\n/g,'\r\n');
 await writeFile(join(root,'src/vendor/codemirror-LICENSE.txt'),normalize(notices+'\n'));
 await writeFile(join(root,'src/vendor/codemirror.bundle.js'),normalize('/*\n'+notices.replace(/\*\//g,'* /')+'\n*/\n'+result.outputFiles[0].text));
 const rows=[...packages].sort(([a],[b])=>a.localeCompare(b)).map(([name,meta])=>`| ${name} | ${meta.version} | MIT |`).join('\n');
-await writeFile(join(root,'docs/THIRD_PARTY.md'),normalize('# Third-party licenses / Лицензии сторонних компонентов\n\nOneHTML Lab includes CodeMirror 6 and its runtime dependencies in the standalone HTML. Full copyright and permission notices are preserved in the bundled code and in [codemirror-LICENSE.txt](../src/vendor/codemirror-LICENSE.txt).\n\nOneHTML Lab включает CodeMirror 6 и его зависимости в самостоятельный HTML. Полные уведомления об авторских правах и условиях использования сохранены во встроенном коде и в файле лицензий выше.\n\n| Component / Компонент | Version / Версия | License / Лицензия |\n|---|---|---|\n'+rows+'\n\nProject / Проект: [CodeMirror](https://codemirror.net/). Build dependencies, including esbuild and Playwright, are not included in the application. / Зависимости сборки, включая esbuild и Playwright, не входят в приложение.\n'));
+const generatedNotices='# Third-party licenses / Лицензии сторонних компонентов\n\nOneHTML Lab includes CodeMirror 6 and its runtime dependencies in the standalone HTML. Full copyright and permission notices are preserved in the bundled code and in [codemirror-LICENSE.txt](../src/vendor/codemirror-LICENSE.txt).\n\nOneHTML Lab включает CodeMirror 6 и его зависимости в самостоятельный HTML. Полные уведомления об авторских правах и условиях использования сохранены во встроенном коде и в файле лицензий выше.\n\n| Component / Компонент | Version / Версия | License / Лицензия |\n|---|---|---|\n'+rows+'\n\nProject / Проект: [CodeMirror](https://codemirror.net/). Build dependencies, including esbuild and Playwright, are not included in the application. / Зависимости сборки, включая esbuild и Playwright, не входят в приложение.\n';
+await writeFile(thirdPartyPath,normalize(generatedNotices+(preservedNotices?'\n'+preservedNotices:'')));
 console.log(`Bundled CodeMirror with ${packages.size} MIT license notices (${result.outputFiles[0].contents.length} bytes before notices).`);
