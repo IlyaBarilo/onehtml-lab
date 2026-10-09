@@ -17,7 +17,6 @@ jobs:
       contents: write
     env:
       RELEASE_TAG: ${{ github.event.release.tag_name }}
-      ONEHTML_TEST_RESULTS: ${{ runner.temp }}/onehtml-check-results
     steps:
       - uses: actions/checkout@v7
         with:
@@ -36,6 +35,8 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: node tests/check.mjs --release-tag="$RELEASE_TAG"
+        env:
+          ONEHTML_TEST_RESULTS: ${{ runner.temp }}/onehtml-check-results
       - name: Прикрепить готовый HTML к выпуску
         run: gh release upload "$RELEASE_TAG" onehtml-lab.html
         env:

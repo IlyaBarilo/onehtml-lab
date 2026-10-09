@@ -11,8 +11,6 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 35
-    env:
-      ONEHTML_TEST_RESULTS: ${{ runner.temp }}/onehtml-check-results
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -22,6 +20,8 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:check
+        env:
+          ONEHTML_TEST_RESULTS: ${{ runner.temp }}/onehtml-check-results
       - name: Сохранить диагностику сбоя проверок
         if: failure()
         uses: actions/upload-artifact@v7
