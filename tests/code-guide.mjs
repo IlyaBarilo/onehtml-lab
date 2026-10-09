@@ -150,10 +150,18 @@ try {
               }
               if (editor === 'codemirror' && id === 'interactive-infographic') {
                 await settings(); await page.locator('[data-guide-part="2"]').click();
-                await code.evaluate(el => el.setSelectionRange(el.selectionStart, el.selectionStart));
-                await page.locator('#edit-fold').click();
+                const mapped = await selection();
+                await page.locator('#edit-fold-structure').click();
+                await page.waitForFunction(() => document.querySelector('#alternative-editor .cm-foldPlaceholder'));
+                await page.waitForFunction(() => !document.querySelector('#edit-fold-structure').hasAttribute('aria-busy'));
                 assert(await page.locator('#alternative-editor .cm-foldPlaceholder').count() > 0);
                 await settings(); await page.locator('[data-guide-part="2"]').click();
+                assert.deepEqual(await selection(), mapped, 'Guide navigation selects the complete mapped section after smart folding');
+                const visibleLines = await page.locator('#alternative-editor .cm-content').innerText();
+                assert(visibleLines.includes(mapped.text.split('\n')[0].trim()), 'The selected section is revealed in the editor');
+                await page.locator('#edit-unfold-all').click();
+                assert.equal(await page.locator('#edit-fold-structure').getAttribute('aria-pressed'), 'true');
+                await page.locator('#edit-fold-structure').click();
                 assert.equal(await page.locator('#alternative-editor .cm-foldPlaceholder').count(), 0);
               }
             }

@@ -223,3 +223,4 @@ try {
 }finally{server.close();}
 console.log(`Media screenshots: ${scratch}`);
 await import('./media-prompts.mjs');
+await import('./media-images.mjs');

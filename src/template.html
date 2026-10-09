@@ -82,6 +82,18 @@
           <label for="media-prompt-names">Имена выбранных файлов</label><textarea id="media-prompt-names" readonly rows="1" placeholder="Добавьте изображения или звук"></textarea>
           <div class="diagnostic-actions"><button id="media-prompt-copy" type="button" disabled>Копировать имена</button></div>
           <p id="media-prompt-feedback" role="status" aria-live="polite" class="diagnostic-note"></p>
+          <section id="media-image-edit" class="media-image-edit" aria-labelledby="media-image-title" hidden>
+            <div class="media-image-heading"><h3 id="media-image-title"></h3><button id="media-image-cancel" class="expert-icon-button" type="button" aria-label="Закрыть подготовку изображения">✕</button></div>
+            <div class="media-image-options">
+              <label>Максимальная сторона<select id="media-image-size"><option value="1024">1 024 пикселя</option><option value="2048" selected>2 048 пикселей</option><option value="0">Исходный размер</option></select></label>
+              <label>Формат<select id="media-image-format"><option value="image/webp">WebP</option><option value="original">Исходный формат</option></select></label>
+              <label id="media-image-quality-row">Качество <output id="media-image-quality-value" for="media-image-quality">82%</output><input id="media-image-quality" type="range" min="40" max="100" step="1" value="82"></label>
+            </div>
+            <div class="media-image-comparison"><figure><figcaption>Сейчас</figcaption><img id="media-image-before" alt="Исходное изображение"><p id="media-image-before-info"></p></figure><figure><figcaption>Результат</figcaption><img id="media-image-after" alt="Подготовленная копия"><p id="media-image-after-info"></p></figure></div>
+            <p id="media-image-feedback" class="diagnostic-note" role="status" aria-live="polite"></p>
+            <label id="media-image-code-row"><input id="media-image-code" type="checkbox" checked> Применить к текущему коду, сохранив прошлую версию</label>
+            <div class="diagnostic-actions"><button id="media-image-preview" type="button">Предпросмотр</button><button id="media-image-apply" type="button" disabled>Применить копию</button><button id="media-image-restore" type="button" hidden>Вернуть оригинал</button></div>
+          </section>
           <div id="media-prompt-delete" class="diagnostic-confirm" hidden><p id="media-prompt-delete-text"></p><div class="diagnostic-actions"><button id="media-prompt-delete-yes" type="button">Удалить файл</button><button id="media-prompt-delete-no" type="button">Отмена</button></div></div>
           <ul id="media-prompt-list" class="diagnostic-list"></ul>
           <details class="media-help"><summary>Хранение и удаление</summary><p class="diagnostic-note">Файлы хранятся в браузере. Удалить копии и посмотреть привязки истории можно в «Диагностика и библиотеки» → «Ресурсы». Список имён не передаёт содержимое файлов ИИ-боту; для анализа картинки прикрепите её в чате бота.</p></details>
@@ -141,6 +153,7 @@
           <button id="theme-toggle" type="button" aria-label="Включить тёмную тему" title="Включить тёмную тему" aria-pressed="false"><svg class="theme-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4a8.5 8.5 0 1 0 11.5 11.5Z"></path></svg><svg class="theme-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"></path></svg></button>
         </div>
       </div>
+      <section id="media-strip" aria-label="Доступные медиа" hidden><div class="media-strip-heading"><button id="media-strip-toggle" type="button" aria-label="Свернуть медиа" aria-expanded="true" aria-controls="media-strip-list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button><span id="media-strip-count"></span></div><div id="media-strip-list" role="group" aria-label="Изображения и звук"></div></section>
       <section id="edit-panel" class="work-panel" aria-labelledby="edit-title" hidden>
         <div class="panel-heading"><h2 id="edit-title">Редактирование</h2><button id="edit-close" type="button" aria-label="Закрыть редактирование">✕</button></div>
         <div class="panel-body edit-body">

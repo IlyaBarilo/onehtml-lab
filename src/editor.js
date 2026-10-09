@@ -197,9 +197,13 @@ function editorWorkspaceAvailable() {
 
 function updateInlineGeometry() {
   const captionHeight = syntaxCaption.hidden ? 0 : syntaxCaption.offsetHeight;
+  const strip = document.querySelector('#media-strip');
+  const stripHeight = strip.hidden ? 0 : strip.offsetHeight;
+  workspaceElement.style.setProperty('--media-strip-height', `${stripHeight}px`);
+  workspaceElement.style.setProperty('--media-tools-height', `${(editQuick.hidden ? 0 : editQuick.offsetHeight) + captionHeight}px`);
   workspaceElement.style.setProperty('--syntax-caption-height', `${captionHeight}px`);
   for (const [name, element] of [['--edit-top', editInline], ['--edit-bottom', editQuick]]) {
-    const size = `${(element.hidden ? 0 : element.offsetHeight) + (name === '--edit-bottom' ? captionHeight : 0)}px`;
+    const size = `${(element.hidden ? 0 : element.offsetHeight) + (name === '--edit-bottom' ? captionHeight + stripHeight : 0)}px`;
     if (workspaceElement.style.getPropertyValue(name) !== size) {
       workspaceElement.style.setProperty(name, size);
       if (document.activeElement === codeField) editRevealCaret = true;

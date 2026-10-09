@@ -74,17 +74,19 @@ async function loadMediaCache() {
     let total = 0;
     for (const saved of (Array.isArray(entries) ? entries : []).slice(0, mediaLimits.count)) {
       const entry = saved?.bytes instanceof ArrayBuffer && saved.bytes.byteLength <= mediaLimits.file
-        ? {id:saved.id,name:saved.name,type:saved.type,blob:new Blob([saved.bytes],{type:saved.type})} : saved;
+        ? {id:saved.id,name:saved.name,type:saved.type,originalId:saved.originalId,blob:new Blob([saved.bytes],{type:saved.type})} : saved;
       if (total + (entry?.blob?.size || 0) > mediaLimits.cache || !await validMediaEntry(entry)) continue;
       total += entry.blob.size;
-      mediaCache.set(entry.id, {id:entry.id,name:entry.name,type:entry.type,blob:entry.blob});
+      const image = typeof mediaImageInfo === 'function' ? mediaImageInfo(new Uint8Array(await entry.blob.arrayBuffer()),entry.type) : null;
+      const originalId = /^[a-f\d]{64}$/.test(entry.originalId || '') && entry.originalId !== entry.id ? entry.originalId : undefined;
+      mediaCache.set(entry.id, {id:entry.id,name:entry.name,type:entry.type,blob:entry.blob,image,originalId});
       mediaPersisted.add(entry.id);
     }
   } catch { mediaFeedback = 'Хранилище медиа недоступно. Новые файлы будут доступны только до закрытия редактора.'; }
   finally { clearTimeout(timeout); }
 }
 
-async function addMediaFile(file) {
+async function addMediaFile(file, originalId) {
   const type = mediaTypes[(/\.([a-z]+)$/i.exec(file.name)?.[1] || '').toLowerCase()];
   if (!type) throw Error('Выберите PNG, JPEG, WebP, MP3, OGG или WAV.');
   if (!file.size || file.size > mediaLimits.file) throw Error('Один файл должен быть не больше 8 МБ.');
@@ -95,8 +97,9 @@ async function addMediaFile(file) {
   const total = [...mediaCache.values()].reduce((sum, entry) => sum + entry.blob.size, 0);
   if (mediaCache.size >= mediaLimits.count || total + file.size > mediaLimits.cache) throw Error('Кэш медиа заполнен: до 64 файлов и 32 МБ. Удалите ненужные файлы.');
   const name = file.name.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 170) || 'media';
-  const entry = { id, name, type, blob: new Blob([bytes], { type }) };
-  try { await mediaTransaction('readwrite', store => store.put({id,name,type,bytes:bytes.buffer})); mediaPersisted.add(id); }
+  originalId = /^[a-f\d]{64}$/.test(originalId || '') && originalId !== id ? originalId : undefined;
+  const entry = { id, name, type, blob: new Blob([bytes], { type }), originalId, image: typeof mediaImageInfo === 'function' ? mediaImageInfo(bytes,type) : null };
+  try { await mediaTransaction('readwrite', store => store.put({id,name,type,originalId,bytes:bytes.buffer})); mediaPersisted.add(id); }
   catch { /* Keep the file for this session; its row makes the limitation explicit. */ }
   mediaCache.set(id, entry);
   return entry;

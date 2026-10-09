@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {webcrypto} from 'node:crypto';
 import {runInNewContext} from 'node:vm';
-const source=(await Promise.all(['library-bundle.js','library-modules.js','media-assets.js','media-prompts.js'].map(file=>readFile(new URL('../src/'+file,import.meta.url),'utf8')))).join('\n');
+const source=(await Promise.all(['format.js','library-bundle.js','library-modules.js','media-assets.js','media-prompts.js','media-images.js'].map(file=>readFile(new URL('../src/'+file,import.meta.url),'utf8')))).join('\n');
 const stored=new Map();
 const api=runInNewContext(source+'\n({mediaCache,mediaHash,attachMedia,scanMedia,planPromptMedia,promptMediaIntro,promptClipboardImage,bindPromptMedia,rememberPromptMedia,promptMediaUrl,promptMediaFiles,loadPromptMediaState,selectUploadedPromptMedia,choose(files){promptMediaSelection=new Map(files.map(file=>[file.name,file.id]));},feedback(){return promptMediaFeedback;}})',{Blob,TextEncoder,TextDecoder,btoa,atob,crypto:webcrypto,localStorage:{getItem:key=>stored.get(key),setItem:(key,value)=>stored.set(key,value)}});
 const png=new Uint8Array(24);png.set([137,80,78,71,13,10,26,10]);

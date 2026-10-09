@@ -55,7 +55,7 @@ function closeWorkspacePanel(restoreFocus = true) {
   if (!entry) return;
   entry.panel.hidden = true;
   if (entry.panel === activityPanel) releaseMediaPreviews();
-  if (entry.panel.id === 'media-panel') releasePromptMediaPreviews();
+  if (entry.panel.id === 'media-panel') { releasePromptMediaPreviews(); closeImageEdit(); }
   if (entry.panel === saveDialog) saveFileList.replaceChildren();
   if (entry.panel === copyDialog) pendingManualCopy = null;
   if (currentPanel()) currentPanel().hidden = false;

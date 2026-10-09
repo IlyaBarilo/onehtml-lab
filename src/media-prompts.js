@@ -132,7 +132,7 @@ async function planPromptMedia(code,selected,shorten) {
 
 function promptMediaIntro(files) {
   if(!files.length)return '';
-  return 'Доступные медиафайлы:\n'+files.map(file=>'- '+file.name).join('\n')
+  return 'Доступные медиафайлы:\n'+files.map(file=>'- '+file.name+(mediaDimensions(mediaCache.get(file.id)) ? ' — '+mediaDimensions(mediaCache.get(file.id)) : '')).join('\n')
     +'\n\nВ ответе используй ссылки с исходными именами файлов, без подкаталогов. При сохранении файлы будут встроены в HTML в формате data URL. Не кодируй содержимое файлов самостоятельно. Для имён с пробелами или специальными символами используй URL-кодирование.'
     +'\nПодключай изображения через img src или url(...) во встроенном CSS, звук — через audio src либо source внутри audio. Для Canvas используй изображение из img; для звука обращайся к audio по id. Не создавай пути к этим файлам в JavaScript, srcset или внешнем CSS.\n\n';
 }
@@ -182,6 +182,7 @@ function releasePromptMediaPreviews() {
   promptMediaUrls.clear();promptMediaRendered=null;
 }
 function renderPromptMedia() {
+  renderMediaStrip();
   const panel=document.querySelector('#media-panel');
   if(currentPanel()!==panel || !expertMode){if(promptMediaRendered!==null)releasePromptMediaPreviews();return;}
   const key=JSON.stringify([promptMediaFiles(),[...mediaCache.keys()],mediaBusy,promptMediaFeedback]);
@@ -194,15 +195,17 @@ function renderPromptMedia() {
   const field=document.querySelector('#media-prompt-names');field.value=names;field.rows=Math.min(5,Math.max(1,promptMediaSelection.size));
   document.querySelector('#media-prompt-copy').disabled=!names || mediaBusy;
   document.querySelector('#media-prompt-ai').disabled=mediaBusy;
-  const rows=[...mediaCache.values()].map(entry=>({entry,name:entry.name}));
-  for(const file of promptMediaFiles())if(!rows.some(row=>row.name===file.name && row.entry.id===file.id))rows.push({entry:mediaCache.get(file.id) || {id:file.id},name:file.name});
+  const rows=mediaPromptRows();
   document.querySelector('#media-prompt-list').replaceChildren(...rows.map(({entry,name})=>{
-    const li=document.createElement('li');li.className='prompt-media-row';
+    const li=document.createElement('li');li.className='prompt-media-row';li.dataset.mediaId=entry.id;li.dataset.mediaName=name;
     const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=promptMediaSelection.get(name)===entry.id;check.disabled=mediaBusy || !promptMediaName(name);check.setAttribute('aria-label',`Включить ${name} в запрос`);
     check.addEventListener('change',()=>{if(check.checked)promptMediaSelection.set(name,entry.id);else promptMediaSelection.delete(name);promptMediaFeedback='';savePromptMediaState();promptMediaRendered=null;renderPromptMedia();});
     const text=document.createElement('span'),title=document.createElement('strong');title.textContent=name;
-    const note=document.createElement('span');note.className='diagnostic-note';note.textContent=entry.blob ? diagnosticSize(entry.blob.size)+(mediaPersisted.has(entry.id)?'':' · Только этот сеанс') : 'Файл отсутствует — выберите снова';text.append(title,note);label.append(check,text);li.append(label);
+    const note=document.createElement('span');note.className='diagnostic-note';note.textContent=entry.blob ? [mediaDimensions(entry),diagnosticSize(entry.blob.size)].filter(Boolean).join(' · ')+(mediaPersisted.has(entry.id)?'':' · Только этот сеанс') : 'Файл отсутствует — выберите снова';text.append(title,note);label.append(check,text);li.append(label);
     if(!entry.blob)return li;
+    const actions=document.createElement('div');actions.className='media-prompt-item-actions diagnostic-actions';
+    const copy=diagnosticButton('Копировать имя',()=>void copyOrSelect(name,'Имя файла скопировано.'));actions.append(copy);
+    if(entry.type.startsWith('image/')) {const resize=diagnosticButton('Уменьшить',()=>openImageEdit(entry,name));resize.disabled=mediaBusy;actions.append(resize);}
     const remove=diagnosticButton('',()=>{
       if(mediaBusy)return;promptMediaDelete=entry;
       document.querySelector('#media-prompt-delete-text').textContent=`Удалить ${name} из браузера?${mediaUsage(entry.id)?' Файл используется в коде или истории. Для запуска этих версий потребуется выбрать его снова.':''} Уже сохранённые автономные HTML сохранят файл.`;
@@ -211,7 +214,7 @@ function renderPromptMedia() {
     const url=URL.createObjectURL(entry.blob);promptMediaUrls.add(url);
     if(entry.type.startsWith('image/')){const image=document.createElement('img');image.src=url;image.alt=name;image.loading='lazy';image.className='media-thumbnail';li.append(image);}
     else{const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=url;audio.setAttribute('aria-label',`Прослушать ${name}`);audio.addEventListener('error',()=>{note.textContent+=' · Прослушивание недоступно в этом браузере.';},{once:true});li.append(audio);}
-    return li;
+    li.append(actions);return li;
   }));
 }
 function openPromptMedia(nested=false) {
@@ -220,6 +223,7 @@ function openPromptMedia(nested=false) {
   showWorkspacePanel(document.querySelector('#media-panel'),nested);
 }
 function initPromptMedia() {
+  initMediaImages();
   document.querySelector('#media-open').addEventListener('click',()=>openPromptMedia());
   document.querySelector('#ai-media-open').addEventListener('click',()=>openPromptMedia(true));
   document.querySelector('#media-prompt-close').addEventListener('click',()=>closeWorkspacePanel());
