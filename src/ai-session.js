@@ -119,6 +119,7 @@ function acceptCopiedAiPrompt(result) {
     mode: snapshot.mode, project: snapshot.project, platform: snapshot.platform, task: snapshot.task,
     shorten: snapshot.shorten, includePrevious: snapshot.includePrevious, text: result.text,
     mediaFiles: result.mediaFiles.map(file => ({ ...file })),
+    profile: snapshot.game ? { version: 1, id: aiGameChoice(JSON.parse(snapshot.game)).id, settings: JSON.parse(snapshot.game) } : null,
     source: snapshot.mode === 'create' ? null : { hash: null, scope: result.scope ?? gameStorageScope, symbols: symbolCount(snapshot.code) } };
   aiPromptEntries = mergeAiPromptEntries([entry], aiPromptEntries);
   renderAiPromptHistory();
@@ -141,6 +142,7 @@ function renderAiPromptHistory() {
   const list = document.querySelector('#ai-prompts-list');
   list.replaceChildren();
   document.querySelector('#ai-prompts-empty').hidden = aiPromptEntries.length > 0;
+  if (currentPanel() === aiAnswerPanel) renderAiAnswerRequests();
   for (const entry of aiPromptEntries) {
     const row = document.createElement('li');
     const button = document.createElement('button');
@@ -185,6 +187,7 @@ function reuseAiPromptEntry(entry) {
   if (!entry || !expertMode || modeBusy) return;
   openAiPrompts(entry.mode);
   aiProject = entry.project;
+  aiGame = normalizeAiGame(entry.profile?.version === 1 ? entry.profile.settings : null);
   setPlatform(entry.platform);
   aiTask.value = entry.task; aiTasks[entry.mode] = entry.task;
   aiShorten.checked = Boolean(entry.shorten);
@@ -230,6 +233,26 @@ function aiAnswerCandidate() {
   return aiAnswerBlock.value !== '' && aiAnswerPlan.blocks[index] ? aiAnswerPlan.blocks[index].code : null;
 }
 
+function renderAiAnswerRequests(selectLatest = false) {
+  const select = document.querySelector('#ai-answer-request'), previous = select.value;
+  const entries = aiPromptEntries.filter(entry => entry.mode === 'create' && entry.project === 'game' && entry.profile?.version === 1 && typeof entry.profile.id === 'string' && Object.hasOwn(aiGameCatalog, entry.profile.id));
+  select.replaceChildren();
+  const empty = document.createElement('option'); empty.value = ''; empty.textContent = 'Только проверить подключения'; select.append(empty);
+  for (const entry of entries) {
+    const option = document.createElement('option'); option.value = entry.id;
+    option.textContent = Object.values(formatVersionDate(entry.createdAt)).join(' ') + ' · ' + aiGameCatalog[entry.profile.id].title + ' · ' + entry.task.slice(0, 60); select.append(option);
+  }
+  select.value = selectLatest ? entries[0]?.id || '' : entries.some(entry => entry.id === previous) ? previous : '';
+  updateAiAnswerBasis();
+}
+
+function updateAiAnswerBasis() {
+  const id = document.querySelector('#ai-answer-request').value;
+  const profile = aiPromptEntries.find(entry => entry.id === id)?.profile;
+  const code = aiAnswerCandidate();
+  document.querySelector('#ai-answer-basis').textContent = code?.trim() ? aiGameConnectionText(code, profile?.version === 1 ? profile.id : '') : '';
+}
+
 function updateAiAnswerInput(reparse = true) {
   aiAnswerRevision++;
   aiAnswerReview = null;
@@ -251,6 +274,7 @@ function updateAiAnswerInput(reparse = true) {
   const notes = code === null ? [aiAnswerPlan.blocks.length ? 'В ответе несколько HTML-блоков. Выберите один: они не объединяются автоматически.' : 'В Markdown-блоках не найден HTML. Вставьте полный HTML или снимите флажок очистки.'] : aiResponseWarnings(code);
   if (aiAnswerClean.checked && aiAnswerPlan.blocks.some(block => !block.completeFence)) notes.push('Markdown-блок не закрыт: ответ мог оборваться.');
   document.querySelector('#ai-answer-note').textContent = notes.join(' ');
+  updateAiAnswerBasis();
   updateAiSessionControls();
 }
 
@@ -314,7 +338,8 @@ function initAiSession() {
     });
   });
   document.querySelector('#ai-prompts-reuse').addEventListener('click', () => reuseAiPromptEntry(aiPromptSelected));
-  document.querySelector('#ai-answer-open').addEventListener('click', () => { updateAiAnswerInput(); showWorkspacePanel(aiAnswerPanel, true); });
+  document.querySelector('#ai-answer-request').addEventListener('change', updateAiAnswerBasis);
+  document.querySelector('#ai-answer-open').addEventListener('click', () => { renderAiAnswerRequests(true); updateAiAnswerInput(); showWorkspacePanel(aiAnswerPanel, true); });
   document.querySelector('#ai-answer-close').addEventListener('click', () => closeWorkspacePanel());
   aiAnswerText.addEventListener('input', () => updateAiAnswerInput());
   aiAnswerClean.addEventListener('change', () => updateAiAnswerInput(false));

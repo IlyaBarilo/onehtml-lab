@@ -9,3 +9,4 @@ await import('./media-assets-unit.mjs');
 await import('./media-prompts-unit.mjs');
 await import('./ai-applications-unit.mjs');
 await import('./ai-session-unit.mjs');
+await import('./ai-profiles-unit.mjs');

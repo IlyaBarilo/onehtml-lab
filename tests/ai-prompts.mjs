@@ -265,3 +265,4 @@ try {
 } finally { server.close(); }
 console.log(`AI prompt screenshots: ${output}`);
 await import('./ai-applications.mjs');
+await import('./ai-profiles.mjs');

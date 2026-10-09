@@ -728,6 +728,14 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 /* Prompt preparation and its preview share one workspace screen. */
 .ai-compose { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 22px; }
 .ai-task-section, .ai-services { min-width: 0; }
+.ai-game-options { margin: 12px 0; min-width: 0; }
+.ai-game-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ai-game-options label { display: block; min-width: 0; font-size: 15px; }
+.ai-game-options select { display: block; width: 100%; min-width: 0; min-height: 44px; margin-top: 5px; padding: 8px; border: 1px solid #b9cbe3; border-radius: 7px; background: #fff; color: #253d5a; font: 16px system-ui, sans-serif; }
+.ai-game-options summary { cursor: pointer; min-height: 44px; padding: 10px 0; font-size: 15px; }
+.ai-game-options p, #ai-source-basis { overflow-wrap: anywhere; }
+.ai-game-options p:empty { display: none; }
+@media (max-width: 360px) { .ai-game-grid { grid-template-columns: minmax(0, 1fr); } }
 .ai-project-types { display: flex; gap: 6px; margin-bottom: 12px; }
 .ai-project-button { flex: 1; min-width: 0; }
 #ai-starter-options label { display: block; margin: 12px 0 6px; font-size: 15px; }

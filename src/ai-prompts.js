@@ -30,7 +30,7 @@ function saveAiPromptSettings() {
   if (!aiSettingsLoaded) return;
   clearTimeout(aiSettingsTimer);
   try { localStorage.setItem(aiSettingsKey, JSON.stringify({ project: aiProject, platform: selectedPlatform,
-    mode: aiMode, tasks: { ...aiTasks, [aiMode]: aiTask.value }, shorten: aiShorten.checked, history: aiHistory.checked })); aiSettingsPersistent = true; }
+    mode: aiMode, tasks: { ...aiTasks, [aiMode]: aiTask.value }, shorten: aiShorten.checked, history: aiHistory.checked, game: aiGame })); aiSettingsPersistent = true; }
   catch { aiSettingsPersistent = false; }
   updateAiProjectLabels();
 }
@@ -40,6 +40,7 @@ function loadAiPromptSettings() {
   try { raw = localStorage.getItem(aiSettingsKey); }
   catch { aiSettingsPersistent = false; }
   try { value = JSON.parse(raw); } catch { /* Ignore damaged preferences without disabling usable storage. */ }
+  aiGame = normalizeAiGame(value?.game);
   aiProject = ['game', 'application'].includes(value?.project) ? value.project
     : examples.some(example => example.category === 'media' && gameStorageScope === `example:${example.id}`) ? 'application' : 'game';
   for (const mode of Object.keys(aiTasks)) if (typeof value?.tasks?.[mode] === 'string') aiTasks[mode] = value.tasks[mode];
@@ -69,6 +70,7 @@ function updateAiProjectLabels() {
   const note = document.querySelector('#ai-settings-note');
   note.hidden = aiSettingsPersistent;
   note.textContent = aiSettingsPersistent ? '' : 'Пожелания и настройки запроса запомнятся только в этом сеансе.';
+  renderAiGameControls();
 }
 
 function setAiProject(project) {
@@ -93,7 +95,7 @@ function aiStarterTask(kind, files = []) {
 function aiPromptSnapshot() {
   const baseline = aiMode === 'check' && aiHistory.checked ? aiCheckBaseline() : null;
   return { mode: aiMode, platform: selectedPlatform, task: aiTask.value.trim(), shorten: aiShorten.checked,
-    project: aiProject, includePrevious: aiHistory.checked,
+    project: aiProject, includePrevious: aiHistory.checked, game: aiProject === 'game' && aiMode === 'create' ? JSON.stringify(aiGame) : '',
     libraryApplication: gameStorageScope === 'example:3d-showcase',
     quality: aiMode === 'check' && aiQualityContext?.code === codeField.value && aiQualityContext.scope === gameStorageScope ? aiQualityContext.text : '',
     code: aiMode === 'create' ? '' : codeField.value, media: JSON.stringify(promptMediaFiles()), mediaVersion: promptMediaVersion,
@@ -131,7 +133,7 @@ function aiPromptText(snapshot, code, shortened, pastCode = snapshot.pastCode) {
     : `Основное устройство — компьютер. В первую очередь продумай расположение элементов, размер текста и элементов управления для его экрана. ${subject} ${application ? 'должно использовать доступное окно браузера' : 'должна занимать всё окно браузера'} и удобно управляться мышью и клавиатурой. Также обеспечь работу на телефоне: адаптацию к небольшому экрану, читаемый текст, крупные экранные кнопки и управление касаниями.`;
   if (snapshot.mode === 'create') {
     if (application) return `Сделай мультимедийное приложение для ${screen}. Задача: ${snapshot.task || '[назначение приложения и пожелания]'}. Сделай одним файлом HTML со встроенными CSS и JavaScript. ${device} Предусмотри понятный основной сценарий, доступные элементы управления и учти предпочтение уменьшенного движения. Не добавляй внешние шрифты и библиотеки без моего запроса. Верни только полный HTML-код.`;
-    return `Сделай игру про ${snapshot.task || '[тема игры]'} для ${screen}. Сделай одним файлом HTML со встроенными CSS и JavaScript. ${device} Добавь возможность сыграть ещё раз. Верни только полный HTML-код.`;
+    return `Сделай игру про ${snapshot.task || '[тема игры]'} для ${screen}. Сделай одним файлом HTML со встроенными CSS и JavaScript. ${device} Добавь возможность сыграть ещё раз. ${snapshot.game ? aiGameInstructions(JSON.parse(snapshot.game)) + ' ' : ''}Верни только полный HTML-код.`;
   }
   if (snapshot.mode === 'explain' || snapshot.mode === 'check') {
     const parts = [snapshot.mode === 'explain'
@@ -158,6 +160,7 @@ function aiPromptText(snapshot, code, shortened, pastCode = snapshot.pastCode) {
   }
   const parts = [snapshot.mode === 'fix' ? `Исправь ошибку в ${application ? 'приложении' : 'игре'} ниже.` : `Измени ${application ? 'приложение' : 'игру'} ниже по моему описанию.`,
     `Верни полный HTML-файл, чтобы я мог целиком заменить прежний код. ${device}`];
+  if (!application) parts.push('Сохрани механику, существующие подключения медиа, технологию и точные версии библиотек текущего кода, если я явно не попросил их изменить. Не переводи игру на другую основу по прежнему выбору для новой игры. Не добавляй внешние зависимости без моего запроса.');
   if (application) parts.push(snapshot.libraryApplication
     ? 'Сохрани HTML со встроенными CSS и кодом приложения. Сохрани существующее подключение Three.js r160 и способ его встраивания; не добавляй новые библиотеки, внешние модели, текстуры или шрифты. Сохрани доступное управление и учти предпочтение уменьшенного движения.'
     : 'Сохрани HTML со встроенными CSS и JavaScript, существующие подключения медиа и точные версии библиотек. Не добавляй новые внешние файлы, шрифты или библиотеки без моего запроса. Сохрани доступное управление и учти предпочтение уменьшенного движения.');
@@ -256,6 +259,8 @@ function updateAiControls() {
   aiOutput.value = '';
   aiLibraries.textContent = '';
   aiLibraries.hidden = true;
+  document.querySelector('#ai-source-basis').textContent = '';
+  document.querySelector('#ai-source-basis').hidden = true;
   const error = document.querySelector('#ai-error');
   error.textContent = snapshot.error;
   document.querySelector('#ai-error-context').hidden = !snapshot.error;
@@ -320,13 +325,20 @@ async function prepareAiPrompt(snapshot, revision) {
     } catch { notes.push('Библиотеки прошлой версии не удалось проверить; её код оставлен без сокращения.'); }
   }
   if (revision !== aiRevision || currentPanel() !== aiDialog || !sameAiSnapshot(snapshot, aiPromptSnapshot())) return;
-  const mediaText = promptMediaIntro(mediaPlan.files).trim();
+  const game = snapshot.game ? JSON.parse(snapshot.game) : null;
+  const actual = snapshot.project === 'game' && snapshot.mode !== 'create' ? aiGameConnections(code) : null;
+  const matched = actual?.found.length === 1 ? Object.entries(aiGameCatalog).find(([, profile]) => profile.key === actual.found[0].key)?.[0] : '';
+  const recipe = snapshot.project === 'game' && ['create', 'change', 'fix'].includes(snapshot.mode) ? (game ? aiGameChoice(game).id : matched) : '';
+  const mediaText = promptMediaIntro(mediaPlan.files).trim() + (mediaPlan.files.length && recipe ? '\n' + aiGameMediaRecipe(recipe) : '');
   const text = aiPromptText(snapshot, code, shortened, pastCode) + (mediaText ? '\n\n' + mediaText : '');
   const saved = Math.max(0, symbolCount(snapshot.code) - symbolCount(code));
   aiOutput.value = text;
   aiSummary.textContent = `В запросе: ${formatSymbolCount(symbolCount(text))}` + (saved ? ` · убрано из кода: ${formatSymbolCount(saved)}` : '');
   aiLibraries.textContent = notes.join('\n');
   aiLibraries.hidden = !notes.length;
+  const connections = document.querySelector('#ai-source-basis');
+  connections.hidden = !actual;
+  connections.textContent = actual ? aiGameConnectionText(snapshot.code) : '';
   aiResult = { snapshot, text, mediaFiles: mediaPlan.files, scope: gameStorageScope };
   aiCopy.disabled = false;
   aiView.disabled = false;
@@ -334,6 +346,7 @@ async function prepareAiPrompt(snapshot, revision) {
 
 function initAiPrompts() {
   aiReady = true;
+  initAiGameProfiles();
   setAiMode('create');
   for (const button of document.querySelectorAll('[data-ai-project]')) button.addEventListener('click', () => setAiProject(button.dataset.aiProject));
   document.querySelector('#ai-starter').addEventListener('change', event => {

@@ -311,11 +311,24 @@
     <div id="ai-starter-options" hidden><label for="ai-starter">Добавить заготовку задачи</label><select id="ai-starter"><option value="">Выберите основу…</option><option value="poster">Интерактивная афиша</option><option value="story">История с выбором</option><option value="infographic">Инфографика</option><option value="quiz">Викторина</option></select><p class="diagnostic-note">Заготовка допишется к пожеланиям. Замените текст в квадратных скобках своей идеей.</p></div>
     <label id="ai-task-label" for="ai-task">Тема игры и пожелания</label>
     <textarea id="ai-task" rows="3" aria-describedby="ai-summary" placeholder="Например: игра про космос, собирать звёзды и избегать метеоритов"></textarea>
+    <div id="ai-game-options" class="ai-game-options">
+      <div class="ai-game-grid"><label>Пространство<select id="ai-game-dimension"></select></label><label>Основа игры<select id="ai-game-basis"></select></label></div>
+      <p id="ai-game-recommendation" class="diagnostic-note"></p>
+      <details><summary>Жанр, оформление и другие пожелания</summary><div class="ai-game-grid">
+        <label>Жанр<select id="ai-game-genre"></select></label><label>Оформление<select id="ai-game-style"></select></label>
+        <label>Физика<select id="ai-game-physics"></select></label><label>Камера<select id="ai-game-camera"></select></label>
+        <label>Экран<select id="ai-game-orientation"></select></label><label>Управление на телефоне<select id="ai-game-controls"></select></label>
+        <label>Звук<select id="ai-game-sound"></select></label><label>Нагрузка<select id="ai-game-load"></select></label>
+      </div><p class="diagnostic-note">Все пожелания необязательны. Назначение файлов можно написать выше: «1.png — персонаж, 2.jpg — фон».</p></details>
+      <p id="ai-game-warning" class="diagnostic-note" role="status" aria-live="polite"></p>
+    </div>
+    <div id="ai-game-improve-option" class="ai-game-options" hidden><label>Добавить пожелание<select id="ai-game-improve"><option value="">Выберите…</option><option value="style" data-task="Улучши оформление игрового мира, сохранив механику.">Улучшить оформление</option><option value="touch" data-task="Сделай управление удобнее на телефоне, сохранив управление на компьютере.">Улучшить управление на телефоне</option><option value="load" data-task="Уменьши нагрузку на телефон, сохранив механику и читаемость.">Уменьшить нагрузку</option><option value="learn" data-task="Добавь короткое обучение в начале, которое можно пропустить.">Добавить обучение</option></select></label></div>
     <div class="diagnostic-actions"><button id="ai-media-open" type="button">Медиа</button><button id="ai-prompts-open" type="button">История запросов</button><button id="ai-answer-open" type="button">Принять ответ</button></div>
     <p id="ai-media-names" class="media-bindings" hidden></p>
     <p id="ai-settings-note" class="diagnostic-note" hidden></p>
     <div id="ai-error-context" hidden><strong>Ошибка игры</strong><p id="ai-error"></p></div>
     <div id="ai-source-options" hidden>
+      <p id="ai-source-basis" class="diagnostic-note" hidden></p>
       <label class="ai-shorten-label"><input id="ai-shorten" type="checkbox" checked>Сократить библиотеки и медиа</label>
       <p id="ai-analysis-context" hidden></p>
       <p id="ai-quality-context" hidden></p>
@@ -350,6 +363,7 @@
     <div class="panel-body">
       <div id="ai-answer-compose"><label for="ai-answer-text">Вставьте полный ответ или HTML-код</label><textarea id="ai-answer-text" spellcheck="false" placeholder="Вставьте ответ ИИ через меню поля или кнопку"></textarea><div class="diagnostic-actions"><button id="ai-answer-paste" type="button">Вставить из буфера</button></div><div id="ai-answer-block-option" hidden><label for="ai-answer-block">В ответе несколько блоков. Выберите HTML</label><select id="ai-answer-block"></select></div><label id="ai-answer-clean-option" class="ai-shorten-label" hidden><input id="ai-answer-clean" type="checkbox" checked>Взять HTML без Markdown и пояснений</label></div>
       <p id="ai-answer-note" class="diagnostic-note" role="status" aria-live="polite"></p>
+      <div class="ai-game-options"><label>Сопоставить с запросом<select id="ai-answer-request"><option value="">Только проверить подключения</option></select></label><p id="ai-answer-basis" class="diagnostic-note"></p></div>
       <div id="ai-answer-review" hidden><button id="ai-answer-back" type="button">К ответу</button><p id="ai-answer-metrics"></p><pre id="ai-answer-diff" class="ai-answer-diff" aria-label="Различия ответа и текущего кода"></pre></div>
     </div>
     <div class="ai-answer-footer"><button id="ai-answer-compare" type="button" disabled>Сравнить</button><button id="ai-answer-apply" type="button" disabled>Заменить код</button></div>

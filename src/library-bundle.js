@@ -32,8 +32,8 @@ function libraryReference(url) {
     return { key: `matter-js@${match[1]}`, title: `Matter.js ${match[1]}`, url,
       licenseUrl: `https://cdn.jsdelivr.net/npm/matter-js@${match[1]}/LICENSE` };
   }
-  match = /^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/phaser\/(3\.\d+\.\d+)\/phaser\.min\.js$/.exec(url)
-    || /^https:\/\/cdn\.jsdelivr\.net\/npm\/phaser@(3\.\d+\.\d+)\/dist\/phaser\.min\.js$/.exec(url);
+  match = /^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/phaser\/(3\.\d+\.\d+|4\.2\.1)\/phaser\.min\.js$/.exec(url)
+    || /^https:\/\/cdn\.jsdelivr\.net\/npm\/phaser@(3\.\d+\.\d+|4\.2\.1)\/dist\/phaser\.min\.js$/.exec(url);
   if (match) {
     return { key: `phaser@${match[1]}`, title: `Phaser ${match[1]}`, url,
       licenseUrl: `https://cdn.jsdelivr.net/npm/phaser@${match[1]}/LICENSE.md` };
@@ -79,10 +79,10 @@ function localLibraryReference(url) {
     const version = (/[._-]v?(0\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
       || folders.map(folder => /^(?:matter(?:-js)?[@._-])?v?(0\.\d+\.\d+)$/i.exec(folder)).find(Boolean))?.[1];
     if (version) reference = libraryReference(`https://cdn.jsdelivr.net/npm/matter-js@${version}/build/matter.min.js`);
-  } else if (/^phaser(?:[._-]v?3\.\d+\.\d+)?(?:\.min)?\.js$/i.test(filename)) {
+  } else if (/^phaser(?:[._-]v?[34]\.\d+\.\d+)?(?:\.min)?\.js$/i.test(filename)) {
     title = 'Phaser';
-    const version = (/[._-]v?(3\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
-      || folders.map(folder => /^(?:phaser[@._-])?v?(3\.\d+\.\d+)$/i.exec(folder)).find(Boolean))?.[1];
+    const version = (/[._-]v?([34]\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
+      || folders.map(folder => /^(?:phaser[@._-])?v?([34]\.\d+\.\d+)$/i.exec(folder)).find(Boolean))?.[1];
     if (version) reference = libraryReference(`https://cdn.jsdelivr.net/npm/phaser@${version}/dist/phaser.min.js`);
   }
   return { ...reference, title: reference?.title || title, localPath: path, filename };

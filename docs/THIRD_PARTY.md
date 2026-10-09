@@ -34,3 +34,11 @@ The 3D showcase references Three.js r160 (npm 0.160.0), licensed under MIT. Thre
 3D-витрина ссылается на Three.js r160 (npm 0.160.0), распространяемую по MIT. Библиотека не включена в редактор. При получении копии через редактор и встраивании в сохраняемый HTML полный текст лицензии и сведения об авторских правах сохраняются вместе с ней. Тесты используют ту же точную версию как зависимость разработки; исходник и LICENSE поставляются npm-пакетом.
 
 Project / Проект: [Three.js](https://threejs.org/). License / Лицензия: [MIT for r160](https://github.com/mrdoob/three.js/blob/r160/LICENSE). No third-party sound recordings, models or textures are included in the new examples. / Сторонние аудиозаписи, модели и текстуры в новых примерах не используются.
+
+## Phaser and Matter.js / Phaser и Matter.js
+
+Game profiles reference Phaser 3.90.0, Phaser 4.2.1 and Matter.js 0.20.0, all under MIT. Exact npm development dependencies supply real distributions and full licenses for tests. These libraries are not bundled with the editor. Downloaded copies retain their complete copyright and permission notices when embedded in a game or exported as separate JavaScript files.
+
+Профили используют Phaser 3.90.0, Phaser 4.2.1 и Matter.js 0.20.0 под MIT. Точные зависимости разработки npm предоставляют настоящие сборки и полные лицензии для проверок. В редактор эти библиотеки не включены. Загруженные копии сохраняют полные авторские уведомления и условия лицензии при встраивании в игру и при сохранении отдельными JS-файлами.
+
+Licenses / Лицензии: [Phaser 3.90.0](https://cdn.jsdelivr.net/npm/phaser@3.90.0/LICENSE.md), [Phaser 4.2.1](https://cdn.jsdelivr.net/npm/phaser@4.2.1/LICENSE.md), [Matter.js 0.20.0](https://cdn.jsdelivr.net/npm/matter-js@0.20.0/LICENSE).

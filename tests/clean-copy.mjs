@@ -19,8 +19,8 @@ try {
   await cp(join(root, 'src'), join(scratch, 'src'), { recursive: true });
   await mkdir(join(scratch, 'tests'));
   for (const file of ['build.mjs', 'package.json', 'LICENSE']) await cp(join(root, file), join(scratch, file));
-  for (const file of ['paste.mjs', 'share.mjs', 'build.mjs', 'library-paths.mjs', 'library-package.mjs', 'library-extract.mjs', 'media-assets-unit.mjs', 'media-prompts-unit.mjs', 'ai-applications-unit.mjs', 'ai-session-unit.mjs']) await cp(join(root, 'tests', file), join(scratch, 'tests', file));
-  const scripts = [['build.mjs'], ['tests/build.mjs'], ['tests/paste.mjs'], ['tests/share.mjs'], ['tests/library-paths.mjs'], ['tests/library-package.mjs'], ['tests/library-extract.mjs'], ['tests/media-assets-unit.mjs'], ['tests/media-prompts-unit.mjs'], ['tests/ai-applications-unit.mjs'], ['tests/ai-session-unit.mjs']];
+  for (const file of ['paste.mjs', 'share.mjs', 'build.mjs', 'library-paths.mjs', 'library-package.mjs', 'library-extract.mjs', 'media-assets-unit.mjs', 'media-prompts-unit.mjs', 'ai-applications-unit.mjs', 'ai-session-unit.mjs', 'ai-profiles-unit.mjs']) await cp(join(root, 'tests', file), join(scratch, 'tests', file));
+  const scripts = [['build.mjs'], ['tests/build.mjs'], ['tests/paste.mjs'], ['tests/share.mjs'], ['tests/library-paths.mjs'], ['tests/library-package.mjs'], ['tests/library-extract.mjs'], ['tests/media-assets-unit.mjs'], ['tests/media-prompts-unit.mjs'], ['tests/ai-applications-unit.mjs'], ['tests/ai-session-unit.mjs'], ['tests/ai-profiles-unit.mjs']];
   for (const script of scripts) {
     const result = spawnSync(process.execPath, script, { cwd: scratch, encoding: 'utf8' });
     assert.equal(result.status, 0, `${script[0]} failed in clean copy:\n${result.stdout}\n${result.stderr}`);
