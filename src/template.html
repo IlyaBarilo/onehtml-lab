@@ -253,13 +253,16 @@
             <details id="library-preparation" class="media-help">
               <summary>Подготовить библиотеки</summary>
               <p class="diagnostic-note">Загрузите нужные версии заранее. Для передачи студентам сохраните набор, разместите его в общей папке и установите из файлов на каждом устройстве. Копии сохраняются в браузере; код игры не меняется.</p>
-              <div class="diagnostic-actions"><button id="library-download-selected" type="button" disabled>Загрузить выбранные</button><button id="library-download-all" type="button">Загрузить весь каталог</button><button id="library-import-pack" type="button">Установить набор из файлов…</button><button id="library-preparation-cancel" type="button" hidden>Остановить загрузку</button></div>
-              <ul id="library-preparation-list" class="diagnostic-list"></ul>
+              <div class="diagnostic-actions"><button id="library-download-selected" type="button" disabled>Скачать выбранные</button><button id="library-download-all" type="button">Скачать все библиотеки</button><button id="library-preparation-cancel" type="button" hidden>Остановить загрузку</button></div>
+              <div class="diagnostic-actions"><button id="library-import-archive" type="button">Загрузить из архива…</button><button id="library-import-pack" type="button">Загрузить манифест и файлы…</button></div>
+              <input id="library-preparation-archive" type="file" accept=".zip,application/zip" aria-label="Сохранённый архив библиотек OneHTML Lab" hidden>
               <input id="library-preparation-input" type="file" multiple accept=".zip,.json,.js,.txt,.md" aria-label="Архив библиотек или манифест со всеми файлами" hidden>
               <input id="library-preparation-raw" type="file" multiple aria-label="JS, зависимости, LICENSE и NOTICE выбранной версии" hidden>
               <label class="library-export-option">Сохранить <select id="library-export-format"><option value="zip">ZIP-архивом</option><option value="files">Отдельными файлами</option></select></label>
-              <div class="diagnostic-actions"><button id="library-export-selected" type="button" disabled>Сохранить выбранные</button><button id="library-export-all" type="button" disabled>Сохранить все копии</button></div>
+              <div class="diagnostic-actions"><button id="library-export-selected" type="button" disabled>Сохранить выбранные</button><button id="library-export-all" type="button" disabled>Сохранить все библиотеки</button></div>
+              <p class="diagnostic-note">Сохраняются загруженные копии. Чтобы получить полный набор, сначала нажмите «Скачать все библиотеки».</p>
               <p id="library-preparation-status" role="status" aria-live="polite" class="diagnostic-note"></p>
+              <ul id="library-preparation-list" class="diagnostic-list"></ul>
               <div id="library-export-files" hidden><button id="library-export-files-all" type="button">Скачать все файлы</button><p class="diagnostic-note">Браузер может запросить разрешение на несколько скачиваний. Каждый файл также можно скачать отдельно.</p><ul id="library-export-file-list" class="diagnostic-list"></ul></div>
             </details>
             <div class="diagnostic-cache-heading"><h3>Сохранённые копии</h3><button id="diagnostic-cache-clear" type="button" disabled>Удалить все</button></div>

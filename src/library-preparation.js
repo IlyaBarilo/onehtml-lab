@@ -125,8 +125,10 @@ function initLibraryPreparation() {
   document.querySelector('#library-download-selected').addEventListener('click',()=>void preparationDownload([...preparationSelection]));
   document.querySelector('#library-download-all').addEventListener('click',()=>void preparationDownload(preparationCatalog.map(([key])=>key)));
   document.querySelector('#library-preparation-cancel').addEventListener('click',()=>preparationController?.abort());
-  const input = document.querySelector('#library-preparation-input'), raw = document.querySelector('#library-preparation-raw');
+  const input = document.querySelector('#library-preparation-input'), raw = document.querySelector('#library-preparation-raw'), archive = document.querySelector('#library-preparation-archive');
+  document.querySelector('#library-import-archive').addEventListener('click',()=>archive.click());
   document.querySelector('#library-import-pack').addEventListener('click',()=>input.click());
+  archive.addEventListener('change',()=>void preparationImport(archive));
   input.addEventListener('change',()=>void preparationImport(input));
   raw.addEventListener('change',()=>void preparationImport(raw,preparationRawKey));
   document.querySelector('#library-export-selected').addEventListener('click',()=>void preparationExport(false));

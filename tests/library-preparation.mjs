@@ -31,6 +31,13 @@ async function importFiles(page,files) {
   await page.locator('#library-preparation-input').setInputFiles(files);
   await page.waitForFunction(()=>window.preparationFileChanged);await settled(page);
 }
+async function importArchive(page,file) {
+  await page.evaluate(()=>{window.preparationArchiveChanged=false;document.querySelector('#library-preparation-archive').addEventListener('change',()=>{window.preparationArchiveChanged=true;},{once:true});});
+  const choosing=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Загрузить из архива…',exact:true}).click();
+  const chooser=await choosing;assert.equal(chooser.isMultiple(),false);await chooser.setFiles(file);
+  await page.waitForFunction(()=>window.preparationArchiveChanged);await settled(page);
+  assert.equal(await page.locator('#library-preparation-archive').inputValue(),'','The archive picker can load the same file again');
+}
 async function archive(page,all=true) {
   await page.locator('#library-export-format').selectOption('zip');const waiting=page.waitForEvent('download');
   await page.locator(all?'#library-export-all':'#library-export-selected').click();const download=await waiting;
@@ -65,6 +72,9 @@ try {
         });
         await page.goto(url);await page.locator('#code').fill(game);
         await panel(page);assert.equal(await page.locator('#library-preparation-list li').count(),11);
+        assert(await page.getByRole('button',{name:'Скачать все библиотеки',exact:true}).isEnabled());
+        assert(await page.getByRole('button',{name:'Сохранить все библиотеки',exact:true}).isDisabled());
+        assert(await page.evaluate(()=>document.querySelector('#library-export-all').getBoundingClientRect().bottom<=document.querySelector('#library-preparation-list').getBoundingClientRect().top),'Saving the complete set must be available before the long catalog');
         await page.locator('#library-download-all').click();await settled(page);
         assert.match(await page.locator('#library-preparation-status').innerText(),/Не загружены.*Matter/s,JSON.stringify(requests));
         assert.equal(await page.locator('#diagnostic-cache-list li').count(),10);
@@ -92,12 +102,15 @@ try {
         assert.equal(await fresh.locator('#diagnostic-cache-list li').count(),1,'Selected export: '+await fresh.locator('#library-preparation-status').innerText());
         await importFiles(fresh,individual);
         assert.equal(await fresh.locator('#diagnostic-cache-list li').count(),11,'Individual files with manifest must install offline');
-        await importFiles(fresh,pack);
+        await importArchive(fresh,pack);
         assert.match(await fresh.locator('#library-preparation-status').innerText(),/Установлено: 11.*сохранены/s);
         assert.equal(await fresh.locator('#diagnostic-cache-list li').count(),11);
         // Incomplete individual selection must not overwrite any of the installed copies.
         await importFiles(fresh,individual.slice(0,1));
         assert.match(await fresh.locator('#library-preparation-status').innerText(),/Не хватает файла/);assert.equal(await fresh.locator('#diagnostic-cache-list li').count(),11);
+        const damagedPack={...pack,buffer:Buffer.from(pack.buffer)};damagedPack.buffer[80]^=1;await importArchive(fresh,damagedPack);
+        assert.match(await fresh.locator('#library-preparation-status').innerText(),/поврежд|контрольн/i);assert.equal(await fresh.locator('#diagnostic-cache-list li').count(),11,'A damaged archive must leave the full installed set intact');
+        await importArchive(fresh,pack);assert.match(await fresh.locator('#library-preparation-status').innerText(),/Установлено: 11/);
         if(engineName==='chromium')await student.setOffline(false);await fresh.reload();await panel(fresh);assert.equal(await fresh.locator('#diagnostic-cache-list li').count(),11,'Imported copies must survive reopening');
         if(engineName==='chromium')await student.setOffline(true);await fresh.locator('#activity-close').click();await fresh.locator('#code').fill(game);await fresh.locator('#run').click();
         await fresh.frameLocator('#preview iframe').locator('#result').waitFor();assert.equal(await fresh.frameLocator('#preview iframe').locator('#result').innerText(),'160');
