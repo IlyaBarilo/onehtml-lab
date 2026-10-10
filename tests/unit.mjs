@@ -14,3 +14,4 @@ await import('./ai-session-unit.mjs');
 await import('./ai-profiles-unit.mjs');
 await import('./babylon-unit.mjs');
 await import('./physics-unit.mjs');
+await import('./library-portable-unit.mjs');

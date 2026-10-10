@@ -173,10 +173,11 @@ function moduleEntryData(entry) {
   } catch {}
   moduleDataCache.set(entry,{source:entry.source,license:entry.license,key:entry.key,catalog:entry.catalogKey,url:entry.sourceUrl,data});return data;
 }
-async function downloadModule(reference) {
+async function downloadModule(reference, options = {}) {
   const ref = moduleCatalog(reference.key);
   if (!ref || ref.url !== reference.url) throw Error('Unknown module');
-  const response = await fetch(ref.licenseUrl,{credentials:'omit',redirect:'error'});
+  const fetchOptions = {credentials:'omit',redirect:'error',...options};
+  const response = await fetch(ref.licenseUrl,fetchOptions);
   const license = await readLibraryResponse(response), files = [], queue = [ref.url], reused = new Map();
   for (const entry of libraryCache.values()) if (entry.format === 'module' && moduleCatalog(entry.key)) {
     const data = moduleEntryData(entry);
@@ -186,7 +187,7 @@ async function downloadModule(reference) {
   for (let i=0;i<queue.length;i++) {
     let source = reused.get(queue[i]);
     if (source === undefined) {
-      const response=await fetch(queue[i],{credentials:'omit',redirect:'error'});
+      const response=await fetch(queue[i],fetchOptions);
       if(!/^(?:text|application)\/(?:javascript|ecmascript)(?:;|$)/i.test(response.headers.get('content-type') || '')) throw Error('Module MIME type');
       source = await readLibraryResponse(response);
     }

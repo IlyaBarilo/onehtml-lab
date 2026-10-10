@@ -681,6 +681,21 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .diagnostic-library-row strong { font-size: 16px; overflow-wrap: anywhere; }
 .diagnostic-library-row p { margin: 5px 0 0; white-space: pre-line; overflow-wrap: anywhere; font-size: 14px; color: #566e8d; line-height: 1.4; }
 .diagnostic-library-row button { flex: 0 0 auto; max-width: 110px; }
+.library-preparation-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #d7e4fa; padding: 8px 0; min-width: 0; }
+.library-preparation-row label { display: flex; align-items: center; flex: 1; gap: 10px; min-width: 0; min-height: 44px; cursor: pointer; }
+.library-preparation-row input { flex: none; width: 18px; height: 18px; }
+.library-preparation-row label > span { min-width: 0; }
+.library-preparation-row strong { display: block; font-size: 15px; overflow-wrap: anywhere; }
+.library-preparation-row label > span > span { display: block; font-size: 13px; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+.library-preparation-row button { flex: none; }
+.library-export-option { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.library-export-option select { min-height: 44px; max-width: 100%; font: inherit; color: inherit; background: #f7faff; border: 1px solid #b8cef4; border-radius: 6px; padding: 6px; }
+#library-preparation-status { white-space: pre-line; overflow-wrap: anywhere; }
+#library-export-file-list button { max-width: 100%; overflow-wrap: anywhere; text-align: left; margin-bottom: 6px; }
+.theme-dark .library-preparation-row { border-color: #3b4b61; }
+.theme-dark .library-export-option select { background: #171e2a; border-color: #557ba9; }
+.theme-dark #library-preparation button { background: #28374c; color: #c6dcff; border-color: #557ba9; }
+.theme-dark #library-preparation .diagnostic-note { color: #a9b8cc; }
 .diagnostic-cache-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 24px; }
 #diagnostic-libraries h3 { font-size: 17px; }
 .diagnostic-confirm { position: sticky; bottom: 0; padding: 12px; background: #fff8e8; border: 1px solid #e5cf9d; border-radius: 8px; font-size: 15px; line-height: 1.4; }

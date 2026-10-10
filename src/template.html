@@ -250,6 +250,18 @@
           </section>
           <section id="diagnostic-libraries" hidden>
             <h3>В текущем коде</h3><p id="diagnostic-library-note" class="diagnostic-note"></p><ul id="diagnostic-library-list" class="diagnostic-list"></ul>
+            <details id="library-preparation" class="media-help">
+              <summary>Подготовить библиотеки</summary>
+              <p class="diagnostic-note">Загрузите нужные версии заранее. Для передачи студентам сохраните набор, разместите его в общей папке и установите из файлов на каждом устройстве. Копии сохраняются в браузере; код игры не меняется.</p>
+              <div class="diagnostic-actions"><button id="library-download-selected" type="button" disabled>Загрузить выбранные</button><button id="library-download-all" type="button">Загрузить весь каталог</button><button id="library-import-pack" type="button">Установить набор из файлов…</button><button id="library-preparation-cancel" type="button" hidden>Остановить загрузку</button></div>
+              <ul id="library-preparation-list" class="diagnostic-list"></ul>
+              <input id="library-preparation-input" type="file" multiple accept=".zip,.json,.js,.txt,.md" aria-label="Архив библиотек или манифест со всеми файлами" hidden>
+              <input id="library-preparation-raw" type="file" multiple aria-label="JS, зависимости, LICENSE и NOTICE выбранной версии" hidden>
+              <label class="library-export-option">Сохранить <select id="library-export-format"><option value="zip">ZIP-архивом</option><option value="files">Отдельными файлами</option></select></label>
+              <div class="diagnostic-actions"><button id="library-export-selected" type="button" disabled>Сохранить выбранные</button><button id="library-export-all" type="button" disabled>Сохранить все копии</button></div>
+              <p id="library-preparation-status" role="status" aria-live="polite" class="diagnostic-note"></p>
+              <div id="library-export-files" hidden><button id="library-export-files-all" type="button">Скачать все файлы</button><p class="diagnostic-note">Браузер может запросить разрешение на несколько скачиваний. Каждый файл также можно скачать отдельно.</p><ul id="library-export-file-list" class="diagnostic-list"></ul></div>
+            </details>
             <div class="diagnostic-cache-heading"><h3>Сохранённые копии</h3><button id="diagnostic-cache-clear" type="button" disabled>Удалить все</button></div>
             <p id="diagnostic-cache-size" class="diagnostic-note"></p><ul id="diagnostic-cache-list" class="diagnostic-list"></ul>
             <div id="diagnostic-confirm" class="diagnostic-confirm" hidden><p id="diagnostic-confirm-text"></p><div class="diagnostic-actions"><button id="diagnostic-delete-yes" type="button">Удалить</button><button id="diagnostic-delete-no" type="button">Отмена</button></div></div>

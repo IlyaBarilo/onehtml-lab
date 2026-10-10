@@ -5,7 +5,7 @@ const standalone = await readFile(new URL('../onehtml-lab.html', import.meta.url
 assert(standalone.includes('data:image/svg+xml,'), 'Favicon must be embedded');
 assert(standalone.includes('Permission is hereby granted, free of charge'), 'Standalone file must include its MIT license');
 assert(!standalone.includes('embeddedThreeR128'), 'Application must not contain a preloaded Three.js copy');
-assert(Buffer.byteLength(standalone) < 1580000, 'Application including editors and model examples must stay within its size budget; engine distributions must remain external');
+assert(Buffer.byteLength(standalone) < 1630000, 'Application including editors, portable library tools and model examples must stay within its size budget; engine distributions must remain external');
 assert(!standalone.includes('Babylon.js v9.30.0 - WebGL'), 'Babylon.js must not be bundled into the editor');
 assert(!standalone.includes('class Narrowphase {'), 'cannon-es distribution must not be bundled into the editor');
 assert(standalone.includes('data-onehtml-library'), 'Standalone file must contain the library replacement mechanism');

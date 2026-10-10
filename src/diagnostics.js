@@ -107,7 +107,7 @@ function renderDiagnosticErrors() {
 }
 
 function diagnosticBytes(source) { return new TextEncoder().encode(source || '').length; }
-function diagnosticCacheBytes(entry) { return (entry.format === 'module' ? moduleEntryData(entry)?.bytes || 0 : diagnosticBytes(entry.source)) + diagnosticBytes(entry.license); }
+function diagnosticCacheBytes(entry) { return (entry.format === 'module' ? moduleEntryData(entry)?.bytes || 0 : diagnosticBytes(entry.source)) + diagnosticBytes(entry.license) + diagnosticBytes(entry.notice || ''); }
 function diagnosticSize(bytes) { return `${formatUIInteger(bytes)} байт`; }
 
 async function inspectDiagnosticLibraries(code) {
@@ -208,6 +208,7 @@ function renderDiagnosticCache() {
     const button = diagnosticButton('Удалить', () => confirmDiagnosticDelete([entry]));
     button.disabled = blocked; row.append(button); return row;
   }));
+  renderLibraryPreparation();
 }
 
 function confirmDiagnosticDelete(entries) {
@@ -317,6 +318,7 @@ function updateDiagnostics() {
 
 function initDiagnostics() {
   diagnosticReady = true;
+  initLibraryPreparation();
   initReadiness();
   initQuality();
   initMediaAssets();

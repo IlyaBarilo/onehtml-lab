@@ -200,6 +200,19 @@ function libraryDatabase() {
   return libraryDatabasePromise;
 }
 
+async function allowedLibraryCacheEntry(entry) {
+  if (!entry || typeof entry.key !== 'string' || typeof entry.source !== 'string'
+    || typeof entry.license !== 'string' || !validLibraryEntry(entry)) return false;
+  const known = libraryReference(entry.sourceUrl)?.key === entry.key;
+  const local = /^[a-f\d]{64}$/.test(entry.documentScope)
+    && localLibraryReference(entry.localPath) && entry.key === localLibraryKey(entry.documentScope, entry.localPath);
+  const extracted = /^asset@[a-f\d]{64}$/.test(entry.key)
+    && await librarySourceHash(libraryAssetIdentity(entry.source, entry.license, entry.notice)) === entry.key.slice(6);
+  let module = entry.format === 'module' && typeof moduleEntryData === 'function' && moduleEntryData(entry);
+  if (module && entry.key.startsWith('module-asset@')) module = await librarySourceHash(entry.source + '\0' + entry.license) === entry.key.slice(13);
+  return Boolean(entry.format === 'module' ? module : known || local || extracted);
+}
+
 async function loadLibraryCache() {
   try {
     const database = await libraryDatabase();
@@ -211,16 +224,7 @@ async function loadLibraryCache() {
       transaction.onabort = () => reject(transaction.error);
     });
     for (const entry of entries) {
-      const knownSource = entry && typeof entry.key === 'string' && libraryReference(entry.sourceUrl)?.key === entry.key;
-      const localSource = entry && /^[a-f\d]{64}$/.test(entry.documentScope)
-        && localLibraryReference(entry.localPath) && entry.key === localLibraryKey(entry.documentScope, entry.localPath);
-      const extractedSource = entry && /^asset@[a-f\d]{64}$/.test(entry.key)
-        && validLibraryEntry(entry)
-        && await librarySourceHash(libraryAssetIdentity(entry.source, entry.license, entry.notice)) === entry.key.slice(6);
-      let moduleSource = entry?.format === 'module' && typeof moduleEntryData === 'function' && moduleEntryData(entry);
-      if (moduleSource && entry.key.startsWith('module-asset@')) moduleSource = await librarySourceHash(entry.source + '\0' + entry.license) === entry.key.slice(13);
-      if ((knownSource || localSource || extractedSource || moduleSource)
-        && validLibraryEntry(entry)) {
+      if (await allowedLibraryCacheEntry(entry)) {
         libraryCache.set(entry.key, entry);
         persistedLibraries.set(entry.key, entry);
       }
@@ -403,12 +407,13 @@ async function readLibraryResponse(response) {
   return response.text();
 }
 
-async function downloadLibrary(reference) {
-  if (reference.format === 'module') return downloadModule(reference);
+async function downloadLibrary(reference, options = {}) {
+  if (reference.format === 'module') return downloadModule(reference, options);
+  const fetchOptions = { credentials: 'omit', redirect: 'error', ...options };
   const [sourceResponse, licenseResponse, noticeResponse] = await Promise.all([
-    fetch(reference.url, { credentials: 'omit', redirect: 'error' }),
-    fetch(reference.licenseUrl, { credentials: 'omit', redirect: 'error' }),
-    reference.noticeUrl ? fetch(reference.noticeUrl, { credentials: 'omit', redirect: 'error' }) : null
+    fetch(reference.url, fetchOptions),
+    fetch(reference.licenseUrl, fetchOptions),
+    reference.noticeUrl ? fetch(reference.noticeUrl, fetchOptions) : null
   ]);
   const [source, license, notice] = await Promise.all([
     readLibraryResponse(sourceResponse),
