@@ -36,7 +36,8 @@ async function state(page) {
       if (item.isLight) lights.push([item.type, item.color.getHex(), item.intensity, ...item.position.toArray()]);
     });
     return { renderers: window.testRenderers.length, camera: [...camera.position.toArray(), ...camera.quaternion.toArray()], meshes, lights,
-      materials: [...materials].map(value => ({ type: value.type, environment: !!value.envMap })), shadows: renderer.shadowMap.enabled };
+      materials: [...materials].map(value => ({ type: value.type, environment: !!value.envMap,
+        colorMap: value.map?.name || null, relief: !!value.bumpMap, roughness: !!value.roughnessMap })), shadows: renderer.shadowMap.enabled };
   });
 }
 const world = ({ renderers, camera, meshes, lights }) => ({ renderers, camera, meshes, lights });
@@ -79,6 +80,62 @@ async function shadowHint(page) {
   });
   assert(changed > 10, 'The shadow callout must point to a real visible shadow, not an unlit surface: ' + changed);
 }
+async function textureEffects(page) {
+  const result = await page.evaluate(() => {
+    const { renderer, scene, camera } = window.testThree, materials = new Set(), textures = new Set();
+    scene.traverse(item => {
+      if (!item.isMesh || !item.material.map) return;
+      materials.add(item.material);
+      for (const key of ['map', 'bumpMap', 'roughnessMap']) textures.add(item.material[key]);
+    });
+    const profiles = [...textures].map(texture => {
+      const canvas = texture.image, data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+      const shades = new Set(); for (let i = 0; i < data.length; i += 4) shades.add(data[i]);
+      return { name: texture.name, pixels: canvas.width * canvas.height, shades: shades.size,
+        colorSpace: texture.colorSpace === (texture.name.endsWith('.color') ? THREE.SRGBColorSpace : THREE.NoColorSpace),
+        repeat: texture.wrapS === THREE.RepeatWrapping && texture.wrapT === THREE.RepeatWrapping,
+        anisotropy: texture.anisotropy <= Math.min(4, renderer.capabilities.getMaxAnisotropy()) };
+    });
+    window.testSurfaceTextures = [...textures].map(texture => {
+      const resource = { texture, disposed: 0 }; texture.addEventListener('dispose', () => resource.disposed++); return resource;
+    });
+    const gl = renderer.getContext(), read = () => {
+      renderer.render(scene, camera);
+      const pixels = new Uint8Array(gl.drawingBufferWidth * gl.drawingBufferHeight * 4);
+      gl.readPixels(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight, gl.RGBA, gl.UNSIGNED_BYTE, pixels); return pixels;
+    };
+    const original = read(), maps = [...materials].map(material => [material, material.map, material.bumpMap, material.roughnessMap]);
+    const changed = pixels => {
+      let count = 0;
+      for (let i = 0; i < pixels.length; i += 4) if ([0, 1, 2].some(c => Math.abs(pixels[i + c] - original[i + c]) > 5)) count++;
+      return count / (pixels.length / 4);
+    };
+    let plain, flat;
+    try {
+      for (const [material] of maps) { material.map = material.bumpMap = material.roughnessMap = null; material.needsUpdate = true; }
+      plain = changed(read());
+      for (const [material, color, , roughness] of maps) { material.map = color; material.roughnessMap = roughness; material.needsUpdate = true; }
+      flat = changed(read());
+    } finally {
+      for (const [material, color, bump, roughness] of maps) {
+        material.map = color; material.bumpMap = bump; material.roughnessMap = roughness; material.needsUpdate = true;
+      }
+      read();
+    }
+    return { profiles, plain, flatPixels: flat * gl.drawingBufferWidth * gl.drawingBufferHeight,
+      physicalPaint: [...materials].some(material => material.map.name === 'paint.color' && material.clearcoat > 0),
+      allocated: renderer.info.memory.textures };
+  });
+  assert.equal(result.profiles.length, 18, 'Six shared surface sets need only three small maps each');
+  assert.deepEqual(result.profiles.map(value => value.name).sort(), ['paint', 'metal', 'rubber', 'solar', 'soil', 'rock']
+    .flatMap(kind => ['color', 'height', 'roughness'].map(role => kind + '.' + role)).sort());
+  assert(result.profiles.every(value => value.colorSpace && value.repeat && value.anisotropy && value.shades > 1));
+  assert(result.profiles.reduce((sum, value) => sum + value.pixels, 0) <= 450000, 'Texture resolution must remain small for phones');
+  assert(result.physicalPaint, 'Paint uses the agreed restrained reflective coating');
+  assert(result.plain > .008, 'Textures must visibly change the rendered surfaces with identical light and geometry: ' + result.plain);
+  assert(result.flatPixels > 40, 'Height maps must visibly change lighting without moving vertices: ' + result.flatPixels);
+  return result.allocated;
+}
 try {
   for (const [name, engine] of engines) {
     const browser = await engine.launch();
@@ -108,6 +165,8 @@ try {
             assert(await page.locator('.three-still').isVisible(), 'Paused WebGL needs a stable visible frame');
             const detailed = await state(page), detailedFrame = await frame(page);
             assert(detailed.shadows && detailed.materials.some(value => value.type === 'MeshPhysicalMaterial' && value.environment));
+            const allocated = await textureEffects(page);
+            assert.deepEqual(await state(page), detailed, 'Isolated texture checks restore all scene materials');
             await page.locator('[data-quality="simple"]').click();
             const simple = await state(page), simpleFrame = await frame(page);
             const painted = await page.locator('.three-still').evaluate(canvas => {
@@ -117,7 +176,8 @@ try {
             });
             assert(painted > .99, 'The paused snapshot must contain the actual scene, including in WebKit');
             assert.deepEqual(world(simple), world(detailed), 'Quality must preserve geometry, camera, animation and light sources');
-            assert(!simple.shadows && simple.materials.every(value => value.type === 'MeshLambertMaterial' && !value.environment));
+            assert(!simple.shadows && simple.materials.every(value => value.type === 'MeshLambertMaterial' && !value.environment
+              && !value.colorMap && !value.relief && !value.roughness), 'Simple quality keeps its original untextured surfaces');
             const changed = await page.evaluate(([a, b]) => {
               const simple = window.testFrames[a], detailed = window.testFrames[b]; let changed = 0;
               for (let i = 0; i < simple.length; i += 4) if ([0, 1, 2].some(c => Math.abs(simple[i + c] - detailed[i + c]) > 12)) changed++;
@@ -129,12 +189,13 @@ try {
             assert.deepEqual(await state(page), simple, 'Selecting the same quality is inert');
             await page.locator('[data-quality="detailed"]').click();
             assert.deepEqual(await state(page), detailed, 'Restoring detailed quality restores the original materials');
+            assert.equal(await page.evaluate(() => window.testThree.renderer.info.memory.textures), allocated, 'Quality switching reuses the generated maps');
             await page.locator('#three-hints').click();
             assert.equal(await page.locator('#three-hints').getAttribute('aria-pressed'), 'true');
             assert.match(await page.locator('.three-hint-caption').innerText(), /Подробное/);
-            assert.equal(await page.locator('.three-hint-overlay text:visible').count(), 3, await page.locator('.three-hint-overlay g').evaluateAll(groups => JSON.stringify(groups.map(group => ({ visibility: getComputedStyle(group).visibility, circle: group.querySelector('circle').outerHTML })))));
+            assert.equal(await page.locator('.three-hint-overlay text:visible').count(), 4, await page.locator('.three-hint-overlay g').evaluateAll(groups => JSON.stringify(groups.map(group => ({ visibility: getComputedStyle(group).visibility, circle: group.querySelector('circle').outerHTML })))));
             await page.locator('[data-quality="simple"]').click();
-            assert.match(await page.locator('.three-hint-caption').innerText(), /без отражений и теней/);
+            assert.match(await page.locator('.three-hint-caption').innerText(), /без текстур, отражений и теней/);
             assert.deepEqual(world(await state(page)), world(detailed));
             await page.keyboard.press('Escape');
             assert.equal(await page.locator('#pause').getAttribute('aria-pressed'), 'true', 'Closing hints must preserve user pause');
@@ -163,6 +224,15 @@ try {
             }));
             assert(labels.every(label => label.visible && label.x > 0 && label.y > 0), 'Each arrow must target a projected scene point: ' + JSON.stringify(labels));
             await shadowHint(page);
+            const textureTarget = await page.evaluate(() => {
+              const { renderer, scene, camera } = window.testThree, circle = document.querySelector('.three-hint-overlay g:nth-child(3) circle');
+              const bounds = renderer.domElement.getBoundingClientRect(), ray = new THREE.Raycaster();
+              ray.setFromCamera(new THREE.Vector2(Number(circle.getAttribute('cx')) / bounds.width * 2 - 1,
+                1 - Number(circle.getAttribute('cy')) / bounds.height * 2), camera);
+              const meshes = []; scene.traverse(item => { if (item.isMesh) meshes.push(item); });
+              return ray.intersectObjects(meshes, false)[0]?.object.material.map?.name;
+            });
+            assert.equal(textureTarget, 'solar.color', 'The texture arrow must point to a visible panel surface');
             await page.screenshot({ path: join(scratch, `${name}-${url.startsWith('file:') ? 'file' : 'http'}-${width}-hints.png`) });
             await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
             assert.equal(await page.locator('#three-expand').getAttribute('aria-pressed'), 'false');
@@ -183,6 +253,7 @@ try {
             assert.match(await page.locator('#info-body').innerText(), /FPS зависит от устройства/);
             await page.locator('#info-close').click();
             await page.locator('#scenario').selectOption('compare');
+            assert(await page.evaluate(() => window.testSurfaceTextures.every(resource => resource.disposed === 1)), 'Leaving the scene releases every generated map');
             assert(await page.locator('#three-quality').isHidden());
             assert.equal(await page.locator('#three-hints, #three-expand').count(), 0);
             await page.locator('#scenario').selectOption('showcase');
@@ -193,7 +264,7 @@ try {
             assert.equal(await page.locator('#three-hints, #three-expand').count(), 0);
             assert.deepEqual(requests, [], 'The fixture and all generated scene resources are offline');
             assert.deepEqual(errors, []);
-            console.log(`${name} ${url.startsWith('file:') ? 'file' : 'http'} ${width}: Three materials/shadows, unchanged model/camera/light, hints, input, FPS, resizing and compact layout passed.`);
+            console.log(`${name} ${url.startsWith('file:') ? 'file' : 'http'} ${width}: Three textures/relief/materials/shadows, resource reuse/disposal, unchanged model/camera/light, hints, input, FPS, resizing and compact layout passed.`);
           } catch (error) {
             failed = true; await page.screenshot({ path: join(scratch, `${name}-${width}-failure.png`) }); throw error;
           } finally { await context.close(); }

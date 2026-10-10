@@ -255,8 +255,8 @@
         ],
         three160: [
           'Three.js — объёмные модели, камеры, материалы, свет и тени. Подходит для 3D-игр и просмотра моделей. Правила игры и физику нужно добавить отдельно.',
-          '«Простое» — матовые материалы без отражений и теней. «Подробное» — металл, блики на стекле и тени от модели. Модель и источники света одинаковые; подробное оформление требует больше вычислений. FPS зависит от устройства.',
-          'Прицел внизу останавливает анимацию и отмечает металл, стекло и место тени. Переключайте оформление, чтобы увидеть разницу. В маленьком поле разверните сцену кнопкой рядом.',
+          '«Простое» — матовые однотонные поверхности. «Подробное» — текстуры, мелкий рельеф, отражения и тени. Посмотрите на полосы металла, рисунок солнечных панелей и зернистый грунт. Модель и свет одинаковые; FPS зависит от устройства.',
+          'Текстуры создаются внутри примера без загрузки изображений. Прицел останавливает анимацию и отмечает металл, стекло, текстуру панели и место тени. Переключайте оформление; для сравнения FPS выключите паузу и подсказки. В маленьком поле разверните сцену кнопкой рядом.',
           'Проведите по сцене, чтобы повернуть камеру вокруг марсохода. В «Сравнении» шар и башня показаны в объёме.'
         ],
         matter: [
@@ -955,8 +955,56 @@
         if ('colorSpace' in environment) environment.colorSpace = Three.SRGBColorSpace;
         else environment.encoding = Three.sRGBEncoding;
         textures.add(environment);
-        const material = settings => {
-          const mat = new Three.MeshStandardMaterial({ envMap: environment, envMapIntensity: .6, ...threeMaterialColors(Three, settings) });
+        const surface = kind => {
+          const size = kind === 'soil' ? 256 : 128, canvases = [], contexts = [], images = [];
+          for (let index = 0; index < 3; index += 1) {
+            const canvas = document.createElement('canvas'); canvas.width = canvas.height = size;
+            const ctx = canvas.getContext('2d'); canvases.push(canvas); contexts.push(ctx); images.push(ctx.createImageData(size, size));
+          }
+          let seed = 1949;
+          for (let y = 0; y < size; y += 1) for (let x = 0; x < size; x += 1) {
+            seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+            const grain = (seed / 4294967296 - .5) * 36, u = x / size * Math.PI * 2, v = y / size * Math.PI * 2;
+            const waves = .5 * Math.sin(u * 3 + 2 * Math.cos(v * 2)) * Math.cos(v * 4)
+              + .3 * Math.sin(u * 7 + 2 * Math.cos(v * 3)) + .2 * Math.sin(u * 11 + Math.sin(v * 9));
+            let tone = 226 + grain * .3, relief = 128 + grain, rough = 220 + grain;
+            if (kind === 'soil' || kind === 'rock') {
+              tone = 185 + waves * 34 + grain; relief = 128 + waves * 60 + grain;
+              rough = 218 + waves * 22 + grain * .5;
+            } else if (kind === 'metal') {
+              const stripes = Math.sin(v * 32);
+              tone = 226 + stripes * 18 + grain * .25; relief = 128 + stripes * 24 + grain * .3;
+              rough = 165 + Math.sin(u * 2) * 40 + stripes * 35;
+            } else if (kind === 'paint') {
+              const wear = Math.max(0, waves - .55) * 90;
+              tone = 245 - wear + grain * .15; relief = 128 - wear * .5 + grain * .25; rough = 180 + wear + grain;
+            } else if (kind === 'rubber') {
+              const groove = Math.cos(u * 12 + v * 8) > .88 ? 35 : 0;
+              tone = 220 - groove + grain * .6; relief = 145 - groove * 2 + grain; rough = 235 + grain * .4;
+            } else if (kind === 'solar') {
+              const conductor = x % 64 < 3 || y % 16 < 1;
+              tone = conductor ? 255 : 150 + Math.sin(u) * 20 + grain * .15;
+              relief = conductor ? 165 : 125; rough = conductor ? 205 : 105 + Math.cos(v) * 30;
+            }
+            const offset = (y * size + x) * 4;
+            for (const [index, value] of [tone, relief, rough].entries()) {
+              for (let channel = 0; channel < 3; channel += 1) images[index].data[offset + channel] = value;
+              images[index].data[offset + 3] = 255;
+            }
+          }
+          const maps = canvases.map((canvas, index) => {
+            contexts[index].putImageData(images[index], 0, 0);
+            const texture = new Three.CanvasTexture(canvas); texture.name = kind + ['.color', '.height', '.roughness'][index];
+            texture.colorSpace = index === 0 ? Three.SRGBColorSpace : Three.NoColorSpace;
+            texture.wrapS = texture.wrapT = Three.RepeatWrapping;
+            texture.repeat.set(kind === 'soil' ? 18 : 1, kind === 'soil' ? 18 : 1);
+            texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+            textures.add(texture); return texture;
+          });
+          return { map: maps[0], bumpMap: maps[1], roughnessMap: maps[2] };
+        };
+        const material = (settings, Type = Three.MeshStandardMaterial) => {
+          const mat = new Type({ envMap: environment, envMapIntensity: .6, ...threeMaterialColors(Three, settings) });
           materials.add(mat); return mat;
         };
         const simpleMaterial = original => {
@@ -967,11 +1015,12 @@
           }
           return simpleMaterials.get(original);
         };
-        const paint = material({ color: 0xd57b36, metalness: .55, roughness: .32 });
-        const metal = material({ color: 0xaebbc9, metalness: .88, roughness: .25 });
+        const paint = material({ color: 0xd57b36, metalness: .55, roughness: .42, clearcoat: .45, clearcoatRoughness: .3,
+          ...surface('paint'), bumpScale: .025 }, Three.MeshPhysicalMaterial);
+        const metal = material({ color: 0xaebbc9, metalness: .88, roughness: .42, ...surface('metal'), bumpScale: .08 });
         const dark = material({ color: 0x202b3b, metalness: .7, roughness: .38 });
-        const rubber = material({ color: 0x18202c, roughness: .9 });
-        const solar = material({ color: 0x244aa4, metalness: .55, roughness: .17 });
+        const rubber = material({ color: 0x18202c, roughness: .95, ...surface('rubber'), bumpScale: .07 });
+        const solar = material({ color: 0x244aa4, metalness: .55, roughness: .35, ...surface('solar'), bumpScale: .015 });
         const glow = material({ color: 0x8aedff, emissive: 0x3ea9d3, emissiveIntensity: 2, roughness: .25 });
         const glass = new Three.MeshPhysicalMaterial({ ...threeMaterialColors(Three, { color: 0x75c5e5 }), metalness: .12, roughness: .08,
           transparent: true, opacity: .52, clearcoat: 1, envMap: environment });
@@ -999,7 +1048,7 @@
         spotlight.position.set(-5, 6, -4); spotlight.target.position.set(0, 1, 0);
         spotlight.castShadow = true; spotlight.shadow.mapSize.set(512, 512); spotlight.shadow.bias = -.0003;
         scene.add(spotlight, spotlight.target);
-        const ground = material({ color: 0x55443e, roughness: .95 });
+        const ground = material({ color: 0x55443e, roughness: .95, ...surface('soil'), bumpScale: .8 });
         const floor = mesh(scene, geometry(new Three.PlaneGeometry(50, 50)), ground, 0, -.2, 0, false);
         floor.rotation.x = -Math.PI / 2;
         const platform = cylinder(scene, dark, 3.4, .2, 0, -.08, 0);
@@ -1042,12 +1091,12 @@
           const suspension = box(rover, metal, .62, .11, .1, side * 1.06, .86, z); suspension.rotation.z = side * -.45;
           const shock = cylinder(rover, dark, .08, .6, side * 1.15, .9, z); shock.rotation.z = side * .35;
         }
-        const wings = [];
+        const wings = [], solarCells = [];
         for (let side of [-1, 1]) {
           const panel = new Three.Group(); panel.position.set(side * 1.72, 1.8, .4); rover.add(panel); wings.push(panel);
           box(panel, dark, 1.15, .08, 2.25, 0, 0, 0);
           for (let x = 0; x < 5; x += 1) for (let z = 0; z < 9; z += 1) {
-            box(panel, solar, .2, .018, .21, (x - 2) * .22, .054, (z - 4) * .24, false);
+            solarCells.push(box(panel, solar, .2, .018, .21, (x - 2) * .22, .054, (z - 4) * .24, false));
           }
           for (let x of [-.58, .58]) box(panel, metal, .028, .035, 2.3, x, .04, 0, false);
           for (let z of [-1.14, 1.14]) box(panel, metal, 1.2, .035, .03, 0, .04, z, false);
@@ -1078,7 +1127,7 @@
           box(claw, metal, .12, .05, .065, side * .07, .25, 0);
         }
         const rockGeometry = geometry(new Three.DodecahedronGeometry(1, 0));
-        const rockMaterial = material({ color: 0x806252, roughness: .93 });
+        const rockMaterial = material({ color: 0x806252, roughness: .93, ...surface('rock'), bumpScale: .3 });
         const rocks = [];
         for (let index = 0; index < 55; index += 1) {
           const angle = index * 2.399, radius = 4.1 + (index % 8) * .55;
@@ -1109,7 +1158,7 @@
         const hintOverlay = document.createElement('div'); hintOverlay.className = 'three-hint-overlay';
         const caption = document.createElement('div'); caption.className = 'three-hint-caption'; caption.setAttribute('role', 'status');
         const marks = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); marks.setAttribute('aria-hidden', 'true');
-        const callouts = ['Металл', 'Стекло', 'Тень'].map(label => {
+        const callouts = ['Металл', 'Стекло', 'Текстура', 'Тень'].map(label => {
           const group = document.createElementNS(marks.namespaceURI, 'g');
           const text = document.createElementNS(marks.namespaceURI, 'text'); text.textContent = label;
           const circle = document.createElementNS(marks.namespaceURI, 'circle'); circle.setAttribute('r', '9');
@@ -1127,7 +1176,7 @@
           if (!threeHintsEnabled) return;
           const compact = height < 220;
           caption.textContent = compact ? 'Разверните сцену для подсказок' : threeDetailed
-            ? 'Подробное · отражения, блики и тени' : 'Простое · без отражений и теней';
+            ? 'Подробное · текстуры, рельеф, отражения и тени' : 'Простое · без текстур, отражений и теней';
           marks.style.visibility = compact ? 'hidden' : 'visible'; marks.setAttribute('viewBox', `0 0 ${width} ${height}`);
           if (compact) return;
           sun.shadow.updateMatrices(sun);
@@ -1160,7 +1209,13 @@
             return ray.intersectObjects(meshes, false)[0]?.object === floor;
           });
           const shadow = visibleShadow?.point;
-          const points = [hubPoint, dome.localToWorld(new Three.Vector3(0, .28, 0)), shadow];
+          const cellPoints = solarCells.map(cell => ({ cell, point: cell.localToWorld(new Three.Vector3(0, .5, 0)) }));
+          cellPoints.sort((a, b) => a.point.distanceTo(camera.position) - b.point.distanceTo(camera.position));
+          const visibleCell = cellPoints.find(value => {
+            const projected = value.point.clone().project(camera); ray.setFromCamera(new Three.Vector2(projected.x, projected.y), camera);
+            return ray.intersectObjects(meshes, false)[0]?.object === value.cell;
+          });
+          const points = [hubPoint, dome.localToWorld(new Three.Vector3(0, .28, 0)), visibleCell?.point, shadow];
           points.forEach((value, index) => {
             if (!value) { callouts[index].group.style.visibility = 'hidden'; return; }
             const point = value.project(camera), { group, text, circle, line } = callouts[index];
@@ -1188,12 +1243,12 @@
           renderer.shadowMap.enabled = threeDetailed;
           host.dataset.threeQuality = threeDetailed ? 'detailed' : 'simple';
           $('three-quality').querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String((button.dataset.quality === 'detailed') === threeDetailed)));
-          $('library-description').textContent = threeDetailed ? 'Материалы, отражения и тени' : 'Матовые материалы · без теней';
+          $('library-description').textContent = threeDetailed ? 'Текстуры, рельеф, отражения и тени' : 'Однотонные материалы · без теней';
           render();
         };
         const syncHints = () => {
           hintOverlay.hidden = !threeHintsEnabled; host.dataset.threeHints = String(threeHintsEnabled);
-          const label = threeHintsEnabled ? 'Выключить подсказки и продолжить анимацию' : 'Показать материалы и тени со стрелками';
+          const label = threeHintsEnabled ? 'Выключить подсказки и продолжить анимацию' : 'Показать текстуры, материалы и тени со стрелками';
           hints.title = label; hints.setAttribute('aria-label', label); hints.setAttribute('aria-pressed', String(threeHintsEnabled));
           render(); resetFps();
         };
@@ -1960,7 +2015,7 @@
         activeScene.pause?.(paused || infoOpen || document.hidden);
         $('scene-name').textContent = scenario === 'compare' ? 'Шар и башня · коснитесь цели для выстрела' : scenario === 'showcase' ? showcaseLabels[mode] : labels[mode];
         $('library-description').textContent = mode.startsWith('phaser') ? phaserRenderingDescription() : descriptions[mode];
-        if (mode.startsWith('three') && scenario === 'showcase') $('library-description').textContent = threeDetailed ? 'Материалы, отражения и тени' : 'Матовые материалы · без теней';
+        if (mode.startsWith('three') && scenario === 'showcase') $('library-description').textContent = threeDetailed ? 'Текстуры, рельеф, отражения и тени' : 'Однотонные материалы · без теней';
         $('scene-stats').hidden = scenario !== 'compare';
         if (scenario === 'compare') $('scene-stats').textContent = 'Сдвинуто: 0/12 · Выстрелов: 0';
         updateInfo();
