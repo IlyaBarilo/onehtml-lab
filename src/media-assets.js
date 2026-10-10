@@ -1,7 +1,6 @@
 // Local user-selected media only. Neither scanning nor attachment executes HTML.
 const mediaCache = new Map();
 const mediaPersisted = new Set();
-const mediaLimits = { file: 8 * 1024 * 1024, document: 16 * 1024 * 1024, cache: 32 * 1024 * 1024, count: 64 };
 const mediaTypes = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', mp3: 'audio/mpeg', ogg: 'audio/ogg', wav: 'audio/wav' };
 let mediaDatabasePromise;
 let mediaBusy = false;
@@ -56,7 +55,7 @@ function mediaSignature(bytes, type) {
 async function validMediaEntry(entry) {
   if (!entry || !/^[a-f\d]{64}$/.test(entry.id) || typeof entry.name !== 'string' || entry.name.length > 170
     || !Object.values(mediaTypes).includes(entry.type) || !(entry.blob instanceof Blob) || entry.blob.type !== entry.type
-    || !entry.blob.size || entry.blob.size > mediaLimits.file) return false;
+    || !entry.blob.size) return false;
   const bytes = new Uint8Array(await entry.blob.arrayBuffer());
   return mediaSignature(bytes, entry.type) && await mediaHash(bytes) === entry.id;
 }
@@ -71,12 +70,10 @@ async function loadMediaCache() {
   try {
     const entries = await Promise.race([mediaTransaction('readonly', store => store.getAll()),
       new Promise((_, reject) => { timeout = setTimeout(() => reject(Error('Media timeout')), 4000); })]);
-    let total = 0;
-    for (const saved of (Array.isArray(entries) ? entries : []).slice(0, mediaLimits.count)) {
-      const entry = saved?.bytes instanceof ArrayBuffer && saved.bytes.byteLength <= mediaLimits.file
+    for (const saved of (Array.isArray(entries) ? entries : [])) {
+      const entry = saved?.bytes instanceof ArrayBuffer
         ? {id:saved.id,name:saved.name,type:saved.type,originalId:saved.originalId,blob:new Blob([saved.bytes],{type:saved.type})} : saved;
-      if (total + (entry?.blob?.size || 0) > mediaLimits.cache || !await validMediaEntry(entry)) continue;
-      total += entry.blob.size;
+      if (!await validMediaEntry(entry)) continue;
       const image = typeof mediaImageInfo === 'function' ? mediaImageInfo(new Uint8Array(await entry.blob.arrayBuffer()),entry.type) : null;
       const originalId = /^[a-f\d]{64}$/.test(entry.originalId || '') && entry.originalId !== entry.id ? entry.originalId : undefined;
       mediaCache.set(entry.id, {id:entry.id,name:entry.name,type:entry.type,blob:entry.blob,image,originalId});
@@ -89,13 +86,11 @@ async function loadMediaCache() {
 async function addMediaFile(file, originalId) {
   const type = mediaTypes[(/\.([a-z]+)$/i.exec(file.name)?.[1] || '').toLowerCase()];
   if (!type) throw Error('Выберите PNG, JPEG, WebP, MP3, OGG или WAV.');
-  if (!file.size || file.size > mediaLimits.file) throw Error('Один файл должен быть не больше 8 МБ.');
+  if (!file.size) throw Error('Файл пуст.');
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (!mediaSignature(bytes, type)) throw Error('Содержимое файла не соответствует его формату.');
   const id = await mediaHash(bytes);
   if (mediaCache.has(id)) return mediaCache.get(id);
-  const total = [...mediaCache.values()].reduce((sum, entry) => sum + entry.blob.size, 0);
-  if (mediaCache.size >= mediaLimits.count || total + file.size > mediaLimits.cache) throw Error('Кэш медиа заполнен: до 64 файлов и 32 МБ. Удалите ненужные файлы.');
   const name = file.name.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 170) || 'media';
   originalId = /^[a-f\d]{64}$/.test(originalId || '') && originalId !== id ? originalId : undefined;
   const entry = { id, name, type, blob: new Blob([bytes], { type }), originalId, image: typeof mediaImageInfo === 'function' ? mediaImageInfo(bytes,type) : null };
@@ -108,14 +103,12 @@ async function addMediaFile(file, originalId) {
 function scanMedia(code) {
   if (mediaScanCache.code === code) return mediaScanCache.result;
   const result = { refs: [], embedded: [], links: [], marker: null, reason: '' };
-  if (code.length > 32_000_000) { result.reason = 'Документ слишком большой для подготовки медиа.'; return result; }
   const tokens = /<!--[\s\S]*?(?:-->|$)|<(script|style|textarea|title|xmp|iframe|noembed|noframes|noscript)\b((?:[^"'<>]|"[^"]*"|'[^']*')*)>([\s\S]*?)(?:<\/\1\s*>|$)|<\/?([a-z][\w:-]*)\b((?:[^"'<>]|"[^"]*"|'[^']*')*)>/gi;
   let templateDepth = 0, audioDepth = 0, markers = 0;
   function add(path, kind, from, to, context) {
     path = decodeScriptUrl(path);
     const embedded = /^data:(?:image\/(?:png|jpeg|webp)|audio\/(?:mpeg|ogg|wav));base64,/i.test(path);
     if (!embedded && !mediaPath(path)) return;
-    if (result.refs.length + result.embedded.length >= 1000) { result.reason = 'В документе больше 1 000 подключений медиа. Привязки не применены.'; return; }
     (embedded ? result.embedded : result.refs).push({ path, kind, from, to, context });
   }
   function css(text, offset, attribute = false) {
@@ -133,10 +126,10 @@ function scanMedia(code) {
       if (!templateDepth && token[0].startsWith('<!--onehtml-media:1:')) {
         markers++;
         try {
-          if (markers !== 1 || token[0].length > 64000) throw Error();
+          if (markers !== 1) throw Error();
           const match = /^<!--onehtml-media:1:([A-Za-z\d+/=]+)-->$/.exec(token[0]);
           const links = JSON.parse(moduleDecode(match?.[1] || ''));
-          if (!Array.isArray(links) || links.length > mediaLimits.count || links.some(link => !link || !mediaPath(link.path) || mediaPath(link.path) !== link.path || !/^[a-f\d]{64}$/.test(link.id))
+          if (!Array.isArray(links) || links.some(link => !link || !mediaPath(link.path) || mediaPath(link.path) !== link.path || !/^[a-f\d]{64}$/.test(link.id))
             || new Set(links.map(link => link.path)).size !== links.length) throw Error();
           result.links = links.map(({path,id}) => ({path,id}));
           result.marker = { from: token.index, to: token.index + token[0].length };
@@ -188,9 +181,6 @@ function attachMedia(code, path, entry) {
   if (!mediaPath(path) || !refs.length) throw Error('В текущем HTML или стилях нет такого относительного пути.');
   if (refs.some(ref => !entry.type.startsWith(ref.kind + '/'))) throw Error('Тип файла не подходит к выбранному подключению.');
   const links = [...scan.links.filter(link => link.path !== path && scan.refs.some(ref => ref.path === link.path)), { path, id: entry.id }];
-  if (links.length > mediaLimits.count) throw Error('В документе допускается до 64 привязок.');
-  const size = [...new Set(links.map(link => link.id))].reduce((sum,id) => sum + (mediaCache.get(id)?.blob.size || 0), 0);
-  if (size > mediaLimits.document) throw Error('Медиа одного документа должны занимать не больше 16 МБ.');
   const marker = `<!--onehtml-media:1:${moduleBase64(JSON.stringify(links))}-->`;
   if (scan.marker) return moduleReplace(code, [{ ...scan.marker, text: marker }]);
   // Keep the doctype first, otherwise the exported document would use quirks mode.
@@ -211,8 +201,6 @@ async function mediaDataUrl(entry) {
 async function prepareMediaHtml(code, enabled = true) {
   if (!enabled || !code.includes('<!--onehtml-media:1:')) return { html: code, media: [], missingMedia: [], mediaReason: '' };
   const scan = scanMedia(code), refs = mediaBindings(code), changes = [], media = [], missingMedia = [];
-  const ids = new Set(refs.filter(ref => ref.entry).map(ref => ref.id));
-  if ([...ids].reduce((sum,id) => sum + mediaCache.get(id).blob.size,0) > mediaLimits.document) return {html:code,media:[],missingMedia:[],mediaReason:'Медиа документа превышают 16 МБ.'};
   for (const ref of refs.filter(ref => ref.id)) {
     if (!ref.entry) { if (!missingMedia.includes(ref.path)) missingMedia.push(ref.path); continue; }
     const url = await mediaDataUrl(ref.entry);
@@ -236,8 +224,19 @@ async function prepareApplicationFiles(code, filename, media = true) {
 }
 
 function mediaPreparationWarning(prepared) {
-  const message = [prepared.mediaReason, prepared.missingMedia?.length ? `Нет выбранных файлов: ${prepared.missingMedia.join(', ')}. Выберите их в «Ресурсах».` : ''].filter(Boolean).join(' ');
-  if (message) inform(message, true, true);
+  const missing = prepared.missingMedia?.length;
+  const message = [prepared.mediaReason, missing ? `Нет выбранных файлов: ${prepared.missingMedia.join(', ')}. Выберите их в «Ресурсах».` : '', resourceSizeWarning(new Blob([prepared.html]).size, 'document')].filter(Boolean).join(' ');
+  if (message) inform(message, Boolean(prepared.mediaReason || missing), true);
+}
+
+function mediaSizeWarning(entry) {
+  const warning = resourceSizeWarning(entry.blob?.size);
+  const pixels = (entry.image?.width || 0) * (entry.image?.height || 0);
+  return [warning, pixels > 40_000_000 ? 'Высокое разрешение: обработка потребует много памяти.' : '',
+    (warning || pixels > 40_000_000) && entry.type?.startsWith('image/') ? 'Можно уменьшить изображение кнопкой «Уменьшить».' : ''].filter(Boolean).join(' ');
+}
+function mediaCacheSizeWarning() {
+  return resourceSizeWarning([...mediaCache.values()].reduce((sum, entry) => sum + entry.blob.size, 0), 'cache');
 }
 
 function releaseMediaPreviews() {
@@ -278,7 +277,7 @@ function renderMediaAssets() {
   if (key === mediaRendered) return;
   releaseMediaPreviews(); mediaRendered = key;
   document.querySelector('#media-add').disabled = mediaBusy || modeBusy;
-  document.querySelector('#media-feedback').textContent = mediaFeedback;
+  document.querySelector('#media-feedback').textContent = [mediaFeedback, mediaCacheSizeWarning()].filter(Boolean).join(' ');
   const scan = scanMedia(source), refs = mediaBindings(source);
   const total = entries.reduce((sum,entry) => sum + entry.blob.size,0);
   document.querySelector('#media-summary').textContent = `${formatUIInteger(entries.length)} файлов · ${diagnosticSize(total)} в кэше`;
@@ -292,6 +291,7 @@ function renderMediaAssets() {
     const note = document.createElement('p'); note.className = 'diagnostic-note';
     note.textContent = `${diagnosticSize(entry.blob.size)} · ${mediaPersisted.has(entry.id) ? 'В браузере' : 'Только этот сеанс'}${scan.links.some(link => link.id === entry.id) ? ' · Привязан к коду' : ''}`;
     row.append(name,note); li.append(row);
+    appendResourceWarning(row, mediaSizeWarning(entry));
     const url = URL.createObjectURL(entry.blob); mediaObjectUrls.add(url);
     if (entry.type.startsWith('image/')) {
       const img=document.createElement('img');img.loading='lazy';img.decoding='async';img.src=url;img.alt=entry.name;img.className='media-thumbnail';
@@ -348,11 +348,11 @@ function initMediaAssets() {
     if(!expertMode || mediaBusy || !files.length)return;
     mediaBusy=true;mediaFeedback='Добавляю файлы…';renderMediaAssets();renderPromptMedia();
     let added=0;const errors=[];
-    for(const file of files.slice(0,mediaLimits.count)) {
+    for(const file of files) {
+      if (resourceSizeWarning(file.size)) { mediaFeedback=`Добавляю ${file.name}. ${resourceSizeWarning(file.size)}`; mediaRendered=null; promptMediaRendered=null; renderMediaAssets(); renderPromptMedia(); }
       try {const entry=await addMediaFile(file);selectUploadedPromptMedia(file,entry);added++;}catch(error){errors.push(`${file.name}: ${error.message}`);}
     }
     mediaBusy=false;mediaFeedback=`Добавлено: ${formatUIInteger(added)}.${errors.length?' '+errors.join(' '):''}`;
-    if(files.length>mediaLimits.count)mediaFeedback+=' Остальные файлы не добавлены: выберите до 64 файлов.';
     promptMediaVersion++;mediaRendered=null;promptMediaRendered=null;diagnosticSnapshot=null;updateDiagnostics();updateAiControls();
   });
   document.querySelector('#media-delete-no').addEventListener('click',()=>{mediaDelete=null;document.querySelector('#media-delete-confirm').hidden=true;});

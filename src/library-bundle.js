@@ -7,12 +7,23 @@ let libraryDatabasePromise;
 const libraryScriptTag = /<!--[\s\S]*?-->|<(style|textarea|title|xmp|iframe|noembed|noframes)\b(?:[^"'<>]|"[^"]*"|'[^']*')*>[\s\S]*?<\/\1\s*>|<script\b((?:[^"'<>]|"[^"]*"|'[^']*')*)>[\s\S]*?<\/script\s*>/gi;
 const localDocumentScopes = new Map();
 let localSessionScope = 0;
-const maxLibraryBytes = 4 * 1024 * 1024;
-const maxLicenseBytes = 64 * 1024;
+// These are advisory thresholds, never download or storage limits.
+const resourceWarningBytes = { library: 4 * 1024 * 1024, file: 8 * 1024 * 1024, document: 16 * 1024 * 1024, cache: 32 * 1024 * 1024, huge: 64 * 1024 * 1024 };
+function resourceSizeWarning(bytes, kind = 'file') {
+  if (!Number.isFinite(bytes) || bytes <= resourceWarningBytes[kind]) return '';
+  const size = (bytes / 1024 / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 });
+  return bytes > resourceWarningBytes.huge
+    ? `Очень большой объём: ${size} МБ. Браузеру может не хватить памяти.`
+    : `Большой объём: ${size} МБ. Загрузка, запуск и сохранение могут занять больше времени.`;
+}
+function appendResourceWarning(container, message) {
+  if (!message) return;
+  const note = document.createElement('span'); note.className = 'resource-warning'; note.textContent = message;
+  container.append(note);
+}
 
 function validLibraryAsset(source, license) {
-  return typeof source === 'string' && source.length > 0 && source.length <= maxLibraryBytes
-    && typeof license === 'string' && license.length <= maxLicenseBytes
+  return typeof source === 'string' && source.length > 0 && typeof license === 'string'
     && !/<\/script/i.test(source) && !/-->/.test(license)
     && license.includes('Permission is hereby granted')
     && license.includes('THE SOFTWARE IS PROVIDED') && /Copyright/i.test(license);
@@ -335,27 +346,9 @@ function localLibraryLicense(source) {
   return [...source.matchAll(/\/\*[\s\S]*?\*\//g)].map(match => match[0].slice(2, -2).replace(/^!/, '').trim()).find(license => validLibraryAsset(source, license)) || '';
 }
 
-async function readLimitedResponse(response, maxBytes) {
+async function readLibraryResponse(response) {
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const announced = Number(response.headers.get('content-length'));
-  if (announced > maxBytes) throw new Error('size limit');
-  if (!response.body) {
-    const text = await response.text();
-    if (new TextEncoder().encode(text).length > maxBytes) throw new Error('size limit');
-    return text;
-  }
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let total = 0;
-  let text = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > maxBytes) { await reader.cancel(); throw new Error('size limit'); }
-    text += decoder.decode(value, { stream: true });
-  }
-  return text + decoder.decode();
+  return response.text();
 }
 
 async function downloadLibrary(reference) {
@@ -365,8 +358,8 @@ async function downloadLibrary(reference) {
     fetch(reference.licenseUrl, { credentials: 'omit', redirect: 'error' })
   ]);
   const [source, license] = await Promise.all([
-    readLimitedResponse(sourceResponse, maxLibraryBytes),
-    readLimitedResponse(licenseResponse, maxLicenseBytes)
+    readLibraryResponse(sourceResponse),
+    readLibraryResponse(licenseResponse)
   ]);
   if (!source.trim() || !validLibraryAsset(source, license)) throw new Error('invalid library or license');
   const entry = { key: reference.catalogKey || reference.key, title: reference.title, source, license: license.trim(),

@@ -15,5 +15,6 @@ assert.equal(info(webp,'image/webp').width,300);assert.equal(info(webp,'image/we
 const lossless=Buffer.alloc(26);lossless.write('RIFF');lossless.write('WEBPVP8L',8);lossless.writeUInt32LE(5,16);lossless[20]=47;lossless.writeUInt32LE(99+(49<<14),21);assert.equal(info(lossless,'image/webp').width,100);assert.equal(info(lossless,'image/webp').height,50);
 const lossy=Buffer.alloc(30);lossy.write('RIFF');lossy.write('WEBPVP8 ',8);lossy.writeUInt32LE(10,16);lossy.writeUInt16LE(100,26);lossy.writeUInt16LE(50,28);assert.equal(info(lossy,'image/webp').width,100);assert.equal(info(lossy,'image/webp').height,50);
 assert.equal(info(Buffer.alloc(3),'image/png'),null);assert.equal(info(Buffer.alloc(0),'image/jpeg'),null);assert.equal(info(Buffer.from('not an image'),'audio/wav'),null);
-assert(canPrepareImage({image:info(staticPng,'image/png')}));assert(!canPrepareImage({image:info(png,'image/png')}));assert(!canPrepareImage({image:{width:40000,height:40000}}));assert(!canPrepareImage({image:null}));
-console.log('Image metadata: PNG/APNG, JPEG/EXIF rotation, WebP variants/animation, truncation and processing limits passed.');
+assert(canPrepareImage({image:info(staticPng,'image/png')}));assert(!canPrepareImage({image:info(png,'image/png')}));assert(canPrepareImage({image:{width:40000,height:40000}}));assert(!canPrepareImage({image:null}));
+assert(!canPrepareImage({image:{width:0,height:1}}));assert(!canPrepareImage({image:{width:Infinity,height:1}}));
+console.log('Image metadata: PNG/APNG, JPEG/EXIF rotation, WebP variants/animation, truncation and large-image preparation passed.');

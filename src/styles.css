@@ -284,7 +284,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .save-library-option input { width: 20px; height: 20px; flex: 0 0 20px; margin: 0; accent-color: #2d6cdf; }
 .save-library-hint { margin: 0; color: #60748f; font-size: 13px; line-height: 1.4; }
 .save-library-mode { display: block; width: 100%; min-height: 44px; margin: 8px 0; padding: 8px 10px; border: 1px solid #b9cbe3; border-radius: 6px; background: #fcfdff; color: #253d5a; font-family: inherit; font-size: 16px; }
-.save-library-option.is-disabled, .save-library-option.is-disabled ~ .save-library-hint { opacity: .45; cursor: default; }
+.save-library-option.is-disabled, .save-library-option.is-disabled ~ .save-library-hint:not(#save-result-size) { opacity: .45; cursor: default; }
 #save-dialog .dialog-actions { margin-top: 16px; }
 #save-dialog { overflow: hidden; top: calc(var(--save-viewport-top, 0px) + max(12px, env(safe-area-inset-top))); max-height: calc(var(--save-viewport-height, 100dvh) - max(12px, env(safe-area-inset-top)) - 12px); }
 #save-form { display: flex; flex-direction: column; max-height: calc(var(--save-viewport-height, 100dvh) - max(12px, env(safe-area-inset-top)) - 60px); }
@@ -673,6 +673,8 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .diagnostic-error-meta { font-size: 13px; color: #647791; }
 .diagnostic-error-row.is-warning { color: #855b16; }
 .runtime-error.is-warning { background: #fff8e8; border-color: #e5cf9d; color: #77511b; }
+.resource-warning { display: block; color: #855b16; overflow-wrap: anywhere; }
+.theme-dark .resource-warning, .theme-dark .save-library-hint.resource-warning { color: #ead4a4; }
 .diagnostic-library-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #d7e2f0; }
 .diagnostic-library-row > div { min-width: 0; }
 .diagnostic-library-row strong { font-size: 16px; overflow-wrap: anywhere; }
@@ -895,7 +897,7 @@ dialog .save-library-option { display: flex; align-items: center; gap: 10px; min
 .theme-dark :is(.toolbar, .expert-tools, #edit-inline, #edit-quick, #syntax-caption, .panel-heading, .history-heading, .comparison-heading, .ai-footer, .library-extraction-footer, #preview-tools) { background: #202c3d; border-color: #3b4b61; color: #b4c7e1; }
 .theme-dark :is(.work-panel, .history-view, .library-extraction, .comparison, dialog, .workspace, #alternative-editor, #comparison-editor, #code-colors, #ai-output, #copy-text, #edit-snippet) { background: #171e2a; color: #d9e2ef; border-color: #3b4b61; }
 .theme-dark :is(h1, h2, h3, .comparison-heading strong) { color: #e1e9f5; }
-.theme-dark :is(h1 span, .app-version, .draft-status, .dialog-copy, dialog label, .save-library-hint, .guide-panel p, .example-card span, .library-extraction-intro, .extraction-note, .library-extraction-footer p, .history-empty, .help-intro, .help-note, .edit-note, #edit-result, #ai-dialog #ai-summary, #ai-dialog #ai-libraries, #ai-dialog #ai-error) { color: #a9b8cc; }
+.theme-dark :is(h1 span, .app-version, .draft-status, .dialog-copy, dialog label, .save-library-hint:not(.resource-warning), .guide-panel p, .example-card span, .library-extraction-intro, .extraction-note, .library-extraction-footer p, .history-empty, .help-intro, .help-note, .edit-note, #edit-result, #ai-dialog #ai-summary, #ai-dialog #ai-libraries, #ai-dialog #ai-error) { color: #a9b8cc; }
 .theme-dark :is(.service-links a, .help-details summary, .history-action, .comparison-legend) { color: #a5c6fb; }
 .theme-dark :is(.service-list li, .history-row, .help-details, .edit-section + .edit-section, .library-extraction-row, .comparison-legend, #edit-display-controls) { border-color: #3b4b61; }
 .theme-dark .expert-resource-actions { border-color: #3b4b61; }

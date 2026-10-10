@@ -26,7 +26,7 @@ function promptMediaPath(path) {
   try { const name=decodeURIComponent(path); return promptMediaName(name) ? name : ''; } catch { return ''; }
 }
 function promptMediaReadFiles(value) {
-  if (!Array.isArray(value) || value.length > mediaLimits.count) return [];
+  if (!Array.isArray(value)) return [];
   const names=new Set();
   return value.filter(file=>file && promptMediaName(file.name) && /^[a-f\d]{64}$/.test(file.id) && !names.has(file.name) && names.add(file.name))
     .map(({name,id})=>({name,id}));
@@ -88,7 +88,6 @@ async function planPromptMedia(code,selected,shorten) {
   const add=(name,id)=>{
     // An explicit selection of another copy with the same name is intentional.
     if (!files.has(name))files.set(name,id);
-    if(files.size>mediaLimits.count)throw Error('В запросе допускается до 64 медиафайлов.');
   };
   let missing=false;
   for(const ref of mediaBindings(code).filter(ref=>ref.id)) {
@@ -102,19 +101,15 @@ async function planPromptMedia(code,selected,shorten) {
   }
   if(scan.marker && !missing)changes.push({...scan.marker,text:''});
   if(shorten) {
-    let total=0;const seen=new Set();
     for(const ref of scan.embedded) {
       try {
         const match=/^data:(image\/(?:png|jpeg|webp)|audio\/(?:mpeg|ogg|wav));base64,([A-Za-z\d+/=\s]+)$/i.exec(ref.path);
         if(!match)continue;
         const base64=match[2].replace(/\s/g,'');
-        if(base64.length>Math.ceil(mediaLimits.file/3)*4)throw Error('Медиа больше 8 МБ.');
         const binary=atob(base64),bytes=Uint8Array.from(binary,char=>char.charCodeAt(0)),type=match[1].toLowerCase();
         if(!type.startsWith(ref.kind+'/'))throw Error('Тип data URL не подходит к подключению.');
-        if(!bytes.length || bytes.length>mediaLimits.file || !mediaSignature(bytes,type))throw Error('Не удалось проверить формат медиа.');
+        if(!bytes.length || !mediaSignature(bytes,type))throw Error('Не удалось проверить формат медиа.');
         const id=await mediaHash(bytes);
-        if(!seen.has(id)){seen.add(id);total+=bytes.length;}
-        if(total>mediaLimits.document)throw Error('Для сокращения медиа допускается до 16 МБ.');
         let entry=mediaCache.get(id),name=selected.find(file=>file.id===id)?.name || entry?.name;
         if(!promptMediaName(name)) {
           name=promptMediaAutoName(type,[...files.keys()]);
@@ -127,7 +122,6 @@ async function planPromptMedia(code,selected,shorten) {
   const result=[...files].map(([name,id])=>({name,id}));
   const unavailable=result.filter(file=>!mediaCache.has(file.id));
   if(unavailable.length)throw Object.assign(Error('Файл отсутствует: '+unavailable.map(file=>file.name).join(', ')+'. В «Медиа» добавьте его снова или снимите отметку включения в запрос.'),{missingMedia:true});
-  if([...new Set(result.map(file=>file.id))].reduce((sum,id)=>sum+mediaCache.get(id).blob.size,0)>mediaLimits.document)throw Error('Медиа запроса должны занимать не больше 16 МБ.');
   return {html:moduleReplace(code,changes),files:result,notes:[...new Set(notes)]};
 }
 
@@ -139,7 +133,7 @@ function promptMediaIntro(files) {
 }
 
 async function promptClipboardImage(blob) {
-  if (!blob.size || blob.size > mediaLimits.file) throw Error('Изображение должно быть не больше 8 МБ.');
+  if (!blob.size) throw Error('Изображение пустое.');
   const bytes = new Uint8Array(await blob.arrayBuffer());
   const type = ['image/png','image/jpeg','image/webp'].find(type=>mediaSignature(bytes,type));
   if (!type || (blob.type && blob.type !== 'application/octet-stream' && blob.type !== type)) throw Error('Вставьте изображение PNG, JPEG или WebP. Формат должен соответствовать содержимому.');
@@ -162,12 +156,11 @@ async function pastePromptImages(read) {
     const blobs=await read();
     if (!blobs.length) throw Error('В буфере нет изображения PNG, JPEG или WebP. Скопируйте саму картинку или выберите файл.');
     let added=0;const errors=[];
-    for (const blob of blobs.slice(0,mediaLimits.count)) {
+    for (const blob of blobs) {
       try {const file=await promptClipboardImage(blob),entry=await addMediaFile(file);selectUploadedPromptMedia(file,entry);added++;}
       catch(error){errors.push(error.message);}
     }
     promptMediaFeedback=`Добавлено изображений: ${formatUIInteger(added)}.${errors.length?' '+[...new Set(errors)].join(' '):''}`;
-    if (blobs.length>mediaLimits.count) promptMediaFeedback+=' Остальные не добавлены: вставляйте до 64 изображений.';
     if (added) {document.querySelector('#media-paste-fallback').hidden=true;document.querySelector('#media-paste-field').value='';}
   } catch(error) {
     const denied=['NotAllowedError','SecurityError','NotFoundError'].includes(error.name);
@@ -191,7 +184,7 @@ function renderPromptMedia() {
   releasePromptMediaPreviews();promptMediaRendered=key;
   document.querySelector('#media-prompt-add').disabled=mediaBusy || modeBusy;
   document.querySelector('#media-prompt-paste').disabled=mediaBusy || modeBusy;
-  document.querySelector('#media-prompt-feedback').textContent=promptMediaFeedback || mediaFeedback;
+  document.querySelector('#media-prompt-feedback').textContent=[promptMediaFeedback || mediaFeedback, mediaCacheSizeWarning()].filter(Boolean).join(' ');
   const names=promptMediaFiles().map(file=>file.name).join('\n');
   const field=document.querySelector('#media-prompt-names');field.value=names;field.rows=Math.min(5,Math.max(1,promptMediaSelection.size));
   document.querySelector('#media-prompt-copy').disabled=!names || mediaBusy;
@@ -204,6 +197,7 @@ function renderPromptMedia() {
     const text=document.createElement('span'),title=document.createElement('strong');title.textContent=name;
     const note=document.createElement('span');note.className='diagnostic-note';note.textContent=entry.blob ? [mediaDimensions(entry),diagnosticSize(entry.blob.size)].filter(Boolean).join(' · ')+(mediaPersisted.has(entry.id)?'':' · Только этот сеанс') : 'Файл отсутствует — выберите снова';text.append(title,note);label.append(check,text);li.append(label);
     if(!entry.blob)return li;
+    appendResourceWarning(text,mediaSizeWarning(entry));
     const actions=document.createElement('div');actions.className='media-prompt-item-actions diagnostic-actions';
     const copy=diagnosticButton('Копировать имя',()=>void copyOrSelect(name,'Имя файла скопировано.'));actions.append(copy);
     if(entry.type.startsWith('image/')) {const resize=diagnosticButton('Уменьшить',()=>openImageEdit(entry,name));resize.disabled=mediaBusy;actions.append(resize);}
@@ -232,7 +226,7 @@ function initPromptMedia() {
   document.querySelector('#media-prompt-paste').addEventListener('click',()=>void pastePromptImages(async()=>{
     if (!navigator.clipboard?.read) throw Error('В этом браузере кнопка не может прочитать изображение. Попробуйте обычную вставку в поле ниже или «Добавить файлы».');
     const items=await navigator.clipboard.read(),blobs=[];
-    for (const item of items.slice(0,mediaLimits.count)) {
+    for (const item of items) {
       const type=['image/png','image/jpeg','image/webp'].find(type=>item.types.includes(type));
       if(type)blobs.push(await item.getType(type));
     }

@@ -178,6 +178,7 @@ function renderDiagnosticLibraries(rows) {
     : 'Подключений библиотек в HTML не найдено. Динамические загрузки из JavaScript не разбираются.';
   list.replaceChildren(...rows.map(item => {
     const row = diagnosticRow(item.title, diagnosticLibraryDescription(item));
+    appendResourceWarning(row, resourceSizeWarning(item.bytes, 'library'));
     if (item.reference && !item.usedKey) {
       const ref = item.reference;
       row.append(diagnosticButton(ref.url ? 'Загрузить…' : 'Выбрать файл…', () => {
@@ -195,7 +196,7 @@ function renderDiagnosticCache() {
   const entries = [...libraryCache.values()];
   const total = entries.reduce((sum, entry) => sum + diagnosticCacheBytes(entry), 0);
   document.querySelector('#diagnostic-cache-size').textContent = entries.length
-    ? `${formatUIInteger(entries.length)} копий · JS и лицензии: ${diagnosticSize(total)}` : 'Сохранённых копий нет.';
+    ? `${formatUIInteger(entries.length)} копий · JS и лицензии: ${diagnosticSize(total)}${resourceSizeWarning(total, 'cache') ? ' · ' + resourceSizeWarning(total, 'cache') : ''}` : 'Сохранённых копий нет.';
   const blocked = diagnosticCacheBusy || Boolean(pendingLibraryAction) || !diagnosticReportReady;
   document.querySelector('#diagnostic-cache-clear').disabled = !entries.length || blocked;
   document.querySelector('#diagnostic-cache-list').replaceChildren(...entries.map(entry => {
@@ -203,6 +204,7 @@ function renderDiagnosticCache() {
     const persisted = persistedLibraries.get(entry.key) === entry;
     const row = diagnosticRow(entry.title || entry.filename || 'Библиотека',
       `${diagnosticSize(diagnosticCacheBytes(entry))} · ${persisted ? 'В браузере' : 'Только этот сеанс'}${used ? ' · Нужна текущему коду' : ''}\n${entry.sourceUrl || entry.localPath || entry.originalUrl || entry.filename || ''}`);
+    appendResourceWarning(row, resourceSizeWarning(diagnosticCacheBytes(entry), 'library'));
     const button = diagnosticButton('Удалить', () => confirmDiagnosticDelete([entry]));
     button.disabled = blocked; row.append(button); return row;
   }));

@@ -89,7 +89,7 @@ function closeImageEdit() {
 
 function imageEditMessage(text) { document.querySelector('#media-image-feedback').textContent = text; }
 
-function canPrepareImage(entry) { return Boolean(entry?.image && !entry.image.animated && entry.image.width * entry.image.height <= 40_000_000 && Math.max(entry.image.width, entry.image.height) <= 16384); }
+function canPrepareImage(entry) { return Boolean(entry?.image && !entry.image.animated && Number.isFinite(entry.image.width) && Number.isFinite(entry.image.height) && entry.image.width > 0 && entry.image.height > 0); }
 
 function openImageEdit(entry, name = entry.name) {
   if (!expertMode || mediaBusy || modeBusy || !mediaCache.has(entry.id)) return;
@@ -99,7 +99,7 @@ function openImageEdit(entry, name = entry.name) {
   const panel = document.querySelector('#media-image-edit'); panel.hidden = false;
   document.querySelector('#media-image-title').textContent = name;
   document.querySelector('#media-image-before').src = mediaImageUrl(entry.blob);
-  document.querySelector('#media-image-before-info').textContent = [mediaDimensions(entry), imageFileSize(entry.blob.size)].filter(Boolean).join(' · ');
+  document.querySelector('#media-image-before-info').textContent = [mediaDimensions(entry), imageFileSize(entry.blob.size), mediaSizeWarning(entry)].filter(Boolean).join(' · ');
   document.querySelector('#media-image-after-info').textContent = 'Подготовьте уменьшенную копию';
   document.querySelector('#media-image-size').value = '2048';
   document.querySelector('#media-image-format').value = 'image/webp';
@@ -157,7 +157,7 @@ async function previewImageCopy() {
   try {
     const image = await decodeMediaImage(edit.entry.blob);
     if (revision !== imageEditRevision || imageEdit !== edit) return;
-    if (!image.naturalWidth || image.naturalWidth * image.naturalHeight > 40_000_000) throw Error('Изображение слишком большое для обработки в браузере.');
+    if (!image.naturalWidth || !image.naturalHeight) throw Error('Не удалось определить размеры изображения.');
     const scale = limit ? Math.min(1, limit / Math.max(image.naturalWidth, image.naturalHeight)) : 1;
     canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
     const context = canvas.getContext('2d'); if (!context) throw Error('Обработка изображений недоступна.');
@@ -165,7 +165,7 @@ async function previewImageCopy() {
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise(resolve => canvas.toBlob(resolve, type, quality));
     if (!blob || blob.type !== type) throw Error('Браузер не поддерживает этот формат. Выберите «Исходный формат».');
-    if (!blob.size || blob.size > mediaLimits.file) throw Error('Результат больше 8 МБ. Уменьшите размер или качество.');
+    if (!blob.size) throw Error('Браузер создал пустое изображение.');
     const bytes = new Uint8Array(await blob.arrayBuffer()), id = await mediaHash(bytes);
     if (revision !== imageEditRevision || imageEdit !== edit) return;
     const previousUrl = document.querySelector('#media-image-after').getAttribute('src');
@@ -197,8 +197,6 @@ async function applyImageCopy(restore = false) {
     const planned = { ...target, originalId: restore ? target.originalId : edit.entry.originalId || edit.entry.id };
     let next = edit.before;
     if (applyCode) for (const path of new Set(mediaBindings(next).filter(ref => ref.id === edit.entry.id).map(ref => ref.path))) next = attachMedia(next, path, planned);
-    const ids = new Set(scanMedia(next).links.map(link => link.id));
-    if ([...ids].reduce((sum, id) => sum + (id === target.id ? target.blob.size : mediaCache.get(id)?.blob.size || 0), 0) > mediaLimits.document) throw Error('Медиа документа превышают 16 МБ.');
     const entry = restore ? target : await addMediaFile({ name: target.name, size: target.blob.size, arrayBuffer: () => target.blob.arrayBuffer() }, planned.originalId);
     if (!current()) throw Error('Код или выбор медиа изменились. Подготовленная копия сохранена в списке; откройте её для применения.');
     const selected = [...promptMediaSelection].filter(([, id]) => id === edit.entry.id);

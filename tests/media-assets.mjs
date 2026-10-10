@@ -50,7 +50,7 @@ try {
   const browser=await engine.launch();
   try {
    const api=await browser.newPage();await api.goto(host);
-   await api.addScriptTag({content:scripts+'\nwindow.mediaApi={scanMedia,mediaCache,mediaPersisted,mediaTransaction,loadMediaCache,addMediaFile,attachMedia,prepareMediaHtml,prepareApplicationHtml,prepareApplicationFiles,mediaLimits,resolvedLibraryMatches,importLocalLibrary};'});
+   await api.addScriptTag({content:scripts+'\nwindow.mediaApi={scanMedia,mediaCache,mediaPersisted,mediaTransaction,loadMediaCache,addMediaFile,attachMedia,prepareMediaHtml,prepareApplicationHtml,prepareApplicationFiles,resolvedLibraryMatches,importLocalLibrary};'});
    const png=await image(api,'#ff2244'), blue=await image(api,'#2255ff');
    const checks=await api.evaluate(async({png,wav,game,license})=>{
     const a=mediaApi,bytes=base64=>Uint8Array.from(atob(base64),c=>c.charCodeAt(0));
@@ -60,7 +60,7 @@ try {
     const prepared=await a.prepareApplicationHtml(attached),exact=await a.prepareApplicationHtml(attached,false,false);
     const files=await a.prepareApplicationFiles(attached,'game.html');
     const kinds=a.scanMedia(`<!-- <img src="fake.png"> --><script>const x='<img src="js.png">';</script><template><template><img src="t.png"></template><img src="t2.png"></template><noscript><img src="n.png"></noscript><style>/*url(comment.png)*/ p{content:'url(string.png)';background:url('real.png')}</style><p style="background:url('inline.png')"></p><img src="actual.png" src="duplicate.png"><audio><source src="voice.wav"></audio>`).refs.map(ref=>ref.path);
-    const invalid=[];for(const file of [new File(['<svg/>'],'fake.png'),new File(['x'],'no-extension'),new File([new Uint8Array(a.mediaLimits.file+1)],'large.wav')])try{await a.addMediaFile(file);}catch(error){invalid.push(error.message);}
+     const invalid=[];for(const file of [new File(['<svg/>'],'fake.png'),new File(['x'],'no-extension'),new File([new Uint8Array(8*1024*1024+1)],'large.wav')])try{await a.addMediaFile(file);}catch(error){invalid.push(error.message);}
     const tampered=attached.replace('<!--onehtml-media:1:','<!--onehtml-media:1:!');
     const mark=attached.slice(a.scanMedia(attached).marker.from,a.scanMedia(attached).marker.to);
     const duplicated=await a.prepareMediaHtml(attached+mark);
@@ -74,16 +74,15 @@ try {
     await a.importLocalLibrary(ref,'window.mediaLibrary=1;',license);
     const combinedPrepared=await a.prepareApplicationHtml(combined);
     const combinedFiles=await a.prepareApplicationFiles(combined,'game.html');
-    // Quota and active-document limits are independent, and duplicates take no extra space.
-    a.mediaLimits.cache=1;let full='';try{await a.addMediaFile(new File([bytes(png),new Uint8Array([1])],'new.png'));}catch(error){full=error.message;}a.mediaLimits.cache=32*1024*1024;
-    a.mediaLimits.document=1;let large='';try{a.attachMedia(game,'./images/photo.png',img);}catch(error){large=error.message;}a.mediaLimits.document=16*1024*1024;
+     const count=a.mediaCache.size,duplicate=await a.addMediaFile(new File([bytes(png)],'copy.png'));
+     const deduplicated=duplicate.id===img.id && a.mediaCache.size===count;
     // A corrupt derived URL in IndexedDB must never be trusted after restoration.
     await a.mediaTransaction('readwrite',store=>store.put({id:img.id,name:img.name,type:img.type,bytes:bytes(png).buffer,dataUrl:'javascript:alert(1)'}));
     a.mediaCache.clear();a.mediaPersisted.clear();await a.loadMediaCache();
     const restored=await a.prepareMediaHtml(attached);
     let mismatch='';try{a.attachMedia(game,'./images/photo.png',snd);}catch(error){mismatch=error.message;}
     a.mediaCache.delete(img.id);const missing=await a.prepareMediaHtml(attached);
-    return {attached,prepared,exact,files,kinds,invalid,tampered:await a.prepareMediaHtml(tampered),duplicated,inert,encodedPrepared,inlinePrepared,mismatch,missing,combinedPrepared,combinedFiles,full,large,restored};
+     return {attached,prepared,exact,files,kinds,invalid,tampered:await a.prepareMediaHtml(tampered),duplicated,inert,encodedPrepared,inlinePrepared,mismatch,missing,combinedPrepared,combinedFiles,deduplicated,restored};
    },{png:png.toString('base64'),wav:wav.toString('base64'),game,license});
    assert.equal(checks.prepared.media.length,2);assert.equal(checks.prepared.missingMedia.length,0);
    assert(!checks.prepared.html.includes('onehtml-media:1:'));
@@ -98,7 +97,7 @@ try {
    assert.equal(checks.combinedPrepared.missingLibraries.length,0,'Media must not change local-library scope');
    assert.match(checks.combinedPrepared.html,/window.mediaLibrary=1/);assert.match(checks.combinedPrepared.html,/data:image\/png/);
    assert.equal(checks.combinedFiles.files.length,2);assert.match(checks.combinedFiles.html,/src="\.\/custom.js"/);
-   assert(checks.full);assert(checks.large);assert(!checks.restored.html.includes('javascript:alert'));
+    assert(checks.deduplicated);assert(!checks.restored.html.includes('javascript:alert'));
    await api.close();
    for(const url of urls)for(const width of [320,1365])for(const editor of ['native','codemirror']) {
     const context=await browser.newContext({viewport:{width,height:844},hasTouch:width===320});context.setDefaultTimeout(10000);
@@ -217,10 +216,11 @@ try {
    await abortedPage.evaluate(()=>{const remove=IDBObjectStore.prototype.delete;IDBObjectStore.prototype.delete=function(...args){const result=remove.apply(this,args);if(this.name==='assets')this.transaction.abort();return result;};});
    await abortedPage.locator('#media-list').getByRole('button',{name:'Удалить',exact:true}).click();await abortedPage.locator('#media-delete-yes').click();await abortedPage.locator('#media-feedback').getByText('Не удалось удалить файл из браузера. Он остался в списке.',{exact:true}).waitFor();
    assert.equal(await abortedPage.locator('#media-list .media-row').count(),1);await abortedPage.reload();await abortedPage.waitForFunction(()=>!document.querySelector('#code').disabled);await resources(abortedPage);assert.equal(await abortedPage.locator('#media-list .media-row').count(),1);await aborted.close();
-   console.log(`${name}: signature/size/manifest guards, library composition, quota fallback and transactional deletion passed.`);
+    console.log(`${name}: signature/manifest guards, library composition, deduplication, quota fallback and transactional deletion passed.`);
   }finally{await browser.close();}
  }
 }finally{server.close();}
 console.log(`Media screenshots: ${scratch}`);
 await import('./media-prompts.mjs');
 await import('./media-images.mjs');
+await import('./large-resources.mjs');

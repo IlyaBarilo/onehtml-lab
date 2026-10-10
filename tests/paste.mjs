@@ -49,6 +49,7 @@ async function createApp(clipboard) {
     prepareApplicationHtml: code => ({ html: code, bundledLibraries: [], missingLibraries: [], media: [], missingMedia: [] }),
     mediaPreparationWarning() {},
     bundledLibraryLabels: () => [],
+    Blob, resourceSizeWarning: () => '',
     loadLibraryCache: async () => {},
     loadMediaCache: async () => {},
     loadPromptMediaState() {}, bindPromptMedia: code => code, promptMediaNotice() {},

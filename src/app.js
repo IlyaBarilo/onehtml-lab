@@ -102,6 +102,7 @@ let extractionPlan = null;
 let extractionCode = '';
 let activeFrame = null;
 let activeBundledLibraries = [];
+let activeResourceWarning = '';
 let networkCount = 0;
 let networkBytes = 0;
 let runtimeErrorReport = '';
@@ -215,7 +216,7 @@ function updateLocalAccessHint() {
   if (blockedApis.length) hints.push(`Игра обратилась к ${blockedApis.join(', ')}. В изолированном предпросмотре доступ к этим данным браузера ограничен; попросите ИИ обработать отсутствие доступа.`);
   const hint = hints.join(' ');
   const libraryHint = activeBundledLibraries.length ? `Встроено: ${activeBundledLibraries.join(', ')}.` : '';
-  const statusHint = [runtimeError.hidden ? hint : '', libraryHint].filter(Boolean).join(' ');
+  const statusHint = [runtimeError.hidden ? hint : '', libraryHint, activeResourceWarning].filter(Boolean).join(' ');
   localAccessStatus.textContent = statusHint;
   localAccessStatus.hidden = !statusHint;
   if (!runtimeError.hidden) {
@@ -238,6 +239,7 @@ function clearRuntimeError() {
   runtimeErrorMessageBase = '';
   runtimeErrorCount = 0;
   activeBundledLibraries = [];
+  activeResourceWarning = '';
   localApisUsed.clear();
   runtimeErrorMessage.textContent = '';
   runtimeError.hidden = true;
@@ -345,7 +347,7 @@ libraryFiles.addEventListener('change', async () => {
     if (scripts.length) {
       const file = scripts[0];
       if (file.name.toLowerCase() !== reference.filename.toLowerCase()) throw new Error(`Нужен файл ${reference.filename}.`);
-      if (!file.size || file.size > maxLibraryBytes) throw new Error('JS-файл должен быть не больше 4 МБ.');
+      if (!file.size) throw new Error('JS-файл пуст.');
       const source = await file.text();
       pendingLocalLibrarySource = { key: reference.key, source };
     }
@@ -353,7 +355,6 @@ libraryFiles.addEventListener('change', async () => {
     if (!source) throw new Error(`Сначала выберите ${reference.filename}.`);
     let license = localLibraryLicense(source);
     if (licenses.length) {
-      if (licenses[0].size > maxLicenseBytes) throw new Error('Файл лицензии должен быть не больше 64 КБ.');
       license = await licenses[0].text();
     }
     if (!license) {
@@ -1339,6 +1340,7 @@ function stopPreview() {
   restoreEditorPosition();
   resetNetworkStatus();
   activeBundledLibraries = [];
+  activeResourceWarning = '';
   updateLocalAccessHint();
 }
 
@@ -1369,6 +1371,8 @@ async function startPreview(replaceLibraries = true) {
     running = true;
     previewCode = code;
     activeBundledLibraries = bundledLibraryLabels(prepared);
+    activeResourceWarning = resourceSizeWarning(new Blob([prepared.html]).size, 'document')
+      || resourceSizeWarning((prepared.bundledLibraryDetails || []).reduce((max, item) => Math.max(max, item.addedBytes), 0), 'library');
     mediaPreparationWarning(prepared);
     updateLocalAccessHint();
   } catch {
@@ -1548,7 +1552,6 @@ let saveMediaRevision = 0;
 async function updateSaveMediaDescription() {
   const revision = ++saveMediaRevision;
   const field = document.querySelector('#save-media'), hint = document.querySelector('#save-media-hint');
-  if (document.querySelector('#save-media-options').hidden) { confirmSaveButton.disabled = false; return; }
   const code = codeField.value;
   const refs = mediaBindings(codeField.value).filter(ref => ref.id);
   const ids = [...new Set(refs.filter(ref => ref.entry).map(ref => ref.id))];
@@ -1566,7 +1569,11 @@ async function updateSaveMediaDescription() {
     const prepared = libraries && saveLibrariesMode.value === 'files'
       ? await prepareApplicationFiles(code, filenameField.value, media) : await prepareApplicationHtml(code, libraries, media);
     if (revision !== saveMediaRevision || code !== codeField.value || currentPanel() !== saveDialog) return;
-    result.textContent = `Размер HTML: ${diagnosticSize(new Blob([prepared.html]).size)}${prepared.files?.length > 1 ? '; JS скачаются отдельно.' : '.'}`;
+    const bytes = new Blob([prepared.html]).size;
+    const total = prepared.files?.reduce((sum, file) => sum + new Blob([file.content]).size, 0) || bytes;
+    const warning = resourceSizeWarning(total, 'document');
+    result.textContent = `Размер HTML: ${diagnosticSize(bytes)}${prepared.files?.length > 1 ? '; все файлы: ' + diagnosticSize(total) + '. JS скачаются отдельно.' : '.'}${warning ? ' ' + warning : ''}`;
+    result.classList.toggle('resource-warning', Boolean(warning));
   } catch {
     if (revision === saveMediaRevision) result.textContent = 'Размер не рассчитан. Попробуйте открыть сохранение ещё раз.';
   } finally {

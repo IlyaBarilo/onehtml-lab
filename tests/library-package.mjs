@@ -23,7 +23,7 @@ const context = {
   },
   setTimeout(fn, ms) { timers.push({ fn, ms }); }
 };
-runInNewContext(source + '\nthis.api = { prepareGameFiles, prepareGameHtml, importLocalLibrary, libraryCache, downloadGameFiles, packageFilename, licensedLibrarySource };', context);
+runInNewContext(source + '\nthis.api = { prepareGameFiles, prepareGameHtml, importLocalLibrary, libraryCache, downloadGameFiles, packageFilename, licensedLibrarySource, validLibraryAsset, readLibraryResponse, resourceSizeWarning };', context);
 const { prepareGameFiles, prepareGameHtml, importLocalLibrary, libraryCache, downloadGameFiles, packageFilename } = context.api;
 const license = 'MIT License\nCopyright (c) Library authors\nPermission is hereby granted\nTHE SOFTWARE IS PROVIDED AS IS';
 for (const [key, source] of [['three@0.128.0', 'window.THREE={REVISION:"128"};'], ['three@0.160.0', 'window.THREE={REVISION:"160"};'], ['matter-js@0.20.0', 'window.Matter={version:"0.20.0"};']]) {
@@ -82,4 +82,17 @@ assert(longPackage.files.every(file => Array.from(file.name).length <= 160));
 assert.equal(packageFilename('CON.js'), '_CON.js');
 assert(packageFilename('x'.repeat(300) + '.html').endsWith('.html'));
 assert.equal(packageFilename('../bad.js'), '.._bad.js');
+const largeSource='/*'+'x'.repeat(5*1024*1024)+'*/window.Large=true;';
+const largeLicense=license+'\nAdditional notice: '+'x'.repeat(70*1024);
+assert(context.api.validLibraryAsset(largeSource,largeLicense),'Large code and full licenses have no application size cap');
+assert.equal(await context.api.readLibraryResponse(new Response(largeSource,{headers:{'Content-Length':String(Buffer.byteLength(largeSource))}})),largeSource);
+await assert.rejects(context.api.readLibraryResponse(new Response('missing',{status:404})),/404/);
+const largeGame='<script src="./large.js"></script>';
+await importLocalLibrary((await prepareGameHtml(largeGame)).missingLibraries[0],largeSource,largeLicense);
+const largePrepared=await prepareGameHtml(largeGame);
+assert(largePrepared.html.includes(largeSource));assert(largePrepared.html.includes(largeLicense.trim()));
+assert.equal((await prepareGameHtml(largeGame,false)).html,largeGame);
+assert.match(context.api.resourceSizeWarning(Buffer.byteLength(largeSource),'library'),/Большой объём: 5 МБ/);
+assert.match(context.api.resourceSizeWarning(65*1024*1024),/Очень большой объём/);
+assert.equal(context.api.resourceSizeWarning(undefined),'');assert.equal(context.api.resourceSizeWarning(1024),'');
 console.log('Separate game files: relative references, licenses, collisions, Unicode and individual downloads passed.');

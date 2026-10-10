@@ -56,7 +56,7 @@ function moduleScripts(code) {
 function scanModules(code) {
   if (moduleScanCache.code === code) return moduleScanCache.plan;
   const plan = { records:[], references:[], issues:[], map:null, imports:Object.create(null), reason:'' };
-  if (code.length > 8000000 || !/\b(?:module|importmap)\b/i.test(code)) return plan;
+  if (!/\b(?:module|importmap)\b/i.test(code)) return plan;
   plan.records = moduleScripts(code);
   const maps = plan.records.filter(r => r.type === 'importmap');
   try {
@@ -112,14 +112,14 @@ function moduleEntryData(entry) {
   try {
     const ref = moduleCatalog(entry.catalogKey || entry.key), files = JSON.parse(entry.source);
     if(entry.key!==ref?.key && !/^module-asset@[a-f\d]{64}$/.test(entry.key)) throw Error('Invalid module key');
-    if (!ref || entry.format !== 'module' || ref.url !== entry.sourceUrl || !Array.isArray(files) || !files.length || files.length > 3
+    if (!ref || entry.format !== 'module' || ref.url !== entry.sourceUrl || !Array.isArray(files) || !files.length
       || !validLibraryAsset(entry.source,entry.license)) throw Error('Invalid module copy');
     const seen = new Set(); let bytes = 0;
     for (const file of files) {
       if (!file || moduleFileUrl(file.url,ref.url) !== file.url || seen.has(file.url) || !validLibraryAsset(file.source,entry.license)) throw Error('Invalid module file');
       seen.add(file.url); bytes += new TextEncoder().encode(file.source).length;
     }
-    if (!seen.has(ref.url) || bytes > maxLibraryBytes) throw Error('Incomplete module copy');
+    if (!seen.has(ref.url)) throw Error('Incomplete module copy');
     for (const file of files) {
       file.imports=moduleImports(file.source);
       for (const item of file.imports) if (item.reason || !seen.has(moduleFileUrl(item.value,file.url))) throw Error('Incomplete dependency');
@@ -132,15 +132,14 @@ async function downloadModule(reference) {
   const ref = moduleCatalog(reference.key);
   if (!ref || ref.url !== reference.url) throw Error('Unknown module');
   const response = await fetch(ref.licenseUrl,{credentials:'omit',redirect:'error'});
-  const license = await readLimitedResponse(response,maxLicenseBytes), files = [], queue = [ref.url];
+  const license = await readLibraryResponse(response), files = [], queue = [ref.url];
   let bytes = 0;
   for (let i=0;i<queue.length;i++) {
-    if (queue.length > 3) throw Error('Too many module files');
     const response=await fetch(queue[i],{credentials:'omit',redirect:'error'});
     if(!/^(?:text|application)\/(?:javascript|ecmascript)(?:;|$)/i.test(response.headers.get('content-type') || '')) throw Error('Module MIME type');
-    const source = await readLimitedResponse(response,maxLibraryBytes);
+    const source = await readLibraryResponse(response);
     bytes += new TextEncoder().encode(source).length;
-    if (bytes > maxLibraryBytes || !validLibraryAsset(source,license)) throw Error('Invalid module source or license');
+    if (!validLibraryAsset(source,license)) throw Error('Invalid module source or license');
     files.push({url:queue[i],source});
     for (const item of moduleImports(source)) {
       if (item.reason) throw Error(item.reason);
