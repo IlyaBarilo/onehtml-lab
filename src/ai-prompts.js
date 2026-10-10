@@ -361,10 +361,10 @@ async function prepareAiPrompt(snapshot, revision) {
   }
   if (revision !== aiRevision || currentPanel() !== aiDialog || !sameAiSnapshot(snapshot, aiPromptSnapshot())) return;
   const game = snapshot.game ? JSON.parse(snapshot.game) : null;
-  const actual = snapshot.project === 'game' && snapshot.mode !== 'create' ? aiGameConnections(code) : null;
+  const actual = snapshot.mode !== 'create' ? aiGameConnections(code) : null;
   const bases = actual?.found.filter(ref => Object.values(aiGameCatalog).some(profile => profile.key === ref.key)) || [];
   const matched = bases.length === 1 ? Object.entries(aiGameCatalog).find(([, profile]) => profile.key === bases[0].key)?.[0] : '';
-  const recipe = snapshot.project === 'game' && ['create', 'change', 'fix'].includes(snapshot.mode) ? (game ? aiGameChoice(game).id : matched) : '';
+  const recipe = ['create', 'change', 'fix'].includes(snapshot.mode) ? (game ? aiGameChoice(game).id : matched) : '';
   const models = mediaPlan.files.some(file => /\.glb$/i.test(file.name));
   const engine = game ? aiGameChoice(game).id : matched;
   if (models && game && !['three','babylon'].includes(engine)) {

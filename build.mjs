@@ -23,6 +23,7 @@ const exampleFiles = [
   { id: 'memory', platform: 'mobile', title: 'Найди пару', description: 'Открывайте пары касанием карточек.' },
   { id: 'reaction', platform: 'mobile', title: 'Проверь реакцию', description: 'Коснитесь экрана после смены цвета.' },
   { id: 'interactive-poster', category: 'media', platform: 'mobile', title: 'Интерактивная афиша', description: 'Анимация, программа мероприятия и смена темы.' },
+  { id: 'pixi-poster', category: 'media', platform: 'all', title: 'Афиша: Canvas и PixiJS', description: 'Одна композиция, маска изображения и движение. Перетаскивайте изображение и сравнивайте способы отрисовки.' },
   { id: 'branching-story', category: 'media', platform: 'mobile', title: 'История с выбором', description: 'Развилки, разные окончания и возврат к выбору.' },
   { id: 'interactive-infographic', category: 'media', platform: 'mobile', title: 'Интерактивная инфографика', description: 'Данные, диаграмма и пояснения по нажатию.' },
   { id: 'sound-panel', category: 'media', platform: 'all', title: 'Звуковая панель', description: 'Четыре синтезируемых звука, формы и цвета. Работает без внешних ресурсов.' },
@@ -43,9 +44,10 @@ const examples = await Promise.all(exampleFiles.map(async entry => {
   return { ...entry, code };
 }));
 const toneLicense = (await readFile(join(root, 'src/vendor/tone-LICENSE.txt'), 'utf8')).trim().replace(/\r\n?/g, '\n');
+const pixiLicense = (await readFile(join(root, 'src/vendor/pixi-LICENSE.txt'), 'utf8')).trim().replace(/\r\n?/g, '\n');
 const script = '(function () {\n"use strict";\n'
   + `const examples = ${JSON.stringify(examples)};\n`
-  + (await Promise.all(files.map(name => readFile(join(root, 'src', name), 'utf8')))).join('\n').replace('/* TONE_LICENSE */ null', () => JSON.stringify(toneLicense)) + '\n})();';
+  + (await Promise.all(files.map(name => readFile(join(root, 'src', name), 'utf8')))).join('\n').replace('/* TONE_LICENSE */ null', () => JSON.stringify(toneLicense)).replace('/* PIXI_LICENSE */ null', () => JSON.stringify(pixiLicense)) + '\n})();';
 const license = (await readFile(join(root, 'LICENSE'), 'utf8')).trim();
 const html = template.replace('/* APP_STYLES */', () => css.replace(/<\/style/gi, '<\\/style'))
   .replace('/* APP_SCRIPT */', () => script.replace(/<\/script/gi, '<\\/script'))

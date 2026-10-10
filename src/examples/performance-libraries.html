@@ -227,6 +227,7 @@
       <div class="load"><label for="load">Объектов: <b id="load-value">120</b></label><input id="load" type="range" min="20" max="10000" step="20" value="120"></div>
       <nav class="modes" aria-label="Выбор теста">
         <button class="mode" data-mode="canvas" data-state="ready" aria-pressed="true"><b>Canvas 2D</b><small>Без библиотек</small></button>
+        <button class="mode" data-mode="pixi" data-state="loading" data-known-bytes="840663" aria-pressed="false" disabled><b>PixiJS 8.22.0</b><small>Ожидает библиотеку</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="webgl" data-state="ready" aria-pressed="false"><b>WebGL</b><small>Без библиотек</small></button>
         <button class="mode" data-mode="svg" data-state="ready" aria-pressed="false"><b>SVG</b><small>Без библиотек</small></button>
         <button class="mode" data-mode="dom" data-state="ready" aria-pressed="false"><b>HTML/CSS</b><small>Web Animations</small></button>
@@ -268,6 +269,7 @@
       const sizeFormat = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
       const labels = {
         canvas: 'Движущиеся частицы · Canvas 2D',
+        pixi: 'Движущиеся изображения · PixiJS',
         three160: 'Вращающиеся кубы · Three.js r160',
         cannon: 'Физические блоки · Three.js + cannon-es',
         babylon: 'Вращающиеся кубы · Babylon.js 9.30.0',
@@ -277,6 +279,7 @@
       };
       const descriptions = {
         canvas: 'Canvas 2D — рисование 2D без игровой библиотеки.',
+        pixi: 'PixiJS — 2D-графика: изображения, слои и маски через WebGL; совместимость CSP — ещё 15,4 КБ.',
         three160: 'Three.js — объёмные модели, камера, свет и тени.',
         cannon: 'Three.js рисует, cannon-es рассчитывает движение и удары.',
         babylon: 'Babylon.js — 3D-движок: камеры, материалы и сцены.',
@@ -285,6 +288,11 @@
         phaser4: 'Phaser 4 — 2D-игры с динамическим светом и эффектами.'
       };
       const explanations = {
+        pixi: [
+          'PixiJS — для интерактивных афиш, анимации и 2D-сцен с множеством изображений. Container управляет слоями, Sprite — изображениями, Graphics — фигурами и масками. Физики и правил игры здесь нет.',
+          'В «Возможностях» перетаскивайте изображение внутри круглой маски. Полную афишу с переключением Canvas / PixiJS откройте в примерах медиа.',
+          'В «Сравнении» тот же шар и башня, что в Canvas: расчёт движения общий. В «Нагрузке» одинаковые частицы; PixiJS рисует их как Sprite. Сравнивайте FPS на своём устройстве: близкая картинка и высокий FPS сами по себе не требуют библиотеки.'
+        ],
         canvas: [
           'Canvas 2D рисует без дополнительных библиотек. Подходит для небольших игр и анимаций. Правила игры и столкновения нужно написать самостоятельно.',
           'Коснитесь набережной, чтобы переключить день и ночь. В «Сравнении» касание запускает шар в башню.'
@@ -323,6 +331,7 @@
       ];
       const showcaseLabels = {
         canvas: 'Набережная · касание переключает день и ночь',
+        pixi: 'Цифровой сад · перетаскивайте изображение внутри круга',
         three160: 'Марсоход · проведите по сцене, чтобы повернуть камеру',
         cannon: 'Шар и башня · коснитесь цели для выстрела',
         babylon: 'Марсоход · проведите по сцене, чтобы повернуть камеру',
@@ -709,6 +718,69 @@
         const context = makeCanvas(), model = comparisonLayout();
         return { tick(delta) { stepComparison(model, delta); drawComparison(context, model); comparisonStats(model); },
           tap(x, y) { comparisonShot(model, x, y); }, dispose() {} };
+      }
+
+      function pixiScene(token) {
+        const P = libraries.pixi, app = new P.Application(), kind = scenario;
+        let ready = false, disposed = false, model, nodes = [], root, art, image, time = 0, offset = { x: 0, y: 0 };
+        const textures = [];
+        host.dataset.pixiState = 'loading';
+        function texture(canvas) { const value = P.Texture.from(canvas); textures.push(value); return value; }
+        function bitmap(w, h, draw) { const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h; draw(canvas.getContext('2d')); return canvas; }
+        function clear() {
+          ready = false;
+          if (app.renderer) app.destroy(true, { children: true });
+          for (const value of textures) value.destroy(true);
+          textures.length = 0;
+        }
+        function draw(delta) {
+          if (!ready || disposed || token !== generation) return;
+          if (kind === 'compare') {
+            stepComparison(model, delta);
+            model.blocks.forEach((item, index) => { nodes[index].position.set(item.x, item.y); nodes[index].rotation = item.angle; });
+            nodes.at(-1).position.set(model.ball.x, model.ball.y); comparisonStats(model);
+          } else if (kind === 'load') {
+            model.forEach((item, index) => { moveParticle(item, delta / 1000); nodes[index].position.set(item.x, item.y); });
+          } else {
+            time += delta / 1000; image.position.set(30 + offset.x, 100 + offset.y);
+            nodes.forEach((node, index) => { node.position.set((index * 97 + time * (18 + index % 13)) % 660 - 30, 100 + index * 73 % 540 + Math.sin(time + index) * 18); node.rotation = Math.sin(time + index) * .5; });
+          }
+          app.render();
+        }
+        void app.init({ preference: ['webgl'], autoStart: false, sharedTicker: false, antialias: true, width, height, resolution: ratio, background: '#0b1929' }).then(() => {
+          if (disposed || token !== generation) { clear(); return; }
+          host.append(app.canvas); root = new P.Container(); app.stage.addChild(root);
+          if (kind === 'compare') {
+            model = comparisonLayout(); const grid = new P.Graphics();
+            for (let x = 0; x < width; x += 40) grid.moveTo(x, 0).lineTo(x, model.floor);
+            grid.stroke({ color: '#24374d', width: 1 }).rect(0, model.floor, width, height - model.floor).fill('#304966'); root.addChild(grid);
+            nodes = model.blocks.map(item => { const node = new P.Graphics().rect(-model.size / 2, -model.size / 2, model.size, model.size).fill(item.color).stroke({ color: '#ffffff', alpha: .5, width: 1 }); root.addChild(node); return node; });
+            const ball = new P.Graphics().circle(0, 0, model.radius).fill('#efab6c').stroke({ color: '#fff1d7', width: 2 }); root.addChild(ball); nodes.push(ball);
+          } else if (kind === 'load') {
+            model = particles(); const dot = texture(bitmap(32, 32, c => { c.fillStyle = '#fff'; c.beginPath(); c.arc(16, 16, 15, 0, Math.PI * 2); c.fill(); }));
+            nodes = model.map(item => { const node = new P.Sprite(dot); node.anchor.set(.5); node.width = node.height = item.r * 2; node.tint = item.color; root.addChild(node); return node; });
+          } else {
+            root.position.set((width - Math.min(width / 600, height / 780) * 600) / 2, (height - Math.min(width / 600, height / 780) * 780) / 2); root.scale.set(Math.min(width / 600, height / 780));
+            const back = new P.Graphics().rect(0, 0, 600, 780).fill('#f4f0e5'); root.addChild(back);
+            const title = texture(bitmap(600, 180, c => { c.fillStyle = '#21564d'; c.font = '800 58px system-ui'; c.fillText('ЦИФРОВОЙ САД', 32, 85); c.font = '22px system-ui'; c.fillText('Анимация · дизайн · интерактив', 34, 135); })); root.addChild(new P.Sprite(title));
+            art = new P.Container(); const mask = new P.Graphics().circle(300, 430, 234).fill('#fff'); root.addChild(art, mask); art.mask = mask;
+            const landscape = texture(bitmap(540, 660, c => { const gradient = c.createLinearGradient(0, 0, 0, 660); gradient.addColorStop(0, '#d8e3d0'); gradient.addColorStop(1, '#406e61'); c.fillStyle = gradient; c.fillRect(0, 0, 540, 660); c.fillStyle = '#fbdfaa'; c.beginPath(); c.arc(390, 180, 65, 0, Math.PI * 2); c.fill(); for (let i = 0; i < 4; i++) { c.fillStyle = ['#8fb4a3', '#6d9885', '#4d7a6b', '#305e53'][i]; c.beginPath(); c.moveTo(0, 660); for (let x = 0; x <= 540; x += 10) c.lineTo(x, 280 + i * 80 + Math.sin(x / 90 + i) * 45); c.lineTo(540, 660); c.closePath(); c.fill(); } }));
+            image = new P.Sprite(landscape); art.addChild(image);
+            const leaf = texture(bitmap(20, 20, c => { c.fillStyle = '#fff'; c.beginPath(); c.ellipse(10, 10, 8, 4, -.5, 0, Math.PI * 2); c.fill(); }));
+            nodes = Array.from({ length: 120 }, () => { const node = new P.Sprite(leaf); node.anchor.set(.5); node.alpha = .7; art.addChild(node); return node; });
+            root.addChild(new P.Graphics().circle(300, 430, 234).stroke({ color: '#21564d', width: 3 }));
+          }
+          ready = true; host.dataset.pixiState = 'ready'; draw(0);
+        }).catch(() => {
+          clear();
+          if (disposed || token !== generation) return;
+          host.dataset.pixiState = 'unavailable'; $('message').textContent = 'WebGL недоступен. Выберите Canvas 2D.';
+        });
+        return { tick: draw,
+          tap(x, y) { if (ready && kind === 'compare') comparisonShot(model, x, y); },
+          drag(x, y, dx, dy) { if (ready && kind === 'showcase') { const scale = root.scale.x; offset.x = Math.max(-70, Math.min(70, offset.x + dx / scale)); offset.y = Math.max(-70, Math.min(70, offset.y + dy / scale)); draw(0); } },
+          dispose() { disposed = true; if (ready) clear(); }
+        };
       }
 
       function matterComparison(Matter) {
@@ -2583,7 +2655,7 @@
         generation += 1;
         activeScene?.dispose();
         activeScene = null; delete host.dataset.physics; delete host.dataset.physicsBlocks; host.removeAttribute('tabindex');
-        for(const key of ['nativeMode','nativeState','nativeApi','nativeWorker','nativeAudio'])delete host.dataset[key];
+        for(const key of ['nativeMode','nativeState','nativeApi','nativeWorker','nativeAudio','pixiState'])delete host.dataset[key];
         host.replaceChildren();
         mode = nextMode;
         nativeControls.hidden = mode !== 'webgl';
@@ -2599,6 +2671,7 @@
         $('message').textContent = '';
         try {
           if (nativeModes.has(mode)) activeScene = nativeScene();
+          else if (mode === 'pixi') activeScene = pixiScene(generation);
           else if (mode === 'cannon') {
             activeScene = cannonEnabled || scenario === 'load' ? cannonScene(libraries.three160, libraries.cannon) : threeComparison(libraries.three160);
             host.dataset.physics = cannonEnabled || scenario === 'load' ? 'cannon' : 'simple';
@@ -2696,12 +2769,12 @@
         } catch {}
       }
 
-      window.registerLabLibrary = (id, library) => {
+      window.registerLabLibrary = (id, library, sourceScript = null) => {
         const button = document.querySelector(`[data-mode="${id}"]`);
         libraries[id] = library;
         button.disabled = !library;
         button.dataset.state = library ? 'ready' : 'failed';
-        const libraryScript = document.currentScript?.previousElementSibling;
+        const libraryScript = sourceScript || document.currentScript?.previousElementSibling;
         const embedded = libraryScript?.tagName === 'SCRIPT' && !libraryScript.hasAttribute('src');
         const remote = /^(?:https?:)?\/\//i.test(libraryScript?.getAttribute('src') || '');
         button.querySelector('small').textContent = library ? (embedded ? 'Встроена в HTML' : remote ? 'Загружена с CDN' : 'Загружена из файла') : 'Не загружена';
@@ -2838,5 +2911,8 @@
   <script src="https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.min.js"></script>
   <script>registerLabLibrary('phaser4', window.Phaser?.VERSION === '4.2.1' ? window.Phaser : null);</script>
   <script type="module" id="cannon-module">import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js'; registerLabPhysics(CANNON, 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js');</script>
+<script id="pixi-core" src="https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/pixi.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/packages/unsafe-eval.min.js"></script>
+<script>registerLabLibrary('pixi', window.PIXI?.VERSION === '8.22.0' && typeof window.PIXI.generateShaderSyncPolyfill === 'function' ? window.PIXI : null, document.getElementById('pixi-core'));</script>
 </body>
 </html>

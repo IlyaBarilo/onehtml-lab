@@ -80,3 +80,15 @@ The distribution includes standardized-audio-context 25.3.70, automation-events 
 В готовую сборку входят standardized-audio-context 25.3.70, automation-events 7.0.4, @babel/runtime 7.26.10 и tslib 2.6.2, указанные в lock-файле коммита выпуска Tone.js и карте исходников. Полные уведомления MIT и условия tslib включены в общий файл. Это компоненты готовой сборки; версии зависимостей, отдельно установленных для разработки, могут отличаться.
 
 Project / Проект: [Tone.js](https://tonejs.github.io/). Release source / Исходник выпуска: [Tone.js release commit](https://github.com/Tonejs/Tone.js/tree/d2d52ffa8803b35debd9f19f2da08ad1c3540de0). The musical example uses the project MIT license. / Музыкальный пример распространяется под MIT проекта.
+
+## PixiJS 8.22.0
+
+PixiJS is an optional 2D renderer under MIT. The pinned classic `dist/pixi.min.js` and official `dist/packages/unsafe-eval.min.js` compatibility module are downloaded separately. Despite its name, that module replaces generated functions with static implementations so PixiJS can run while CSP still blocks eval. Neither script is bundled with the editor. Embedded HTML, adjacent JavaScript and portable sets preserve the full [distribution notices](../src/vendor/pixi-LICENSE.txt).
+
+PixiJS — необязательная библиотека 2D-отрисовки под MIT. Классическое ядро `dist/pixi.min.js` и официальный модуль совместимости `dist/packages/unsafe-eval.min.js` точной версии 8.22.0 скачиваются отдельно. Вопреки названию модуль заменяет генерацию функций статическими реализациями: запрет eval в предпросмотре сохраняется. В редактор входят только лицензии, а не эти JS-сборки. Встраивание, отдельные JS-файлы и переносимые наборы сохраняют полный файл уведомлений по ссылке выше.
+
+The core distribution source map identifies eventemitter3, @pixi/colord, ismobilejs, earcut, parse-svg-path and tiny-lru. Their complete MIT, ISC and BSD-3-Clause notices, including the additional tiny-lru copyright carried by the distribution, are preserved. The compatibility module contains PixiJS code under the same MIT notice.
+
+Карта исходников ядра указывает eventemitter3, @pixi/colord, ismobilejs, earcut, parse-svg-path и tiny-lru. Сохранены полные условия MIT, ISC и BSD-3-Clause, включая дополнительное уведомление tiny-lru из готового JS. Модуль совместимости содержит код PixiJS под той же MIT.
+
+Project / Проект: [PixiJS](https://pixijs.com/). Core license / Лицензия ядра: [8.22.0](https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/LICENSE). The poster artwork and animation are authored for OneHTML Lab under the project MIT license. / Графика афиши и анимация созданы для OneHTML Lab и распространяются под MIT проекта.

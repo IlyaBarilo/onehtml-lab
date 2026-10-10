@@ -14,7 +14,7 @@ const license = await readFile(new URL('node_modules/cannon-es/LICENSE', root), 
 const cannonUrl = 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
 const moduleData = 'data:text/javascript;base64,' + Buffer.from(license.split(/\r?\n/).map(line => '// ' + line).join('\n') + '\n' + cannon).toString('base64');
 const probe = `THREE.WebGLRenderer = new Proxy(THREE.WebGLRenderer, {construct(target,args){const renderer=Reflect.construct(target,args),render=renderer.render.bind(renderer);renderer.render=(scene,camera)=>{window.testScene={renderer,scene,camera};return render(scene,camera)};return renderer}});`;
-const fixture = source.replace(/<script src="https:[^"]+"><\/script>/g, tag => '<script>\n' + (tag.includes('three@0.160.0') ? (three + '\n' + probe).replace(/<\/script/gi, '<\\/script') : '') + '\n</script>')
+const fixture = source.replace(/<script\b[^>]*\bsrc="https:[^"]+"[^>]*><\/script>/g, tag => '<script>\n' + (tag.includes('three@0.160.0') ? (three + '\n' + probe).replace(/<\/script/gi, '<\\/script') : '') + '\n</script>')
   .replace('<script type="module" id="cannon-module">', '<script type="importmap">' + JSON.stringify({imports:{[cannonUrl]:moduleData}}) + '</script><script type="module" id="cannon-module">');
 const scratch = await mkdtemp(join(tmpdir(), 'onehtml-cannon-benchmark-'));
 const file = join(scratch, 'benchmark.html'); await writeFile(file, fixture);

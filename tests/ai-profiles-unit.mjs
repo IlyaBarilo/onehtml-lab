@@ -5,6 +5,15 @@ const source = (await Promise.all(['library-bundle.js', 'ai-profiles.js', 'ai-pr
 const api = runInNewContext(source + '\n({normalizeAiGame,aiGameChoice,aiGameInstructions,aiGameWarnings,aiGameConnections,aiGameConnectionText,aiGameMediaRecipe,libraryReference,localLibraryReference,aiPromptText})', { document: { querySelector: () => ({}) } });
 assert.equal(api.aiGameChoice().id, 'canvas');
 assert.equal(api.aiGameChoice({ genre: 'platformer' }).id, 'phaser3');
+assert.equal(api.aiGameChoice({ basis: 'pixi' }).id, 'pixi');
+assert.match(api.aiGameInstructions({ basis: 'pixi' }), /pixi\.js@8\.22\.0\/dist\/pixi\.min\.js/);
+assert.match(api.aiGameInstructions({ basis: 'pixi' }), /packages\/unsafe-eval\.min\.js/);
+assert.match(api.aiGameInstructions({ basis: 'pixi' }), /await app\.init.*app\.render\(\)/);
+assert.match(api.aiGameMediaRecipe('pixi'), /Texture\.from\(imageElement\)/);
+assert(api.aiGameWarnings({ basis: 'pixi', physics: 'bodies' }).some(note=>note.includes('не рассчитывает физику')));
+const pixiTags = '<script src="https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/pixi.min.js"></script><script src="https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/packages/unsafe-eval.min.js"></script>';
+assert(!api.aiGameConnectionText(pixiTags, 'pixi').includes('дополнительные библиотеки'));
+assert(api.aiGameConnectionText(pixiTags.split('</script>')[0]+'</script>', 'pixi').includes('Не найден модуль'));
 assert.equal(api.aiGameChoice({ physics: 'bodies' }).id, 'matter');
 assert.equal(api.aiGameChoice({ dimension: '3d' }).id, 'three');
 assert.equal(api.aiGameChoice({ dimension: '3d', basis: 'babylon' }).id, 'babylon');

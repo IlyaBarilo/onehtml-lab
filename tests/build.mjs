@@ -5,7 +5,7 @@ const standalone = await readFile(new URL('../onehtml-lab.html', import.meta.url
 assert(standalone.includes('data:image/svg+xml,'), 'Favicon must be embedded');
 assert(standalone.includes('Permission is hereby granted, free of charge'), 'Standalone file must include its MIT license');
 assert(!standalone.includes('embeddedThreeR128'), 'Application must not contain a preloaded Three.js copy');
-assert(Buffer.byteLength(standalone) < 1690000, 'Application including editors, native browser demos, portable library tools and model examples must stay within its size budget; engine distributions must remain external');
+assert(Buffer.byteLength(standalone) < 1730000, 'Application including editors, native browser demos, portable library tools and model examples must stay within its size budget; engine distributions must remain external');
 assert(!standalone.includes('Babylon.js v9.30.0 - WebGL'), 'Babylon.js must not be bundled into the editor');
 assert(!standalone.includes('class Narrowphase {'), 'cannon-es distribution must not be bundled into the editor');
 assert(standalone.includes('data-onehtml-library'), 'Standalone file must contain the library replacement mechanism');
@@ -20,6 +20,10 @@ const toneLicenses = normalizeLineEndings(await readFile(new URL('../src/vendor/
 assert(standalone.includes(JSON.stringify(toneLicenses)), 'Complete Tone.js distribution notices must be present as catalog data');
 assert(!standalone.includes('/* TONE_LICENSE */ null'), 'The music license marker must be replaced by the build');
 assert(!standalone.includes('For license information please see Tone.js.LICENSE.txt'), 'Tone.js itself must remain an optional download');
+const pixiLicenses = normalizeLineEndings(await readFile(new URL('../src/vendor/pixi-LICENSE.txt', import.meta.url), 'utf8')).trim();
+assert(standalone.includes(JSON.stringify(pixiLicenses)), 'Complete PixiJS and bundled component notices must be present as catalog data');
+assert(!standalone.includes('/* PIXI_LICENSE */ null'), 'The PixiJS license marker must be replaced');
+assert(!standalone.includes(' * PixiJS - v8.22.0'), 'PixiJS engine distribution must remain an optional download');
 const expectedVersion = process.argv[2];
 assert(process.argv.length <= 3, 'Use: node tests/build.mjs [v1.2.3]');
 const matches = [...standalone.matchAll(/class="app-version"/g)];

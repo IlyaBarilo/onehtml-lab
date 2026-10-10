@@ -21,6 +21,8 @@ const assets = [
   ['babylon', 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/babylon.js', 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/license.md', 'window.BABYLON={Engine:{Version:"9.30.0"}};']
 ].map(([id, url, licenseUrl, source], index) => ({ id, url, licenseUrl, source: '/* ' + 'x'.repeat(2048 + index * 512) + ' */\n' + source }));
 assets.push({ id: 'tone', url: 'https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.js', source: await readFile(new URL('../node_modules/tone/build/Tone.js', import.meta.url), 'utf8') });
+assets.push({id:'pixi',url:'https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/pixi.min.js',source:await readFile(new URL('../node_modules/pixi.js/dist/pixi.min.js',import.meta.url),'utf8')});
+assets.push({id:'pixi-csp',url:'https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/packages/unsafe-eval.min.js',source:await readFile(new URL('../node_modules/pixi.js/dist/packages/unsafe-eval.min.js',import.meta.url),'utf8')});
 const cannonUrl = 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
 const cannonLicense = await readFile(new URL('../node_modules/cannon-es/LICENSE', import.meta.url), 'utf8');
 assets.push({ id: 'cannon', url: cannonUrl, licenseUrl: cannonUrl.replace('/dist/cannon-es.js', '/LICENSE'), source: await readFile(new URL('../node_modules/cannon-es/dist/cannon-es.js', import.meta.url), 'utf8') });
@@ -138,6 +140,7 @@ async function checkCanvasRoute(page, name) {
 
 async function libraryLabels(frame, status) {
   for (const asset of assets) {
+    if (asset.id === 'pixi-csp') continue; // Companion script shares the PixiJS card.
     const button = frame.locator(`[data-mode="${asset.id}"]`);
     await button.locator('small').getByText(status, { exact: true }).waitFor();
     assert(await button.isEnabled());
@@ -271,7 +274,7 @@ try {
         assert.equal(requests, 0, 'Opening the example must not download libraries without a click');
         await page.locator('#library-download').click();
         await page.locator('#library-request').waitFor({ state: 'hidden' });
-        assert.equal(requests, 14, 'Download seven libraries, their complete notices and Babylon NOTICE');
+        assert.equal(requests, 16, 'Download nine library scripts, their complete notices and Babylon NOTICE');
         await page.locator('#run').click();
         const frame = page.frameLocator('#preview > iframe');
         await libraryLabels(frame, 'Встроена в HTML');
@@ -339,9 +342,9 @@ try {
         assert(await frame.locator('.load').isVisible());
         assert.equal((await frame.locator('#load-value').innerText()).replace(/\s/g, ''), '10000');
         await page.locator('#run').click();
-        assert.equal(requests, 14, 'Cached preview must not request external scripts');
+        assert.equal(requests, 16, 'Cached preview must not request external scripts');
         const embedded = await downloadHtml(page);
-        assert.equal(embedded.match(/data-onehtml-bundle="1"/g)?.length, 6);
+        assert.equal(embedded.match(/data-onehtml-bundle="1"/g)?.length, 8);
         assert.equal(embedded.match(/data-onehtml-modules="1"/g)?.length, 1);
         assert.equal(embedded.match(/Copyright \(c\) Test library authors/g)?.length, 4);
         const embeddedPath = join(scratch, name + '-embedded.html');
@@ -350,7 +353,7 @@ try {
         await useNativeEditor(saved);
         await saved.goto(pathToFileURL(embeddedPath).href);
         await libraryLabels(saved, 'Встроена в HTML');
-        assert.equal(requests, 14, 'Standalone embedded test must not request CDN resources');
+        assert.equal(requests, 16, 'Standalone embedded test must not request CDN resources');
         await checkCompactLayout(saved, name);
         await saved.close();
         const unchanged = await downloadHtml(page, false);
@@ -371,7 +374,7 @@ try {
         await page.locator('#confirm-save').click();
         await page.locator('#save-files').waitFor({ state: 'visible' });
         const names = await page.locator('#save-file-list button').allTextContents();
-        assert.equal(names.length, 8);
+        assert.equal(names.length, 10);
         const automaticCount = name === 'webkit' ? 1 : names.length;
         const deadline = Date.now() + 10_000;
         while (downloads.length < automaticCount && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 50));

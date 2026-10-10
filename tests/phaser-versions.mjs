@@ -12,7 +12,7 @@ assert(engines.length, 'Choose chromium or webkit');
 let fixture = await readFile(new URL('../src/examples/performance-libraries.html', import.meta.url), 'utf8');
 // This fixture tests Phaser rendering; physics is exercised separately with the real module.
 fixture = fixture.replace(/<script type="module" id="cannon-module">[\s\S]*?<\/script>/, '');
-fixture = fixture.replace(/<script src="https:[^"]+(?:babylonjs|tone@)[^"]*"><\/script>/g, '<script></script>');
+fixture = fixture.replace(/<script(?: id="[^"]*")? src="https:[^"]+(?:babylonjs|tone@|pixi\.js@)[^"]*"><\/script>/g, '<script></script>');
 for (const [url, folder, codePath, licensePath] of [
   ['https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js', 'three', 'build/three.min.js', 'LICENSE'],
   ['https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js', 'matter-js', 'build/matter.min.js', 'LICENSE'],

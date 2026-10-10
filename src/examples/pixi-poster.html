@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Афиша: Canvas и PixiJS</title>
+<style>
+:root { color-scheme:light; font-family:system-ui,sans-serif; color:#183b3b; background:#e7eeeb; }
+* { box-sizing:border-box; }
+body { margin:0; height:100vh; height:100dvh; }
+button,input { font:inherit; }
+button { min-height:44px; border:1px solid #bfd1ca; border-radius:10px; color:inherit; background:#f8fbf9; padding:8px 14px; cursor:pointer; }
+button[aria-pressed="true"] { color:#fff; background:#235e53; border-color:#235e53; }
+button:disabled { opacity:.45; cursor:default; }
+button:focus-visible,input:focus-visible,#stage:focus-visible { outline:3px solid #d1873a; outline-offset:2px; }
+[hidden] { display:none !important; }
+main { display:flex; flex-direction:column; height:100%; min-height:0; }
+header { padding:10px 14px 8px; background:#f6faf7; border-bottom:1px solid #cad8d1; }
+.heading,.toolbar,.engines { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.heading { justify-content:space-between; }
+h1 { font-size:19px; margin:0; }
+#help-toggle { padding:0; width:44px; font-weight:700; }
+.engines { margin-top:6px; }
+#description { margin:7px 0 0; font-size:14px; line-height:1.4; }
+#stage { flex:1; min-height:180px; position:relative; overflow:hidden; touch-action:none; }
+#surface { position:absolute; inset:0; }
+#surface canvas { display:block; width:100%; height:100%; }
+#status { margin:6px 0 0; color:#58746b; font-size:13px; line-height:1.4; }
+#status:empty { display:none; }
+footer { padding:8px 14px; border-top:1px solid #cad8d1; background:#f6faf7; }
+.toolbar { gap:6px; }
+.swatch { width:44px; padding:0; position:relative; }
+.swatch:after { content:""; display:block; height:18px; width:18px; border-radius:50%; margin:auto; background:var(--swatch); border:2px solid #ffffffa8; }
+.icon-button { width:44px; padding:10px; }
+.icon-button svg { display:block; width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+#pause .play,#pause[aria-pressed="true"] .pause { display:none; }
+#pause[aria-pressed="true"] .play { display:block; }
+.load { display:flex; align-items:center; gap:10px; margin-top:7px; font-size:13px; }
+.load label { min-width:128px; }
+.load input { flex:1; min-width:70px; height:30px; accent-color:#235e53; }
+#metrics { margin:4px 0 0; min-height:18px; font-size:13px; color:#58746b; }
+#help { position:absolute; inset:12px; z-index:2; padding:18px; border:1px solid #bdd0c5; border-radius:14px; background:#f8fbf4; overflow:auto; }
+#help h2 { margin:0 0 12px; font-size:19px; }
+#help p { font-size:15px; line-height:1.5; }
+#help-close { float:right; }
+@media(min-width:800px) { header { display:grid; grid-template-columns:auto 1fr; gap:4px 24px; } .engines { justify-content:flex-end; margin:0; } #description,#status { grid-column:1/-1; } footer { display:flex; align-items:center; gap:18px; } .load { flex:1; margin:0; } #metrics { min-width:180px; margin:0; } }
+@media(max-height:480px) { body { height:auto; min-height:100vh; } main { min-height:640px; } }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="heading"><h1>Афиша: Canvas и PixiJS</h1><button id="help-toggle" aria-expanded="false" aria-controls="help" aria-label="Объяснить сравнение">?</button></div>
+  <nav class="engines" aria-label="Способ отрисовки"><button data-engine="canvas" aria-pressed="true">Canvas</button><button data-engine="pixi" aria-pressed="false" disabled>PixiJS 8.22.0</button></nav>
+  <p id="description">Canvas — отрисовка без библиотеки. Слои и взаимодействие организованы вручную.</p>
+  <p id="status" role="status">Перетаскивайте изображение внутри круга. Стрелки — сдвиг, пробел — пауза.</p>
+</header>
+<section id="stage" tabindex="0" aria-label="Афиша. Перетаскивайте изображение; стрелки двигают его, пробел включает паузу.">
+  <div id="surface"></div>
+  <section id="help" hidden><button id="help-close" aria-label="Закрыть объяснение">×</button><h2>Что сравниваем</h2>
+    <p>Одна афиша, изображение и движение в обоих вариантах. Переключение сохраняет цвет, положение и число элементов.</p>
+    <p><b>Canvas:</b> достаточно для небольшой композиции. Очистку кадра, порядок слоёв, маску и обработку нажатий пишем сами.</p>
+    <p><b>PixiJS:</b> слои Container, изображения Sprite и маски Graphics. Удобнее управлять сложной 2D-сценой и большим количеством изображений через WebGL. Физики и правил игры в библиотеке нет.</p>
+    <p>Посмотрите на границу круглой маски и перетаскивайте изображение. Увеличьте число элементов и сравните FPS без паузы. На небольшой сцене разница может быть незаметна; PixiJS не гарантирует больше FPS на любом устройстве.</p>
+    <p>Библиотека: 821 КБ JS и 15,4 КБ дополнения для предпросмотра без eval. Для автономного файла встроите их при сохранении; изображения здесь создаются кодом.</p>
+  </section>
+</section>
+<footer>
+  <div class="toolbar" aria-label="Оформление афиши"><button class="swatch" data-palette="0" style="--swatch:#2e7865" aria-label="Зелёная палитра" aria-pressed="true"></button><button class="swatch" data-palette="1" style="--swatch:#496491" aria-label="Синяя палитра" aria-pressed="false"></button><button class="swatch" data-palette="2" style="--swatch:#a55b49" aria-label="Терракотовая палитра" aria-pressed="false"></button><button id="pause" class="icon-button" aria-pressed="false" aria-label="Пауза" title="Пауза"><svg class="pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg><svg class="play" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7Z"/></svg></button><button id="reset" class="icon-button" aria-label="Сброс" title="Сброс"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8a8 8 0 1 1-1 8M5 3v5h5"/></svg></button></div>
+  <div class="load"><label for="count">Элементов: <b id="count-value">120</b></label><input id="count" type="range" min="20" max="10000" step="20" value="120"></div>
+  <p id="metrics" aria-live="off">FPS: — · Нажатий: 0</p>
+</footer>
+</main>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id), stage = $('stage'), surface = $('surface');
+  const W = 720, H = 980, palettes = [{ink:'#21564d',accent:'#e39469',sky:'#b8d9cb'}, {ink:'#3b537a',accent:'#de957d',sky:'#ccd8ee'}, {ink:'#904b3d',accent:'#d4a34f',sky:'#efd4b5'}];
+  const format = new Intl.NumberFormat('ru-RU'), state = {palette:0, x:0, y:0, paused:false, count:120, time:0, taps:0};
+  let engine = 'canvas', renderer = null, library = null, generation = 0, drag = null, view = {scale:1,x:0,y:0,width:1,height:1};
+  let last = null, frameCount = 0, frameTime = 0, fps = '—', disposed = false, helpOpen = false;
+  function bitmap(width,height,draw) { const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;draw(canvas.getContext('2d'));return canvas; }
+  const picture = bitmap(840,840,c => {
+    const sky=c.createLinearGradient(0,0,0,840);sky.addColorStop(0,'#d8e3d0');sky.addColorStop(.55,'#aad0ba');sky.addColorStop(1,'#406e61');c.fillStyle=sky;c.fillRect(0,0,840,840);
+    c.fillStyle='#fbdfaa';c.beginPath();c.arc(620,200,93,0,Math.PI*2);c.fill();
+    for(let layer=0;layer<5;layer++){c.fillStyle=['#8fb4a3','#6d9885','#4d7a6b','#305e53','#20483f'][layer];c.beginPath();c.moveTo(0,840);for(let x=0;x<=850;x+=10)c.lineTo(x,350+layer*75+Math.sin(x/130+layer*.8)*65+Math.cos(x/47+layer)*14);c.lineTo(840,840);c.closePath();c.fill();}
+    for(let i=0;i<80;i++){const x=(i*113+31)%840,y=480+(i*71)%360;c.strokeStyle=i%2?'#c2d3a466':'#749c7f';c.lineWidth=2;c.beginPath();c.moveTo(x,y+30);c.quadraticCurveTo(x-8,y+12,x+7,y-16);c.stroke();}
+  });
+  function background() { const p=palettes[state.palette];return bitmap(W,H,c=>{
+    c.fillStyle='#f4f0e5';c.fillRect(0,0,W,H);c.strokeStyle='#d5dace';c.lineWidth=1;for(let y=0;y<H;y+=24){c.beginPath();c.moveTo(0,y+.5);c.lineTo(W,y+.5);c.stroke();}
+    c.fillStyle=p.ink;c.font='600 22px system-ui';c.fillText('ФЕСТИВАЛЬ МЕДИАИСКУССТВА',48,64);c.font='800 78px system-ui';c.fillText('ЦИФРОВОЙ',43,166);c.fillText('САД',43,251);
+    c.strokeStyle=p.ink;c.lineWidth=2;c.strokeRect(49,280,197,45);c.font='600 20px system-ui';c.fillText('СОЗДАВАЙ ИГРАЯ',64,311);
+    c.fillStyle=p.accent;c.beginPath();c.arc(590,237,56,0,Math.PI*2);c.fill();c.fillStyle=p.ink;c.font='700 20px system-ui';c.textAlign='center';c.fillText('ВХОД',590,232);c.fillText('СВОБОДНЫЙ',590,257);c.textAlign='left';
+    c.fillStyle=p.ink;c.font='700 33px system-ui';c.fillText('Из идеи — в движение',48,858);c.font='22px system-ui';c.fillText('Анимация · дизайн · интерактив',48,900);c.font='600 20px system-ui';c.fillText('ПЕРЕТАСКИВАЙ ИЗОБРАЖЕНИЕ',48,947);
+  }); }
+  const dot = bitmap(20,20,c=>{c.fillStyle='#fff';c.beginPath();c.ellipse(10,10,8,4,-.5,0,Math.PI*2);c.fill();});
+  function elements() { let seed=19607;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};return Array.from({length:state.count},()=>({x:random()*W,y:340+random()*465,speed:15+random()*28,phase:random()*Math.PI*2,size:3+random()*7})); }
+  function position(item) { return {x:(item.x+state.time*item.speed)%(W+24)-12,y:item.y+Math.sin(state.time*.7+item.phase)*18,angle:Math.sin(state.time+item.phase)*.6}; }
+  function canvasRenderer() {
+    const canvas=document.createElement('canvas');surface.append(canvas);const c=canvas.getContext('2d');let base=background(),items=elements();
+    return { resize(){canvas.width=Math.round(view.width*Math.min(devicePixelRatio||1,2));canvas.height=Math.round(view.height*Math.min(devicePixelRatio||1,2));}, rebuild(){base=background();items=elements();},
+      draw(){const ratio=canvas.width/view.width;c.setTransform(ratio,0,0,ratio,0,0);c.fillStyle='#e7eeeb';c.fillRect(0,0,view.width,view.height);c.translate(view.x,view.y);c.scale(view.scale,view.scale);c.drawImage(base,0,0);
+        c.save();c.beginPath();c.arc(360,565,236,0,Math.PI*2);c.clip();c.drawImage(picture,-3+state.x,202+state.y,726,726);
+        c.globalAlpha=.75;for(const item of items){const pos=position(item);c.save();c.translate(pos.x,pos.y);c.rotate(pos.angle);c.drawImage(dot,-item.size,-item.size,item.size*2,item.size*2);c.restore();}c.restore();
+        c.strokeStyle=palettes[state.palette].ink;c.lineWidth=3;c.beginPath();c.arc(360,565,236,0,Math.PI*2);c.stroke();},
+      dispose(){canvas.remove();}
+    };
+  }
+  async function pixiRenderer(token) {
+    const P=library, app=new P.Application();
+    try { await app.init({preference:['webgl'],autoStart:false,sharedTicker:false,antialias:true,resolution:Math.min(devicePixelRatio||1,2),width:view.width,height:view.height,background:0xe7eeeb}); }
+    catch(error) { if(app.renderer)app.destroy(true,{children:true,texture:true,textureSource:true});throw error; }
+    if(token!==generation || disposed){app.destroy(true,{children:true,texture:true,textureSource:true});return null;}
+    surface.append(app.canvas);const root=new P.Container();app.stage.addChild(root);
+    const textures=[],texture=canvas=>{const t=P.Texture.from(canvas);textures.push(t);return t;};
+    const base=new P.Sprite(texture(background()));root.addChild(base);
+    const art=new P.Container(),mask=new P.Graphics().circle(360,565,236).fill(0xffffff);root.addChild(art,mask);art.mask=mask;
+    const image=new P.Sprite(texture(picture));image.width=image.height=726;art.addChild(image);
+    const particleLayer=new P.Container();art.addChild(particleLayer);const particleTexture=texture(dot);let items=[],sprites=[];
+    const outline=new P.Graphics();root.addChild(outline);
+    function rebuild(){const old=base.texture;base.texture=texture(background());old.destroy(true);textures.splice(textures.indexOf(old),1);
+      for(const node of particleLayer.removeChildren())node.destroy();items=elements();sprites=items.map(()=>{const sprite=new P.Sprite(particleTexture);sprite.anchor.set(.5);sprite.alpha=.75;particleLayer.addChild(sprite);return sprite;});
+      outline.clear().circle(360,565,236).stroke({color:palettes[state.palette].ink,width:3});}
+    rebuild();
+    return { resize(){app.renderer.resize(view.width,view.height);root.position.set(view.x,view.y);root.scale.set(view.scale);}, rebuild,
+      draw(){image.position.set(-3+state.x,202+state.y);for(let i=0;i<items.length;i++){const pos=position(items[i]),node=sprites[i];node.position.set(pos.x,pos.y);node.rotation=pos.angle;node.width=node.height=items[i].size*2;}app.render();},
+      dispose(){app.destroy(true,{children:true});for(const t of textures)t.destroy(true);}
+    };
+  }
+  function layout(){const bounds=stage.getBoundingClientRect();view.width=Math.max(1,bounds.width);view.height=Math.max(1,bounds.height);view.scale=Math.min(view.width/W,view.height/H);view.x=(view.width-W*view.scale)/2;view.y=(view.height-H*view.scale)/2;renderer?.resize();renderer?.draw();}
+  async function select(next){const token=++generation;renderer?.dispose();renderer=null;surface.replaceChildren();drag=null;engine=next;document.body.dataset.rendererState='loading';
+    document.querySelectorAll('[data-engine]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.engine===engine)));
+    $('description').textContent=engine==='pixi'?'PixiJS — готовые слои, изображения и маски. Отрисовка через WebGL.':'Canvas — отрисовка без библиотеки. Слои и взаимодействие организованы вручную.';
+    $('status').textContent=engine==='pixi'?'Подготавливаю WebGL…':'Перетаскивайте изображение внутри круга. Стрелки — сдвиг, пробел — пауза.';
+    try { const nextRenderer=next==='pixi'?await pixiRenderer(token):canvasRenderer();if(token!==generation || disposed){nextRenderer?.dispose();return;}renderer=nextRenderer;layout();document.body.dataset.renderer=engine;document.body.dataset.rendererState='ready';fps='—';frameCount=0;last=null;
+      if(engine==='pixi')$('status').textContent='Та же афиша · маска Graphics, изображение Sprite, слои Container.'; }
+    catch { if(token!==generation || disposed)return;await select('canvas');$('status').textContent='WebGL недоступен. Афиша продолжает работать в Canvas.'; }
+  }
+  function sync(){document.querySelectorAll('[data-palette]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.palette)===state.palette)));$('pause').setAttribute('aria-pressed',String(state.paused));$('pause').setAttribute('aria-label',state.paused?'Продолжить':'Пауза');$('pause').title=state.paused?'Продолжить':'Пауза';$('count').value=state.count;$('count-value').textContent=format.format(state.count);
+    stage.dataset.offset=`${Math.round(state.x)},${Math.round(state.y)}`;stage.dataset.palette=state.palette;stage.dataset.time=state.time.toFixed(3);$('metrics').textContent=`FPS: ${fps} · Нажатий: ${format.format(state.taps)}`;}
+  function offset(x,y){state.x=Math.max(-96,Math.min(96,x));state.y=Math.max(-96,Math.min(96,y));renderer?.draw();sync();}
+  stage.addEventListener('pointerdown',event=>{if(helpOpen || event.target.closest('button'))return;event.preventDefault();stage.focus({preventScroll:true});const rect=stage.getBoundingClientRect(),x=(event.clientX-rect.left-view.x)/view.scale,y=(event.clientY-rect.top-view.y)/view.scale;state.taps++;if(Math.hypot(x-360,y-565)<236){drag={id:event.pointerId,x:event.clientX,y:event.clientY,ox:state.x,oy:state.y};stage.setPointerCapture(event.pointerId);}sync();});
+  stage.addEventListener('pointermove',event=>{if(drag?.id!==event.pointerId)return;offset(drag.ox+(event.clientX-drag.x)/view.scale,drag.oy+(event.clientY-drag.y)/view.scale);});
+  for(const name of ['pointerup','pointercancel','lostpointercapture'])stage.addEventListener(name,event=>{if(drag?.id===event.pointerId)drag=null;});
+  stage.addEventListener('keydown',event=>{if(helpOpen)return;if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(event.key)){event.preventDefault();if(event.key===' ')$('pause').click();else offset(state.x+(event.key==='ArrowRight'?12:event.key==='ArrowLeft'?-12:0),state.y+(event.key==='ArrowDown'?12:event.key==='ArrowUp'?-12:0));}});
+  document.querySelectorAll('[data-engine]').forEach(button=>button.addEventListener('click',()=>void select(button.dataset.engine)));
+  document.querySelectorAll('[data-palette]').forEach(button=>button.addEventListener('click',()=>{state.palette=Number(button.dataset.palette);renderer?.rebuild();renderer?.draw();sync();}));
+  $('pause').addEventListener('click',()=>{state.paused=!state.paused;last=null;sync();});
+  $('reset').addEventListener('click',()=>{Object.assign(state,{palette:0,x:0,y:0,paused:false,count:120,time:0,taps:0});renderer?.rebuild();renderer?.draw();last=null;sync();});
+  $('count').addEventListener('input',event=>{$('count-value').textContent=format.format(Number(event.target.value));});
+  $('count').addEventListener('change',event=>{state.count=Number(event.target.value);renderer?.rebuild();renderer?.draw();sync();});
+  function help(value){helpOpen=value;$('help').hidden=!value;$('help-toggle').setAttribute('aria-expanded',String(value));drag=null;last=null;(value?$('help-close'):$('help-toggle')).focus();}
+  $('help-toggle').addEventListener('click',()=>help(!helpOpen));$('help-close').addEventListener('click',()=>help(false));document.addEventListener('keydown',event=>{if(event.key==='Escape'&&helpOpen)help(false);});
+  document.addEventListener('visibilitychange',()=>{drag=null;last=null;frameCount=0;});
+  new ResizeObserver(layout).observe(stage);layout();void select('canvas');sync();
+  function animate(time){if(disposed)return;requestAnimationFrame(animate);if(document.hidden||helpOpen){last=null;return;}if(last===null)last=time;const delta=Math.min(40,time-last);last=time;
+    if(!state.paused&&renderer){state.time+=delta/1000;renderer.draw();if(frameCount===0)frameTime=time;frameCount++;if(time-frameTime>750){fps=format.format(Math.round((frameCount-1)*1000/(time-frameTime)));frameCount=0;sync();}}
+  }requestAnimationFrame(animate);
+  window.addEventListener('pagehide',()=>{disposed=true;generation++;renderer?.dispose();renderer=null;},{once:true});
+  window.registerPosterLibrary = value => {library=value;document.querySelector('[data-engine="pixi"]').disabled=!value;if(!value)$('status').textContent='Не загружены PixiJS или модуль совместимости. Canvas работает без библиотеки; подготовьте оба файла в OneHTML Lab.';};
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/pixi.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/packages/unsafe-eval.min.js"></script>
+<script>registerPosterLibrary(window.PIXI?.VERSION === '8.22.0' && typeof window.PIXI.generateShaderSyncPolyfill === 'function' ? window.PIXI : null);</script>
+</body>
+</html>

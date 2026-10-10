@@ -1,7 +1,7 @@
 // Requirements describe new games; existing code determines subsequent changes.
 const aiGameOptions = {
   dimension: { '2d': '2D', '3d': '3D' },
-  basis: { auto: 'Рекомендовать', canvas: 'Без библиотек', phaser3: 'Phaser 3.90.0', phaser4: 'Phaser 4.2.1', matter: 'Matter.js 0.20.0', three: 'Three.js r160', babylon: 'Babylon.js 9.30.0' },
+  basis: { auto: 'Рекомендовать', canvas: 'Без библиотек', pixi: 'PixiJS 8.22.0', phaser3: 'Phaser 3.90.0', phaser4: 'Phaser 4.2.1', matter: 'Matter.js 0.20.0', three: 'Three.js r160', babylon: 'Babylon.js 9.30.0' },
   genre: { '': 'Своя идея', platformer: 'Платформер', arcade: 'Аркада сверху', puzzle: 'Головоломка', runner: 'Раннер', racing: 'Гонки' },
   physics: { '': 'По задаче', simple: 'Простые столкновения', gravity: 'Прыжки и гравитация', bodies: 'Вращение и равновесие' },
   camera: { '': 'По задаче', side: 'Сбоку', top: 'Сверху', iso: 'Изометрия', behind: 'Позади героя', first: 'От первого лица' },
@@ -14,6 +14,7 @@ const aiGameOptions = {
 const aiGameLabels = { dimension: 'Пространство', basis: 'Основа игры', genre: 'Жанр', physics: 'Физика', camera: 'Камера', orientation: 'Экран', controls: 'Управление на телефоне', style: 'Оформление', sound: 'Звук', load: 'Нагрузка' };
 const aiGameCatalog = {
   canvas: { title: 'Без библиотек', key: '' },
+  pixi: { title: 'PixiJS 8.22.0', key: 'pixi.js@8.22.0', url: 'https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/pixi.min.js' },
   phaser3: { title: 'Phaser 3.90.0', key: 'phaser@3.90.0', url: 'https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js' },
   phaser4: { title: 'Phaser 4.2.1', key: 'phaser@4.2.1', url: 'https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.min.js' },
   matter: { title: 'Matter.js 0.20.0', key: 'matter-js@0.20.0', url: 'https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js' },
@@ -21,6 +22,7 @@ const aiGameCatalog = {
   babylon: { title: 'Babylon.js 9.30.0', key: 'babylonjs@9.30.0', url: 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/babylon.js' }
 };
 let aiGame = normalizeAiGame();
+const aiPixiCompatUrl = aiGameCatalog.pixi.url.replace('pixi.min.js', 'packages/unsafe-eval.min.js');
 const aiPhysicsKey = 'cannon-es@0.20.0';
 const aiPhysicsUrl = 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
 const aiMusicKey = 'tone@15.1.22';
@@ -48,6 +50,7 @@ function aiGameWarnings(value) {
   if ((game.dimension === '3d') !== ['three', 'babylon'].includes(id)) notes.push('Основа не соответствует 2D/3D. Уточните пространство или основу.');
   if (game.dimension === '3d' && game.physics === 'bodies' && id !== 'three') notes.push('Для 3D-физики с вращением и равновесием поддержана связка Three.js + cannon-es. Физика выбранной основы пока не подготовлена; ваш выбор сохранён.');
   if (id === 'canvas' && game.physics === 'bodies') notes.push('Для равновесия и вращения рекомендуем Matter.js; ваш выбор сохранён.');
+  if (id === 'pixi' && ['bodies', 'gravity'].includes(game.physics)) notes.push('PixiJS рисует сцену, но не рассчитывает физику. Для игровой физики удобнее Phaser или отдельная проверенная библиотека; ваш выбор сохранён.');
   if (game.dimension === '2d' && ['behind', 'first'].includes(game.camera)) notes.push('Камера позади героя или от первого лица рассчитана на 3D.');
   return notes;
 }
@@ -58,7 +61,9 @@ function aiGameInstructions(value, models = false) {
   for (const [key, label] of Object.entries(aiGameLabels)) if (key !== 'basis' && game[key]) parts.push(`${label}: ${aiGameOptions[key][game[key]]}.`);
   parts.push(physics ? `Используй Three.js r160 и cannon-es 0.20.0 как ES-модули. Перед скриптом игры добавь <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","cannon-es":"${aiPhysicsUrl}"}}</script>. В <script type="module"> импортируй import * as THREE from 'three'; import * as CANNON from 'cannon-es';. Не подключай дополнительно обычный скрипт THREE, CommonJS, latest или другую версию. Не вставляй исходники библиотек в ответ: OneHTML Lab подготовит их при сохранении.` : models && id === 'three' ? 'Используй Three.js r160 как ES-модуль с GLTFLoader. Точные подключения и работа с GLB указаны в конце запроса. Не вставляй исходники библиотек в ответ.' : profile.url ? `Используй ${profile.title}. Подключи до кода игры обычным скриптом <script src="${profile.url}"></script>. Не используй import, latest или другие версии. Не вставляй исходники библиотеки в ответ: OneHTML Lab подготовит их при сохранении.` : 'Используй HTML, Canvas 2D или SVG и обычный JavaScript без внешних библиотек.');
   if (id.startsWith('phaser')) parts.push(`Используй встроенную ${game.physics === 'bodies' ? 'Matter Physics' : 'Arcade Physics при необходимости столкновений'}. Не подключай отдельный Matter.js. Создавай графику через Graphics/текстуры Phaser; не добавляй плагины. При повторном старте не дублируй обработчики и таймеры.`);
+  if (id === 'pixi') parts.push(`Сразу после ядра PixiJS, до кода игры, подключи <script src="${aiPixiCompatUrl}"></script>. Это официальный модуль для работы без eval в изолированном предпросмотре, той же версии 8.22.0.`);
   if (id === 'matter') parts.push('Используй Matter.js для физических тел, а Canvas 2D для своей отрисовки. Связывай координаты и поворот рисунка с телом. При сбросе очищай тела и обработчики, не создавай второй цикл обновления.');
+  if (id === 'pixi') parts.push('Используй PIXI.Application и дождись await app.init({preference: ["webgl"], autoStart: false, sharedTicker: false, resolution: Math.min(devicePixelRatio || 1, 2)}). Добавь app.canvas в рабочую область. Создавай слои через Container, изображения через Sprite, фигуры через Graphics API версии 8. В единственном requestAnimationFrame обновляй сцену и вызывай app.render(); не запускай одновременно app.ticker. Простые столкновения и правила игры напиши самостоятельно: PixiJS не включает физику. Не используй API версии 7, плагины, внешние шрифты или WebGPU. При сбросе и смене сцены освобождай прежний app и текстуры; сохраняй один цикл кадров. Если WebGL недоступен, покажи понятное сообщение.');
   if (id === 'three') parts.push((models ? 'Загрузи выбранные GLB-модели через GLTFLoader той же версии. ' : 'Используй ядро Three.js через THREE, без addons, внешних моделей и загрузчиков. Строй сцену из геометрии, света и материалов; ')+(physics ? 'Физические тела рассчитывай в CANNON.World; связывай положение и quaternion видимого объекта с телом. Используй world.step(1 / 60, Math.min(deltaSeconds, 0.05), 3), спящие тела и ограниченное число активных объектов. При возврате из фона сбрасывай отсчёт времени. Для GLB используй простые Box/Sphere-коллизии: визуальная геометрия сама не становится физическим телом. При сбросе очищай прежние тела, снаряды и обработчики, сохраняй один цикл обновления. ' : 'Простые столкновения проверяй самостоятельно. ')+'Ограничь плотность пикселей и число теней на телефоне.');
   if (id === 'babylon') parts.push('Используй ядро Babylon.js через BABYLON и Engine с WebGL. Не подключай WebGPU, Havok, GUI или инспектор. '+(models ? 'Подключи GLB-загрузчик 9.30.0 по инструкции в конце запроса. ' : 'Не подключай загрузчики моделей. Строй сцену из MeshBuilder, материалов, камеры и света; ')+'Простые столкновения проверяй самостоятельно. Ограничь плотность пикселей и размер теней на телефоне. При сбросе освобождай прежнюю Scene и обработчики, не создавай второй цикл кадров.');
   const genres = { platformer: 'Прыжок должен быть предсказуемым; предусмотрено небольшое прощение раннего/позднего нажатия. Цель и опасные поверхности должны быть понятны.', arcade: 'Сделай заметную реакцию на попадание, понятное получение урона и короткую защиту от повторного урона.', puzzle: 'Покажи цель и текущее состояние головоломки. Сделай удобный сброс; начальное состояние должно позволять решение.', runner: 'Дай время увидеть препятствия, постепенно повышай сложность и не создавай непроходимые сочетания.', racing: 'Сделай понятные границы трассы, плавное управление и заметную реакцию на столкновение.' };
@@ -73,6 +78,7 @@ function aiGameInstructions(value, models = false) {
 function aiGameMediaRecipe(id) {
   const recipes = {
     canvas: 'После загрузки img используй его в drawImage; не начинай отрисовку до готовности изображения.',
+    pixi: 'После decode() или load скрытого img создай PIXI.Texture.from(imageElement) и PIXI.Sprite из этой текстуры. Не передавай имя файла в Assets.load или Texture.from: OneHTML Lab подставляет данные в img src. Удаляй созданные текстуры при освобождении приложения.',
     phaser3: 'До создания Phaser.Game дождись загрузки img. В create() передай HTMLImageElement в this.textures.addImage("hero", imageElement), затем используй ключ "hero" для игрового объекта. При повторном старте проверь this.textures.exists("hero"). Не передавай имя файла в this.load.image.',
     matter: 'После загрузки img рисуй его через Canvas drawImage в позиции и с поворотом физического тела Matter. Не задавай путь в render.sprite.texture.',
     three: 'После загрузки img создай new THREE.Texture(imageElement), задай texture.needsUpdate = true и texture.colorSpace = THREE.SRGBColorSpace, передай текстуру материалу. Не используй TextureLoader с именем файла.',
@@ -112,7 +118,8 @@ function aiGameConnectionText(code, profileId = '', settings = null) {
     if (expected.key && !actual.found.some(ref => ref.key === expected.key)) parts.push('Ожидаемое подключение не найдено; ответ может использовать другую основу или способ подключения.');
     if (physics && !actual.found.some(ref => ref.key === aiPhysicsKey)) parts.push('Ожидаемое подключение cannon-es не найдено.');
     if (music && !actual.found.some(ref => ref.key === aiMusicKey)) parts.push('Ожидаемое подключение Tone.js не найдено.');
-    if (actual.found.some(ref => ref.key !== expected.key && !(physics && ref.key === aiPhysicsKey) && !(music && ref.key === aiMusicKey) && !(profileId === 'three' && ref.key === 'three-gltf@0.160.0'))) parts.push('Есть отличающиеся версии или дополнительные библиотеки.');
+    if (profileId === 'pixi' && !actual.found.some(ref => ref.key === 'pixi.js@8.22.0:unsafe-eval')) parts.push('Не найден модуль совместимости PixiJS с предпросмотром без eval.');
+    if (actual.found.some(ref => ref.key !== expected.key && !(physics && ref.key === aiPhysicsKey) && !(music && ref.key === aiMusicKey) && !(profileId === 'three' && ref.key === 'three-gltf@0.160.0') && !(profileId === 'pixi' && ref.key === 'pixi.js@8.22.0:unsafe-eval'))) parts.push('Есть отличающиеся версии или дополнительные библиотеки.');
   }
   parts.push(actual.found.length ? 'В HTML распознано: ' + actual.found.map(ref => ref.title).join(', ') + '.' : 'Известные библиотеки в HTML не распознаны.');
   if (actual.unknown.length) parts.push('Другие подключения: ' + actual.unknown.slice(0, 6).map(url => url.slice(0, 160)).join(', ') + '.');
@@ -132,6 +139,7 @@ function renderAiGameControls() {
   for (const key of Object.keys(aiGameOptions)) document.querySelector('#ai-game-' + key).value = aiGame[key];
   document.querySelector('#ai-game-recommendation').textContent = `${aiGameCatalog[choice.id].title}. ${choice.reason}` + (choice.id === 'phaser4' ? ' Новая ветка рендеринга, света и фильтров; не все примеры Phaser 3 совместимы.' : choice.id === 'babylon' ? ' Для 3D-сцен с готовыми камерами, материалами и инструментами движка.' : '');
   if (aiGameUsesPhysics(aiGame)) document.querySelector('#ai-game-recommendation').textContent += ' Для вращения и равновесия: cannon-es 0.20.0.';
+  if (choice.id === 'pixi') document.querySelector('#ai-game-recommendation').textContent += ' Для интерактивной 2D-графики, изображений, масок и фильтров. Физику и правила игры нужно добавить отдельно.';
   if (aiGame.sound === 'rhythm') document.querySelector('#ai-game-recommendation').textContent += ' Для музыки и ритма: Tone.js 15.1.22.';
   document.querySelector('#ai-game-warning').textContent = aiGameWarnings(aiGame).join(' ');
 }

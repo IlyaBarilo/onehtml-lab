@@ -3,6 +3,7 @@
 const libraryCache = new Map();
 // Only notices are included in the editor; the Tone.js distribution is downloaded separately.
 const toneDistributionLicense = /* TONE_LICENSE */ null;
+const pixiDistributionLicense = /* PIXI_LICENSE */ null;
 const persistedLibraries = new Map();
 let libraryCachePersistent = false;
 let libraryDatabasePromise;
@@ -44,7 +45,8 @@ function validLibraryEntry(entry) {
   return entry && validLibraryAsset(entry.source, entry.license, entry.notice || '')
     && (!entry.licenseType || entry.licenseType === libraryLicenseType(entry.license))
     && (!libraryNeedsNotice(entry) || libraryLicenseType(entry.license) === 'Apache-2.0' && /Babylon\.js[\s\S]*Copyright/.test(entry.notice || ''))
-    && (!(entry.catalogKey || entry.key || '').startsWith('tone@') || Boolean(toneDistributionLicense) && entry.license.replace(/\r\n?/g, '\n').includes(toneDistributionLicense));
+    && (!(entry.catalogKey || entry.key || '').startsWith('tone@') || Boolean(toneDistributionLicense) && entry.license.replace(/\r\n?/g, '\n').includes(toneDistributionLicense))
+    && (!(entry.catalogKey || entry.key || '').startsWith('pixi.js@') || Boolean(pixiDistributionLicense) && entry.license.replace(/\r\n?/g, '\n').includes(pixiDistributionLicense));
 }
 function libraryAssetIdentity(source, license, notice = '') { return source + '\0' + license + (notice ? '\0' + notice : ''); }
 function libraryLicenseText(entry) { return entry.license + (entry.notice ? '\nNOTICE:\n' + entry.notice : ''); }
@@ -55,6 +57,14 @@ const knownLibraryBytes = { 'three@0.160.0': 669884, 'matter-js@0.20.0': 83476,
   'babylonjs-loaders@9.30.0:glTF2': 399422, 'babylonjs-loaders@9.30.0:all': 849596 };
 
 function libraryReference(url) {
+  if (/^https:\/\/(?:cdn\.jsdelivr\.net\/npm\/|unpkg\.com\/)pixi\.js@8\.22\.0\/dist\/packages\/unsafe-eval\.min\.js$/.test(url)) return {
+    key: 'pixi.js@8.22.0:unsafe-eval', title: 'PixiJS 8.22.0 · совместимость CSP', url, downloadBytes: 15751, licenseType: 'MIT',
+    licenseUrl: 'https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/LICENSE', licenseText: pixiDistributionLicense
+  };
+  if (/^https:\/\/(?:cdn\.jsdelivr\.net\/npm\/|unpkg\.com\/)pixi\.js@8\.22\.0\/dist\/pixi\.min\.js$/.test(url)) return {
+    key: 'pixi.js@8.22.0', title: 'PixiJS 8.22.0', url, downloadBytes: 840663, licenseType: 'MIT',
+    licenseUrl: 'https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/LICENSE', licenseText: pixiDistributionLicense
+  };
   if (/^https:\/\/(?:cdn\.jsdelivr\.net\/npm\/|unpkg\.com\/)tone@15\.1\.22\/build\/Tone\.js$/.test(url)) return {
     key: 'tone@15.1.22', title: 'Tone.js 15.1.22', url, downloadBytes: 345500, licenseType: 'MIT',
     licenseUrl: 'https://cdn.jsdelivr.net/npm/tone@15.1.22/LICENSE.md', licenseText: toneDistributionLicense
@@ -129,6 +139,16 @@ function localLibraryReference(url) {
     const version = (/[._-]v?(0\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
       || folders.map(folder => /^(?:matter(?:-js)?[@._-])?v?(0\.\d+\.\d+)$/i.exec(folder)).find(Boolean))?.[1];
     if (version) reference = libraryReference(`https://cdn.jsdelivr.net/npm/matter-js@${version}/build/matter.min.js`);
+  } else if (/^(?:pixi[._-])?unsafe-eval(?:[._-]v?\d+\.\d+\.\d+)?(?:\.min)?\.js$/i.test(filename)) {
+    title = 'PixiJS · совместимость CSP';
+    const version = (/[._-]v?(\d+\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
+      || folders.map(folder => /^(?:pixi(?:\.js)?[@._-])?v?(\d+\.\d+\.\d+)$/i.exec(folder)).find(Boolean))?.[1];
+    if (version) reference = libraryReference(`https://cdn.jsdelivr.net/npm/pixi.js@${version}/dist/packages/unsafe-eval.min.js`);
+  } else if (/^pixi(?:[._-]v?\d+\.\d+\.\d+)?(?:\.min)?\.js$/i.test(filename)) {
+    title = 'PixiJS';
+    const version = (/[._-]v?(\d+\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
+      || folders.map(folder => /^(?:pixi(?:\.js)?[@._-])?v?(\d+\.\d+\.\d+)$/i.exec(folder)).find(Boolean))?.[1];
+    if (version) reference = libraryReference(`https://cdn.jsdelivr.net/npm/pixi.js@${version}/dist/pixi.min.js`);
   } else if (/^tone(?:[._-]v?\d+\.\d+\.\d+)?(?:\.min)?\.js$/i.test(filename)) {
     title = 'Tone.js';
     const version = (/[._-]v?(\d+\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
@@ -183,6 +203,8 @@ async function librarySourceHash(source) {
 }
 
 function libraryCatalogReference(key) {
+  if (key === 'pixi.js@8.22.0:unsafe-eval') return libraryReference('https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/packages/unsafe-eval.min.js');
+  if (key === 'pixi.js@8.22.0') return libraryReference('https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/pixi.min.js');
   if (key === 'tone@15.1.22') return libraryReference('https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.js');
   if (/^babylonjs-loaders@9\.30\.0:(?:glTF2|all)$/.test(key || '')) return libraryReference('https://cdn.jsdelivr.net/npm/babylonjs-loaders@9.30.0/'+(key.endsWith(':glTF2') ? 'babylon.glTF2FileLoader.min.js' : 'babylonjs.loaders.min.js'));
   if (key === 'babylonjs@9.30.0') return libraryReference('https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/babylon.js');
@@ -447,6 +469,8 @@ function libraryFilename(reference, entry) {
   const phaser = /^phaser@([\d.]+)$/.exec(key);
   if (phaser) return `phaser-${phaser[1]}.min.js`;
   if (key === 'tone@15.1.22') return 'tone-15.1.22.js';
+  if (key === 'pixi.js@8.22.0') return 'pixi-8.22.0.min.js';
+  if (key === 'pixi.js@8.22.0:unsafe-eval') return 'pixi-unsafe-eval-8.22.0.min.js';
   if (key === 'babylonjs@9.30.0') return 'babylon-9.30.0.js';
   if (key === 'babylonjs-loaders@9.30.0:glTF2') return 'babylon-glTF2-9.30.0.js';
   if (key === 'babylonjs-loaders@9.30.0:all') return 'babylon-loaders-9.30.0.js';
