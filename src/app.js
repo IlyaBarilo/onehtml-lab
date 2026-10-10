@@ -279,8 +279,8 @@ function requestLibraries(prepared, action, code = codeField.value) {
   const local = prepared.missingLibraries.filter(item => item.localPath);
   const hosts = [...new Set(downloadable.flatMap(item => [item.url.split('/')[2], item.licenseUrl.split('/')[2]]))].join(', ');
   libraryRequestText.textContent = `Для автономной игры нужны: ${titles}.`
-    + (downloadable.length ? ` Скачать с ${hosts}; до 4 МБ на библиотеку.` : '')
-    + (local.length ? ` Локальный файл: ${local[0].localPath}. Можно выбрать JS и полный текст MIT-лицензии.` : '')
+    + (downloadable.length ? ` Скачать с ${hosts}.` : '')
+    + (local.length ? ` Локальный файл: ${local[0].localPath}. Можно выбрать JS, полный текст лицензии MIT или Apache-2.0 и NOTICE.` : '')
     + (action === 'convert' ? ' После получения нажмите «Применить», чтобы встроить копию и лицензию в код.'
       : ' Копия будет доступна для предпросмотра и встраивания при сохранении.');
   libraryDownloadButton.hidden = !downloadable.length;
@@ -342,8 +342,9 @@ libraryFiles.addEventListener('change', async () => {
   try {
     if (!libraryActionIsCurrent(pending)) throw new Error('Код изменился. Повторите действие.');
     const scripts = files.filter(file => /\.js$/i.test(file.name));
-    const licenses = files.filter(file => !/\.js$/i.test(file.name));
-    if (scripts.length > 1 || licenses.length > 1) throw new Error('Выберите один JS-файл и один файл его MIT-лицензии.');
+    const notices = files.filter(file => /^NOTICE(?:\.[\w-]+)?$/i.test(file.name));
+    const licenses = files.filter(file => !/\.js$/i.test(file.name) && !notices.includes(file));
+    if (scripts.length > 1 || licenses.length > 1 || notices.length > 1) throw new Error('Выберите один JS-файл, его лицензию и NOTICE при наличии.');
     if (scripts.length) {
       const file = scripts[0];
       if (file.name.toLowerCase() !== reference.filename.toLowerCase()) throw new Error(`Нужен файл ${reference.filename}.`);
@@ -353,18 +354,25 @@ libraryFiles.addEventListener('change', async () => {
     }
     const source = pendingLocalLibrarySource?.key === reference.key ? pendingLocalLibrarySource.source : '';
     if (!source) throw new Error(`Сначала выберите ${reference.filename}.`);
-    let license = localLibraryLicense(source);
+    const included = localLibraryNotices(source);
+    let license = pendingLocalLibrarySource.license || included.license;
     if (licenses.length) {
       license = await licenses[0].text();
     }
+    const notice = notices.length ? await notices[0].text() : pendingLocalLibrarySource.notice || included.notice;
+    Object.assign(pendingLocalLibrarySource, { license, notice });
     if (!license) {
-      libraryRequestText.textContent = `${reference.filename} прочитан. Теперь выберите файл с полным текстом его MIT-лицензии (LICENSE, .txt или .md).`;
+      libraryRequestText.textContent = `${reference.filename} прочитан. Выберите полный текст MIT или Apache-2.0 (LICENSE, .txt или .md) и NOTICE при наличии.`;
       libraryFilesButton.textContent = 'Выбрать лицензию';
       return;
     }
-    if (!validLibraryAsset(source, license)) throw new Error('Нужны безопасный для встраивания JS-файл и полный текст MIT-лицензии с авторскими правами.');
+    if (libraryNeedsNotice(reference) && !notice) {
+      libraryRequestText.textContent = 'Для Babylon.js нужен также файл NOTICE поставки. Выберите его вместе с лицензией или отдельно.';
+      libraryFilesButton.textContent = 'Выбрать NOTICE'; return;
+    }
+    if (!validLibraryEntry({ ...reference, source, license, notice })) throw new Error('Нужны безопасный для встраивания JS-файл, полная MIT или Apache-2.0 и авторские уведомления.');
     if (!libraryActionIsCurrent(pending)) return;
-    const persisted = await importLocalLibrary(reference, source, license);
+    const persisted = await importLocalLibrary(reference, source, license, notice);
     const prepared = await prepareGameHtml(pending.code);
     if (!libraryActionIsCurrent(pending)) return;
     hideLibraryRequest();

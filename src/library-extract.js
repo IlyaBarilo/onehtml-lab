@@ -26,7 +26,7 @@ async function embeddedLibraryRows(code) {
     const bodyEnd = match[0].search(/<\/script\s*>$/i);
     const source = match[0].slice(8 + match[2].length, bodyEnd).replace(/^\r?\n/, '').replace(/\r?\n$/, '');
     const row = { index: match.index, end: match.index + match[0].length, start: match.index,
-      title: catalog?.title || filename, filename, key, originalUrl, source, license: '', cdn: '',
+      title: catalog?.title || filename, filename, key, originalUrl, source, license: '', notice: '', cdn: '',
       inlineAttributes: libraryInlineAttributes(attributes), reason: '' };
     rows.push(row);
     if (['async', 'defer', 'nomodule'].some(name => attributes.has(name))
@@ -39,11 +39,15 @@ async function embeddedLibraryRows(code) {
     if (value('bundle') === '1') {
       const marker = `onehtml-library:${encodeURIComponent(key)}\n`;
       const titleEnd = commentText.indexOf('\n', marker.length);
-      if (!commentText.startsWith(marker) || titleEnd < 0 || !commentText.slice(marker.length, titleEnd).endsWith(', MIT license:')) {
+      const type = /, (MIT|Apache-2\.0) license:$/.exec(commentText.slice(marker.length, titleEnd))?.[1];
+      if (!commentText.startsWith(marker) || titleEnd < 0 || !type || (value('license') && value('license') !== type)) {
         row.reason = 'Не найдена лицензия встроенной копии.';
         continue;
       }
       row.license = commentText.slice(titleEnd + 1).trim();
+      row.licenseType = type;
+      const noticeStart = row.license.lastIndexOf('\nNOTICE:\n');
+      if (noticeStart >= 0) { row.notice = row.license.slice(noticeStart + 9).trim(); row.license = row.license.slice(0, noticeStart).trim(); }
       if (!hash || !/^[a-f\d]{64}$/.test(value('sha256'))) {
         row.reason = 'Недоступна проверка исходного кода библиотеки.';
         continue;
@@ -64,9 +68,9 @@ async function embeddedLibraryRows(code) {
       row.license = cached.license;
       if (!hash) { row.reason = 'Недоступна проверка исходного кода библиотеки.'; continue; }
     }
-    if (!validLibraryAsset(row.source, row.license)) { row.reason = 'Не удалось проверить библиотеку и её MIT-лицензию.'; continue; }
+    if (!validLibraryEntry(row)) { row.reason = 'Не удалось проверить библиотеку, лицензию или NOTICE.'; continue; }
     row.start = adjacent.index;
-    row.assetKey = 'asset@' + await librarySourceHash(source + '\0' + row.license);
+    row.assetKey = 'asset@' + await librarySourceHash(libraryAssetIdentity(source, row.license, row.notice));
     row.catalogKey = catalog?.key;
     const requestedCdn = value('cdn') || (libraryReference(originalUrl)?.key === catalog?.key ? originalUrl : cached?.sourceUrl);
     row.cdn = catalog ? (libraryReference(requestedCdn)?.key === catalog.key ? requestedCdn : catalog.url) : '';
@@ -98,6 +102,7 @@ async function planLibraryExtraction(code, mode = 'cdn') {
       }
       names.add(name.toLowerCase());
       asset = { key: row.assetKey, title: row.title, source: row.source, license: row.license, filename: name,
+        licenseType: libraryLicenseType(row.license), notice: row.notice,
         catalogKey: row.catalogKey, sourceUrl: row.cdn, originalUrl: row.originalUrl,
         bytes: new TextEncoder().encode(row.source).length, savedAt: Date.now() };
       assets.set(asset.key, asset);
@@ -136,7 +141,7 @@ async function planLibraryEmbedding(code) {
   const rows = await Promise.all(references.map(async reference => {
     const entry = cachedLibrary(reference);
     return { title: reference.title, removable: Boolean(entry),
-      note: reference.localPath ? `Выберите ${reference.filename} и MIT-лицензию.` : 'Нужна копия библиотеки с MIT-лицензией.',
+      note: reference.localPath ? `Выберите ${reference.filename}, лицензию и NOTICE при наличии.` : 'Нужна копия библиотеки с полной лицензией и уведомлениями.',
       removedBytes: entry ? new Blob([reference.tag]).size - new Blob([await embeddedLibraryTag(reference, entry)]).size : 0 };
   }));
   if (typeof scanModules === 'function') {

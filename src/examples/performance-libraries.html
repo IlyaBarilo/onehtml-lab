@@ -78,7 +78,7 @@
     .metric strong { display: block; font-size: clamp(25px, 4vw, 34px); line-height: 1.1; font-variant-numeric: tabular-nums; }
     .metric span { display: block; margin-top: 4px; font-size: 13px; color: #a9bdd7; }
     #fps { color: #7cdbb0; }
-    .modes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+    .modes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
     .mode { padding: 7px 10px; text-align: left; }
     .mode b { display: block; font-size: 15px; }
     .mode small { display: block; margin-top: 3px; color: #b4c6de; font-size: 12px; }
@@ -197,6 +197,7 @@
       <nav class="modes" aria-label="Выбор теста">
         <button class="mode" data-mode="canvas" data-state="ready" aria-pressed="true"><b>Canvas 2D</b><small>Без библиотек</small></button>
         <button class="mode" data-mode="three160" aria-pressed="false" disabled><b>Three.js r160</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
+        <button class="mode" data-mode="babylon" aria-pressed="false" disabled><b>Babylon.js 9.30</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="matter" aria-pressed="false" disabled><b>Matter.js 0.20</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="phaser" aria-pressed="false" disabled><b>Phaser 3.90</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="phaser4" aria-pressed="false" disabled><b>Phaser 4.2.1</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
@@ -237,6 +238,7 @@
       const labels = {
         canvas: 'Движущиеся частицы · Canvas 2D',
         three160: 'Вращающиеся кубы · Three.js r160',
+        babylon: 'Вращающиеся кубы · Babylon.js 9.30.0',
         matter: 'Физика падающих шаров · Matter.js',
         phaser: 'Движущиеся частицы · Phaser 3',
         phaser4: 'Движущиеся частицы · Phaser 4'
@@ -244,6 +246,7 @@
       const descriptions = {
         canvas: 'Canvas 2D — рисование 2D без игровой библиотеки.',
         three160: 'Three.js — объёмные модели, камера, свет и тени.',
+        babylon: 'Babylon.js — 3D-движок: камеры, материалы и сцены.',
         matter: 'Matter.js — физика: масса, столкновения и связи.',
         phaser: 'Phaser 3 — движок для 2D-аркад и платформеров.',
         phaser4: 'Phaser 4 — 2D-игры с динамическим светом и эффектами.'
@@ -258,6 +261,11 @@
           '«Простое» — матовые однотонные поверхности. «Подробное» — текстуры, мелкий рельеф, отражения и тени. Посмотрите на полосы металла, рисунок солнечных панелей и зернистый грунт. Модель и свет одинаковые; FPS зависит от устройства.',
           'Текстуры создаются внутри примера без загрузки изображений. Прицел останавливает анимацию и отмечает металл, стекло, текстуру панели и место тени. Переключайте оформление; для сравнения FPS выключите паузу и подсказки. В маленьком поле разверните сцену кнопкой рядом.',
           'Проведите по сцене, чтобы повернуть камеру вокруг марсохода. В «Сравнении» шар и башня показаны в объёме.'
+        ],
+        babylon: [
+          'Babylon.js — 3D-движок с готовыми камерами, материалами и управлением сценой. Подходит для 3D-игр и интерактивных миров. Three.js удобен для компактной сцены и собственной структуры приложения; Babylon.js — когда нужен более цельный движок.',
+          'Марсоход, камера, свет и рисунки поверхностей сопоставимы с Three.js. Переключайте «Простое» и «Подробное», поворачивайте камеру касанием или мышью. Близкая картинка нормальна: выбор движка зависит и от разработки, размер библиотеки и FPS — от поставки и устройства.',
+          'В «Сравнении» тот же шар и башня, в «Нагрузке» — вращающиеся кубы. Полноценная физика, загрузчики моделей, WebGPU и GUI здесь не подключены.'
         ],
         matter: [
           'Matter.js рассчитывает падение, удары, вращение и связи между предметами. Подходит для физических головоломок и механизмов. Рисование и правила игры создаются отдельно.',
@@ -275,6 +283,7 @@
       const showcaseLabels = {
         canvas: 'Набережная · касание переключает день и ночь',
         three160: 'Марсоход · проведите по сцене, чтобы повернуть камеру',
+        babylon: 'Марсоход · проведите по сцене, чтобы повернуть камеру',
         matter: 'Механизмы · перетаскивайте тела или толкните маятники',
         phaser: 'Лесная станция · Phaser 3',
         phaser4: 'Лесная станция · Phaser 4'
@@ -931,6 +940,63 @@
         renderer.toneMappingExposure = 1.15;
       }
 
+      function roverSurfaceHash(x, y) {
+        let value = Math.imul(x, 374761393) ^ Math.imul(y, 668265263);
+        value = Math.imul(value ^ value >>> 13, 1274126177);
+        return ((value ^ value >>> 16) >>> 0) / 4294967295;
+      }
+
+      function roverSurfaceCanvases(kind) {
+        const hash = roverSurfaceHash;
+        const noise = (x, y) => {
+          const ix = Math.floor(x), iy = Math.floor(y), dx = x - ix, dy = y - iy;
+          const sx = dx * dx * (3 - 2 * dx), sy = dy * dy * (3 - 2 * dy);
+          const a = hash(ix, iy), b = hash(ix + 1, iy), c = hash(ix, iy + 1), d = hash(ix + 1, iy + 1);
+          return ((a + (b - a) * sx) * (1 - sy) + (c + (d - c) * sx) * sy) * 2 - 1;
+        };
+        const size = kind === 'soil' ? 256 : 128, canvases = [], contexts = [], images = [];
+        for (let index = 0; index < 3; index += 1) {
+          const canvas = document.createElement('canvas'); canvas.width = canvas.height = size;
+          const ctx = canvas.getContext('2d'); canvases.push(canvas); contexts.push(ctx); images.push(ctx.createImageData(size, size));
+        }
+        let seed = 1949;
+        for (let y = 0; y < size; y += 1) for (let x = 0; x < size; x += 1) {
+          seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+          const grain = (seed / 4294967296 - .5) * 36, u = x / size * Math.PI * 2, v = y / size * Math.PI * 2;
+          const waves = .5 * Math.sin(u * 3 + 2 * Math.cos(v * 2)) * Math.cos(v * 4)
+            + .3 * Math.sin(u * 7 + 2 * Math.cos(v * 3)) + .2 * Math.sin(u * 11 + Math.sin(v * 9));
+          let tone = 226 + grain * .3, relief = 128 + grain, rough = 220 + grain;
+          if (kind === 'soil' || kind === 'rock') {
+            const offset = kind === 'soil' ? 37 : 113;
+            const terrain = .55 * noise(x / 40 + offset, y / 40 + 19) + .3 * noise(x / 13 + 7, y / 13 + offset)
+              + .15 * noise(x / 4 + offset, y / 4 + 61);
+            tone = 205 + terrain * 35 + grain * .6; relief = 128 + terrain * 75 + grain;
+            rough = 218 + terrain * 22 + grain * .5;
+          } else if (kind === 'metal') {
+            const stripes = Math.sin(v * 32);
+            tone = 226 + stripes * 18 + grain * .25; relief = 128 + stripes * 24 + grain * .3;
+            rough = 165 + Math.sin(u * 2) * 40 + stripes * 35;
+          } else if (kind === 'paint') {
+            const wear = Math.max(0, waves - .55) * 90;
+            tone = 245 - wear + grain * .15; relief = 128 - wear * .5 + grain * .25; rough = 180 + wear + grain;
+          } else if (kind === 'rubber') {
+            const groove = Math.cos(u * 12 + v * 8) > .88 ? 35 : 0;
+            tone = 220 - groove + grain * .6; relief = 145 - groove * 2 + grain; rough = 235 + grain * .4;
+          } else if (kind === 'solar') {
+            const conductor = x % 64 < 3 || y % 16 < 1;
+            tone = conductor ? 255 : 150 + Math.sin(u) * 20 + grain * .15;
+            relief = conductor ? 165 : 125; rough = conductor ? 205 : 105 + Math.cos(v) * 30;
+          }
+          const offset = (y * size + x) * 4;
+          for (const [index, value] of [tone, relief, rough].entries()) {
+            for (let channel = 0; channel < 3; channel += 1) images[index].data[offset + channel] = value;
+            images[index].data[offset + 3] = 255;
+          }
+        }
+        contexts.forEach((ctx, index) => ctx.putImageData(images[index], 0, 0));
+        return { size, canvases };
+      }
+
       function threeShowcase(Three) {
         const renderer = new Three.WebGLRenderer({ antialias: true });
         renderer.setPixelRatio(Math.min(ratio, 1.5));
@@ -958,59 +1024,10 @@
         if ('colorSpace' in environment) environment.colorSpace = Three.SRGBColorSpace;
         else environment.encoding = Three.sRGBEncoding;
         textures.add(environment);
-        const hash = (x, y) => {
-          let value = Math.imul(x, 374761393) ^ Math.imul(y, 668265263);
-          value = Math.imul(value ^ value >>> 13, 1274126177);
-          return ((value ^ value >>> 16) >>> 0) / 4294967295;
-        };
-        const noise = (x, y) => {
-          const ix = Math.floor(x), iy = Math.floor(y), dx = x - ix, dy = y - iy;
-          const sx = dx * dx * (3 - 2 * dx), sy = dy * dy * (3 - 2 * dy);
-          const a = hash(ix, iy), b = hash(ix + 1, iy), c = hash(ix, iy + 1), d = hash(ix + 1, iy + 1);
-          return ((a + (b - a) * sx) * (1 - sy) + (c + (d - c) * sx) * sy) * 2 - 1;
-        };
+        const hash = roverSurfaceHash;
         const surface = kind => {
-          const size = kind === 'soil' ? 256 : 128, canvases = [], contexts = [], images = [];
-          for (let index = 0; index < 3; index += 1) {
-            const canvas = document.createElement('canvas'); canvas.width = canvas.height = size;
-            const ctx = canvas.getContext('2d'); canvases.push(canvas); contexts.push(ctx); images.push(ctx.createImageData(size, size));
-          }
-          let seed = 1949;
-          for (let y = 0; y < size; y += 1) for (let x = 0; x < size; x += 1) {
-            seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-            const grain = (seed / 4294967296 - .5) * 36, u = x / size * Math.PI * 2, v = y / size * Math.PI * 2;
-            const waves = .5 * Math.sin(u * 3 + 2 * Math.cos(v * 2)) * Math.cos(v * 4)
-              + .3 * Math.sin(u * 7 + 2 * Math.cos(v * 3)) + .2 * Math.sin(u * 11 + Math.sin(v * 9));
-            let tone = 226 + grain * .3, relief = 128 + grain, rough = 220 + grain;
-            if (kind === 'soil' || kind === 'rock') {
-              const offset = kind === 'soil' ? 37 : 113;
-              const terrain = .55 * noise(x / 40 + offset, y / 40 + 19) + .3 * noise(x / 13 + 7, y / 13 + offset)
-                + .15 * noise(x / 4 + offset, y / 4 + 61);
-              tone = 205 + terrain * 35 + grain * .6; relief = 128 + terrain * 75 + grain;
-              rough = 218 + terrain * 22 + grain * .5;
-            } else if (kind === 'metal') {
-              const stripes = Math.sin(v * 32);
-              tone = 226 + stripes * 18 + grain * .25; relief = 128 + stripes * 24 + grain * .3;
-              rough = 165 + Math.sin(u * 2) * 40 + stripes * 35;
-            } else if (kind === 'paint') {
-              const wear = Math.max(0, waves - .55) * 90;
-              tone = 245 - wear + grain * .15; relief = 128 - wear * .5 + grain * .25; rough = 180 + wear + grain;
-            } else if (kind === 'rubber') {
-              const groove = Math.cos(u * 12 + v * 8) > .88 ? 35 : 0;
-              tone = 220 - groove + grain * .6; relief = 145 - groove * 2 + grain; rough = 235 + grain * .4;
-            } else if (kind === 'solar') {
-              const conductor = x % 64 < 3 || y % 16 < 1;
-              tone = conductor ? 255 : 150 + Math.sin(u) * 20 + grain * .15;
-              relief = conductor ? 165 : 125; rough = conductor ? 205 : 105 + Math.cos(v) * 30;
-            }
-            const offset = (y * size + x) * 4;
-            for (const [index, value] of [tone, relief, rough].entries()) {
-              for (let channel = 0; channel < 3; channel += 1) images[index].data[offset + channel] = value;
-              images[index].data[offset + 3] = 255;
-            }
-          }
+          const { size, canvases } = roverSurfaceCanvases(kind);
           const maps = canvases.map((canvas, index) => {
-            contexts[index].putImageData(images[index], 0, 0);
             const texture = new Three.CanvasTexture(canvas); texture.name = kind + ['.color', '.height', '.roughness'][index];
             texture.colorSpace = index === 0 ? Three.SRGBColorSpace : Three.NoColorSpace;
             texture.wrapS = texture.wrapT = kind === 'soil' || kind === 'rock' ? Three.ClampToEdgeWrapping : Three.RepeatWrapping;
@@ -1317,6 +1334,120 @@
             geometries.forEach(value => value.dispose()); materials.forEach(value => value.dispose()); textures.forEach(value => value.dispose()); renderer.dispose(); renderer.forceContextLoss();
           }
         };
+      }
+
+      function is3DMode(value) { return value.startsWith('three') || value === 'babylon'; }
+      let pendingBabylonView = null;
+
+      function babylonContext(B, fov = 42) {
+        if (!B.Engine.isSupported) throw Error('WebGL недоступен');
+        const canvas = document.createElement('canvas'); host.append(canvas);
+        const engine = new B.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true }, false);
+        const scene = new B.Scene(engine); scene.useRightHandedSystem = true;
+        scene.clearColor = B.Color4.FromHexString('#0d192bff');
+        const processing = scene.imageProcessingConfiguration;
+        processing.toneMappingEnabled = true; processing.toneMappingType = B.ImageProcessingConfiguration.TONEMAPPING_ACES; processing.exposure = 1.15;
+        const camera = new B.FreeCamera('camera', new B.Vector3(0, 3, 8), scene); camera.fov = fov * Math.PI / 180; camera.minZ = .1; camera.maxZ = 100;
+        const resize = () => { const scale = Math.min(ratio, 1.5); canvas.style.width = width + 'px'; canvas.style.height = height + 'px'; engine.setSize(Math.round(width * scale), Math.round(height * scale)); };
+        resize(); host.dataset.babylonMode = scenario;
+        pendingBabylonView = { B, engine, scene, camera, resize, render: () => scene.render(), dispose() { scene.dispose(); engine.dispose(); canvas.remove(); delete host.dataset.babylonMode; delete host.dataset.babylonQuality; delete host.dataset.babylonObjects; } };
+        return pendingBabylonView;
+      }
+
+      function babylonScene(B) {
+        const view = babylonContext(B, 50), { scene, camera } = view;
+        camera.position.set(0, 0, 15); camera.setTarget(B.Vector3.Zero());
+        const mats = colors.map((color, index) => { const m = new B.StandardMaterial('color-' + index, scene); m.disableLighting = true; m.emissiveColor = B.Color3.FromHexString(color); return m; });
+        const base = B.MeshBuilder.CreateBox('cube-source', { size: .55 }, scene); base.isVisible = false;
+        const columns = Math.ceil(Math.sqrt(objectCount * width / height)), rows = Math.ceil(objectCount / columns), spanY = 11, spanX = spanY * width / height;
+        const cubes = Array.from({ length: objectCount }, (_, index) => {
+          const cube = base.clone('cube-' + index); cube.isVisible = true; cube.material = mats[index % mats.length];
+          cube.position.set(((index % columns + .5) / columns - .5) * spanX, ((Math.floor(index / columns) + .5) / rows - .5) * spanY, 0);
+          cube.scaling.setAll(Math.min(1, spanX / columns, spanY / rows)); cube.rotation.set(Math.random() * 3, Math.random() * 3, 0); return cube;
+        });
+        host.dataset.babylonObjects = String(cubes.length);
+        return { tick(delta) { for (const cube of cubes) { cube.rotation.x += delta * .0005; cube.rotation.y += delta * .0007; } view.render(); },
+          tap(x, y) { for (const cube of cubes) cube.rotation.z += (x / width - .5) * .6; }, dispose: view.dispose };
+      }
+
+      function babylonComparison(B) {
+        const model = comparisonLayout(), unit = 12 / width, view = babylonContext(B, 38), { scene, camera } = view;
+        scene.clearColor = B.Color4.FromHexString('#0b1929ff');
+        const distance = (height * unit + 1.8) / (2 * Math.tan(19 * Math.PI / 180)); camera.position.set(0, distance * .14, distance); camera.setTarget(B.Vector3.Zero());
+        const ambient = new B.HemisphericLight('ambient', new B.Vector3(0, 1, 0), scene); ambient.diffuse = B.Color3.FromHexString('#e8f2ff'); ambient.groundColor = B.Color3.FromHexString('#213547'); ambient.intensity = 1.5;
+        const sun = new B.DirectionalLight('sun', new B.Vector3(5, -height * unit - 4, -8).normalize(), scene); sun.position.set(-5, height * unit + 4, 8); sun.diffuse = B.Color3.FromHexString('#fff1d7'); sun.intensity = 3;
+        const shadows = new B.ShadowGenerator(1024, sun); shadows.usePercentageCloserFiltering = true; shadows.normalBias = .02;
+        const material = (name, color, roughness) => { const m = new B.PBRMaterial(name, scene); m.albedoColor = B.Color3.FromHexString(color); m.metallic = 0; m.roughness = roughness; return m; };
+        const mats = colors.map((color, index) => material('block-' + index, color, .45));
+        const floor = B.MeshBuilder.CreateBox('floor', { width: 12.5, height: .25, depth: 3 }, scene); floor.position.y = (height / 2 - model.floor) * unit - .125; floor.receiveShadows = true; floor.material = material('floor', '#304966', .85);
+        const blocks = model.blocks.map((item, index) => { const mesh = B.MeshBuilder.CreateBox('block-' + index, { width: model.size * unit, height: model.size * unit, depth: model.size * unit * 1.5 }, scene); mesh.material = mats[index % mats.length]; mesh.receiveShadows = true; shadows.addShadowCaster(mesh); return mesh; });
+        const ball = B.MeshBuilder.CreateSphere('ball', { diameter: model.radius * unit * 2, segments: 24 }, scene); ball.material = material('ball', '#efab6c', .25); shadows.addShadowCaster(ball);
+        const position = (mesh, item) => mesh.position.set((item.x - width / 2) * unit, (height / 2 - item.y) * unit, 0);
+        return { tick(delta) { stepComparison(model, delta); blocks.forEach((mesh, index) => position(mesh, model.blocks[index])); position(ball, model.ball); view.render(); comparisonStats(model); }, tap(x, y) { comparisonShot(model, x, y); }, dispose: view.dispose };
+      }
+
+      function babylonShowcase(B) {
+        const view = babylonContext(B), { scene, camera } = view;
+        scene.fogMode = B.Scene.FOGMODE_EXP2; scene.fogColor = B.Color3.FromHexString('#0d192b'); scene.fogDensity = .038;
+        const sky = Array.from({ length: 6 }, () => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 0, 128); g.addColorStop(0, '#8ab1d0'); g.addColorStop(.45, '#243952'); g.addColorStop(1, '#101b29'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); x.fillStyle = '#d6e7ff'; x.fillRect(20, 10, 12, 65); x.fillStyle = '#ffba70'; x.fillRect(100, 30, 16, 46); return new Uint8Array(x.getImageData(0, 0, 128, 128).data); });
+        const environment = new B.RawCubeTexture(scene, sky, 128, B.Constants.TEXTUREFORMAT_RGBA, B.Constants.TEXTURETYPE_UNSIGNED_BYTE, true, false); environment.gammaSpace = true; scene.environmentTexture = environment;
+        const ambient = new B.HemisphericLight('ambient', new B.Vector3(0, 1, 0), scene); ambient.diffuse = B.Color3.FromHexString('#89bbff'); ambient.groundColor = B.Color3.FromHexString('#6a453b'); ambient.intensity = .8;
+        const sun = new B.DirectionalLight('sun', new B.Vector3(-5, -8, -4).normalize(), scene); sun.position.set(5, 8, 4); sun.diffuse = B.Color3.FromHexString('#ffd3a0'); sun.intensity = 3; sun.shadowMinZ = .5; sun.shadowMaxZ = 24;
+        const spotlight = new B.SpotLight('spotlight', new B.Vector3(-5, 6, -4), new B.Vector3(5, -5, 4).normalize(), 2 * Math.PI / 5, 1, scene); spotlight.diffuse = B.Color3.FromHexString('#68bcff'); spotlight.intensity = 10;
+        const shadows = [new B.ShadowGenerator(width < 700 ? 1024 : 2048, sun), new B.ShadowGenerator(512, spotlight)]; shadows.forEach(value => { value.usePercentageCloserFiltering = true; value.bias = .0003; value.normalBias = .035; });
+        const detailMaterials = new Map(), simpleMaterials = new Map();
+        const surface = (kind, strength) => {
+          const { size, canvases } = roverSurfaceCanvases(kind), pixels = canvases.map(c => c.getContext('2d').getImageData(0, 0, size, size).data);
+          const normal = new Uint8Array(pixels[1].length), heightAt = (x, y) => pixels[1][((y + size) % size * size + (x + size) % size) * 4] / 255;
+          for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) { const n = new B.Vector3((heightAt(x - 1, y) - heightAt(x + 1, y)) * strength, (heightAt(x, y - 1) - heightAt(x, y + 1)) * strength, 1).normalize(), i = (y * size + x) * 4; normal[i] = (n.x * .5 + .5) * 255; normal[i + 1] = (n.y * .5 + .5) * 255; normal[i + 2] = (n.z * .5 + .5) * 255; normal[i + 3] = 255; }
+          const texture = (data, name) => { const t = B.RawTexture.CreateRGBATexture(data, size, size, scene, true, false); t.name = name; t.wrapU = t.wrapV = ['soil', 'rock'].includes(kind) ? B.Texture.CLAMP_ADDRESSMODE : B.Texture.WRAP_ADDRESSMODE; return t; };
+          return { color: texture(pixels[0], kind + '.color'), normal: texture(normal, kind + '.normal') };
+        };
+        const material = (name, color, metal, roughness, kind, relief = 1) => { const m = new B.PBRMaterial(name, scene); m.albedoColor = B.Color3.FromHexString(color); m.metallic = metal; m.roughness = roughness; m.environmentIntensity = .6; if (kind) { const maps = surface(kind, relief); m.albedoTexture = maps.color; m.bumpTexture = maps.normal; } return m; };
+        const paint = material('paint', '#d57b36', .55, .42, 'paint', .5); paint.clearCoat.isEnabled = true; paint.clearCoat.intensity = .45; paint.clearCoat.roughness = .3;
+        const metal = material('metal', '#aebbc9', .88, .42, 'metal', 1.5), dark = material('dark', '#202b3b', .7, .38), rubber = material('rubber', '#18202c', 0, .95, 'rubber', 1.5), solar = material('solar', '#244aa4', .55, .35, 'solar', .4), glow = material('glow', '#8aedff', 0, .25);
+        glow.emissiveColor = B.Color3.FromHexString('#3ea9d3').scale(2);
+        const glass = material('glass', '#75c5e5', .12, .08); glass.alpha = .52; glass.clearCoat.isEnabled = true;
+        const group = (name, parent = null, x = 0, y = 0, z = 0) => { const node = new B.TransformNode(name, scene); node.parent = parent; node.position.set(x, y, z); return node; };
+        const mesh = (value, parent, mat, x = 0, y = 0, z = 0, casts = true) => { value.parent = parent; value.material = mat; value.position.set(x, y, z); value.receiveShadows = true; detailMaterials.set(value, mat); if (casts) shadows.forEach(s => s.addShadowCaster(value)); return value; };
+        const box = (parent, mat, sx, sy, sz, x = 0, y = 0, z = 0, casts = true) => mesh(B.MeshBuilder.CreateBox('box', { width: sx, height: sy, depth: sz }, scene), parent, mat, x, y, z, casts);
+        const cylinder = (parent, mat, radius, length, x = 0, y = 0, z = 0) => mesh(B.MeshBuilder.CreateCylinder('cylinder', { diameter: radius * 2, height: length, tessellation: 24 }, scene), parent, mat, x, y, z);
+        const joint = (parent, mat, x = 0, y = 0, z = 0) => mesh(B.MeshBuilder.CreateSphere('joint', { diameter: .22, segments: 12 }, scene), parent, mat, x, y, z);
+        const torus = (parent, mat, radius, tube, x = 0, y = 0, z = 0, casts = true) => mesh(B.MeshBuilder.CreateTorus('torus', { diameter: radius * 2, thickness: tube * 2, tessellation: 36 }, scene), parent, mat, x, y, z, casts);
+        const floor = mesh(B.MeshBuilder.CreateGround('floor', { width: 50, height: 50 }, scene), null, material('soil', '#55443e', 0, .95, 'soil', 3), 0, -.2, 0, false);
+        cylinder(null, dark, 3.4, .2, 0, -.08); torus(null, glow, 3.25, .024, 0, .03, 0, false);
+        for (let index = 0; index < 28; index++) { const angle = index / 28 * Math.PI * 2; box(null, metal, .025, .012, .22, Math.sin(angle) * 3, .025, Math.cos(angle) * 3, false).rotation.y = angle; }
+        const rover = group('rover'); box(rover, dark, 2.1, .35, 3.1, 0, 1); box(rover, paint, 1.85, .45, 2.6, 0, 1.4); box(rover, metal, 1.95, .06, 2.7, 0, 1.67);
+        const dome = mesh(B.MeshBuilder.CreateSphere('dome', { diameter: 1.1, segments: 28, slice: .5 }, scene), rover, glass, 0, 1.7, -.55, false); dome.scaling.set(1, .72, 1.15); torus(rover, metal, .54, .035, 0, 1.7, -.55);
+        for (const side of [-1, 1]) { for (let index = 0; index < 14; index++) { box(rover, dark, .045, .26, .06, side * .94, 1.4, -1.1 + index * .16, false); joint(rover, metal, side * .93, 1.67, -1.18 + index * .18).scaling.setAll(.25); } box(rover, glow, .32, .12, .05, side * .64, 1.37, -1.34, false); }
+        const wheels = [], wings = [];
+        for (const side of [-1, 1]) for (const z of [-1.25, 0, 1.25]) {
+          const wheel = group('wheel', rover, side * 1.4, .54, z); wheels.push(wheel); torus(wheel, rubber, .39, .13).rotation.z = Math.PI / 2; cylinder(wheel, metal, .28, .3).rotation.z = Math.PI / 2;
+          for (let index = 0; index < 24; index++) { const angle = index / 24 * Math.PI * 2; box(wheel, rubber, .34, .065, .13, 0, Math.cos(angle) * .5, Math.sin(angle) * .5).rotation.x = angle; }
+          for (let index = 0; index < 8; index++) box(wheel, paint, .32, .038, .48, 0, 0, 0, false).rotation.x = index / 8 * Math.PI;
+          box(rover, metal, .62, .11, .1, side * 1.06, .86, z).rotation.z = side * -.45; cylinder(rover, dark, .08, .6, side * 1.15, .9, z).rotation.z = side * .35;
+        }
+        for (const side of [-1, 1]) { const panel = group('panel', rover, side * 1.72, 1.8, .4); wings.push(panel); box(panel, dark, 1.15, .08, 2.25); for (let x = 0; x < 5; x++) for (let z = 0; z < 9; z++) box(panel, solar, .2, .018, .21, (x - 2) * .22, .054, (z - 4) * .24, false); for (const x of [-.58, .58]) box(panel, metal, .028, .035, 2.3, x, .04, 0, false); for (const z of [-1.14, 1.14]) box(panel, metal, 1.2, .035, .03, 0, .04, z, false); }
+        const mast = group('mast', rover, 0, 1.7, .9); cylinder(mast, metal, .055, 1.05, 0, .52); const scanner = group('scanner', mast, 0, 1.03); box(scanner, paint, .6, .28, .3); for (const x of [-.17, .17]) joint(scanner, glow, x, 0, -.2);
+        const antenna = group('antenna', rover, -.6, 1.75, .65); cylinder(antenna, metal, .045, .6, 0, .3);
+        const shape = Array.from({ length: 16 }, (_, index) => { const r = index / 15 * .42; return new B.Vector3(r, r * r * 1.2, 0); });
+        const dish = mesh(B.MeshBuilder.CreateLathe('dish', { shape, tessellation: 32, cap: B.Mesh.NO_CAP, sideOrientation: B.Mesh.DOUBLESIDE }, scene), antenna, material('dish', '#d1dae5', .5, .28), 0, .62); dish.rotation.z = -.5; cylinder(antenna, glow, .018, .45, 0, .72);
+        const arm = group('arm', rover, .75, 1.6, -1.1); joint(arm, metal); box(arm, paint, .14, .85, .14, 0, .42); const elbow = group('elbow', arm, 0, .85); joint(elbow, metal); box(elbow, metal, .1, .7, .1, 0, .35); const claw = group('claw', elbow, 0, .72);
+        for (const side of [-1, 1]) { box(claw, dark, .065, .26, .065, side * .11, .12).rotation.z = side * .25; box(claw, metal, .12, .05, .065, side * .07, .25); }
+        const rockMaterial = material('rock', '#806252', 0, .93, 'rock', 2);
+        for (let index = 0; index < 55; index++) { const angle = index * 2.399, radius = 4.1 + (index % 8) * .55, rock = mesh(B.MeshBuilder.CreatePolyhedron('rock', { type: 2, size: 1, flat: true }, scene), null, rockMaterial, Math.sin(angle) * radius, -.1, Math.cos(angle) * radius); rock.scaling.set(.15 + index % 3 * .13, .16 + index % 4 * .1, .2 + index % 5 * .07); rock.rotation.set(index, index * .7, index * .3); const uv = rock.getVerticesData(B.VertexBuffer.UVKind); if (uv) { const scale = .32 + roverSurfaceHash(index, 1) * .2, turn = roverSurfaceHash(index, 2) * Math.PI * 2, ox = .5 + (roverSurfaceHash(index, 3) - .5) * .25, oy = .5 + (roverSurfaceHash(index, 4) - .5) * .25; for (let i = 0; i < uv.length; i += 2) { const u = (uv[i] - .5) * scale, v = (uv[i + 1] - .5) * scale; uv[i] = ox + u * Math.cos(turn) - v * Math.sin(turn); uv[i + 1] = oy + u * Math.sin(turn) + v * Math.cos(turn); } rock.setVerticesData(B.VertexBuffer.UVKind, uv); } }
+        let time = 0, angle = .65, elevation = .45, targetAngle = angle, targetElevation = elevation, controlledUntil = 0;
+        const placeCamera = () => { const distance = 8 / Math.min(1, width / height); camera.position.set(Math.sin(angle) * distance * Math.cos(elevation), 1.3 + Math.sin(elevation) * distance, Math.cos(angle) * distance * Math.cos(elevation)); camera.setTarget(new B.Vector3(0, 1.3, 0)); };
+        const setQuality = () => { for (const [item, detail] of detailMaterials) { if (!simpleMaterials.has(detail)) { const m = new B.StandardMaterial('simple-' + detail.name, scene); m.diffuseColor = detail.albedoColor.clone(); m.emissiveColor = detail.emissiveColor.clone(); m.specularColor = B.Color3.Black(); m.alpha = detail.alpha; simpleMaterials.set(detail, m); } item.material = threeDetailed ? detail : simpleMaterials.get(detail); } scene.shadowsEnabled = threeDetailed; host.dataset.babylonQuality = threeDetailed ? 'detailed' : 'simple'; $('three-quality').querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String((button.dataset.quality === 'detailed') === threeDetailed))); $('library-description').textContent = threeDetailed ? 'Текстуры, рельеф, отражения и тени' : 'Однотонные материалы · без теней'; view.render(); };
+        const expand = document.createElement('button'); expand.id = 'three-expand'; const svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+        const syncExpanded = () => { document.querySelector('.app').classList.toggle('three-expanded', threeExpanded); expand.innerHTML = svg + (threeExpanded ? '<path d="M9 3v6H3m18 0h-6V3M3 15h6v6m6 0v-6h6"/>' : '<path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/>') + '</svg>'; const label = threeExpanded ? 'Вернуть показатели и выбор библиотек' : 'Развернуть сцену марсохода'; expand.title = label; expand.setAttribute('aria-label', label); expand.setAttribute('aria-pressed', String(threeExpanded)); };
+        const escape = event => { if (event.key === 'Escape' && !infoOpen && threeExpanded) expand.click(); };
+        placeCamera(); setQuality();
+        expand.addEventListener('click', () => { threeExpanded = !threeExpanded; syncExpanded(); }); document.addEventListener('keydown', escape); document.querySelector('.controls').append(expand);
+        syncExpanded();
+        const orbit = (x, y) => { targetAngle = x / width * Math.PI * 2; targetElevation = .18 + (1 - y / height) * .7; controlledUntil = time + 8; };
+        return { setQuality, tick(delta) { const seconds = delta / 1000; time += seconds; if (time > controlledUntil) targetAngle += seconds * .11; angle += (targetAngle - angle) * Math.min(1, seconds * 5); elevation += (targetElevation - elevation) * Math.min(1, seconds * 5); placeCamera(); wheels.forEach(w => { w.rotation.x -= seconds * .45; }); wings.forEach((p, index) => { p.rotation.z = (index ? -1 : 1) * (.15 + Math.sin(time * .6) * .025); }); arm.rotation.x = -.6 + Math.sin(time * .7) * .3; elbow.rotation.x = -1.1 + Math.sin(time * .7 + 1) * .4; scanner.rotation.y = Math.sin(time * .5) * .8; antenna.rotation.y = time * .12; rover.position.y = Math.sin(time * 1.3) * .025; view.render(); }, tap: orbit, drag: orbit,
+          pause(value) { if (value) view.render(); }, resize() { view.resize(); placeCamera(); view.render(); }, dispose() { document.removeEventListener('keydown', escape); expand.remove(); view.dispose(); } };
       }
 
       function matterShowcase(Matter) {
@@ -1988,7 +2119,7 @@
       }
 
       function startScene(nextMode = mode) {
-        if (!nextMode.startsWith('three') || scenario !== 'showcase') {
+        if (!is3DMode(nextMode) || scenario !== 'showcase') {
           threeExpanded = false; document.querySelector('.app').classList.remove('three-expanded');
         }
         if (!nextMode.startsWith('phaser') || scenario !== 'showcase') {
@@ -2000,29 +2131,35 @@
         host.replaceChildren();
         mode = nextMode;
         $('phaser-renderer').hidden = !mode.startsWith('phaser');
-        $('three-quality').hidden = !mode.startsWith('three') || scenario !== 'showcase';
+        $('three-quality').hidden = !is3DMode(mode) || scenario !== 'showcase';
+        $('three-quality').setAttribute('aria-label', mode === 'babylon' ? 'Оформление Babylon.js' : 'Оформление Three.js');
         document.querySelector('.description-row').classList.toggle('phaser-description', mode.startsWith('phaser'));
-        document.querySelector('.description-row').classList.toggle('three-description', mode.startsWith('three') && scenario === 'showcase');
+        document.querySelector('.description-row').classList.toggle('three-description', is3DMode(mode) && scenario === 'showcase');
         syncRendererButtons();
         $('message').textContent = '';
         try {
           if (scenario === 'compare') {
             if (mode === 'canvas') activeScene = canvasComparison();
             else if (mode.startsWith('three')) activeScene = threeComparison(libraries[mode]);
+            else if (mode === 'babylon') activeScene = babylonComparison(libraries.babylon);
             else if (mode === 'matter') activeScene = matterComparison(libraries.matter);
             else activeScene = phaserComparison(libraries[mode], generation);
           }
           else if (scenario === 'showcase') {
             if (mode === 'canvas') activeScene = canvasShowcase();
             else if (mode.startsWith('three')) activeScene = threeShowcase(libraries[mode]);
+            else if (mode === 'babylon') activeScene = babylonShowcase(libraries.babylon);
             else if (mode === 'matter') activeScene = matterShowcase(libraries.matter);
             else activeScene = phaserShowcase(libraries[mode], generation, mode === 'phaser4');
           }
           else if (mode === 'canvas') activeScene = canvasScene();
           else if (mode.startsWith('three')) activeScene = threeScene(libraries[mode]);
+          else if (mode === 'babylon') activeScene = babylonScene(libraries.babylon);
           else if (mode === 'matter') activeScene = matterScene(libraries.matter);
           else activeScene = phaserScene(libraries[mode], generation);
+          pendingBabylonView = null;
         } catch (error) {
+          pendingBabylonView?.dispose(); pendingBabylonView = null;
           const failedMode = mode;
           mode = 'canvas';
           $('phaser-renderer').hidden = true;
@@ -2038,7 +2175,7 @@
         activeScene.pause?.(paused || infoOpen || document.hidden);
         $('scene-name').textContent = scenario === 'compare' ? 'Шар и башня · коснитесь цели для выстрела' : scenario === 'showcase' ? showcaseLabels[mode] : labels[mode];
         $('library-description').textContent = mode.startsWith('phaser') ? phaserRenderingDescription() : descriptions[mode];
-        if (mode.startsWith('three') && scenario === 'showcase') $('library-description').textContent = threeDetailed ? 'Текстуры, рельеф, отражения и тени' : 'Однотонные материалы · без теней';
+        if (is3DMode(mode) && scenario === 'showcase') $('library-description').textContent = threeDetailed ? 'Текстуры, рельеф, отражения и тени' : 'Однотонные материалы · без теней';
         $('scene-stats').hidden = scenario !== 'compare';
         if (scenario === 'compare') $('scene-stats').textContent = 'Сдвинуто: 0/12 · Выстрелов: 0';
         updateInfo();
@@ -2190,9 +2327,11 @@
       requestAnimationFrame(animate);
     })();
   </script>
-  <!-- Exact classic builds let OneHTML Lab replace these links and include their MIT licenses on export. -->
+  <!-- Exact classic builds let OneHTML Lab replace these links and preserve their licenses and notices on export. -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script>registerLabLibrary('three160', window.THREE?.REVISION === '160' ? window.THREE : null);</script>
+  <script src="https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/babylon.js"></script>
+  <script>registerLabLibrary('babylon', window.BABYLON?.Engine?.Version === '9.30.0' ? window.BABYLON : null);</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js"></script>
   <script>registerLabLibrary('matter', window.Matter?.version === '0.20.0' ? window.Matter : null);</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.90.0/phaser.min.js"></script>

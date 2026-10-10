@@ -10,11 +10,14 @@ const example = await readFile(new URL('../src/examples/performance-libraries.ht
 const appUrl = new URL('../onehtml-lab.html', import.meta.url).href;
 const scratch = await mkdtemp(join(tmpdir(), 'onehtml-lab-performance-'));
 const license = 'MIT License\nCopyright (c) Test library authors\nPermission is hereby granted, free of charge\nTHE SOFTWARE IS PROVIDED AS IS';
+const apache = (await readFile(new URL('../docs/licenses/babylonjs-9.30.0-LICENSE.txt', import.meta.url), 'utf8')).trim();
+const notice = (await readFile(new URL('../docs/licenses/babylonjs-9.30.0-NOTICE.txt', import.meta.url), 'utf8')).trim();
 const assets = [
   ['three160', 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js', 'https://cdn.jsdelivr.net/npm/three@0.160.0/LICENSE', 'window.THREE={REVISION:"160"};'],
   ['matter', 'https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js', 'https://cdn.jsdelivr.net/npm/matter-js@0.20.0/LICENSE', 'window.Matter={version:"0.20.0"};'],
   ['phaser', 'https://cdnjs.cloudflare.com/ajax/libs/phaser/3.90.0/phaser.min.js', 'https://cdn.jsdelivr.net/npm/phaser@3.90.0/LICENSE.md', 'window.Phaser={VERSION:"3.90.0"};'],
-  ['phaser4', 'https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.min.js', 'https://cdn.jsdelivr.net/npm/phaser@4.2.1/LICENSE.md', 'window.Phaser={VERSION:"4.2.1"};']
+  ['phaser4', 'https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.min.js', 'https://cdn.jsdelivr.net/npm/phaser@4.2.1/LICENSE.md', 'window.Phaser={VERSION:"4.2.1"};'],
+  ['babylon', 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/babylon.js', 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/license.md', 'window.BABYLON={Engine:{Version:"9.30.0"}};']
 ].map(([id, url, licenseUrl, source], index) => ({ id, url, licenseUrl, source: '/* ' + 'x'.repeat(2048 + index * 512) + ' */\n' + source }));
 const engines = process.argv.includes('--engines=chromium') ? [['chromium', chromium]] : [['chromium', chromium], ['webkit', webkit]];
 const canvasSource = example.slice(example.indexOf('      function canvasShowcase()'), example.indexOf('      function threeColor('));
@@ -225,9 +228,10 @@ try {
           const url = route.request().url();
           const source = assets.find(asset => asset.url === url);
           const licensed = assets.some(asset => asset.licenseUrl === url);
-          assert(source || licensed, 'Only the four exact libraries and licenses may be requested');
+          const isNotice = url === 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/NOTICE.md';
+          assert(source || licensed || isNotice, 'Only the exact libraries, licenses and NOTICE may be requested');
           await route.fulfill({ contentType: source ? 'text/javascript' : 'text/plain',
-            headers: { 'access-control-allow-origin': '*' }, body: source ? source.source : license });
+            headers: { 'access-control-allow-origin': '*' }, body: source ? source.source : isNotice ? notice : url.includes('babylonjs@') ? apache : license });
         });
         const page = await context.newPage();
         await useNativeEditor(page);
@@ -252,7 +256,7 @@ try {
         assert.equal(requests, 0, 'Opening the example must not download libraries without a click');
         await page.locator('#library-download').click();
         await page.locator('#library-request').waitFor({ state: 'hidden' });
-        assert.equal(requests, 8, 'Download all four libraries and their licenses');
+        assert.equal(requests, 11, 'Download five libraries, licenses and Babylon NOTICE');
         await page.locator('#run').click();
         const frame = page.frameLocator('#preview > iframe');
         await libraryLabels(frame, 'Встроена в HTML');
@@ -308,9 +312,9 @@ try {
         assert(await frame.locator('.load').isVisible());
         assert.equal((await frame.locator('#load-value').innerText()).replace(/\s/g, ''), '10000');
         await page.locator('#run').click();
-        assert.equal(requests, 8, 'Cached preview must not request external scripts');
+        assert.equal(requests, 11, 'Cached preview must not request external scripts');
         const embedded = await downloadHtml(page);
-        assert.equal(embedded.match(/data-onehtml-bundle="1"/g)?.length, 4);
+        assert.equal(embedded.match(/data-onehtml-bundle="1"/g)?.length, 5);
         assert.equal(embedded.match(/Copyright \(c\) Test library authors/g)?.length, 4);
         const embeddedPath = join(scratch, name + '-embedded.html');
         await writeFile(embeddedPath, embedded);
@@ -318,7 +322,7 @@ try {
         await useNativeEditor(saved);
         await saved.goto(pathToFileURL(embeddedPath).href);
         await libraryLabels(saved, 'Встроена в HTML');
-        assert.equal(requests, 8, 'Standalone embedded test must not request CDN resources');
+        assert.equal(requests, 11, 'Standalone embedded test must not request CDN resources');
         await checkCompactLayout(saved, name);
         await saved.close();
         const unchanged = await downloadHtml(page, false);
@@ -339,7 +343,7 @@ try {
         await page.locator('#confirm-save').click();
         await page.locator('#save-files').waitFor({ state: 'visible' });
         const names = await page.locator('#save-file-list button').allTextContents();
-        assert.equal(names.length, 5);
+        assert.equal(names.length, 6);
         const automaticCount = name === 'webkit' ? 1 : names.length;
         const deadline = Date.now() + 10_000;
         while (downloads.length < automaticCount && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 50));
@@ -363,7 +367,7 @@ try {
         assert.equal(requests, beforeLocal, 'Separate libraries must load from files beside HTML');
         await local.close();
         assert.deepEqual(errors, [], 'The application and Canvas test must execute without errors');
-        console.log(`${name} file: three modes, default showcase, descriptions, tower interaction, four library sizes, 10000 objects, FPS, taps and all exports passed.`);
+        console.log(`${name} file: three modes, default showcase, descriptions, tower interaction, five library sizes, 10000 objects, FPS, taps and all exports passed.`);
       } finally { await context.close(); }
     } finally { await browser.close(); }
   }

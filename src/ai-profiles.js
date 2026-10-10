@@ -1,7 +1,7 @@
 // Requirements describe new games; existing code determines subsequent changes.
 const aiGameOptions = {
   dimension: { '2d': '2D', '3d': '3D' },
-  basis: { auto: 'Рекомендовать', canvas: 'Без библиотек', phaser3: 'Phaser 3.90.0', phaser4: 'Phaser 4.2.1', matter: 'Matter.js 0.20.0', three: 'Three.js r160' },
+  basis: { auto: 'Рекомендовать', canvas: 'Без библиотек', phaser3: 'Phaser 3.90.0', phaser4: 'Phaser 4.2.1', matter: 'Matter.js 0.20.0', three: 'Three.js r160', babylon: 'Babylon.js 9.30.0' },
   genre: { '': 'Своя идея', platformer: 'Платформер', arcade: 'Аркада сверху', puzzle: 'Головоломка', runner: 'Раннер', racing: 'Гонки' },
   physics: { '': 'По задаче', simple: 'Простые столкновения', gravity: 'Прыжки и гравитация', bodies: 'Вращение и равновесие' },
   camera: { '': 'По задаче', side: 'Сбоку', top: 'Сверху', iso: 'Изометрия', behind: 'Позади героя', first: 'От первого лица' },
@@ -17,7 +17,8 @@ const aiGameCatalog = {
   phaser3: { title: 'Phaser 3.90.0', key: 'phaser@3.90.0', url: 'https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js' },
   phaser4: { title: 'Phaser 4.2.1', key: 'phaser@4.2.1', url: 'https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.min.js' },
   matter: { title: 'Matter.js 0.20.0', key: 'matter-js@0.20.0', url: 'https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js' },
-  three: { title: 'Three.js r160', key: 'three@0.160.0', url: 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js' }
+  three: { title: 'Three.js r160', key: 'three@0.160.0', url: 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js' },
+  babylon: { title: 'Babylon.js 9.30.0', key: 'babylonjs@9.30.0', url: 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/babylon.js' }
 };
 let aiGame = normalizeAiGame();
 
@@ -36,7 +37,7 @@ function aiGameChoice(value) {
 }
 function aiGameWarnings(value) {
   const game = normalizeAiGame(value), { id } = aiGameChoice(game), notes = [];
-  if ((game.dimension === '3d') !== (id === 'three')) notes.push('Основа не соответствует 2D/3D. Уточните пространство или основу.');
+  if ((game.dimension === '3d') !== ['three', 'babylon'].includes(id)) notes.push('Основа не соответствует 2D/3D. Уточните пространство или основу.');
   if (game.dimension === '3d' && game.physics === 'bodies') notes.push('Полноценная 3D-физика пока не входит в профиль. Упростите физику или опишите её отдельно.');
   if (id === 'canvas' && game.physics === 'bodies') notes.push('Для равновесия и вращения рекомендуем Matter.js; ваш выбор сохранён.');
   if (game.dimension === '2d' && ['behind', 'first'].includes(game.camera)) notes.push('Камера позади героя или от первого лица рассчитана на 3D.');
@@ -50,6 +51,7 @@ function aiGameInstructions(value) {
   if (id.startsWith('phaser')) parts.push(`Используй встроенную ${game.physics === 'bodies' ? 'Matter Physics' : 'Arcade Physics при необходимости столкновений'}. Не подключай отдельный Matter.js. Создавай графику через Graphics/текстуры Phaser; не добавляй плагины. При повторном старте не дублируй обработчики и таймеры.`);
   if (id === 'matter') parts.push('Используй Matter.js для физических тел, а Canvas 2D для своей отрисовки. Связывай координаты и поворот рисунка с телом. При сбросе очищай тела и обработчики, не создавай второй цикл обновления.');
   if (id === 'three') parts.push('Используй ядро Three.js через THREE, без addons, внешних моделей и загрузчиков. Строй сцену из геометрии, света и материалов; простые столкновения проверяй самостоятельно. Ограничь плотность пикселей и число теней на телефоне.');
+  if (id === 'babylon') parts.push('Используй ядро Babylon.js через BABYLON и Engine с WebGL. Не подключай WebGPU, Havok, GUI, инспектор или загрузчики моделей. Строй сцену из MeshBuilder, материалов, камеры и света; простые столкновения проверяй самостоятельно. Ограничь плотность пикселей и размер теней на телефоне. При сбросе освобождай прежнюю Scene и обработчики, не создавай второй цикл кадров.');
   const genres = { platformer: 'Прыжок должен быть предсказуемым; предусмотрено небольшое прощение раннего/позднего нажатия. Цель и опасные поверхности должны быть понятны.', arcade: 'Сделай заметную реакцию на попадание, понятное получение урона и короткую защиту от повторного урона.', puzzle: 'Покажи цель и текущее состояние головоломки. Сделай удобный сброс; начальное состояние должно позволять решение.', runner: 'Дай время увидеть препятствия, постепенно повышай сложность и не создавай непроходимые сочетания.', racing: 'Сделай понятные границы трассы, плавное управление и заметную реакцию на столкновение.' };
   if (genres[game.genre]) parts.push(genres[game.genre]);
   const styles = { paper: 'Используй слои бумажных форм, тёплую ограниченную палитру и мягкие тени.', neon: 'Используй тёмный игровой мир, два-три ярких акцента и умеренное свечение; сохраняй читаемость.', drawn: 'Используй мягкие рисованные силуэты, согласованную палитру и выразительные движения персонажей.', minimal: 'Используй чёткие силуэты, контраст фигуры и фона и различимые формы объектов.' };
@@ -64,7 +66,8 @@ function aiGameMediaRecipe(id) {
     canvas: 'После загрузки img используй его в drawImage; не начинай отрисовку до готовности изображения.',
     phaser3: 'До создания Phaser.Game дождись загрузки img. В create() передай HTMLImageElement в this.textures.addImage("hero", imageElement), затем используй ключ "hero" для игрового объекта. При повторном старте проверь this.textures.exists("hero"). Не передавай имя файла в this.load.image.',
     matter: 'После загрузки img рисуй его через Canvas drawImage в позиции и с поворотом физического тела Matter. Не задавай путь в render.sprite.texture.',
-    three: 'После загрузки img создай new THREE.Texture(imageElement), задай texture.needsUpdate = true и texture.colorSpace = THREE.SRGBColorSpace, передай текстуру материалу. Не используй TextureLoader с именем файла.'
+    three: 'После загрузки img создай new THREE.Texture(imageElement), задай texture.needsUpdate = true и texture.colorSpace = THREE.SRGBColorSpace, передай текстуру материалу. Не используй TextureLoader с именем файла.',
+    babylon: 'После загрузки img нарисуй его в BABYLON.DynamicTexture с исходными размерами: texture.getContext().drawImage(imageElement, 0, 0), затем texture.update(). Передай текстуру материалу. Не создавай BABYLON.Texture с именем файла.'
   };
   return (recipes[id === 'phaser4' ? 'phaser3' : id] || '') + ' Изображение может быть скрытым img с id, но с обычным src; дождись decode() или load и обработай ошибку. Для звука используй audio по id: play() после действия пользователя с обработкой отказа; не создавай URL звука в JavaScript.';
 }
@@ -112,7 +115,7 @@ function renderAiGameControls() {
   if (!create) return;
   const choice = aiGameChoice(aiGame);
   for (const key of Object.keys(aiGameOptions)) document.querySelector('#ai-game-' + key).value = aiGame[key];
-  document.querySelector('#ai-game-recommendation').textContent = `${aiGameCatalog[choice.id].title}. ${choice.reason}` + (choice.id === 'phaser4' ? ' Новая ветка рендеринга, света и фильтров; не все примеры Phaser 3 совместимы.' : '');
+  document.querySelector('#ai-game-recommendation').textContent = `${aiGameCatalog[choice.id].title}. ${choice.reason}` + (choice.id === 'phaser4' ? ' Новая ветка рендеринга, света и фильтров; не все примеры Phaser 3 совместимы.' : choice.id === 'babylon' ? ' Для 3D-сцен с готовыми камерами, материалами и инструментами движка.' : '');
   document.querySelector('#ai-game-warning').textContent = aiGameWarnings(aiGame).join(' ');
 }
 function initAiGameProfiles() {

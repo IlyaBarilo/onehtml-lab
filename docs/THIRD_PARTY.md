@@ -42,3 +42,11 @@ Game profiles reference Phaser 3.90.0, Phaser 4.2.1 and Matter.js 0.20.0, all un
 Профили используют Phaser 3.90.0, Phaser 4.2.1 и Matter.js 0.20.0 под MIT. Точные зависимости разработки npm предоставляют настоящие сборки и полные лицензии для проверок. В редактор эти библиотеки не включены. Загруженные копии сохраняют полные авторские уведомления и условия лицензии при встраивании в игру и при сохранении отдельными JS-файлами.
 
 Licenses / Лицензии: [Phaser 3.90.0](https://cdn.jsdelivr.net/npm/phaser@3.90.0/LICENSE.md), [Phaser 4.2.1](https://cdn.jsdelivr.net/npm/phaser@4.2.1/LICENSE.md), [Matter.js 0.20.0](https://cdn.jsdelivr.net/npm/matter-js@0.20.0/LICENSE).
+
+## Babylon.js
+
+Babylon.js 9.30.0 is an optional game engine under Apache-2.0. Its WebGL core is referenced by the game profile and library test; it is not bundled with the editor. The exact npm development dependency supplies the real distribution for tests. Downloading, embedding, exporting adjacent JavaScript files and shortening copies preserve the full [LICENSE](licenses/babylonjs-9.30.0-LICENSE.txt) and [NOTICE](licenses/babylonjs-9.30.0-NOTICE.txt) from that package. Babylon.js does not change the MIT license of OneHTML Lab.
+
+Babylon.js 9.30.0 — необязательный игровой движок под Apache-2.0. Профиль игры и тест библиотек подключают его ядро WebGL; в редактор оно не включено. Точная зависимость npm предоставляет настоящий дистрибутив для проверок. При загрузке, встраивании, сохранении отдельного JS и сокращении копий сохраняются полные LICENSE и NOTICE из пакета по ссылкам выше. Лицензия OneHTML Lab остаётся MIT.
+
+Project / Проект: [Babylon.js](https://www.babylonjs.com/). Exact release / Точный выпуск: [9.30.0](https://github.com/BabylonJS/Babylon.js/releases/tag/9.30.0). GUI, Havok, model loaders, inspector and WebGPU are not part of the supported profile. / GUI, Havok, загрузчики моделей, инспектор и WebGPU в поддерживаемый профиль не входят.

@@ -22,14 +22,33 @@ function appendResourceWarning(container, message) {
   container.append(note);
 }
 
-function validLibraryAsset(source, license) {
-  return typeof source === 'string' && source.length > 0 && typeof license === 'string'
-    && !/<\/script/i.test(source) && !/-->/.test(license)
-    && license.includes('Permission is hereby granted')
-    && license.includes('THE SOFTWARE IS PROVIDED') && /Copyright/i.test(license);
+function libraryLicenseType(license) {
+  if (typeof license !== 'string') return '';
+  if (license.includes('Permission is hereby granted') && license.includes('THE SOFTWARE IS PROVIDED') && /Copyright/i.test(license)) return 'MIT';
+  if (/Apache License[\s\S]*?Version 2\.0/.test(license) && license.includes('TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION')
+    && ['Definitions', 'Grant of Copyright License', 'Grant of Patent License', 'Redistribution', 'Submission of Contributions',
+      'Trademarks', 'Disclaimer of Warranty', 'Limitation of Liability', 'Accepting Warranty or Additional Liability'].every(section => license.includes(section))) return 'Apache-2.0';
+  return '';
 }
+function validLibraryAsset(source, license, notice = '') {
+  return typeof source === 'string' && source.length > 0 && typeof license === 'string'
+    && !/<\/script/i.test(source) && !/-->/.test(license) && typeof notice === 'string' && !/-->|<\/script/i.test(notice)
+    && Boolean(libraryLicenseType(license));
+}
+function libraryNeedsNotice(entry) { return /^babylonjs@/.test(entry.catalogKey || entry.key || '') || /^Babylon\.js(?: |$)/.test(entry.title || ''); }
+function validLibraryEntry(entry) {
+  return entry && validLibraryAsset(entry.source, entry.license, entry.notice || '')
+    && (!entry.licenseType || entry.licenseType === libraryLicenseType(entry.license))
+    && (!libraryNeedsNotice(entry) || libraryLicenseType(entry.license) === 'Apache-2.0' && /Babylon\.js[\s\S]*Copyright/.test(entry.notice || ''));
+}
+function libraryAssetIdentity(source, license, notice = '') { return source + '\0' + license + (notice ? '\0' + notice : ''); }
+function libraryLicenseText(entry) { return entry.license + (entry.notice ? '\nNOTICE:\n' + entry.notice : ''); }
 
 function libraryReference(url) {
+  if (/^https:\/\/(?:cdn\.jsdelivr\.net\/npm\/|unpkg\.com\/)babylonjs@9\.30\.0\/babylon\.js$/.test(url)) {
+    return { key: 'babylonjs@9.30.0', title: 'Babylon.js 9.30.0', url, licenseType: 'Apache-2.0',
+      licenseUrl: 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/license.md', noticeUrl: 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/NOTICE.md' };
+  }
   let match = /^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/three\.js\/r(\d{3})\/three\.min\.js$/.exec(url)
     || /^https:\/\/cdn\.jsdelivr\.net\/npm\/three@0\.(\d{3})\.0\/build\/three\.min\.js$/.exec(url);
   if (match && Number(match[1]) >= 128 && Number(match[1]) <= 160) {
@@ -95,6 +114,11 @@ function localLibraryReference(url) {
     const version = (/[._-]v?([34]\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
       || folders.map(folder => /^(?:phaser[@._-])?v?([34]\.\d+\.\d+)$/i.exec(folder)).find(Boolean))?.[1];
     if (version) reference = libraryReference(`https://cdn.jsdelivr.net/npm/phaser@${version}/dist/phaser.min.js`);
+  } else if (/^babylon(?:js)?(?:[._-]v?\d+\.\d+\.\d+)?(?:\.min)?\.js$/i.test(filename)) {
+    title = 'Babylon.js';
+    const version = (/[._-]v?(\d+\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
+      || folders.map(folder => /^(?:babylon(?:js)?[@._-])?v?(\d+\.\d+\.\d+)$/i.exec(folder)).find(Boolean))?.[1];
+    if (version) reference = libraryReference(`https://cdn.jsdelivr.net/npm/babylonjs@${version}/babylon.js`);
   }
   return { ...reference, title: reference?.title || title, localPath: path, filename };
 }
@@ -128,6 +152,7 @@ async function librarySourceHash(source) {
 }
 
 function libraryCatalogReference(key) {
+  if (key === 'babylonjs@9.30.0') return libraryReference('https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/babylon.js');
   if (typeof moduleCatalog === 'function' && moduleCatalog(key)) return moduleCatalog(key);
   let match = /^three@0\.(\d{3})\.0$/.exec(key || '');
   if (match) return libraryReference(`https://cdn.jsdelivr.net/npm/three@0.${match[1]}.0/build/three.min.js`);
@@ -172,12 +197,12 @@ async function loadLibraryCache() {
       const localSource = entry && /^[a-f\d]{64}$/.test(entry.documentScope)
         && localLibraryReference(entry.localPath) && entry.key === localLibraryKey(entry.documentScope, entry.localPath);
       const extractedSource = entry && /^asset@[a-f\d]{64}$/.test(entry.key)
-        && validLibraryAsset(entry.source, entry.license)
-        && await librarySourceHash(entry.source + '\0' + entry.license) === entry.key.slice(6);
+        && validLibraryEntry(entry)
+        && await librarySourceHash(libraryAssetIdentity(entry.source, entry.license, entry.notice)) === entry.key.slice(6);
       let moduleSource = entry?.format === 'module' && typeof moduleEntryData === 'function' && moduleEntryData(entry);
       if (moduleSource && entry.key.startsWith('module-asset@')) moduleSource = await librarySourceHash(entry.source + '\0' + entry.license) === entry.key.slice(13);
       if ((knownSource || localSource || extractedSource || moduleSource)
-        && validLibraryAsset(entry.source, entry.license)) {
+        && validLibraryEntry(entry)) {
         libraryCache.set(entry.key, entry);
         persistedLibraries.set(entry.key, entry);
       }
@@ -268,12 +293,13 @@ function libraryFilename(reference, entry) {
   if (matter) return `matter-${matter[1]}.min.js`;
   const phaser = /^phaser@([\d.]+)$/.exec(key);
   if (phaser) return `phaser-${phaser[1]}.min.js`;
+  if (key === 'babylonjs@9.30.0') return 'babylon-9.30.0.js';
   return 'library.js';
 }
 
 function licensedLibrarySource(reference, entry) {
   const title = reference.title.replace(/[\r\n\u2028\u2029]/g, ' ');
-  const notice = `${title}, MIT license:\r\n${entry.license}`;
+  const notice = `${title}, ${libraryLicenseType(entry.license)} license:\r\n${libraryLicenseText(entry)}`;
   const comment = notice.includes('*/')
     ? notice.split(/\r\n?|\n|\u2028|\u2029/).map(line => '// ' + line).join('\r\n')
     : `/*!\r\n${notice}\r\n*/`;
@@ -285,10 +311,10 @@ async function embeddedLibraryTag(reference, entry) {
   const catalog = libraryCatalogReference(entry.catalogKey || entry.key);
   const cdn = catalog && libraryReference(entry.sourceUrl)?.key === catalog.key ? entry.sourceUrl : catalog?.url;
   const metadata = { 'library': entry.key, 'bundle': '1', 'source': reference.originalUrl || reference.localPath || reference.url || '',
-    'filename': libraryFilename(reference, entry), 'sha256': await librarySourceHash(entry.source) };
+    'filename': libraryFilename(reference, entry), 'sha256': await librarySourceHash(entry.source), 'license': libraryLicenseType(entry.license) };
   if (cdn) { metadata.cdn = cdn; metadata.catalog = catalog.key; }
   const attributes = Object.entries(metadata).map(([name, value]) => `data-onehtml-${name}="${libraryAttribute(value)}"`).join(' ');
-  return `<!--onehtml-library:${encodeURIComponent(entry.key)}\n${title}, MIT license:\n${entry.license}\n-->\n<script ${reference.inlineAttributes ? reference.inlineAttributes + ' ' : ''}${attributes}>\n${entry.source}\n</script>`;
+  return `<!--onehtml-library:${encodeURIComponent(entry.key)}\n${title}, ${libraryLicenseType(entry.license)} license:\n${libraryLicenseText(entry)}\n-->\n<script ${reference.inlineAttributes ? reference.inlineAttributes + ' ' : ''}${attributes}>\n${entry.source}\n</script>`;
 }
 
 async function prepareGameHtml(code, replaceLibraries = true) {
@@ -329,9 +355,10 @@ function bundledLibraryLabels(prepared) {
   });
 }
 
-async function importLocalLibrary(reference, source, license) {
-  if (!reference.localPath || !validLibraryAsset(source, license)) throw new Error('invalid library or license');
+async function importLocalLibrary(reference, source, license, notice = '') {
+  if (!reference.localPath || !validLibraryEntry({ ...reference, source, license, notice })) throw new Error('invalid library, license or NOTICE');
   const entry = { key: reference.key, title: reference.title, source, license: license.trim(),
+    licenseType: libraryLicenseType(license), notice: notice.trim(),
     localPath: reference.localPath, documentScope: reference.documentScope,
     bytes: new TextEncoder().encode(source).length, savedAt: Date.now() };
   let persisted = false;
@@ -346,6 +373,11 @@ function localLibraryLicense(source) {
   return [...source.matchAll(/\/\*[\s\S]*?\*\//g)].map(match => match[0].slice(2, -2).replace(/^!/, '').trim()).find(license => validLibraryAsset(source, license)) || '';
 }
 
+function localLibraryNotices(source) {
+  const text = localLibraryLicense(source).replace(/\r\n?/g, '\n'), at = text.lastIndexOf('\nNOTICE:\n');
+  return { license: at < 0 ? text : text.slice(0, at).trim(), notice: at < 0 ? '' : text.slice(at + 9).trim() };
+}
+
 async function readLibraryResponse(response) {
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.text();
@@ -353,16 +385,18 @@ async function readLibraryResponse(response) {
 
 async function downloadLibrary(reference) {
   if (reference.format === 'module') return downloadModule(reference);
-  const [sourceResponse, licenseResponse] = await Promise.all([
+  const [sourceResponse, licenseResponse, noticeResponse] = await Promise.all([
     fetch(reference.url, { credentials: 'omit', redirect: 'error' }),
-    fetch(reference.licenseUrl, { credentials: 'omit', redirect: 'error' })
+    fetch(reference.licenseUrl, { credentials: 'omit', redirect: 'error' }),
+    reference.noticeUrl ? fetch(reference.noticeUrl, { credentials: 'omit', redirect: 'error' }) : null
   ]);
-  const [source, license] = await Promise.all([
+  const [source, license, notice] = await Promise.all([
     readLibraryResponse(sourceResponse),
-    readLibraryResponse(licenseResponse)
+    readLibraryResponse(licenseResponse), noticeResponse ? readLibraryResponse(noticeResponse) : ''
   ]);
-  if (!source.trim() || !validLibraryAsset(source, license)) throw new Error('invalid library or license');
+  if (!source.trim() || !validLibraryEntry({ ...reference, source, license, notice })) throw new Error('invalid library, license or NOTICE');
   const entry = { key: reference.catalogKey || reference.key, title: reference.title, source, license: license.trim(),
+    licenseType: libraryLicenseType(license), notice: notice.trim(),
     sourceUrl: reference.url, licenseUrl: reference.licenseUrl,
     bytes: new TextEncoder().encode(source).length, savedAt: Date.now() };
   try { await saveLibraryToCache(entry); libraryCachePersistent = true; }

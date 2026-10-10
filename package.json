@@ -50,6 +50,7 @@
     "phaser3": "npm:phaser@3.90.0",
     "phaser4": "npm:phaser@4.2.1",
     "playwright": "1.62.1",
-    "three": "0.160.0"
+    "three": "0.160.0",
+    "babylonjs": "9.30.0"
   }
 }
