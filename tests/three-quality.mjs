@@ -55,12 +55,12 @@ async function frame(page) {
 }
 async function geometry(page) {
   const result = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, scrollWidth: document.documentElement.scrollWidth,
-    footer: document.querySelector('footer').getBoundingClientRect().bottom, stage: document.querySelector('#stage').clientHeight,
+    header: document.querySelector('header').getBoundingClientRect().bottom, stage: document.querySelector('#stage').clientHeight,
     buttons: Array.from(document.querySelectorAll('.controls button, #three-quality button')).map(button => {
       const r = button.getBoundingClientRect(); return { left: r.left, right: r.right, height: r.height, bottom: r.bottom };
     }) }));
   assert(result.scrollWidth <= result.width && result.stage >= 64, JSON.stringify(result));
-  if (result.height > 360) assert(result.footer <= result.height + 1, JSON.stringify(result));
+  if (result.height > 360) assert(result.header <= result.height + 1, JSON.stringify(result));
   assert(result.buttons.every(r => r.left >= 0 && r.right <= result.width + 1 && r.height >= 44), JSON.stringify(result));
 }
 async function shadowHint(page) {

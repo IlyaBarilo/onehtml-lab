@@ -159,9 +159,9 @@ async function downloadHtml(page, embed = true) {
 
 async function checkPreviewLayout(page, name) {
   const layout = await page.locator('html').evaluate(() => {
-    const footer = document.querySelector('footer').getBoundingClientRect();
+    const header = document.querySelector('header').getBoundingClientRect();
     return { top: document.querySelector('header').getBoundingClientRect().top,
-      bottom: footer.bottom, height: innerHeight, width: innerWidth,
+      bottom: header.bottom, height: innerHeight, width: innerWidth,
       scrollWidth: document.documentElement.scrollWidth,
       scrollHeight: document.documentElement.scrollHeight,
       overflow: getComputedStyle(document.body).overflowY,
@@ -176,7 +176,7 @@ async function checkPreviewLayout(page, name) {
     // The existing example uses scrolling below 360px to keep its scene and touch targets usable.
     assert.equal(layout.overflow, 'auto', 'A very short preview must allow vertical scrolling: ' + detail);
     assert(layout.scrollHeight > layout.height, 'The compact fallback must expose its full content: ' + detail);
-    await page.locator('footer').scrollIntoViewIfNeeded();
+    await page.locator('header').scrollIntoViewIfNeeded();
     const controls = await page.locator('html').evaluate(() => Array.from(document.querySelectorAll('.controls button, .load label, #load')).map(element => {
       const rect = element.getBoundingClientRect();
       return { top: rect.top, bottom: rect.bottom, height: rect.height, button: element.tagName === 'BUTTON' };
@@ -205,10 +205,10 @@ async function checkCompactLayout(page, name) {
       await page.locator('html').evaluate((root, font) => { root.style.fontFamily = font; }, font);
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       const layout = await page.evaluate(() => {
-        const footer = document.querySelector('footer').getBoundingClientRect();
+        const header = document.querySelector('header').getBoundingClientRect();
         const stage = document.querySelector('#stage').getBoundingClientRect();
         const label = document.querySelector('.load label');
-        return { width: innerWidth, height: innerHeight, bottom: footer.bottom, stage: stage.height,
+        return { width: innerWidth, height: innerHeight, bottom: header.bottom, stage: stage.height,
           scrollWidth: document.documentElement.scrollWidth,
           labelWidth: label.clientWidth, labelScrollWidth: label.scrollWidth,
           controls: Array.from(document.querySelectorAll('.controls button')).map(button => {
@@ -274,6 +274,15 @@ try {
         await page.locator('#run').click();
         const frame = page.frameLocator('#preview > iframe');
         await libraryLabels(frame, 'Встроена в HTML');
+        assert.equal(await frame.locator('footer').count(), 0, 'Controls and metrics belong to the compact header, without a footer');
+        for (const id of ['fps', 'frame-time', 'input-time', 'tap-count', 'finger-count', 'coordinates']) {
+          assert.equal(await frame.locator(`header .metrics #${id}`).count(), 1, 'Keep every metric available in the header');
+        }
+        for (const id of ['pause', 'reset']) {
+          assert.equal(await frame.locator(`header .primary-controls #${id} svg`).count(), 1, 'Pause and reset use accessible header icons');
+        }
+        assert.equal(await frame.locator('#pause').getAttribute('aria-label'), 'Пауза');
+        assert.equal(await frame.locator('#reset').getAttribute('aria-label'), 'Сброс');
         assert.equal(await frame.locator('#scenario').inputValue(), 'showcase');
         assert.equal(await frame.locator('#scenario option').count(), 3);
         assert(await frame.locator('.load').isHidden());
@@ -291,6 +300,8 @@ try {
         if (name === 'chromium') await page.screenshot({ path: join(tmpdir(), 'onehtml-lab-performance-example.png') });
         assert.equal(await frame.locator('#load').getAttribute('max'), '10000');
         await frame.locator('#pause').click();
+        assert.equal(await frame.locator('#pause').getAttribute('aria-label'), 'Продолжить');
+        assert.equal(await frame.locator('#pause').getAttribute('title'), 'Продолжить');
         await frame.locator('#load').evaluate(field => {
           field.value = '10000';
           field.dispatchEvent(new Event('input', { bubbles: true }));
@@ -302,6 +313,7 @@ try {
         await frame.locator('#stage').tap({ position: { x: 30, y: 50 } });
         assert.equal(await frame.locator('#tap-count').innerText(), '1');
         await frame.locator('#pause').click();
+        assert.equal(await frame.locator('#pause').getAttribute('aria-label'), 'Пауза');
         await frame.locator('#fps').filter({ hasText: /^\d+$/ }).waitFor();
         await frame.locator('#stage').tap({ position: { x: 45, y: 60 } });
         assert.equal(await frame.locator('#tap-count').innerText(), '2');

@@ -445,7 +445,8 @@ try {
           assert.match(await page.locator('#info-body').innerText(), /Canvas.*почти одинаково/s);
           await page.locator('#info-close').click();
           await page.locator('#pause').click();
-          await page.locator('#phaser-expand').click(); assert(await page.locator('header').isHidden());
+          await page.locator('#phaser-expand').click(); assert(await page.locator('.heading h1').isHidden());
+          assert(await page.locator('#pause').isVisible() && await page.locator('#phaser-expand').isVisible(), 'Expanded scenes retain their top controls');
           await page.locator('#phaser-expand').click(); assert(await page.locator('header').isVisible());
           await page.locator('#scenario').selectOption('compare');
           await page.waitForFunction(() => window.testGames.at(-1).scene.getScenes(true)[0]?.blocks?.length === 12);
@@ -476,13 +477,25 @@ try {
             await geometry(page);
             await page.locator('#phaser-hints').click();
             assert.match(await page.locator('.phaser-hint-caption').innerText(), /Разверните сцену/);
-            assert(await page.locator('.controls').evaluate(node => node.getBoundingClientRect().bottom <= innerHeight + 1), 'Controls must fit a low phone preview');
+            assert(await page.locator('.controls button:visible').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().bottom <= innerHeight + 1)), 'Controls must fit a low phone preview');
             await page.locator('#phaser-expand').click();
             assert(await page.locator('#scene').evaluate(node => node.clientHeight > 190), 'Expanded phone level must have room for its controls');
             await page.locator('.phaser-hint-caption').filter({ hasText: /Phaser 4.*тень/ }).waitFor();
             await geometry(page);
             await page.locator('#phaser-hints').click();
             await page.locator('#phaser-expand').click();
+            for (const panelWidth of [600, 601, 800, 801]) {
+              await page.setViewportSize({ width: panelWidth, height: 650 });
+              await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+              await geometry(page);
+              const panel = await page.evaluate(() => {
+                const title = document.createRange(); title.selectNodeContents(document.querySelector('.heading h1'));
+                return { title: title.getBoundingClientRect().toJSON(), buttons: Array.from(document.querySelectorAll('.controls button')).map(node => node.getBoundingClientRect().toJSON()),
+                  cards: Array.from(document.querySelectorAll('.mode')).map(node => ({ width: node.clientWidth, content: node.scrollWidth })) };
+              });
+              assert(panel.cards.every(card => card.content <= card.width), 'Library labels must fit at intermediate widths: ' + panelWidth);
+              assert(panel.buttons.every(button => button.top >= panel.title.bottom || button.bottom <= panel.title.top || button.left >= panel.title.right || button.right <= panel.title.left), 'Header icons must not cover the title: ' + panelWidth);
+            }
           }
           assert.deepEqual(errors, []); assert.deepEqual(requests, [], 'Real engines must work in the standalone offline fixture');
           console.log(`${name} ${new URL(url).protocol} ${width}: shared day/night, retained Phaser gameplay, ${available ? 'WebGL lights/filters' : 'Canvas fallback'}, paused switching, all modes, layout and offline engines passed.`);

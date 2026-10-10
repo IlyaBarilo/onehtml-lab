@@ -13,31 +13,41 @@
     button:focus-visible, input:focus-visible { outline: 3px solid #82bdff; outline-offset: 2px; }
     button:disabled { cursor: default; opacity: .5; }
     .app { display: flex; flex-direction: column; height: 100%; }
-    header, footer { flex: none; padding: 12px 16px; background: #101e30; }
-    .heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    header { flex: none; padding: 8px 12px; background: #101e30; }
+    .heading { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: "title metrics scenario controls"; align-items: center; gap: 6px 12px; }
+    .heading h1 { grid-area: title; white-space: nowrap; }
+    .heading .metrics { grid-area: metrics; }
+    #scenario { grid-area: scenario; }
+    .controls { grid-area: controls; display: flex; align-items: center; gap: 6px; }
+    .primary-controls, .scene-controls { display: flex; align-items: center; gap: 4px; }
+    .scene-controls:empty { display: none; }
+    .controls button { flex: none; width: 44px; height: 44px; min-height: 44px; padding: 0; display: grid; place-items: center; }
+    .controls svg { width: 22px; height: 22px; }
+    #pause[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; }
     h1 { margin: 0; font-size: clamp(18px, 2.5vw, 24px); }
-    #scenario { width: 140px; min-height: 36px; padding: 5px 8px; border: 1px solid #3b5676; border-radius: 8px; background: #17283e; color: #eaf2ff; font: inherit; font-size: 14px; }
-    .library-description { margin: 8px 0 0; color: #b8cce5; font-size: 13px; line-height: 1.4; }
-    .description-row { display: flex; align-items: center; gap: 8px; }
+    #scenario { width: 140px; min-height: 44px; padding: 5px 8px; border: 1px solid #3b5676; border-radius: 8px; background: #17283e; color: #eaf2ff; font: inherit; font-size: 14px; }
+    .library-description { margin: 4px 0 0; color: #b8cce5; font-size: 14px; line-height: 1.4; }
+    .description-row { display: flex; align-items: center; gap: 6px 8px; }
     .description-row p { flex: 1; min-width: 0; }
-    #phaser-renderer { flex: none; display: flex; gap: 4px; margin-top: 8px; }
+    #phaser-renderer { flex: none; display: flex; gap: 4px; margin-top: 4px; }
     #phaser-renderer[hidden] { display: none; }
     #phaser-renderer button { min-height: 44px; padding: 5px 8px; font-size: 14px; }
     #phaser-renderer button[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; color: #eaf2ff; }
     #phaser-renderer button:focus-visible { outline: 3px solid #82bdff; outline-offset: 2px; }
-    #three-quality { flex: none; display: flex; gap: 4px; margin-top: 8px; }
+    #three-quality { flex: none; display: flex; gap: 4px; margin-top: 4px; }
     #three-quality[hidden] { display: none; }
     #three-quality button { min-height: 44px; padding: 5px 8px; font-size: 14px; }
     #three-quality button[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; }
-    #cannon-physics { display: flex; flex: none; gap: 4px; margin-top: 8px; }
+    #cannon-physics { display: flex; flex: none; gap: 4px; margin-top: 4px; }
     #cannon-physics[hidden] { display: none; }
     #cannon-physics button { min-height: 44px; padding: 5px 8px; font-size: 14px; }
     #cannon-physics button[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; }
     .cannon-description { flex-wrap: wrap; }
     .cannon-description .library-description { flex-basis: 100%; }
-    .cannon-description #info-toggle { margin-left: auto; }
-    .app.three-expanded .heading, .app.three-expanded .metrics, .app.three-expanded .modes, .app.three-expanded .details { display: none; }
-    .app.three-expanded header { padding: 4px 10px; }
+
+    .app.three-expanded .heading h1, .app.three-expanded #scenario, .app.three-expanded .metrics, .app.three-expanded .modes, .app.three-expanded .load { display: none; }
+    .app.three-expanded .heading { display: flex; justify-content: flex-end; }
+    .app.three-expanded header { padding: 4px 8px; }
     #three-hints, #three-expand { width: 44px; padding: 0; flex: none; display: grid; place-items: center; }
     #three-hints svg, #three-expand svg { width: 22px; height: 22px; }
     #three-hints[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; }
@@ -49,7 +59,7 @@
     #scene .three-still[hidden] { display: none; }
     .three-hint-overlay text { fill: #dcecff; font: 600 14px system-ui, sans-serif; paint-order: stroke; stroke: #091e31; stroke-width: 4px; }
     #stage:has(.three-hint-overlay:not([hidden])) #paused, #stage:has(.three-hint-overlay:not([hidden])) .stage-note { visibility: hidden; }
-    #info-toggle { flex: none; width: 32px; min-height: 32px; margin-top: 8px; padding: 0; font-size: 20px; }
+    #info-toggle { font-size: 22px; }
     .info-panel { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; background: #101e30; touch-action: auto; }
     .info-panel[hidden] { display: none; }
     .info-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid #2f4561; }
@@ -58,9 +68,11 @@
     .info-body { overflow-y: auto; padding: 0 14px 16px; font-size: 15px; line-height: 1.5; }
     .info-body p { margin: 12px 0; }
     .info-body .recommendation { padding: 10px 12px; border-left: 3px solid #88bbff; background: #17283e; }
-    .app.info-open .metrics, .app.info-open .modes, .app.info-open .description-row, .app.info-open footer { display: none; }
-    .app.info-open .heading { margin-bottom: 0; }
-    .app.phaser-expanded header, .app.phaser-expanded .details { display: none; }
+    .app.info-open .metrics, .app.info-open .modes, .app.info-open .description-row, .app.info-open .load, .app.info-open #scenario, .app.info-open .controls { display: none; }
+    .app.info-open .heading { display: flex; }
+    .app.phaser-expanded .heading h1, .app.phaser-expanded .metrics, .app.phaser-expanded #scenario, .app.phaser-expanded .modes, .app.phaser-expanded .description-row, .app.phaser-expanded .load { display: none; }
+    .app.phaser-expanded .heading { display: flex; justify-content: flex-end; }
+    .app.phaser-expanded header { padding: 4px 8px; }
     #phaser-expand { width: 44px; padding: 0; display: grid; place-items: center; }
     #phaser-expand svg { width: 22px; height: 22px; }
     #phaser-hints { width: 44px; padding: 0; display: grid; place-items: center; }
@@ -80,12 +92,18 @@
     .phaser-hint-view.phaser-compact .phaser-hint-caption b { display: none; }
     #scene-stats { position: absolute; bottom: 8px; left: 10px; padding: 5px 8px; border-radius: 6px; background: #091321cc; pointer-events: none; font-size: 14px; }
     .load[hidden] { display: none; }
-    .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-    .metric { background: #17283e; border-radius: 10px; padding: 8px 12px; }
-    .metric strong { display: block; font-size: clamp(25px, 4vw, 34px); line-height: 1.1; font-variant-numeric: tabular-nums; }
-    .metric span { display: block; margin-top: 4px; font-size: 13px; color: #a9bdd7; }
+    .metrics { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-start; gap: 2px 12px; color: #b8cce5; font-size: 14px; line-height: 18px; font-variant-numeric: tabular-nums; }
+    .metric { display: inline-flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+    .metric strong { color: #eaf2ff; font-size: inherit; font-weight: 600; }
+    .metrics > span { white-space: nowrap; }
+    #fps { font-size: 18px; }
+    #fps, #tap-count { min-width: 3ch; }
+    #finger-count { min-width: 5ch; }
+    #frame-time { min-width: 12ch; }
+    #input-time { min-width: 16ch; }
+    #coordinates { min-width: 14ch; }
     #fps { color: #7cdbb0; }
-    .modes { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+    .modes { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
     .mode { padding: 7px 10px; text-align: left; }
     .mode b { display: block; font-size: 15px; }
     .mode small { display: block; margin-top: 3px; color: #b4c6de; font-size: 12px; }
@@ -119,73 +137,48 @@
     #message { display: block; color: #ffb2ae; margin-top: 5px; }
     #paused { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; background: #09132188; font-size: 28px; font-weight: 700; }
     #paused[hidden] { display: none; }
-    .controls { display: flex; align-items: center; gap: 10px; }
-    .load { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
-    .load label { font-size: 14px; white-space: nowrap; }
+    .load { display: flex; align-items: center; gap: 10px; min-width: 0; margin-top: 2px; }
+    .load label { flex: none; font-size: 14px; white-space: nowrap; }
     #load-value { font-variant-numeric: tabular-nums; }
     input[type="range"] { width: 100%; min-width: 30px; height: 44px; margin: 0; accent-color: #88bbff; }
-    .controls button { padding: 0 14px; font-size: 14px; }
     #phaser-effects[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; }
-    .details { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 13px; color: #a9bdd7; font-variant-numeric: tabular-nums; }
-    @media (max-width: 600px) {
-      header, footer { padding: 10px; }
+    @media (max-width: 1200px) and (min-width: 801px) {
+      .heading { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "title scenario controls" "metrics metrics metrics"; gap: 4px 8px; }
       h1 { font-size: 18px; }
       #scenario { width: 132px; }
-      .metric { padding: 8px 10px; }
+    }
+    @media (max-width: 800px) {
+      header { padding: 6px 8px; }
+      h1 { font-size: 18px; }
+      .heading { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "title primary" "scenario tools" "metrics metrics"; gap: 3px 6px; }
+      .controls { display: contents; }
+      .primary-controls { grid-area: primary; justify-content: flex-end; }
+      .scene-controls { grid-area: tools; justify-content: flex-end; }
+      #scenario { width: 132px; }
+      .metrics { gap: 2px 10px; }
       .modes { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
       .modes::-webkit-scrollbar { height: 6px; }
       .modes::-webkit-scrollbar-thumb { background: #4c7097; border-radius: 3px; }
       .mode { flex: 0 0 150px; min-height: 70px; }
       .mode:first-child { flex-basis: 110px; }
       .mode:first-child small { margin-top: 3px; }
-      .phaser-description .library-description { min-height: 2.8em; }
-      .load { flex-wrap: wrap; gap: 0; }
-      .load label { width: 100%; }
-      input[type="range"] { height: 34px; }
-      .controls { gap: 8px; }
-      .controls button { padding: 0 10px; }
-      .controls:has(#phaser-hints) { gap: 4px; }
-      .controls:has(#phaser-hints) button { padding: 0 4px; }
-      .controls #phaser-hints, .controls #phaser-expand, .controls #phaser-effects { padding: 0; flex: none; }
-      .controls #three-hints, .controls #three-expand { padding: 0; }
-      .three-description { flex-wrap: wrap; gap: 4px 8px; }
-      .three-description .library-description { flex-basis: 100%; margin-top: 4px; }
-      .three-description #three-quality, .three-description #info-toggle { margin-top: 0; }
-      .three-description #info-toggle { margin-left: auto; }
-      .details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; }
-      .details span { white-space: nowrap; }
-      .details span:last-child { grid-column: 1 / -1; }
+      .description-row { flex-wrap: wrap; }
+      .description-row .library-description { flex-basis: 100%; }
+      .app.phaser-expanded .controls, .app.three-expanded .controls { display: flex; }
     }
-    @media (max-height: 500px) and (min-width: 601px) {
-      header, footer { padding: 6px 12px; }
-      .heading { margin-bottom: 5px; }
-      .metric { padding: 5px 10px; }
-      .metric strong { font-size: 24px; }
-      .modes { margin-top: 6px; gap: 6px; }
-    }
-    @media (max-height: 580px) and (max-width: 600px) {
-      header, footer { padding: 6px 8px; }
-      header { padding-top: 4px; padding-bottom: 4px; }
-      .heading { gap: 6px; margin-bottom: 2px; }
-      .heading h1 { flex-shrink: 0; white-space: nowrap; }
-      #scenario { min-height: 32px; }
-      .library-description, #info-toggle, #phaser-renderer { margin-top: 4px; }
-      .metric { padding: 3px 6px; }
-      .metrics { grid-template-columns: 1fr 1fr 1.3fr; }
-      .metric strong { font-size: 21px; }
-      .metric span { margin-top: 2px; font-size: 12px; line-height: 1.2; }
-      .mode { flex: 0 0 160px; padding: 5px 8px; min-height: 64px; }
+    @media (max-height: 580px) {
+      header { padding: 4px 8px; }
+      .modes { margin-top: 3px; gap: 6px; }
+      .mode { padding: 5px 8px; }
       .library-size { margin-top: 2px; }
-      .modes { display: flex; overflow-x: auto; margin-top: 3px; padding-bottom: 2px; }
-      .mode:first-child { display: block; flex-basis: 110px; }
-      .mode:first-child small { margin-top: 3px; }
-      input[type="range"] { height: 28px; }
-      .load label { white-space: normal; line-height: 1.2; }
-      .details { display: flex; overflow-x: auto; gap: 12px; margin-top: 4px; font-size: 12px; scrollbar-width: thin; }
-      .details::-webkit-scrollbar { height: 4px; }
+      .description-row .library-description { display: none; }
+      .description-row { display: none; }
+      .description-row:has(:where(#phaser-renderer, #three-quality, #cannon-physics):not([hidden])) { display: flex; }
       #stage { min-height: 64px; }
-      .three-description .library-description, .cannon-description .library-description { display: none; }
-      #cannon-physics { margin-top: 4px; }
+    }
+    @media (max-height: 580px) and (max-width: 800px) {
+      .mode { flex-basis: 160px; min-height: 64px; }
+      .modes { padding-bottom: 2px; }
     }
     @media (max-height: 360px) {
       body { overflow-y: auto; }
@@ -196,12 +189,18 @@
 <body>
   <main class="app">
     <header>
-      <div class="heading"><h1>Тест библиотек</h1><select id="scenario" aria-label="Режим теста для всех движков"><option value="showcase">Возможности</option><option value="compare">Сравнение</option><option value="load">Нагрузка</option></select></div>
-      <div class="metrics" aria-label="Показатели теста">
-        <div class="metric"><strong id="fps">—</strong><span>FPS</span></div>
-        <div class="metric"><strong id="tap-count">0</strong><span>Нажатий</span></div>
-        <div class="metric" title="Текущее и максимальное число одновременных касаний"><strong id="finger-count">0 / 0</strong><span>Касания/макс.</span></div>
+      <div class="heading"><h1>Тест библиотек</h1>
+        <div class="metrics" aria-label="Показатели теста">
+          <div class="metric"><span>FPS</span><strong id="fps">—</strong></div>
+          <span id="frame-time">Кадр: —</span><span id="input-time" title="Время от нажатия до следующего кадра">До кадра: —</span>
+          <div class="metric"><span>Нажатий:</span><strong id="tap-count">0</strong></div>
+          <div class="metric" title="Текущее и максимальное число одновременных касаний"><span>Касания:</span><strong id="finger-count">0 / 0</strong></div>
+          <span id="coordinates" title="Координаты последнего нажатия по сцене">X/Y: —</span>
+        </div>
+        <select id="scenario" aria-label="Режим теста для всех движков"><option value="showcase">Возможности</option><option value="compare">Сравнение</option><option value="load">Нагрузка</option></select>
+        <div class="controls" aria-label="Управление тестом"><div class="primary-controls"><button id="pause" aria-pressed="false" aria-label="Пауза" title="Пауза"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg></button><button id="reset" aria-label="Сброс" title="Сброс"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1.6 7M4 4v6h6"/></svg></button><button id="info-toggle" title="Какую библиотеку и отрисовку выбрать" aria-label="Подробно о выбранной библиотеке" aria-expanded="false" aria-controls="library-info">?</button></div><div class="scene-controls"></div></div>
       </div>
+      <div class="load"><label for="load">Объектов: <b id="load-value">120</b></label><input id="load" type="range" min="20" max="10000" step="20" value="120"></div>
       <nav class="modes" aria-label="Выбор теста">
         <button class="mode" data-mode="canvas" data-state="ready" aria-pressed="true"><b>Canvas 2D</b><small>Без библиотек</small></button>
         <button class="mode" data-mode="three160" aria-pressed="false" disabled><b>Three.js r160</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
@@ -211,7 +210,7 @@
         <button class="mode" data-mode="phaser" aria-pressed="false" disabled><b>Phaser 3.90</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="phaser4" aria-pressed="false" disabled><b>Phaser 4.2.1</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
       </nav>
-      <div class="description-row"><p id="library-description" class="library-description"></p><div id="phaser-renderer" role="group" aria-label="Отрисовка Phaser" hidden><button data-renderer="canvas" aria-pressed="false">Canvas</button><button data-renderer="webgl" aria-pressed="true">WebGL</button></div><div id="three-quality" role="group" aria-label="Оформление Three.js" hidden><button data-quality="simple" aria-pressed="false">Простое</button><button data-quality="detailed" aria-pressed="true">Подробное</button></div><div id="cannon-physics" role="group" aria-label="Физика башни" hidden><button data-physics="simple" aria-pressed="false">Без физики</button><button data-physics="bodies" aria-pressed="true">cannon-es</button></div><button id="info-toggle" title="Какую библиотеку и отрисовку выбрать" aria-label="Подробно о выбранной библиотеке" aria-expanded="false" aria-controls="library-info">?</button></div>
+      <div class="description-row"><p id="library-description" class="library-description"></p><div id="phaser-renderer" role="group" aria-label="Отрисовка Phaser" hidden><button data-renderer="canvas" aria-pressed="false">Canvas</button><button data-renderer="webgl" aria-pressed="true">WebGL</button></div><div id="three-quality" role="group" aria-label="Оформление Three.js" hidden><button data-quality="simple" aria-pressed="false">Простое</button><button data-quality="detailed" aria-pressed="true">Подробное</button></div><div id="cannon-physics" role="group" aria-label="Физика башни" hidden><button data-physics="simple" aria-pressed="false">Без физики</button><button data-physics="bodies" aria-pressed="true">cannon-es</button></div></div>
     </header>
     <section id="stage" aria-label="Поле теста: нажимайте или касайтесь несколькими пальцами">
       <div id="scene"></div>
@@ -221,14 +220,6 @@
       <div id="paused" hidden>Пауза</div>
       <section id="library-info" class="info-panel" aria-label="Описание библиотеки" hidden><div class="info-heading"><h2 id="info-title"></h2><button id="info-close" aria-label="Закрыть описание">×</button></div><div id="info-body" class="info-body"></div></section>
     </section>
-    <footer>
-      <div class="controls">
-        <div class="load"><label for="load">Объектов: <b id="load-value">120</b></label><input id="load" type="range" min="20" max="10000" step="20" value="120"></div>
-        <button id="pause" aria-pressed="false">Пауза</button>
-        <button id="reset">Сброс</button>
-      </div>
-      <div class="details"><span id="frame-time">Кадр: —</span><span id="input-time">До кадра: —</span><span id="coordinates">Координаты: —</span></div>
-    </footer>
   </main>
   <script>
     (() => {
@@ -1422,7 +1413,7 @@
         hints.addEventListener('click', () => { threeHintsEnabled = !threeHintsEnabled; pendingInput = null; syncHints(); });
         expand.addEventListener('click', () => { threeExpanded = !threeExpanded; syncExpanded(); });
         document.addEventListener('keydown', escape);
-        document.querySelector('.controls').append(hints, expand);
+        document.querySelector('.scene-controls').append(hints, expand);
         const pose = () => {
           placeCamera(); wheels.forEach(wheel => { wheel.rotation.x = -time * .45; });
           wings.forEach((panel, index) => { panel.rotation.z = (index ? -1 : 1) * (.15 + Math.sin(time * .6) * .025); });
@@ -1622,7 +1613,7 @@
         const pose = () => { placeCamera(); wheels.forEach(w => { w.rotation.x = -time * .45; }); wings.forEach((p, index) => { p.rotation.z = (index ? -1 : 1) * (.15 + Math.sin(time * .6) * .025); }); arm.rotation.x = -.6 + Math.sin(time * .7) * .3; elbow.rotation.x = -1.1 + Math.sin(time * .7 + 1) * .4; scanner.rotation.y = Math.sin(time * .5) * .8; antenna.rotation.y = time * .12; rover.position.y = Math.sin(time * 1.3) * .025; };
         pose(); setQuality();
         hints.addEventListener('click', () => { threeHintsEnabled = !threeHintsEnabled; pendingInput = null; syncHints(); });
-        expand.addEventListener('click', () => { threeExpanded = !threeExpanded; syncExpanded(); }); document.addEventListener('keydown', escape); document.querySelector('.controls').append(hints, expand);
+        expand.addEventListener('click', () => { threeExpanded = !threeExpanded; syncExpanded(); }); document.addEventListener('keydown', escape); document.querySelector('.scene-controls').append(hints, expand);
         syncHints(); syncExpanded();
         const orbit = (x, y) => { if (threeHintsEnabled) return; targetAngle = x / width * Math.PI * 2; targetElevation = .18 + (1 - y / height) * .7; controlledUntil = time + 8; };
         return { get ownLoop() { return threeHintsEnabled; }, getViewState() { return { time, angle, elevation, targetAngle, targetElevation, controlledUntil }; }, setQuality,
@@ -1720,7 +1711,7 @@
             phaserEffectsEnabled = !phaserEffectsEnabled; current.setVisuals(phaserEffectsEnabled);
             repaint();
           });
-          document.querySelector('.controls').append(effects);
+          document.querySelector('.scene-controls').append(effects);
         }
         const hud = document.createElement('div'); hud.className = 'phaser-hud';
         const totals = document.createElement('span'), area = document.createElement('span'); hud.append(totals, area);
@@ -1786,7 +1777,7 @@
           if (phaserHintsEnabled || paused || infoOpen || document.hidden) game.loop.sleep(); else game.loop.wake();
           pendingInput = null; resetFps(); repaint();
         });
-        document.querySelector('.controls').append(hints);
+        document.querySelector('.scene-controls').append(hints);
         const timeToggle = document.createElement('button'); timeToggle.id = 'phaser-time';
         for (const name of ['pointerdown', 'pointerup', 'pointercancel']) timeToggle.addEventListener(name, event => event.stopPropagation());
         timeToggle.addEventListener('click', () => {
@@ -1799,7 +1790,7 @@
           expand.innerHTML = svg + (phaserExpanded ? '<path d="M3 9h6V3m6 0v6h6M3 15h6v6m6 0v-6h6"/>' : '<path d="M9 3H3v6m12-6h6v6M3 15v6h6m6 0h6v-6"/>') + '</svg>';
         };
         const toggleExpand = () => { phaserExpanded = !phaserExpanded; document.querySelector('.app').classList.toggle('phaser-expanded', phaserExpanded); updateExpand(); };
-        expand.addEventListener('click', toggleExpand); updateExpand(); document.querySelector('.controls').append(expand);
+        expand.addEventListener('click', toggleExpand); updateExpand(); document.querySelector('.scene-controls').append(expand);
         host.tabIndex = 0;
         host.classList.toggle('phaser-compact', compact); host.append(hud, pad, result, timeToggle, hintOverlay);
         setHintView();
@@ -2460,7 +2451,7 @@
         rings.push({ ...point, time });
         $('tap-count').textContent = integer(tapCount);
         $('finger-count').textContent = `${integer(pointers.size)} / ${integer(peakPointers)}`;
-        $('coordinates').textContent = `Координаты: ${integer(Math.round(point.x))}, ${integer(Math.round(point.y))}`;
+        $('coordinates').textContent = `X/Y: ${integer(Math.round(point.x))}, ${integer(Math.round(point.y))}`;
         if (!paused) activeScene?.tap(point.x, point.y, event.pointerId, event.target.closest('[data-phaser-action]')?.dataset.phaserAction);
         drawTouches(performance.now());
       });
@@ -2502,7 +2493,9 @@
       $('load').addEventListener('change', event => { objectCount = Number(event.target.value); startScene(); });
       $('pause').addEventListener('click', () => {
         paused = !paused;
-        $('pause').textContent = paused ? 'Продолжить' : 'Пауза';
+        const label = paused ? 'Продолжить' : 'Пауза';
+        $('pause').setAttribute('aria-label', label); $('pause').title = label;
+        $('pause').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (paused ? '<path d="M8 5l11 7-11 7Z"/>' : '<path d="M9 5v14M15 5v14"/>') + '</svg>';
         $('pause').setAttribute('aria-pressed', String(paused));
         $('paused').hidden = !paused;
         activeScene.pause?.(paused || infoOpen || document.hidden);
@@ -2514,7 +2507,7 @@
         $('tap-count').textContent = '0';
         $('finger-count').textContent = `${integer(pointers.size)} / ${integer(peakPointers)}`;
         $('input-time').textContent = 'До кадра: —';
-        $('coordinates').textContent = 'Координаты: —';
+        $('coordinates').textContent = 'X/Y: —';
         startScene();
       });
       document.addEventListener('visibilitychange', () => {

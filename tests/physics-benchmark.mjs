@@ -62,6 +62,7 @@ try {
           await page.locator('[data-physics="bodies"]').click();
           await page.locator('#pause').click();
           const stage = await page.locator('#stage').boundingBox();
+          const worldCount = await page.evaluate(() => testWorlds.length);
           if (width===320) await page.locator('#stage').tap({position:{x:stage.width*.7,y:stage.height*.65}});
           else await page.locator('#stage').click({position:{x:stage.width*.7,y:stage.height*.65}});
           await page.waitForFunction(() => /Выстрелов: 1/.test(document.querySelector('#scene-stats').textContent));
@@ -69,6 +70,7 @@ try {
           await page.locator('#fps').filter({hasText:/^\d+$/}).waitFor();
           const motion = await page.evaluate(() => {const world=testWorlds.at(-1);return {contacts:world.contacts.length,rotated:world.bodies.filter(body=>body.mass===1&&Math.abs(body.quaternion.w)<.99).length};});
           assert(motion.rotated>0,'Impacts must rotate actual 3D bodies');
+          assert.equal(await page.evaluate(() => testWorlds.length),worldCount,'Updating FPS and input metrics must not recreate the scene');
           await page.locator('#pause').click();
           // WebKit clears the readable WebGL back buffer after compositing; sample the rendered frame immediately.
           const colors = await page.evaluate(() => {testScene.renderer.render(testScene.scene,testScene.camera);const sample=document.createElement('canvas');sample.width=sample.height=64;const ctx=sample.getContext('2d');ctx.drawImage(testScene.renderer.domElement,0,0,64,64);const pixels=ctx.getImageData(0,0,64,64).data,colors=new Set();for(let i=0;i<pixels.length;i+=4)if(pixels[i+3])colors.add(pixels[i]+','+pixels[i+1]+','+pixels[i+2]);return colors.size;});
@@ -90,7 +92,7 @@ try {
           if (width===320) {
             await page.setViewportSize({width:320,height:367});
             await page.waitForTimeout(100);
-            const layout=await page.evaluate(() => ({width:innerWidth,scroll:document.documentElement.scrollWidth,stage:document.querySelector('#stage').clientHeight,bottom:document.querySelector('footer').getBoundingClientRect().bottom}));
+            const layout=await page.evaluate(() => ({width:innerWidth,scroll:document.documentElement.scrollWidth,stage:document.querySelector('#stage').clientHeight,bottom:document.querySelector('header').getBoundingClientRect().bottom}));
             assert(layout.scroll<=layout.width && layout.stage>=64 && layout.bottom<=368,'Cannon controls and scene must fit a short phone preview: '+JSON.stringify(layout));
           }
           await page.locator('#scenario').selectOption('load');
