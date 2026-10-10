@@ -26,6 +26,7 @@ const exampleFiles = [
   { id: 'branching-story', category: 'media', platform: 'mobile', title: 'История с выбором', description: 'Развилки, разные окончания и возврат к выбору.' },
   { id: 'interactive-infographic', category: 'media', platform: 'mobile', title: 'Интерактивная инфографика', description: 'Данные, диаграмма и пояснения по нажатию.' },
   { id: 'sound-panel', category: 'media', platform: 'all', title: 'Звуковая панель', description: 'Четыре синтезируемых звука, формы и цвета. Работает без внешних ресурсов.' },
+  { id: 'music-lab', category: 'media', platform: 'all', title: 'Музыкальный пульт: Web Audio и Tone.js', description: 'Одна мелодия, четыре инструмента, темп и эхо. Сравните звук браузера с музыкальной библиотекой.' },
   { id: '3d-showcase', category: 'media', platform: 'all', title: '3D-витрина', description: 'Лампа, материалы, свет и тени. Three.js r160 можно встроить при сохранении.' },
   { id: 'glb-model', category: 'media', platform: 'all', title: '3D-модель GLB', description: 'Спутник с текстурой и анимацией. Вращение касанием или мышью, масштаб и скачивание модели.' },
   { id: '3d-physics', category: 'media', platform: 'all', title: '3D-физика: башня и шар', description: 'Сбивайте башню шаром. Three.js рисует, cannon-es рассчитывает падение, вращение, трение и отскок.' },
@@ -41,9 +42,10 @@ const examples = await Promise.all(exampleFiles.map(async entry => {
   if (entry.id === 'glb-model') code = code.replace('data-model-src="satellite.glb"', `data-model-src="data:model/gltf-binary;base64,${(await readFile(join(root,'src/examples/satellite.glb'))).toString('base64')}"`);
   return { ...entry, code };
 }));
+const toneLicense = (await readFile(join(root, 'src/vendor/tone-LICENSE.txt'), 'utf8')).trim().replace(/\r\n?/g, '\n');
 const script = '(function () {\n"use strict";\n'
   + `const examples = ${JSON.stringify(examples)};\n`
-  + (await Promise.all(files.map(name => readFile(join(root, 'src', name), 'utf8')))).join('\n') + '\n})();';
+  + (await Promise.all(files.map(name => readFile(join(root, 'src', name), 'utf8')))).join('\n').replace('/* TONE_LICENSE */ null', () => JSON.stringify(toneLicense)) + '\n})();';
 const license = (await readFile(join(root, 'LICENSE'), 'utf8')).trim();
 const html = template.replace('/* APP_STYLES */', () => css.replace(/<\/style/gi, '<\\/style'))
   .replace('/* APP_SCRIPT */', () => script.replace(/<\/script/gi, '<\\/script'))

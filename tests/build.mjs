@@ -16,6 +16,10 @@ const editorLicenses = await readFile(new URL('../src/vendor/codemirror-LICENSE.
 // Git uses LF on Linux; the standalone build deliberately writes CRLF.
 const normalizeLineEndings = text => text.replace(/\r\n/g, '\n');
 assert(normalizeLineEndings(standalone).includes(normalizeLineEndings(editorLicenses).trim()), 'All CodeMirror copyright and permission notices must be included in full');
+const toneLicenses = normalizeLineEndings(await readFile(new URL('../src/vendor/tone-LICENSE.txt', import.meta.url), 'utf8')).trim();
+assert(standalone.includes(JSON.stringify(toneLicenses)), 'Complete Tone.js distribution notices must be present as catalog data');
+assert(!standalone.includes('/* TONE_LICENSE */ null'), 'The music license marker must be replaced by the build');
+assert(!standalone.includes('For license information please see Tone.js.LICENSE.txt'), 'Tone.js itself must remain an optional download');
 const expectedVersion = process.argv[2];
 assert(process.argv.length <= 3, 'Use: node tests/build.mjs [v1.2.3]');
 const matches = [...standalone.matchAll(/class="app-version"/g)];

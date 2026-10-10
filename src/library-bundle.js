@@ -1,6 +1,8 @@
 // Classic scripts can come from the versioned catalog or user-selected local files.
 // ES modules and scripts with dependencies need a separate resolver.
 const libraryCache = new Map();
+// Only notices are included in the editor; the Tone.js distribution is downloaded separately.
+const toneDistributionLicense = /* TONE_LICENSE */ null;
 const persistedLibraries = new Map();
 let libraryCachePersistent = false;
 let libraryDatabasePromise;
@@ -39,7 +41,8 @@ function libraryNeedsNotice(entry) { return /^babylonjs(?:-loaders)?@/.test(entr
 function validLibraryEntry(entry) {
   return entry && validLibraryAsset(entry.source, entry.license, entry.notice || '')
     && (!entry.licenseType || entry.licenseType === libraryLicenseType(entry.license))
-    && (!libraryNeedsNotice(entry) || libraryLicenseType(entry.license) === 'Apache-2.0' && /Babylon\.js[\s\S]*Copyright/.test(entry.notice || ''));
+    && (!libraryNeedsNotice(entry) || libraryLicenseType(entry.license) === 'Apache-2.0' && /Babylon\.js[\s\S]*Copyright/.test(entry.notice || ''))
+    && (!(entry.catalogKey || entry.key || '').startsWith('tone@') || Boolean(toneDistributionLicense) && entry.license.replace(/\r\n?/g, '\n').includes(toneDistributionLicense));
 }
 function libraryAssetIdentity(source, license, notice = '') { return source + '\0' + license + (notice ? '\0' + notice : ''); }
 function libraryLicenseText(entry) { return entry.license + (entry.notice ? '\nNOTICE:\n' + entry.notice : ''); }
@@ -50,6 +53,10 @@ const knownLibraryBytes = { 'three@0.160.0': 669884, 'matter-js@0.20.0': 83476,
   'babylonjs-loaders@9.30.0:glTF2': 399422, 'babylonjs-loaders@9.30.0:all': 849596 };
 
 function libraryReference(url) {
+  if (/^https:\/\/(?:cdn\.jsdelivr\.net\/npm\/|unpkg\.com\/)tone@15\.1\.22\/build\/Tone\.js$/.test(url)) return {
+    key: 'tone@15.1.22', title: 'Tone.js 15.1.22', url, downloadBytes: 345500, licenseType: 'MIT',
+    licenseUrl: 'https://cdn.jsdelivr.net/npm/tone@15.1.22/LICENSE.md', licenseText: toneDistributionLicense
+  };
   const loader = /^https:\/\/(?:cdn\.jsdelivr\.net\/npm\/|unpkg\.com\/)babylonjs-loaders@9\.30\.0\/(babylon\.glTF2FileLoader|babylonjs\.loaders)\.min\.js$/.exec(url);
   if (loader) {
     const kind = loader[1] === 'babylon.glTF2FileLoader' ? 'glTF2' : 'all', key = 'babylonjs-loaders@9.30.0:' + kind;
@@ -120,6 +127,11 @@ function localLibraryReference(url) {
     const version = (/[._-]v?(0\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
       || folders.map(folder => /^(?:matter(?:-js)?[@._-])?v?(0\.\d+\.\d+)$/i.exec(folder)).find(Boolean))?.[1];
     if (version) reference = libraryReference(`https://cdn.jsdelivr.net/npm/matter-js@${version}/build/matter.min.js`);
+  } else if (/^tone(?:[._-]v?\d+\.\d+\.\d+)?(?:\.min)?\.js$/i.test(filename)) {
+    title = 'Tone.js';
+    const version = (/[._-]v?(\d+\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
+      || folders.map(folder => /^(?:tone[@._-])?v?(\d+\.\d+\.\d+)$/i.exec(folder)).find(Boolean))?.[1];
+    if (version) reference = libraryReference(`https://cdn.jsdelivr.net/npm/tone@${version}/build/Tone.js`);
   } else if (/^phaser(?:[._-]v?[34]\.\d+\.\d+)?(?:\.min)?\.js$/i.test(filename)) {
     title = 'Phaser';
     const version = (/[._-]v?([34]\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
@@ -169,6 +181,7 @@ async function librarySourceHash(source) {
 }
 
 function libraryCatalogReference(key) {
+  if (key === 'tone@15.1.22') return libraryReference('https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.js');
   if (/^babylonjs-loaders@9\.30\.0:(?:glTF2|all)$/.test(key || '')) return libraryReference('https://cdn.jsdelivr.net/npm/babylonjs-loaders@9.30.0/'+(key.endsWith(':glTF2') ? 'babylon.glTF2FileLoader.min.js' : 'babylonjs.loaders.min.js'));
   if (key === 'babylonjs@9.30.0') return libraryReference('https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/babylon.js');
   if (typeof moduleCatalog === 'function' && moduleCatalog(key)) return moduleCatalog(key);
@@ -315,6 +328,7 @@ function libraryFilename(reference, entry) {
   if (matter) return `matter-${matter[1]}.min.js`;
   const phaser = /^phaser@([\d.]+)$/.exec(key);
   if (phaser) return `phaser-${phaser[1]}.min.js`;
+  if (key === 'tone@15.1.22') return 'tone-15.1.22.js';
   if (key === 'babylonjs@9.30.0') return 'babylon-9.30.0.js';
   if (key === 'babylonjs-loaders@9.30.0:glTF2') return 'babylon-glTF2-9.30.0.js';
   if (key === 'babylonjs-loaders@9.30.0:all') return 'babylon-loaders-9.30.0.js';
@@ -412,12 +426,12 @@ async function downloadLibrary(reference, options = {}) {
   const fetchOptions = { credentials: 'omit', redirect: 'error', ...options };
   const [sourceResponse, licenseResponse, noticeResponse] = await Promise.all([
     fetch(reference.url, fetchOptions),
-    fetch(reference.licenseUrl, fetchOptions),
+    reference.licenseText ? null : fetch(reference.licenseUrl, fetchOptions),
     reference.noticeUrl ? fetch(reference.noticeUrl, fetchOptions) : null
   ]);
   const [source, license, notice] = await Promise.all([
     readLibraryResponse(sourceResponse),
-    readLibraryResponse(licenseResponse), noticeResponse ? readLibraryResponse(noticeResponse) : ''
+    reference.licenseText || readLibraryResponse(licenseResponse), noticeResponse ? readLibraryResponse(noticeResponse) : ''
   ]);
   if (!source.trim() || !validLibraryEntry({ ...reference, source, license, notice })) throw new Error('invalid library, license or NOTICE');
   const entry = { key: reference.catalogKey || reference.key, title: reference.title, source, license: license.trim(),

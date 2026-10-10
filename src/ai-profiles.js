@@ -23,6 +23,8 @@ const aiGameCatalog = {
 let aiGame = normalizeAiGame();
 const aiPhysicsKey = 'cannon-es@0.20.0';
 const aiPhysicsUrl = 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
+const aiMusicKey = 'tone@15.1.22';
+const aiMusicUrl = 'https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.js';
 function aiGameUsesPhysics(value) {
   const game = normalizeAiGame(value);
   return game.dimension === '3d' && game.physics === 'bodies' && aiGameChoice(game).id === 'three';
@@ -51,7 +53,7 @@ function aiGameWarnings(value) {
 }
 function aiGameInstructions(value, models = false) {
   const game = normalizeAiGame(value), { id } = aiGameChoice(game), profile = aiGameCatalog[id];
-  const physics = aiGameUsesPhysics(game);
+  const physics = aiGameUsesPhysics(game), music = game.sound === 'rhythm';
   const parts = ['Сделай небольшую законченную игру с одной основной механикой, понятной целью, началом, завершением и повторным запуском.'];
   for (const [key, label] of Object.entries(aiGameLabels)) if (key !== 'basis' && game[key]) parts.push(`${label}: ${aiGameOptions[key][game[key]]}.`);
   parts.push(physics ? `Используй Three.js r160 и cannon-es 0.20.0 как ES-модули. Перед скриптом игры добавь <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","cannon-es":"${aiPhysicsUrl}"}}</script>. В <script type="module"> импортируй import * as THREE from 'three'; import * as CANNON from 'cannon-es';. Не подключай дополнительно обычный скрипт THREE, CommonJS, latest или другую версию. Не вставляй исходники библиотек в ответ: OneHTML Lab подготовит их при сохранении.` : models && id === 'three' ? 'Используй Three.js r160 как ES-модуль с GLTFLoader. Точные подключения и работа с GLB указаны в конце запроса. Не вставляй исходники библиотек в ответ.' : profile.url ? `Используй ${profile.title}. Подключи до кода игры обычным скриптом <script src="${profile.url}"></script>. Не используй import, latest или другие версии. Не вставляй исходники библиотеки в ответ: OneHTML Lab подготовит их при сохранении.` : 'Используй HTML, Canvas 2D или SVG и обычный JavaScript без внешних библиотек.');
@@ -63,9 +65,9 @@ function aiGameInstructions(value, models = false) {
   if (genres[game.genre]) parts.push(genres[game.genre]);
   const styles = { paper: 'Используй слои бумажных форм, тёплую ограниченную палитру и мягкие тени.', neon: 'Используй тёмный игровой мир, два-три ярких акцента и умеренное свечение; сохраняй читаемость.', drawn: 'Используй мягкие рисованные силуэты, согласованную палитру и выразительные движения персонажей.', minimal: 'Используй чёткие силуэты, контраст фигуры и фона и различимые формы объектов.' };
   if (styles[game.style]) parts.push(styles[game.style]);
-  parts.push('Оформляй сам игровой мир: персонажей, препятствия, фон, движение и реакции. Не заменяй это декоративным меню вокруг простого поля. Не добавляй внешние зависимости и ресурсы кроме выбранной основы'+(physics ? ', cannon-es 0.20.0' : '')+' и перечисленных медиа.');
+  parts.push('Оформляй сам игровой мир: персонажей, препятствия, фон, движение и реакции. Не заменяй это декоративным меню вокруг простого поля. Не добавляй внешние зависимости и ресурсы кроме выбранной основы'+(physics ? ', cannon-es 0.20.0' : '')+(music ? ', Tone.js 15.1.22' : '')+' и перечисленных медиа.');
   if (game.load === 'light') parts.push('Ограничь частицы и эффекты, переиспользуй объекты, учитывай время кадра и небольшой экран.');
-  if (game.sound !== 'none') parts.push('Запускай звук только после действия пользователя, обрабатывай отказ и дай возможность выключить звук. Для простых синтезируемых эффектов используй Web Audio без дополнительной библиотеки.');
+  if (game.sound !== 'none') parts.push('Запускай звук только после действия пользователя, обрабатывай отказ и дай возможность выключить звук. '+(music ? `Для музыки и ритма подключи обычным скриптом <script src="${aiMusicUrl}"></script> до кода игры. Используй Tone.start() после нажатия, Tone.getTransport() для темпа и Tone.Loop/Sequence для ритма; передавай полученное время в синтезатор. При остановке и уходе в фон останавливай Transport и ноты. Синтезируй звук без внешних семплов, не используй import или другую версию. Не вставляй исходники Tone.js в ответ.` : 'Для простых синтезируемых эффектов используй Web Audio без дополнительной библиотеки.'));
   return parts.join(' ');
 }
 function aiGameMediaRecipe(id) {
@@ -106,10 +108,11 @@ function aiGameConnections(code) {
 function aiGameConnectionText(code, profileId = '', settings = null) {
   const actual = aiGameConnections(code), parts = [];
   if (profileId && Object.hasOwn(aiGameCatalog, profileId)) {
-    const expected = aiGameCatalog[profileId], physics = settings && aiGameUsesPhysics(settings); parts.push('В запросе: ' + expected.title + (physics ? ' + cannon-es 0.20.0' : '') + '.');
+    const expected = aiGameCatalog[profileId], physics = settings && aiGameUsesPhysics(settings), music = settings?.sound === 'rhythm'; parts.push('В запросе: ' + expected.title + (physics ? ' + cannon-es 0.20.0' : '') + (music ? ' + Tone.js 15.1.22' : '') + '.');
     if (expected.key && !actual.found.some(ref => ref.key === expected.key)) parts.push('Ожидаемое подключение не найдено; ответ может использовать другую основу или способ подключения.');
     if (physics && !actual.found.some(ref => ref.key === aiPhysicsKey)) parts.push('Ожидаемое подключение cannon-es не найдено.');
-    if (actual.found.some(ref => ref.key !== expected.key && !(physics && ref.key === aiPhysicsKey) && !(profileId === 'three' && ref.key === 'three-gltf@0.160.0'))) parts.push('Есть отличающиеся версии или дополнительные библиотеки.');
+    if (music && !actual.found.some(ref => ref.key === aiMusicKey)) parts.push('Ожидаемое подключение Tone.js не найдено.');
+    if (actual.found.some(ref => ref.key !== expected.key && !(physics && ref.key === aiPhysicsKey) && !(music && ref.key === aiMusicKey) && !(profileId === 'three' && ref.key === 'three-gltf@0.160.0'))) parts.push('Есть отличающиеся версии или дополнительные библиотеки.');
   }
   parts.push(actual.found.length ? 'В HTML распознано: ' + actual.found.map(ref => ref.title).join(', ') + '.' : 'Известные библиотеки в HTML не распознаны.');
   if (actual.unknown.length) parts.push('Другие подключения: ' + actual.unknown.slice(0, 6).map(url => url.slice(0, 160)).join(', ') + '.');
@@ -129,6 +132,7 @@ function renderAiGameControls() {
   for (const key of Object.keys(aiGameOptions)) document.querySelector('#ai-game-' + key).value = aiGame[key];
   document.querySelector('#ai-game-recommendation').textContent = `${aiGameCatalog[choice.id].title}. ${choice.reason}` + (choice.id === 'phaser4' ? ' Новая ветка рендеринга, света и фильтров; не все примеры Phaser 3 совместимы.' : choice.id === 'babylon' ? ' Для 3D-сцен с готовыми камерами, материалами и инструментами движка.' : '');
   if (aiGameUsesPhysics(aiGame)) document.querySelector('#ai-game-recommendation').textContent += ' Для вращения и равновесия: cannon-es 0.20.0.';
+  if (aiGame.sound === 'rhythm') document.querySelector('#ai-game-recommendation').textContent += ' Для музыки и ритма: Tone.js 15.1.22.';
   document.querySelector('#ai-game-warning').textContent = aiGameWarnings(aiGame).join(' ');
 }
 function initAiGameProfiles() {

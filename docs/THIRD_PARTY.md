@@ -68,3 +68,15 @@ cannon-es is an optional 3D physics library under [MIT](licenses/cannon-es-0.20.
 cannon-es — необязательная библиотека 3D-физики под MIT. Поддерживается ES-модуль точной версии 0.20.0; он скачивается отдельно и не включён в редактор. Кэш, встроенные и отдельные копии сохраняют полный текст лицензии с авторскими правами. npm-пакет предоставляет настоящий дистрибутив для браузерных проверок.
 
 Project / Проект: [cannon-es](https://github.com/pmndrs/cannon-es). The tower example and library benchmark use the project's MIT license. / Пример башни и тест работы библиотек распространяются под MIT проекта.
+
+## Tone.js 15.1.22
+
+Tone.js is an optional music framework under MIT. Its pinned classic `build/Tone.js` distribution is downloaded separately; the editor contains only its notices. The musical example synthesizes sounds without recordings or samples. Embedded HTML, adjacent JavaScript and portable library sets retain the complete [distribution licenses](../src/vendor/tone-LICENSE.txt).
+
+Tone.js — необязательная музыкальная библиотека под MIT. Поддерживается классическая сборка `build/Tone.js` точной версии 15.1.22; она скачивается отдельно. В редактор входят только уведомления о лицензиях. Музыкальный пример синтезирует звук без сторонних записей и семплов. Встроенный HTML, отдельные JS-файлы и переносимые наборы сохраняют полные лицензии сборки по ссылке выше.
+
+The distribution includes standardized-audio-context 25.3.70, automation-events 7.0.4, @babel/runtime 7.26.10 and tslib 2.6.2, as recorded in the Tone.js release commit's lockfile and source map. Their MIT and tslib permission notices are included in full. These are the bundled components, not the independently resolved development dependencies.
+
+В готовую сборку входят standardized-audio-context 25.3.70, automation-events 7.0.4, @babel/runtime 7.26.10 и tslib 2.6.2, указанные в lock-файле коммита выпуска Tone.js и карте исходников. Полные уведомления MIT и условия tslib включены в общий файл. Это компоненты готовой сборки; версии зависимостей, отдельно установленных для разработки, могут отличаться.
+
+Project / Проект: [Tone.js](https://tonejs.github.io/). Release source / Исходник выпуска: [Tone.js release commit](https://github.com/Tonejs/Tone.js/tree/d2d52ffa8803b35debd9f19f2da08ad1c3540de0). The musical example uses the project MIT license. / Музыкальный пример распространяется под MIT проекта.

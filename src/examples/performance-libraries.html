@@ -231,6 +231,7 @@
         <button class="mode" data-mode="svg" data-state="ready" aria-pressed="false"><b>SVG</b><small>Без библиотек</small></button>
         <button class="mode" data-mode="dom" data-state="ready" aria-pressed="false"><b>HTML/CSS</b><small>Web Animations</small></button>
         <button class="mode" data-mode="audio" data-state="ready" aria-pressed="false"><b>Web Audio</b><small>Звук без файлов</small></button>
+        <button class="mode" data-mode="tone" data-state="loading" data-known-bytes="345500" aria-pressed="false" disabled><b>Tone.js 15.1.22</b><small>Ожидает библиотеку</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="worker" data-state="ready" aria-pressed="false"><b>OffscreenCanvas</b><small>Отдельный поток</small></button>
         <button class="mode" data-mode="webgpu" data-state="ready" aria-pressed="false"><b>WebGPU</b><small>Эксперимент</small></button>
         <button class="mode" data-mode="three160" aria-pressed="false" disabled><b>Three.js r160</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
@@ -2293,15 +2294,19 @@
       }
 
       const nativeModes = new Set(['webgl', 'svg', 'dom', 'audio', 'worker', 'webgpu']);
+      nativeModes.add('tone');
       let nativeGLVersion = 2, nativeYaw = 0;
       Object.assign(labels, { webgl: 'Движущиеся частицы · чистый WebGL', svg: 'Движущиеся частицы · SVG', dom: 'Движущиеся элементы · HTML/CSS', audio: 'Частицы и звук · Web Audio', worker: 'Движущиеся частицы · отдельный поток', webgpu: 'Движущиеся частицы · WebGPU' });
       Object.assign(showcaseLabels, { webgl: 'Шар и башня · касание: выстрел, движение: камера', svg: 'Векторные орбиты · касание меняет направление', dom: 'Живая афиша · коснитесь карточки', audio: 'Звуковая палитра · коснитесь для звука', worker: 'Набережная · отрисовка в отдельном потоке', webgpu: 'Шар и башня · WebGPU без библиотек' });
       Object.assign(descriptions, { webgl: 'WebGL — 2D/3D через шейдеры, без движка.', svg: 'SVG — векторные фигуры как элементы страницы.', dom: 'HTML/CSS — элементы страницы и Web Animations.', audio: 'Web Audio — синтез звука; изображение рисует Canvas.', worker: 'OffscreenCanvas — Canvas 2D в отдельном потоке.', webgpu: 'WebGPU — эксперимент: графика через современный GPU API.' });
+      labels.tone = labels.audio; showcaseLabels.tone = showcaseLabels.audio;
+      descriptions.tone = 'Tone.js — готовые инструменты и музыкальный таймер поверх Web Audio.';
       Object.assign(explanations, {
         webgl: ['WebGL встроен в браузер. Шейдеры и геометрия находятся в этом HTML, загружать библиотеку не нужно. Камеру, свет, материалы и правила игры здесь создаёт собственный код.', 'В «Нагрузке» Canvas, WebGL, SVG, HTML/CSS, OffscreenCanvas и WebGPU получают одни и те же частицы, начальные позиции, движение и разрешение. Сравнивайте FPS и время кадра на своём устройстве; простая сцена может выглядеть одинаково.', 'В «Сравнении» та же башня и шар, что в Three.js/Babylon.js: размеры, палитра и начальная камера совпадают. Упрощённое движение общее с Canvas; WebGL сам не рассчитывает физику. В «Возможностях» проведите по сцене: видны глубина, освещение и рисунок из шейдера. Блики и тени готовых движков могут отличаться.', 'Canvas удобен для небольших 2D-игр. WebGL полезен для большого количества объектов, шейдерных эффектов и 3D. Three.js/Babylon.js дают готовые инструменты поверх графического API. WebGL 2 расширяет WebGL 1; этот пример использует общий набор возможностей, поэтому картинка одинакова.'],
         svg: ['SVG хранит каждую фигуру как элемент страницы. Подходит для интерактивных схем, инфографики и векторных игр: фигуры остаются чёткими при масштабировании.', 'Коснитесь орбит, чтобы изменить направление. В «Сравнении» та же 2D-башня; в «Нагрузке» — общий набор частиц. Тысячи элементов увеличивают работу с деревом страницы; для массового рисования часто удобнее Canvas/WebGL.'],
         dom: ['HTML/CSS удобны для карточек, викторин, интерактивных плакатов и интерфейсов. Текст остаётся текстом, а элементы доступны браузеру. CSS perspective создаёт пространственные преобразования, но не заменяет движок объёмных моделей.', 'Афиша использует Web Animations: коснитесь карточки для выделения. Пауза останавливает анимацию. В «Сравнении» и «Нагрузке» движение то же, что в Canvas; отдельные HTML-элементы показывают цену работы с большим деревом страницы.'],
         audio: ['Web Audio создаёт звук без аудиофайлов: генератор, огибающая и анализатор. Коснитесь палитры: положение меняет ноту, а линия показывает звуковую волну. Звук начинается после нажатия.', 'Это дополнение к графике, а не другой способ рисования. Изображение создаёт Canvas 2D. В «Нагрузке» ползунок меняет число видимых частиц, а не число одновременно звучащих нот. Пауза и уход из вкладки приостанавливают звук.'],
+        tone: ['Те же ноты и формы волн, что в Web Audio: коснитесь палитры и сравните. Звучание не обязано отличаться: Tone.js работает поверх Web Audio. Изображение рисует Canvas; нагрузка меняет число частиц, а не голосов.', 'Для простых игровых звуков достаточно Web Audio. Tone.js удобнее для мелодий: готовые синтезаторы, эффекты и Transport с темпом. Откройте пример «Музыкальный пульт» для ритма, темпа и эха. Библиотеку можно скачать, встроить или перенести набором.'],
         worker: ['OffscreenCanvas передаёт Canvas отдельному Worker. Здесь он рисует ту же набережную, башню и частицы; главный поток принимает нажатия и обслуживает интерфейс.', 'FPS и задержка до кадра учитывают сообщения о действительно нарисованных кадрах из Worker. Отдельный поток помогает отзывчивости, но не гарантирует больший FPS. Для него нужен браузер с OffscreenCanvas и Worker. Код потока находится внутри HTML; интернет не нужен.'],
         webgpu: ['WebGPU — современный встроенный API графики и вычислений. Этот эксперимент рисует те же частицы и объёмную башню без библиотек. Шейдер написан на WGSL; WebGL использует GLSL.', 'Поддержка зависит от браузера, видеоускорителя и безопасного контекста. В изолированном предпросмотре API может быть недоступен: тогда попробуйте сохранённый HTML отдельно в совместимом браузере. Отсутствие поддержки не означает ошибку игры.', 'Сравнивайте с WebGL на той же сцене и устройстве. Здесь показана отрисовка; вычислительные шейдеры и сложные модели не подключены. Для обычной 2D-игры WebGPU может быть избыточным.']
       });
@@ -2440,17 +2445,24 @@
       function nativeAudio() {
         const Constructor = window.AudioContext || window.webkitAudioContext; if (!Constructor) throw Error('Web Audio не поддерживается этим браузером.');
         const drawing = scenario === 'showcase' ? null : scenario === 'compare' ? canvasComparison() : canvasScene();
-        const context = drawing ? null : makeCanvas(); let audio = null, analyser = null, wave = null, closed = false; const voices = new Set();
+        const context = drawing ? null : makeCanvas(); let audio = null, analyser = null, wave = null, closed = false, synths = null, toneContext = null; const voices = new Set();
         nativeStatus('ready'); host.dataset.nativeAudio = 'silent';
         const scene = { tick(delta) { drawing?.tick(delta); if (!context) return;
           context.fillStyle = '#0b1929'; context.fillRect(0,0,width,height); for (let i=0;i<5;i++) { context.fillStyle = colors[i]; context.globalAlpha = .65; context.fillRect(i*width/5+4, height*.2, width/5-8, height*.5); } context.globalAlpha=1;
           context.fillStyle = '#eaf2ff'; context.textAlign='center'; context.font='16px system-ui'; context.fillText('Коснитесь: нота зависит от положения', width/2, height*.12);
           if (analyser) { analyser.getByteTimeDomainData(wave); context.strokeStyle='#eaf2ff'; context.lineWidth=2; context.beginPath(); for(let i=0;i<wave.length;i++) { const x=i/(wave.length-1)*width,y=height*.82+(wave[i]-128)/128*height*.12; i?context.lineTo(x,y):context.moveTo(x,y); } context.stroke(); } },
-          tap(x,y) { drawing?.tap(x,y); void play(x,y); }, pause(value) { if (audio && audio.state !== 'closed') { if (value) { for(const osc of voices)try{osc.stop();}catch{} void audio.suspend().catch(()=>{}); } } },
-          dispose() { closed=true; drawing?.dispose(); for(const osc of voices)try{osc.stop();}catch{} if(audio)void audio.close().catch(()=>{}); voices.clear(); delete host.dataset.nativeAudio; } };
-        async function play(x,y) { try { if (!audio) { audio=new Constructor(); analyser=audio.createAnalyser(); analyser.fftSize=512; wave=new Uint8Array(analyser.fftSize); analyser.connect(audio.destination); }
+          tap(x,y) { drawing?.tap(x,y); void play(x,y); }, pause(value) { if (audio && audio.state !== 'closed') { if (value) { synths?.forEach(synth=>synth.releaseAll());for(const osc of voices)try{osc.stop();}catch{} void audio.suspend().catch(()=>{}); } } },
+          dispose() { closed=true; drawing?.dispose(); synths?.forEach(synth=>synth.dispose());toneContext?.dispose();for(const osc of voices)try{osc.stop();}catch{} if(audio)void audio.close().catch(()=>{}); voices.clear(); delete host.dataset.nativeAudio; } };
+        async function play(x,y) { try { if (!audio) {
+            if(mode==='tone') { const Tone=libraries.tone;if(!Tone)throw Error('Нет Tone.js');toneContext=new Tone.Context();Tone.setContext(toneContext,true);audio=toneContext.rawContext;
+              synths=['sine','triangle','sine'].map(type=>new Tone.PolySynth(Tone.Synth,{oscillator:{type},envelope:{attack:.015,decay:0,sustain:1,release:.405},volume:-18.416}));
+            } else audio=new Constructor();analyser=audio.createAnalyser(); analyser.fftSize=512; wave=new Uint8Array(analyser.fftSize); analyser.connect(audio.destination);
+            if(synths)synths.forEach(synth=>synth.connect(analyser));
+          }
           await audio.resume(); if(closed || paused || infoOpen || document.hidden)return;
-          const osc=audio.createOscillator(), gain=audio.createGain(), now=audio.currentTime, note=Math.min(14,Math.floor(x/width*15));
+          const note=Math.min(14,Math.floor(x/width*15));
+          if(synths) { synths[note%3].triggerAttackRelease(220*Math.pow(2,note/12),.02,audio.currentTime+.01);host.dataset.nativeAudio=audio.state;return; }
+          const osc=audio.createOscillator(), gain=audio.createGain(), now=audio.currentTime;
           osc.type=['sine','triangle','sine'][note%3]; osc.frequency.value=220*Math.pow(2,note/12); gain.gain.setValueAtTime(0,now); gain.gain.linearRampToValueAtTime(.12,now+.015); gain.gain.exponentialRampToValueAtTime(.0001,now+.42);
           osc.connect(gain); gain.connect(analyser); voices.add(osc); host.dataset.nativeAudio=audio.state; osc.onended=()=>{voices.delete(osc);osc.disconnect();gain.disconnect();}; osc.start();osc.stop(now+.45);
         } catch { if(!closed) $('message').textContent='Не удалось включить звук. Проверьте разрешение браузера.'; } }
@@ -2526,7 +2538,7 @@
       }); }
       function nativeScene() {
         nativeStatus('ready');
-        if(mode==='webgl')return nativeWebGL();if(mode==='webgpu')return nativeWebGPU();if(mode==='worker')return nativeWorker();if(mode==='audio')return nativeAudio();
+        if(mode==='webgl')return nativeWebGL();if(mode==='webgpu')return nativeWebGPU();if(mode==='worker')return nativeWorker();if(mode==='audio'||mode==='tone')return nativeAudio();
         if(mode==='svg'&&scenario==='showcase')return nativeSVGShowcase();if(mode==='dom'&&scenario==='showcase')return nativeDOMShowcase();return nativeElements(mode==='svg');
       }
 
@@ -2698,7 +2710,7 @@
         } else if (library && libraryScript?.src) {
           externalLibraryButtons.set(libraryScript.src, button);
           const entry = performance.getEntriesByName(libraryScript.src, 'resource').slice(-1)[0];
-          showLibrarySize(button, entry?.decodedBodySize);
+          showLibrarySize(button, entry?.decodedBodySize || Number(button.dataset.knownBytes));
         } else showLibrarySize(button, null);
       };
 
@@ -2813,6 +2825,8 @@
     })();
   </script>
   <!-- Exact classic builds let OneHTML Lab replace these links and preserve their licenses and notices on export. -->
+  <script src="https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.js"></script>
+  <script>registerLabLibrary('tone', window.Tone?.version === '15.1.22' ? window.Tone : null);</script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script>registerLabLibrary('three160', window.THREE?.REVISION === '160' ? window.THREE : null);</script>
   <script src="https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/babylon.js"></script>

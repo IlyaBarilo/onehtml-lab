@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Музыкальный пульт</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; color: #eaf2ff; background: #0c1727; }
+    * { box-sizing: border-box; }
+    body { margin: 0; height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+    button, input { font: inherit; }
+    button { min-height: 44px; padding: 8px 12px; border: 1px solid #3c5575; border-radius: 9px; color: inherit; background: #192c45; cursor: pointer; }
+    button:disabled { opacity: .4; cursor: default; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #96c5ff; outline-offset: 2px; }
+    button[aria-pressed="true"] { border-color: #8dbbfb; background: #284d7b; }
+    header { padding: 10px 14px; border-bottom: 1px solid #2c4260; flex: none; }
+    .heading, .engines, .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .heading { justify-content: space-between; }
+    h1 { font-size: 21px; margin: 0; }
+    h2 { font-size: 16px; margin: 0 0 10px; }
+    #help-toggle { width: 44px; font-size: 22px; padding: 0; }
+    .engines { margin-top: 8px; }
+    .engines button { flex: 1; }
+    #explanation { color: #c0d1e7; font-size: 14px; line-height: 1.45; margin: 8px 0 0; }
+    main { flex: 1; min-height: 0; overflow-y: auto; padding: 14px; }
+    .content { max-width: 1080px; margin: auto; }
+    .controls { margin-bottom: 14px; }
+    #play { min-width: 110px; background: #255b78; }
+    .tempo { flex: 1 1 200px; display: grid; grid-template-columns: auto minmax(60px, 1fr) auto; gap: 8px; align-items: center; }
+    #tempo { width: 100%; min-width: 60px; accent-color: #9bd9da; }
+    #tempo-value { min-width: 6ch; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .echo { min-height: 44px; display: flex; align-items: center; gap: 8px; }
+    input[type="checkbox"] { width: 20px; height: 20px; accent-color: #8dbbfb; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+    .panel { min-width: 0; padding: 14px; border: 1px solid #2c4260; border-radius: 12px; background: #112138; }
+    .note { margin: 6px 0 12px; font-size: 14px; color: #b9cce5; line-height: 1.45; }
+    #wave { width: 100%; height: 96px; display: block; border-radius: 8px; background: #0c1727; }
+    #pads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+    #pads button { padding: 10px 2px; min-height: 58px; }
+    #pads small { display: block; margin-top: 4px; color: #a4bddb; font-size: 12px; }
+    #pads .lit { background: #315e78; border-color: #a7e3d4; }
+    .track { margin-top: 12px; }
+    .track:first-child { margin-top: 0; }
+    .track-name { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 14px; }
+    .track-name span { color: #a4bddb; font-size: 12px; }
+    .steps { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+    .steps button { min-width: 0; padding: 0; font-size: 14px; font-variant-numeric: tabular-nums; }
+    .steps button[aria-pressed="true"] { background: color-mix(in srgb, var(--track-color) 30%, #112138); border-color: var(--track-color); }
+    .steps button.current { outline: 2px solid #eaf2ff; outline-offset: -3px; }
+    .status { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; color: #b9cce5; font-size: 13px; line-height: 1.45; flex-wrap: wrap; }
+    #sound-status { color: #a7e3d4; }
+    #help { border: 1px solid #42668e; border-radius: 10px; padding: 12px; margin-bottom: 14px; background: #182e48; line-height: 1.5; }
+    #help p { margin: 8px 0; }
+    [hidden] { display: none !important; }
+    @media (max-width: 650px) { header, main { padding: 10px; } .layout { grid-template-columns: minmax(0, 1fr); } .layout .panel:last-child { grid-row: 1; } .panel { padding: 10px; } .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .tempo { grid-column: 1 / -1; } h1 { font-size: 20px; } #wave { height: 64px; } }
+    @media (prefers-reduced-motion: reduce) { #wave { opacity: .65; } }
+  </style>
+</head>
+<body data-engine="native" data-audio-state="silent">
+  <header>
+    <div class="heading"><h1>Музыкальный пульт</h1><button id="help-toggle" aria-label="Как сравнивать" aria-expanded="false">?</button></div>
+    <div class="engines" aria-label="Звуковая технология">
+      <button data-engine="native" aria-pressed="true">Web Audio</button>
+      <button data-engine="tone" aria-pressed="false" disabled>Tone.js 15.1.22</button>
+    </div>
+    <p id="explanation">Web Audio — звуки без библиотеки. Синтез, ритм и эхо написаны вручную.</p>
+  </header>
+  <main><div class="content">
+    <div id="help" hidden>
+      <p><strong>На что смотреть и слушать?</strong> В обоих вариантах одинаковые ноты, инструменты, ритм и эхо. Переключите технологию и нажмите «Слушать»: звук не обязан заметно отличаться.</p>
+      <p><strong>Web Audio</strong> удобно для нескольких игровых звуков без загрузки библиотеки. <strong>Tone.js</strong> удобнее для музыки: готовые синтезаторы, эффекты и Transport связывают события с темпом. Tone.js работает поверх Web Audio и не гарантирует более качественный звук или больший FPS.</p>
+      <p>Нажимайте ноты, меняйте шаги ритма и темп. Клавиши A S D F G H J K играют ноты, пробел запускает или останавливает ритм. Звук включается после действия. В фоне воспроизведение останавливается; для продолжения нажмите «Слушать».</p>
+    </div>
+    <div class="controls">
+      <button id="play" aria-pressed="false">Слушать</button>
+      <button id="reset">Сброс</button>
+      <label class="tempo">Темп <input id="tempo" type="range" min="60" max="180" step="1" value="112"><output id="tempo-value">112 BPM</output></label>
+      <label class="echo"><input id="echo" type="checkbox">Эхо</label>
+      <button id="mute" aria-pressed="false">Звук включён</button>
+    </div>
+    <div class="layout">
+      <section class="panel"><h2>Ритм — 8 шагов</h2><p class="note">Нажмите шаг, чтобы добавить или убрать звук.</p><div id="tracks"></div></section>
+      <section class="panel"><h2>Сыграйте свою мелодию</h2><canvas id="wave" aria-label="Волна звучащей ноты"></canvas><div id="pads"></div>
+        <div class="status"><span id="sound-status" role="status">Нажмите ноту или «Слушать»</span><span id="last-note">—</span></div>
+        <p class="note" id="library-status">Tone.js не загружена. Web Audio работает без библиотеки.</p>
+      </section>
+    </div>
+  </div></main>
+  <script>
+    (() => {
+      'use strict';
+      const $ = id => document.getElementById(id);
+      const tracks = [
+        { name: 'Удар', note: 'C2', frequency: 65.406, type: 'sine', color: '#e6b988' },
+        { name: 'Бас', note: 'C3', frequency: 130.813, type: 'triangle', color: '#89d6c1' },
+        { name: 'Импульс', note: 'E4', frequency: 329.628, type: 'square', color: '#99b9f4' },
+        { name: 'Колокольчик', note: 'G5', frequency: 783.991, type: 'sine', color: '#d6a8df' }
+      ];
+      const notes = [['До',261.626],['Ре',293.665],['Ми',329.628],['Фа',349.228],['Соль',391.995],['Ля',440],['Си',493.883],['До',523.251]];
+      const keys = ['a','s','d','f','g','h','j','k'];
+      const initial = [[1,0,0,0,1,0,0,0],[0,0,1,0,0,0,1,0],[0,1,0,1,0,1,0,1],[0,0,0,1,0,0,0,1]];
+      let pattern = initial.map(row => [...row]), engine = 'native', backend = null, starting = null, revision = 0, playing = false, muted = false, step = 0;
+      const visualTimers = new Set(), voices = new Set();
+      let interval = null, loop = null, frame = null, nextTime = 0;
+      const wave = $('wave'), draw = wave.getContext('2d');
+      const describe = { native: 'Web Audio — звуки без библиотеки. Синтез, ритм и эхо написаны вручную.', tone: 'Tone.js — готовые синтезаторы, эффекты и таймер с темпом. Удобнее для мелодий и ритма.' };
+      function status(text, state) { $('sound-status').textContent = text; if(state) document.body.dataset.audioState = state; }
+      function renderPattern() {
+        $('tracks').replaceChildren(...tracks.map((track, row) => {
+          const box = document.createElement('div'); box.className = 'track'; box.style.setProperty('--track-color', track.color);
+          const label = document.createElement('div'); label.className = 'track-name';
+          const name = document.createElement('strong'); name.textContent = track.name;
+          const note = document.createElement('span'); note.textContent = track.note; label.append(name, note);
+          const list = document.createElement('div'); list.className = 'steps';
+          for(let column=0;column<8;column++) { const button=document.createElement('button'); button.textContent=column+1; button.dataset.row=row;button.dataset.step=column;
+            button.setAttribute('aria-label', `${track.name}, шаг ${column+1}`); button.setAttribute('aria-pressed', String(Boolean(pattern[row][column])));
+            button.addEventListener('click',()=>{pattern[row][column]=Number(!pattern[row][column]);button.setAttribute('aria-pressed',String(Boolean(pattern[row][column])));}); list.append(button); }
+          box.append(label,list); return box;
+        }));
+      }
+      function envelope(gain,time,duration) { gain.setValueAtTime(0,time);gain.linearRampToValueAtTime(.25,time+.006);gain.linearRampToValueAtTime(.05,time+.086);gain.setValueAtTime(.05,time+duration);gain.linearRampToValueAtTime(0,time+duration+.1); }
+      function nativeBackend() {
+        const Constructor=window.AudioContext||window.webkitAudioContext;
+        if(!Constructor)throw Error('Web Audio не поддерживается браузером.');
+        const context=new Constructor(), master=context.createGain(), analyser=context.createAnalyser(), delay=context.createDelay(1), feedback=context.createGain(), wet=context.createGain();
+        master.gain.value=muted?0:.35;analyser.fftSize=256;delay.delayTime.value=.18;feedback.gain.value=.22;wet.gain.value=$('echo').checked?.3:0;
+        master.connect(analyser);analyser.connect(context.destination);master.connect(delay);delay.connect(feedback);feedback.connect(delay);delay.connect(wet);wet.connect(analyser);
+        const samples=new Float32Array(analyser.fftSize);
+        return { now:()=>context.currentTime, resume:()=>context.resume(), state:()=>context.state,
+          note(track,frequency,time) { if(voices.size>=32)return;const oscillator=context.createOscillator(),gain=context.createGain();oscillator.type=track.type;oscillator.frequency.value=frequency;envelope(gain.gain,time,.13);oscillator.connect(gain);gain.connect(master);voices.add(oscillator);oscillator.onended=()=>{voices.delete(oscillator);oscillator.disconnect();gain.disconnect();};oscillator.start(time);oscillator.stop(time+.24); },
+          volume:()=>{master.gain.setValueAtTime(muted?0:.35,context.currentTime);wet.gain.setValueAtTime(!muted&&$('echo').checked?.3:0,context.currentTime);}, echo:()=>wet.gain.setValueAtTime(!muted&&$('echo').checked?.3:0,context.currentTime),
+          wave:()=>{analyser.getFloatTimeDomainData(samples);return samples;},
+          silence(){for(const voice of voices)try{voice.stop();}catch{}voices.clear();},
+          dispose(){this.silence();for(const node of [master,analyser,delay,feedback,wet])node.disconnect();void context.close().catch(()=>{});}
+        };
+      }
+      function toneBackend() {
+        if(!window.Tone || Tone.version!=='15.1.22')throw Error('Сначала загрузите Tone.js 15.1.22.');
+        const context=new Tone.Context();Tone.setContext(context,true);
+        const master=new Tone.Gain(muted?0:.35).toDestination(),analyser=new Tone.Analyser('waveform',256),effect=new Tone.FeedbackDelay(.18,.22),wet=new Tone.Gain($('echo').checked?.3:0);
+        effect.wet.value=1;master.connect(analyser);master.connect(effect);effect.connect(wet);wet.toDestination();
+        const synths=tracks.map(track=>new Tone.PolySynth(Tone.Synth,{oscillator:{type:track.type},envelope:{attack:.006,decay:.08,sustain:.2,release:.1},volume:-12.0412}).connect(master));
+        synths.forEach(synth=>synth.maxPolyphony=8);
+        return { now:()=>Tone.now(), resume:()=>Tone.start(), state:()=>context.state,
+          note(track,frequency,time){synths[tracks.indexOf(track)].triggerAttackRelease(frequency,.13,time);},
+          volume:()=>{master.gain.value=muted?0:.35;wet.gain.value=!muted&&$('echo').checked?.3:0;},echo:()=>wet.gain.value=!muted&&$('echo').checked?.3:0,wave:()=>analyser.getValue(),
+          silence(){synths.forEach(synth=>synth.releaseAll());},
+          dispose(){synths.forEach(synth=>synth.dispose());for(const node of [master,analyser,effect,wet])node.dispose();context.dispose();void context.close().catch(()=>{});}
+        };
+      }
+      async function ready() {
+        if(starting)return starting;
+        const token=revision;
+        try { if(!backend)backend=engine==='tone'?toneBackend():nativeBackend();const active=backend;
+          starting=active.resume();await starting;
+          if(token!==revision||active!==backend||document.hidden)return false;
+          if(active.state()!=='running')throw Error('Браузер не включил звук. Нажмите ещё раз.');
+          status(muted?'Звук выключен':'Звук включён',muted?'muted':'running');return true;
+        } catch(error){if(token===revision){stop();status(error.message,'unavailable');}return false;}
+        finally{if(token===revision)starting=null;}
+      }
+      function later(callback,delay) { const token=revision,id=setTimeout(()=>{visualTimers.delete(id);if(token===revision)callback();},Math.max(0,delay));visualTimers.add(id); }
+      function advance(time) {
+        const column=step++%8;
+        for(let row=0;row<4;row++)if(pattern[row][column])backend.note(tracks[row],tracks[row].frequency,time);
+        later(()=>{if(!playing)return;document.querySelectorAll('[data-step]').forEach(button=>button.classList.toggle('current',Number(button.dataset.step)===column));$('last-note').textContent=`Шаг ${column+1} из 8`;},(time-backend.now())*1000);
+      }
+      function stop() {
+        revision++;playing=false;clearInterval(interval);interval=null;
+        if(loop){loop.dispose();loop=null;Tone.getTransport().stop();Tone.getTransport().cancel();}
+        backend?.dispose();backend=null;starting=null;for(const timer of visualTimers)clearTimeout(timer);visualTimers.clear();
+        document.querySelectorAll('.current,.lit').forEach(button=>button.classList.remove('current','lit'));
+        $('play').textContent='Слушать';$('play').setAttribute('aria-pressed','false');
+        status('Воспроизведение остановлено',muted?'muted':'silent');
+      }
+      async function togglePlay() {
+        if(playing){stop();return;}const token=revision;if(!await ready()||token!==revision)return;
+        playing=true;$('play').textContent='Остановить';$('play').setAttribute('aria-pressed','true');
+        if(engine==='tone'){const transport=Tone.getTransport();transport.bpm.value=Number($('tempo').value);loop=new Tone.Loop(time=>advance(time),'8n').start(0);transport.start('+0.03');}
+        else { nextTime=backend.now()+.03;const schedule=()=>{if(!playing)return;while(nextTime<backend.now()+.09){advance(nextTime);nextTime+=30/Number($('tempo').value);}};schedule();interval=setInterval(schedule,25); }
+      }
+      async function playNote(index) {
+        const token=revision;if(!await ready()||token!==revision)return;
+        backend.note(tracks[3],notes[index][1],backend.now()+.01);const pad=$('pads').children[index];pad.classList.add('lit');later(()=>pad.classList.remove('lit'),220);$('last-note').textContent=notes[index][0];
+      }
+      function changeEngine(next) {
+        if(next===engine)return;revision++;stop();backend?.dispose();backend=null;starting=null;
+        engine=next;document.body.dataset.engine=engine;document.body.dataset.audioState='silent';
+        document.querySelectorAll('[data-engine]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.engine===engine)));
+        $('explanation').textContent=describe[engine];status('Мелодия сохранена. Нажмите «Слушать»');
+      }
+      renderPattern();
+      notes.forEach(([name],index)=>{const button=document.createElement('button');button.textContent=name;button.setAttribute('aria-label',`${name}, клавиша ${keys[index].toUpperCase()}`);const key=document.createElement('small');key.textContent=keys[index].toUpperCase();button.append(key);button.addEventListener('click',()=>void playNote(index));$('pads').append(button);});
+      document.querySelectorAll('button[data-engine]').forEach(button=>button.addEventListener('click',()=>changeEngine(button.dataset.engine)));
+      $('play').addEventListener('click',()=>void togglePlay());
+      $('reset').addEventListener('click',()=>{revision++;stop();starting=null;pattern=initial.map(row=>[...row]);step=0;$('tempo').value=112;$('tempo-value').textContent='112 BPM';$('echo').checked=false;backend?.echo();renderPattern();$('last-note').textContent='—';});
+      $('tempo').addEventListener('input',()=>{$('tempo-value').textContent=$('tempo').value+' BPM';if(engine==='tone'&&backend)Tone.getTransport().bpm.value=Number($('tempo').value);});
+      $('echo').addEventListener('change',()=>backend?.echo());
+      $('mute').addEventListener('click',()=>{muted=!muted;backend?.volume();$('mute').textContent=muted?'Звук выключен':'Звук включён';$('mute').setAttribute('aria-pressed',String(muted));if(backend)status(muted?'Звук выключен':'Звук включён',muted?'muted':'running');});
+      $('help-toggle').addEventListener('click',()=>{$('help').hidden=!$('help').hidden;$('help-toggle').setAttribute('aria-expanded',String(!$('help').hidden));});
+      document.addEventListener('keydown',event=>{if(event.repeat||event.ctrlKey||event.metaKey||event.altKey||/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(event.target.tagName))return;const index=keys.indexOf(event.key.toLowerCase());if(index>=0){event.preventDefault();void playNote(index);}if(event.code==='Space'){event.preventDefault();void togglePlay();}});
+      document.addEventListener('visibilitychange',()=>{if(document.hidden){revision++;stop();starting=null;backend?.dispose();backend=null;status('Воспроизведение остановлено в фоне','silent');}});
+      window.addEventListener('pagehide',()=>{revision++;stop();backend?.dispose();backend=null;if(frame!==null)cancelAnimationFrame(frame);});
+      function paint() {
+        const bounds=wave.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,2),w=Math.max(1,Math.round(bounds.width*ratio)),h=Math.max(1,Math.round(bounds.height*ratio));if(wave.width!==w||wave.height!==h){wave.width=w;wave.height=h;}
+        draw.fillStyle='#0c1727';draw.fillRect(0,0,w,h);draw.strokeStyle='#96dfcf';draw.lineWidth=2*ratio;draw.beginPath();const samples=backend?.wave();
+        if(samples)for(let i=0;i<samples.length;i++){const x=i/(samples.length-1)*w,y=h/2+samples[i]*h*.8;i?draw.lineTo(x,y):draw.moveTo(x,y);}else{draw.moveTo(0,h/2);draw.lineTo(w,h/2);}draw.stroke();frame=requestAnimationFrame(paint);
+      }
+      paint();
+      window.registerMusicLibrary = library => {
+        const button=document.querySelector('button[data-engine="tone"]');button.disabled=!library;
+        const script=document.currentScript?.previousElementSibling,embedded=script?.tagName==='SCRIPT'&&!script.hasAttribute('src');
+        const bytes=embedded?new TextEncoder().encode(script.textContent).length:345500;
+        $('library-status').textContent=library?`Tone.js ${library.version} · ${embedded?'встроена в HTML':/^(?:https?:)?\/\//i.test(script?.getAttribute('src')||'')?'ссылка CDN':'файл рядом'} · ${(bytes/1024).toLocaleString('ru-RU',{maximumFractionDigits:1})} КБ`:'Tone.js не загружена. Web Audio работает без библиотеки.';
+      };
+      if(!window.AudioContext&&!window.webkitAudioContext){status('Web Audio не поддерживается браузером. Ритм можно редактировать.','unavailable');$('play').disabled=true;for(const button of $('pads').children)button.disabled=true;}
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.js"></script>
+  <script>registerMusicLibrary(window.Tone?.version === '15.1.22' ? window.Tone : null);</script>
+</body>
+</html>
