@@ -78,13 +78,36 @@ try {
       await fallback.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){return /webgl/i.test(type)?null:get.call(this,type,...args);};});
       await fallback.route('https://**/*',route=>route.fulfill({body:route.request().url()===compatUrl?compat:distribution,contentType:'text/javascript'}));await fallback.goto(pathToFileURL(join(scratch,'cdn.html')).href);await fallback.locator('[data-engine="pixi"]').click();await fallback.locator('#status').filter({hasText:'WebGL недоступен'}).waitFor();assert.equal(await fallback.locator('body').getAttribute('data-renderer'),'canvas');await fallback.close();
       const incomplete=await browser.newPage();await incomplete.route('https://**/*',route=>route.request().url()===url?route.fulfill({body:distribution,contentType:'text/javascript'}):route.abort());await incomplete.goto(pathToFileURL(join(scratch,'cdn.html')).href);assert(await incomplete.locator('[data-engine="pixi"]').isDisabled());assert((await incomplete.locator('#status').textContent()).includes('модуль совместимости'));await incomplete.close();
-      const benchmark = await browser.newPage({viewport:{width:390,height:750}}), benchmarkErrors=[]; benchmark.on('pageerror',error=>benchmarkErrors.push(error.message));
-      await benchmark.route('https://**/*',route=>[url,compatUrl].includes(route.request().url())?route.fulfill({body:route.request().url()===compatUrl?compat:distribution,contentType:'text/javascript'}):route.abort()); await benchmark.goto(new URL('src/examples/performance-libraries.html',root).href);
-      await benchmark.locator('[data-mode="pixi"]:enabled').waitFor(); await benchmark.locator('[data-mode="pixi"]').click(); await benchmark.waitForFunction(()=>['ready','unavailable'].includes(document.querySelector('#scene').dataset.pixiState));
-      if (await benchmark.locator('#scene').getAttribute('data-pixi-state')==='ready') {
-        for (const scenario of ['compare','load','showcase']) { await benchmark.locator('#scenario').selectOption(scenario); await benchmark.locator('#scene[data-pixi-state="ready"]').waitFor(); assert.equal(await benchmark.locator('#scene canvas').count(),1); await benchmark.locator('#stage').click({position:{x:120,y:70}}); if(scenario==='compare')await benchmark.waitForFunction(()=>document.querySelector('#scene-stats').textContent.includes('Выстрелов: 1')); if(scenario==='load'){await benchmark.locator('#load').evaluate(node=>{node.value='10000';node.dispatchEvent(new Event('input',{bubbles:true}));node.dispatchEvent(new Event('change',{bubbles:true}));});await benchmark.locator('#scene[data-pixi-state="ready"]').waitFor();assert.equal((await benchmark.locator('#load-value').textContent()).replace(/\s/g,''),'10000');} }
+      for (const width of [390,1365]) {
+        const benchmark = await browser.newPage({viewport:{width,height:750},hasTouch:width<500}), benchmarkErrors=[]; benchmark.on('pageerror',error=>benchmarkErrors.push(error.message));
+        await benchmark.route('https://**/*',route=>[url,compatUrl].includes(route.request().url())?route.fulfill({body:route.request().url()===compatUrl?compat:distribution,contentType:'text/javascript'}):route.abort()); await benchmark.goto(new URL('src/examples/performance-libraries.html',root).href);
+        await benchmark.locator('[data-mode="pixi"]:enabled').waitFor(); await benchmark.locator('[data-mode="pixi"]').click(); await benchmark.waitForFunction(()=>['ready','unavailable'].includes(document.querySelector('#scene').dataset.pixiState));
+        if (await benchmark.locator('#scene').getAttribute('data-pixi-state')==='ready') {
+          for (const scenario of ['compare','load','showcase']) { await benchmark.locator('#scenario').selectOption(scenario); await benchmark.locator('#scene[data-pixi-state="ready"]').waitFor(); assert.equal(await benchmark.locator('#scene canvas').count(),1); await benchmark.locator('#stage').click({position:{x:120,y:70}}); if(scenario==='compare')await benchmark.waitForFunction(()=>document.querySelector('#scene-stats').textContent.includes('Выстрелов: 1')); if(scenario==='load'){await benchmark.locator('#load').evaluate(node=>{node.value='10000';node.dispatchEvent(new Event('input',{bubbles:true}));node.dispatchEvent(new Event('change',{bubbles:true}));});await benchmark.locator('#scene[data-pixi-state="ready"]').waitFor();assert.equal((await benchmark.locator('#load-value').textContent()).replace(/\s/g,''),'10000');} }
+          const bounds=await benchmark.locator('#stage').boundingBox(),scale=Math.min(bounds.width/600,bounds.height/780);
+          const start={x:bounds.x+bounds.width/2,y:bounds.y+(bounds.height-780*scale)/2+430*scale};
+          // Read after the scene's animation callback, before WebGL's default framebuffer is discarded.
+          const assertPicture=async()=>{
+            const rgba=await benchmark.locator('#scene canvas').evaluate(canvas=>new Promise(resolve=>requestAnimationFrame(()=>{
+              const scale=Math.min(canvas.width/600,canvas.height/780),x=canvas.width/2,y=(canvas.height-780*scale)/2+430*scale;
+              const gl=canvas.getContext('webgl2')||canvas.getContext('webgl'),rgba=new Uint8Array(4);gl.readPixels(Math.floor(x),Math.floor(canvas.height-y),1,1,gl.RGBA,gl.UNSIGNED_BYTE,rgba);resolve([...rgba]);
+            })));
+            assert(rgba[3]===255&&rgba[1]>rgba[0]&&rgba[1]>rgba[2],`PixiJS landscape must remain inside its mask after dragging (${name}, ${width}): ${rgba}`);
+          };
+          await assertPicture();await benchmark.mouse.move(start.x,start.y);await benchmark.mouse.down();await assertPicture();
+          await benchmark.mouse.move(start.x+40*scale,start.y+30*scale,{steps:4});await assertPicture();await benchmark.mouse.up();
+          // A second drag starts from the current position; crossing the circle edge stays bounded.
+          await benchmark.mouse.move(start.x,start.y);await benchmark.mouse.down();await benchmark.mouse.move(start.x-280*scale,start.y-100*scale,{steps:4});await benchmark.mouse.up();await assertPicture();
+          if(name==='chromium'&&width<500){
+            const cdp=await benchmark.context().newCDPSession(benchmark);
+            await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:start.x,y:start.y,id:1}]});
+            await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:start.x+25*scale,y:start.y+20*scale,id:1}]});await assertPicture();
+            await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await cdp.detach();
+          }
+          await benchmark.screenshot({path:join(scratch,`${name}-${width}-pixi-drag.png`)});
+        }
+        assert.deepEqual(benchmarkErrors,[]); await benchmark.close();
       }
-      assert.deepEqual(benchmarkErrors,[]); await benchmark.close();
       const context = await browser.newContext({viewport:{width:390,height:800}}), ui = await context.newPage(), requests=[]; await useNativeEditor(ui);
       await context.route('https://**/*',route=>{assert([url,compatUrl].includes(route.request().url()));requests.push(route.request().url());return route.fulfill({body:route.request().url()===compatUrl?compat:distribution,contentType:'text/javascript'});});
       await ui.goto(new URL('onehtml-lab.html',root).href); await ui.locator('#expert-toggle').click(); await ui.locator('#examples-open').click(); await ui.locator('[data-example-category="media"]').click(); assert(await ui.locator('[data-example-id="pixi-poster"]').isVisible()); assert(await ui.locator('[data-example-id="interactive-poster"]').isVisible()); await ui.locator('#examples-close').click();

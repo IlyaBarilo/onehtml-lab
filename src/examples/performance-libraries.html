@@ -722,7 +722,7 @@
 
       function pixiScene(token) {
         const P = libraries.pixi, app = new P.Application(), kind = scenario;
-        let ready = false, disposed = false, model, nodes = [], root, art, image, time = 0, offset = { x: 0, y: 0 };
+        let ready = false, disposed = false, model, nodes = [], root, art, image, time = 0, offset = { x: 0, y: 0 }, dragStart = null;
         const textures = [];
         host.dataset.pixiState = 'loading';
         function texture(canvas) { const value = P.Texture.from(canvas); textures.push(value); return value; }
@@ -777,8 +777,16 @@
           host.dataset.pixiState = 'unavailable'; $('message').textContent = 'WebGL недоступен. Выберите Canvas 2D.';
         });
         return { tick: draw,
-          tap(x, y) { if (ready && kind === 'compare') comparisonShot(model, x, y); },
-          drag(x, y, dx, dy) { if (ready && kind === 'showcase') { const scale = root.scale.x; offset.x = Math.max(-70, Math.min(70, offset.x + dx / scale)); offset.y = Math.max(-70, Math.min(70, offset.y + dy / scale)); draw(0); } },
+          tap(x, y) {
+            if (!ready) return;
+            if (kind === 'compare') comparisonShot(model, x, y);
+            else if (kind === 'showcase') {
+              const scale = root.scale.x, localX = (x - root.x) / scale, localY = (y - root.y) / scale;
+              dragStart = Math.hypot(localX - 300, localY - 430) < 234 ? { x, y, ox: offset.x, oy: offset.y } : null;
+            }
+          },
+          drag(x, y) { if (ready && kind === 'showcase' && dragStart) { const scale = root.scale.x; offset.x = Math.max(-70, Math.min(70, dragStart.ox + (x - dragStart.x) / scale)); offset.y = Math.max(-70, Math.min(70, dragStart.oy + (y - dragStart.y) / scale)); draw(0); } },
+          release() { dragStart = null; },
           dispose() { disposed = true; if (ready) clear(); }
         };
       }
