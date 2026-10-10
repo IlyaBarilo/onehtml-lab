@@ -60,3 +60,11 @@ GLTFLoader и BufferGeometryUtils версии Three.js r160 использую�
 The satellite model, its texture and animation are authored for OneHTML Lab and covered by the project MIT license. User-supplied models retain their own terms; importing a model does not relicense it.
 
 Модель спутника, текстура и анимация созданы для OneHTML Lab и распространяются под MIT проекта. Загруженные пользователем модели сохраняют собственные условия использования; добавление модели не меняет её лицензию.
+
+## cannon-es 0.20.0
+
+cannon-es is an optional 3D physics library under [MIT](licenses/cannon-es-0.20.0-LICENSE.txt). The pinned ES module is downloaded separately and is not bundled with the editor. Cached, embedded and adjacent copies retain the full copyright and permission notice. The package provides the actual distribution used by browser checks.
+
+cannon-es — необязательная библиотека 3D-физики под MIT. Поддерживается ES-модуль точной версии 0.20.0; он скачивается отдельно и не включён в редактор. Кэш, встроенные и отдельные копии сохраняют полный текст лицензии с авторскими правами. npm-пакет предоставляет настоящий дистрибутив для браузерных проверок.
+
+Project / Проект: [cannon-es](https://github.com/pmndrs/cannon-es). The tower example uses the project's MIT license. / Пример башни распространяется под MIT проекта.

@@ -7,6 +7,7 @@ assert(standalone.includes('Permission is hereby granted, free of charge'), 'Sta
 assert(!standalone.includes('embeddedThreeR128'), 'Application must not contain a preloaded Three.js copy');
 assert(Buffer.byteLength(standalone) < 1550000, 'Application including editors and model examples must stay within its size budget; engine distributions must remain external');
 assert(!standalone.includes('Babylon.js v9.30.0 - WebGL'), 'Babylon.js must not be bundled into the editor');
+assert(!standalone.includes('class Narrowphase {'), 'cannon-es distribution must not be bundled into the editor');
 assert(standalone.includes('data-onehtml-library'), 'Standalone file must contain the library replacement mechanism');
 assert(!standalone.includes('не распространяется по лицензии MIT'), 'Standalone file must not retain separate logo restrictions');
 assert(!standalone.includes('<!-- APP_'), 'No template markers may remain');

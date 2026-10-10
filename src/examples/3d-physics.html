@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>3D-физика: башня и шар</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#152337;color:#edf4ff;font:16px system-ui,sans-serif}body{display:flex;flex-direction:column}
+header,footer{flex-shrink:0;background:#1b2e47;padding:10px 14px}header{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #304966}h1{font-size:19px;margin:0 auto 0 0}button,summary{font:inherit;color:inherit;cursor:pointer}button{min-height:44px;padding:8px 12px;background:#294868;border:1px solid #6383a4;border-radius:8px}button:disabled{opacity:.4;cursor:default}button:focus-visible,summary:focus-visible,input:focus-visible{outline:2px solid #ffca84;outline-offset:3px}#fire{background:#bc592b;border-color:#ee9563;font-weight:600}button[aria-pressed="true"]{background:#3e6289}
+main{position:relative;flex:1;min-height:0;touch-action:none}canvas{display:block;width:100%;height:100%}#status{position:absolute;left:12px;right:12px;top:10px;font-size:14px;color:#c7d7eb;pointer-events:none}#aim{position:absolute;left:50%;top:50%;width:16px;height:16px;transform:translate(-50%,-50%);pointer-events:none;border:1px solid #cbddef;border-radius:50%;opacity:.65}#aim::after{content:"";position:absolute;left:6px;top:6px;width:2px;height:2px;background:#fff}
+.stats{display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:14px;font-variant-numeric:tabular-nums;color:#c7d7eb}.stats strong{color:#fff}.settings{margin-top:8px;font-size:14px}summary{width:max-content;max-width:100%;min-height:36px;display:flex;align-items:center;gap:8px;list-style:none}summary::-webkit-details-marker{display:none}summary::before{content:"+";color:#93b6dd}details[open] summary::before{content:"−"}.parameters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding-top:6px}.parameters label{display:flex;flex-direction:column;gap:6px;min-width:0}.parameters output{color:#fff}.parameters input{width:100%;min-width:0;accent-color:#88baf4;min-height:28px}.note{font-size:13px;color:#b7cce3;line-height:1.5;margin:8px 0 0}.more{max-height:34vh;overflow:auto}#help{padding-top:4px}#help p{margin:6px 0;font-size:14px;line-height:1.5;color:#c7d7eb}#help strong{color:#fff}
+@media(max-width:500px){header,footer{padding:8px}h1{width:100%;font-size:18px}button{font-size:14px;padding:7px 10px}.stats{gap:12px}.parameters{gap:9px}.parameters label{font-size:13px}#status{left:8px;right:8px;font-size:13px}}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","cannon-es":"https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"}}</script>
+</head>
+<body>
+<header><h1>Башня и шар</h1><button id="fire" disabled>Бросить шар</button><button id="reset" disabled>Сброс</button><button id="pause" disabled aria-pressed="false">Пауза</button><button id="help-toggle" aria-label="Как управлять и что меняет физика" aria-expanded="false" aria-controls="help">?</button></header>
+<main id="stage"><p id="status" role="status">Загрузка Three.js и cannon-es…</p><span id="aim" hidden></span></main>
+<footer>
+<div class="stats"><span>Бросков: <strong id="shots">0</strong></span><span>Сдвинуто: <strong id="fallen">0</strong> / 18</span></div>
+<div class="more">
+<details class="settings"><summary>Масса, трение и отскок</summary><div class="parameters">
+<label>Масса блока <output id="mass-value" for="mass">1 кг</output><input id="mass" aria-label="Масса блока" type="range" min="0.5" max="4" step="0.5" value="1"></label>
+<label>Трение <output id="friction-value" for="friction">0,4</output><input id="friction" aria-label="Трение" type="range" min="0" max="1" step="0.1" value="0.4"></label>
+<label>Отскок <output id="bounce-value" for="bounce">0,15</output><input id="bounce" aria-label="Отскок" type="range" min="0" max="0.8" step="0.05" value="0.15"></label>
+</div><p class="note">Изменение параметра строит башню заново. Тяжёлые блоки сложнее сбить; трение удерживает их, отскок делает столкновения упругими.</p></details>
+<section id="help" hidden><p><strong>Коснитесь башни, чтобы бросить шар в эту точку.</strong> Перетаскивание поворачивает камеру. Кнопка бросает в центр прицела.</p><p>Клавиатура: пробел — бросок, стрелки — камера, R — сброс, P — пауза.</p><p><strong>Three.js рисует, cannon-es рассчитывает движение.</strong> Смотрите на вращение, скольжение и остановку блоков. Это физические тела, а не заранее заданная анимация.</p></section>
+</div>
+</footer>
+<script type="module">
+import * as THREE from 'three';
+import * as CANNON from 'cannon-es';
+const stage=document.querySelector('#stage'),status=document.querySelector('#status'),fireButton=document.querySelector('#fire'),resetButton=document.querySelector('#reset'),pauseButton=document.querySelector('#pause');
+const mass=document.querySelector('#mass'),friction=document.querySelector('#friction'),bounce=document.querySelector('#bounce');
+let renderer,scene,camera,world,observer,frameId,lastTime=0,paused=false,disposed=false,drag=null,yaw=.3,pitch=.16,shots=0;
+const blocks=[],balls=[],geometries=[],materials=[],clockwiseTarget=new THREE.Vector3(0,1.6,0),raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2(),aimPlane=new THREE.Plane(new THREE.Vector3(0,0,1),0);
+try {
+  renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1;
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;stage.append(renderer.domElement);
+  scene=new THREE.Scene();scene.background=new THREE.Color('#152337');scene.fog=new THREE.Fog('#152337',18,36);
+  camera=new THREE.PerspectiveCamera(42,1,.1,60);
+  scene.add(new THREE.HemisphereLight(0xe1edff,0x334159,1.9));const sun=new THREE.DirectionalLight(0xffead2,2.2);sun.position.set(5,9,5);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-8;sun.shadow.camera.right=8;sun.shadow.camera.top=8;sun.shadow.camera.bottom=-8;sun.shadow.camera.far=28;sun.shadow.bias=-.0003;scene.add(sun);
+  const blockGeometry=new THREE.BoxGeometry(.72,.58,2.4),ballGeometry=new THREE.SphereGeometry(.32,20,14),floorGeometry=new THREE.CylinderGeometry(7,7,.24,64);geometries.push(blockGeometry,ballGeometry,floorGeometry);
+  const palette=['#76b7c5','#de9569','#83a6d9'],blockMaterials=palette.map(color=>new THREE.MeshStandardMaterial({color,roughness:.62})),ballMaterial=new THREE.MeshStandardMaterial({color:'#f3ce73',roughness:.32}),floorMaterial=new THREE.MeshStandardMaterial({color:'#2a405a',roughness:.9});materials.push(...blockMaterials,ballMaterial,floorMaterial);
+  const floor=new THREE.Mesh(floorGeometry,floorMaterial);floor.position.y=-.12;floor.receiveShadow=true;scene.add(floor);
+  function cameraView(){const distance=10.5*Math.max(1,1/camera.aspect);camera.position.set(Math.sin(yaw)*Math.cos(pitch)*distance,1.6+Math.sin(pitch)*distance,Math.cos(yaw)*Math.cos(pitch)*distance);camera.lookAt(clockwiseTarget);}
+  function resize(){const w=stage.clientWidth,h=stage.clientHeight;if(!w||!h)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();cameraView();}
+  observer=new ResizeObserver(resize);observer.observe(stage);resize();
+  function removeBall(item){world.removeBody(item.body);scene.remove(item.mesh);balls.splice(balls.indexOf(item),1);}
+  function resetScene(){
+    for(const item of [...blocks,...balls])scene.remove(item.mesh);blocks.length=0;balls.length=0;
+    world=new CANNON.World({gravity:new CANNON.Vec3(0,-9.81,0),allowSleep:true});world.broadphase=new CANNON.SAPBroadphase(world);world.solver.iterations=12;
+    world.defaultContactMaterial.friction=Number(friction.value);world.defaultContactMaterial.restitution=Number(bounce.value);
+    const ground=new CANNON.Body({mass:0,shape:new CANNON.Plane()});ground.quaternion.setFromEuler(-Math.PI/2,0,0);world.addBody(ground);
+    for(let row=0;row<6;row++)for(let column=0;column<3;column++){
+      const body=new CANNON.Body({mass:Number(mass.value),shape:new CANNON.Box(new CANNON.Vec3(.36,.29,1.2)),allowSleep:true,sleepSpeedLimit:.15,sleepTimeLimit:1});
+      body.position.set(row%2?0:(column-1)*.78,.3+row*.6,row%2?(column-1)*.78:0);if(row%2)body.quaternion.setFromEuler(0,Math.PI/2,0);body.previousPosition.copy(body.position);body.interpolatedPosition.copy(body.position);body.previousQuaternion.copy(body.quaternion);body.interpolatedQuaternion.copy(body.quaternion);world.addBody(body);
+      const mesh=new THREE.Mesh(blockGeometry,blockMaterials[row%palette.length]);mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);mesh.position.copy(body.position);mesh.quaternion.copy(body.quaternion);
+      blocks.push({body,mesh,start:body.position.clone(),quaternion:body.quaternion.clone()});
+    }
+    shots=0;lastTime=0;document.querySelector('#shots').textContent='0';document.querySelector('#fallen').textContent='0';
+    status.textContent=paused?'Пауза':'Касание — бросок · перетаскивание — камера';fireButton.disabled=paused;
+  }
+  function throwBall(clientX,clientY){
+    if(paused||disposed||!world)return;
+    camera.updateMatrixWorld();const rect=stage.getBoundingClientRect();pointer.set(clientX===undefined?0:((clientX-rect.left)/rect.width)*2-1,clientY===undefined?0:1-((clientY-rect.top)/rect.height)*2);
+    raycaster.setFromCamera(pointer,camera);const target=new THREE.Vector3();if(!raycaster.ray.intersectPlane(aimPlane,target))return;
+    const direction=target.clone().sub(camera.position).normalize(),origin=camera.position.clone().addScaledVector(direction,.8),flightTime=origin.distanceTo(target)/16;
+    const body=new CANNON.Body({mass:3,shape:new CANNON.Sphere(.32),allowSleep:true,sleepSpeedLimit:.15});body.position.copy(origin);body.previousPosition.copy(body.position);body.interpolatedPosition.copy(body.position);body.velocity.set(direction.x*16,direction.y*16+9.81*flightTime/2,direction.z*16);body.linearDamping=.01;world.addBody(body);
+    const mesh=new THREE.Mesh(ballGeometry,ballMaterial);mesh.castShadow=true;mesh.position.copy(body.position);scene.add(mesh);balls.push({body,mesh,born:performance.now()});
+    if(balls.length>12)removeBall(balls[0]);shots++;document.querySelector('#shots').textContent=shots.toLocaleString('ru-RU');
+    for(const item of blocks)item.body.wakeUp();
+  }
+  function togglePause(){paused=!paused;pauseButton.setAttribute('aria-pressed',String(paused));pauseButton.textContent=paused?'Продолжить':'Пауза';fireButton.disabled=paused;lastTime=0;status.textContent=paused?'Пауза':'Касание — бросок · перетаскивание — камера';}
+  function tick(now){
+    if(disposed)return;frameId=requestAnimationFrame(tick);if(document.hidden){lastTime=0;return;}
+    const delta=lastTime?Math.min((now-lastTime)/1000,.05):0;lastTime=now;
+    if(!paused){world.step(1/60,delta,3);for(const item of [...blocks,...balls]){item.mesh.position.copy(item.body.interpolatedPosition);item.mesh.quaternion.copy(item.body.interpolatedQuaternion);}
+      for(const item of [...balls])if(now-item.born>12000||item.body.position.length()>35||item.body.position.y< -5)removeBall(item);
+      const moved=blocks.filter(item=>{const q=item.body.quaternion,s=item.quaternion;return item.body.position.distanceTo(item.start)>.55||Math.abs(q.x*s.x+q.y*s.y+q.z*s.z+q.w*s.w)<.95;}).length;document.querySelector('#fallen').textContent=String(moved);
+    }renderer.render(scene,camera);
+  }
+  resetScene();fireButton.disabled=false;resetButton.disabled=false;pauseButton.disabled=false;document.querySelector('#aim').hidden=false;frameId=requestAnimationFrame(tick);
+  fireButton.onclick=()=>throwBall();resetButton.onclick=resetScene;pauseButton.onclick=togglePause;
+  stage.addEventListener('pointerdown',e=>{if(!e.isPrimary||e.button!==0)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,moved:false};stage.setPointerCapture(e.pointerId);});
+  stage.addEventListener('pointermove',e=>{if(drag?.id!==e.pointerId)return;if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>6)drag.moved=true;if(drag.moved){yaw=Math.max(-1.05,Math.min(1.05,yaw-(e.clientX-drag.lastX)*.006));pitch=Math.max(.04,Math.min(.65,pitch+(e.clientY-drag.lastY)*.006));cameraView();}drag.lastX=e.clientX;drag.lastY=e.clientY;});
+  stage.addEventListener('pointerup',e=>{if(drag?.id!==e.pointerId)return;const tap=!drag.moved;drag=null;if(stage.hasPointerCapture(e.pointerId))stage.releasePointerCapture(e.pointerId);if(tap)throwBall(e.clientX,e.clientY);});
+  for(const name of ['pointercancel','lostpointercapture'])stage.addEventListener(name,()=>{drag=null;});
+  for(const input of [mass,friction,bounce]){input.oninput=()=>{document.querySelector('#'+input.id+'-value').textContent=Number(input.value).toLocaleString('ru-RU')+(input===mass?' кг':'');};input.onchange=resetScene;}
+  addEventListener('keydown',e=>{if(/^(INPUT|BUTTON|SUMMARY)$/.test(e.target.tagName)||e.altKey||e.ctrlKey||e.metaKey)return;const key=e.key.toLowerCase();if(key===' '){e.preventDefault();if(!e.repeat)throwBall();}else if(key==='r')resetScene();else if(key==='p'&&!e.repeat)togglePause();else if(key.startsWith('arrow')){e.preventDefault();if(key==='arrowleft')yaw=Math.max(-1.05,yaw-.08);if(key==='arrowright')yaw=Math.min(1.05,yaw+.08);if(key==='arrowup')pitch=Math.min(.65,pitch+.04);if(key==='arrowdown')pitch=Math.max(.04,pitch-.04);cameraView();}});
+  document.addEventListener('visibilitychange',()=>{lastTime=0;drag=null;});
+  addEventListener('pagehide',()=>{disposed=true;cancelAnimationFrame(frameId);observer.disconnect();for(const geometry of geometries)geometry.dispose();for(const material of materials)material.dispose();sun.shadow.map?.dispose();renderer.dispose();},{once:true});
+}catch(error){status.textContent='Не удалось запустить 3D-физику: '+error.message;status.style.color='#ffc7c7';observer?.disconnect();renderer?.dispose();}
+document.querySelector('#help-toggle').onclick=e=>{const help=document.querySelector('#help');help.hidden=!help.hidden;e.currentTarget.setAttribute('aria-expanded',String(!help.hidden));};
+</script>
+</body>
+</html>

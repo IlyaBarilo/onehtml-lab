@@ -2,6 +2,11 @@
 const moduleDataCache = new WeakMap();
 let moduleScanCache = { code: null, plan: null };
 function moduleReference(url) {
+  if (/^https:\/\/(?:cdn\.jsdelivr\.net\/npm|unpkg\.com)\/cannon-es@0\.20\.0\/dist\/cannon-es\.js$/.test(url)) return {
+    key: 'cannon-es@0.20.0', title: 'cannon-es 0.20.0 · 3D-физика', format: 'module', downloadBytes: 346256,
+    url: 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js', originalUrl: url,
+    licenseUrl: 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/LICENSE'
+  };
   if (/^https:\/\/(?:cdn\.jsdelivr\.net\/npm|unpkg\.com)\/three@0\.160\.0\/examples\/jsm\/loaders\/GLTFLoader\.js$/.test(url)) return {
     key: 'three-gltf@0.160.0', title: 'Three.js r160 · GLB-загрузчик', format: 'module', downloadBytes: 1413400,
     url: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js', originalUrl: url,
@@ -16,9 +21,19 @@ function moduleReference(url) {
     licenseUrl: `https://cdn.jsdelivr.net/npm/three@${version}/LICENSE` };
 }
 function moduleCatalog(key) {
+  if (key === 'cannon-es@0.20.0') return moduleReference('https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js');
   if (key === 'three-gltf@0.160.0') return moduleReference('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js');
   const m = /^three-esm@(0\.\d{3}\.0):(three\.module(?:\.min)?\.js)$/.exec(key || '');
   return m && moduleReference(`https://cdn.jsdelivr.net/npm/three@${m[1]}/build/${m[2]}`);
+}
+function localModuleReference(url) {
+  if (!url || url.startsWith('//') || (/^[a-z][a-z\d+.-]*:/i.test(url) && !/^file:/i.test(url) && !/^[a-z]:[\\/]/i.test(url))) return null;
+  let path = url.replace(/\\/g, '/').split(/[?#]/)[0];
+  try { path = decodeURIComponent(path); } catch { return null; }
+  const filename = path.split('/').pop(), folders = path.split('/').slice(0, -1);
+  const known = /^cannon-es[._-]v?0\.20\.0\.js$/i.test(filename)
+    || /^cannon-es\.js$/i.test(filename) && folders.some(folder => /^(?:cannon-es[@._-])?v?0\.20\.0$/i.test(folder));
+  return known ? { ...moduleCatalog('cannon-es@0.20.0'), originalUrl: url, modulePath: url, moduleLocal: true, filename } : null;
 }
 function moduleMappedUrl(value, imports) {
   if (Object.hasOwn(imports,value)) return imports[value];
@@ -86,7 +101,7 @@ function scanModules(code) {
   function add(value, record, position) {
     const mapped = moduleMappedUrl(value,plan.imports);
     if(plan.map?.attrs.has('data-onehtml-modules') && typeof mapped==='string' && mapped.startsWith('data:text/javascript;base64,')) return;
-    let ref = typeof mapped === 'string' && moduleReference(mapped);
+    let ref = typeof mapped === 'string' && (moduleReference(mapped) || localModuleReference(mapped));
     if (typeof mapped === 'string' && plan.map?.attrs.has('data-onehtml-module-links')) {
       try {
         const links=JSON.parse(moduleDecode(plan.map.attrs.get('data-onehtml-module-links').value));
@@ -95,7 +110,7 @@ function scanModules(code) {
           filename:!/^https:/.test(mapped)?mapped.split('/').pop():'',modulePath:mapped,moduleLocal:!/^https:/.test(mapped)};
       } catch {}
     }
-    const reason = plan.reason || (!ref ? 'Поддерживаются ядро Three.js r160–r180 и GLTFLoader r160 с точными CDN-ссылками. Другие дополнения, локальные пути и модули не встраиваются.' : '');
+    const reason = plan.reason || (!ref ? 'Поддерживаются ядро Three.js r160–r180, GLTFLoader r160 и cannon-es 0.20.0 с точными CDN-ссылками. Для локального cannon-es укажите версию в имени файла или папки. Другие дополнения, локальные пути и модули не встраиваются.' : '');
     if (reason) plan.issues.push({ title:'Модуль JavaScript', path: typeof mapped === 'string' ? mapped : value, state:'Подмена не поддерживается', note:reason });
     else plan.references.push({ ...ref, index:record.index, record, value, position });
   }
@@ -121,6 +136,11 @@ function scanModules(code) {
   moduleScanCache = { code, plan }; return plan;
 }
 function moduleFileUrl(path, base) {
+  if (base === 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js') {
+    const url = new URL(path, base).href;
+    if (url !== base) throw Error('Неподдерживаемая зависимость cannon-es.');
+    return url;
+  }
   const root = /^(https:\/\/cdn\.jsdelivr\.net\/npm\/three@0\.\d{3}\.0\/)/.exec(base)?.[1];
   const addon = base.includes('/examples/jsm/');
   const url = path === 'three' && addon ? root + 'build/three.module.js' : new URL(path,base).href;
@@ -219,7 +239,8 @@ async function prepareModuleLibraries(code, mode='inline', reserved=[], copies=n
   const imports=Object.assign(Object.create(null),plan.imports), outputs=new Map(), targets=new Map(), names=new Set(reserved.map(s=>s.toLowerCase()));
   for (const {entry,data} of selected.values()) for (const file of data.files) {
     if (outputs.has(file.url)) continue;
-    const version=/@0\.(\d{3})\.0/.exec(file.url)[1], base=`three-r${version}-${file.url.split('/').pop()}`;
+    const version=/@0\.(\d{3})\.0/.exec(file.url)?.[1];
+    const base=file.url === moduleCatalog('cannon-es@0.20.0').url ? 'cannon-es-0.20.0.js' : `three-r${version}-${file.url.split('/').pop()}`;
     let name=base,n=2;while(names.has(name.toLowerCase())) name=base.replace(/\.js$/,`-${n++}.js`);
     names.add(name.toLowerCase()); outputs.set(file.url,{file,entry,name});
     if (mode==='files') targets.set(file.url,'./'+encodeURIComponent(name));
@@ -306,6 +327,7 @@ async function embeddedModulePlan(code,mode='cdn') {
       const attrs=new Map(record.attrs);attrs.delete('data-onehtml-module-src');
       html=html.replace(record.tag,`<script ${libraryInlineAttributes(attrs)} src="${libraryAttribute(url)}"></script>`);
     }
+    if (mode === 'cdn') html = moduleLocalLinksToCdn(html);
     const plain=scanModules(html), links=plain.references.map(ref=>({key:ref.key,path:ref.originalUrl,assetKey:assets.find(e=>e.catalogKey===ref.key)?.key}));
     const pin=`data-onehtml-module-links="${moduleBase64(JSON.stringify(links))}"`;
     if(plain.map) html=moduleReplace(html,[{from:plain.map.index,to:plain.map.end,text:plain.map.tag.replace(/\sdata-onehtml-module-links="[^"]*"/g,'').replace('>',` ${pin}>`)}]);
@@ -319,4 +341,18 @@ async function embeddedModulePlan(code,mode='cdn') {
     row.path=assets.map(e=>e.sourceUrl).join(', ');
     return {html,rows:[row],assets,count:assets.length,removedBytes:row.removedBytes};
   } catch(error) {row.reason=error.message || 'Не удалось проверить модульную копию.';row.note=row.reason;return {html:code,rows:[row],assets:[],count:0};}
+}
+
+function moduleLocalLinksToCdn(code) {
+  const plan = scanModules(code), changes = [], imports = { ...plan.imports };
+  let mapChanged = false;
+  for (const ref of plan.references.filter(ref => ref.moduleLocal)) {
+    if (ref.position && (Object.hasOwn(imports, ref.value) || moduleMappedUrl(ref.value, imports) !== ref.value)) {
+      imports[ref.value] = ref.url; mapChanged = true;
+    } else if (ref.position) changes.push({ from: ref.record.from + ref.position.from, to: ref.record.from + ref.position.to, text: JSON.stringify(ref.url) });
+    else changes.push({ from: ref.record.index, to: ref.record.end, text: `<script ${libraryInlineAttributes(ref.record.attrs)} src="${libraryAttribute(ref.url)}"></script>` });
+  }
+  if (mapChanged && plan.map) changes.push({ from: plan.map.index, to: plan.map.end,
+    text: `<script type="importmap">${JSON.stringify({ imports }).replace(/</g, '\\u003c')}</script>` });
+  return moduleReplace(code, changes);
 }

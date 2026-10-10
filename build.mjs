@@ -28,6 +28,7 @@ const exampleFiles = [
   { id: 'sound-panel', category: 'media', platform: 'all', title: 'Звуковая панель', description: 'Четыре синтезируемых звука, формы и цвета. Работает без внешних ресурсов.' },
   { id: '3d-showcase', category: 'media', platform: 'all', title: '3D-витрина', description: 'Лампа, материалы, свет и тени. Three.js r160 можно встроить при сохранении.' },
   { id: 'glb-model', category: 'media', platform: 'all', title: '3D-модель GLB', description: 'Спутник с текстурой и анимацией. Вращение касанием или мышью, масштаб и скачивание модели.' },
+  { id: '3d-physics', category: 'media', platform: 'all', title: '3D-физика: башня и шар', description: 'Сбивайте башню шаром. Three.js рисует, cannon-es рассчитывает падение, вращение, трение и отскок.' },
   { id: 'snake', platform: 'desktop', title: 'Змейка', description: 'Управляйте стрелками или WASD.' },
   { id: 'falling-stars', platform: 'desktop', title: 'Лови звёзды', description: 'Двигайте платформу мышью.' },
   { id: 'space-reaction', platform: 'desktop', title: 'Реакция на пробел', description: 'Нажмите пробел после сигнала.' },

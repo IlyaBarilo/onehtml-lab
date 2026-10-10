@@ -260,7 +260,7 @@ function updateAiAnswerBasis() {
   const id = document.querySelector('#ai-answer-request').value;
   const profile = aiPromptEntries.find(entry => entry.id === id)?.profile;
   const code = aiAnswerCandidate();
-  document.querySelector('#ai-answer-basis').textContent = code?.trim() ? aiGameConnectionText(code, profile?.version === 1 ? profile.id : '') : '';
+  document.querySelector('#ai-answer-basis').textContent = code?.trim() ? aiGameConnectionText(code, profile?.version === 1 ? profile.id : '', profile?.version === 1 ? profile.settings : null) : '';
 }
 
 function updateAiAnswerInput(reparse = true) {

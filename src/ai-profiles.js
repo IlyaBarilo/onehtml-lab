@@ -21,6 +21,12 @@ const aiGameCatalog = {
   babylon: { title: 'Babylon.js 9.30.0', key: 'babylonjs@9.30.0', url: 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/babylon.js' }
 };
 let aiGame = normalizeAiGame();
+const aiPhysicsKey = 'cannon-es@0.20.0';
+const aiPhysicsUrl = 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
+function aiGameUsesPhysics(value) {
+  const game = normalizeAiGame(value);
+  return game.dimension === '3d' && game.physics === 'bodies' && aiGameChoice(game).id === 'three';
+}
 
 function normalizeAiGame(value) {
   const result = {};
@@ -38,25 +44,26 @@ function aiGameChoice(value) {
 function aiGameWarnings(value) {
   const game = normalizeAiGame(value), { id } = aiGameChoice(game), notes = [];
   if ((game.dimension === '3d') !== ['three', 'babylon'].includes(id)) notes.push('Основа не соответствует 2D/3D. Уточните пространство или основу.');
-  if (game.dimension === '3d' && game.physics === 'bodies') notes.push('Полноценная 3D-физика пока не входит в профиль. Упростите физику или опишите её отдельно.');
+  if (game.dimension === '3d' && game.physics === 'bodies' && id !== 'three') notes.push('Для 3D-физики с вращением и равновесием поддержана связка Three.js + cannon-es. Физика выбранной основы пока не подготовлена; ваш выбор сохранён.');
   if (id === 'canvas' && game.physics === 'bodies') notes.push('Для равновесия и вращения рекомендуем Matter.js; ваш выбор сохранён.');
   if (game.dimension === '2d' && ['behind', 'first'].includes(game.camera)) notes.push('Камера позади героя или от первого лица рассчитана на 3D.');
   return notes;
 }
 function aiGameInstructions(value, models = false) {
   const game = normalizeAiGame(value), { id } = aiGameChoice(game), profile = aiGameCatalog[id];
+  const physics = aiGameUsesPhysics(game);
   const parts = ['Сделай небольшую законченную игру с одной основной механикой, понятной целью, началом, завершением и повторным запуском.'];
   for (const [key, label] of Object.entries(aiGameLabels)) if (key !== 'basis' && game[key]) parts.push(`${label}: ${aiGameOptions[key][game[key]]}.`);
-  parts.push(models && id === 'three' ? 'Используй Three.js r160 как ES-модуль с GLTFLoader. Точные подключения и работа с GLB указаны в конце запроса. Не вставляй исходники библиотек в ответ.' : profile.url ? `Используй ${profile.title}. Подключи до кода игры обычным скриптом <script src="${profile.url}"></script>. Не используй import, latest или другие версии. Не вставляй исходники библиотеки в ответ: OneHTML Lab подготовит их при сохранении.` : 'Используй HTML, Canvas 2D или SVG и обычный JavaScript без внешних библиотек.');
+  parts.push(physics ? `Используй Three.js r160 и cannon-es 0.20.0 как ES-модули. Перед скриптом игры добавь <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","cannon-es":"${aiPhysicsUrl}"}}</script>. В <script type="module"> импортируй import * as THREE from 'three'; import * as CANNON from 'cannon-es';. Не подключай дополнительно обычный скрипт THREE, CommonJS, latest или другую версию. Не вставляй исходники библиотек в ответ: OneHTML Lab подготовит их при сохранении.` : models && id === 'three' ? 'Используй Three.js r160 как ES-модуль с GLTFLoader. Точные подключения и работа с GLB указаны в конце запроса. Не вставляй исходники библиотек в ответ.' : profile.url ? `Используй ${profile.title}. Подключи до кода игры обычным скриптом <script src="${profile.url}"></script>. Не используй import, latest или другие версии. Не вставляй исходники библиотеки в ответ: OneHTML Lab подготовит их при сохранении.` : 'Используй HTML, Canvas 2D или SVG и обычный JavaScript без внешних библиотек.');
   if (id.startsWith('phaser')) parts.push(`Используй встроенную ${game.physics === 'bodies' ? 'Matter Physics' : 'Arcade Physics при необходимости столкновений'}. Не подключай отдельный Matter.js. Создавай графику через Graphics/текстуры Phaser; не добавляй плагины. При повторном старте не дублируй обработчики и таймеры.`);
   if (id === 'matter') parts.push('Используй Matter.js для физических тел, а Canvas 2D для своей отрисовки. Связывай координаты и поворот рисунка с телом. При сбросе очищай тела и обработчики, не создавай второй цикл обновления.');
-  if (id === 'three') parts.push((models ? 'Загрузи выбранные GLB-модели через GLTFLoader той же версии. ' : 'Используй ядро Three.js через THREE, без addons, внешних моделей и загрузчиков. Строй сцену из геометрии, света и материалов; ')+'Простые столкновения проверяй самостоятельно. Ограничь плотность пикселей и число теней на телефоне.');
+  if (id === 'three') parts.push((models ? 'Загрузи выбранные GLB-модели через GLTFLoader той же версии. ' : 'Используй ядро Three.js через THREE, без addons, внешних моделей и загрузчиков. Строй сцену из геометрии, света и материалов; ')+(physics ? 'Физические тела рассчитывай в CANNON.World; связывай положение и quaternion видимого объекта с телом. Используй world.step(1 / 60, Math.min(deltaSeconds, 0.05), 3), спящие тела и ограниченное число активных объектов. При возврате из фона сбрасывай отсчёт времени. Для GLB используй простые Box/Sphere-коллизии: визуальная геометрия сама не становится физическим телом. При сбросе очищай прежние тела, снаряды и обработчики, сохраняй один цикл обновления. ' : 'Простые столкновения проверяй самостоятельно. ')+'Ограничь плотность пикселей и число теней на телефоне.');
   if (id === 'babylon') parts.push('Используй ядро Babylon.js через BABYLON и Engine с WebGL. Не подключай WebGPU, Havok, GUI или инспектор. '+(models ? 'Подключи GLB-загрузчик 9.30.0 по инструкции в конце запроса. ' : 'Не подключай загрузчики моделей. Строй сцену из MeshBuilder, материалов, камеры и света; ')+'Простые столкновения проверяй самостоятельно. Ограничь плотность пикселей и размер теней на телефоне. При сбросе освобождай прежнюю Scene и обработчики, не создавай второй цикл кадров.');
   const genres = { platformer: 'Прыжок должен быть предсказуемым; предусмотрено небольшое прощение раннего/позднего нажатия. Цель и опасные поверхности должны быть понятны.', arcade: 'Сделай заметную реакцию на попадание, понятное получение урона и короткую защиту от повторного урона.', puzzle: 'Покажи цель и текущее состояние головоломки. Сделай удобный сброс; начальное состояние должно позволять решение.', runner: 'Дай время увидеть препятствия, постепенно повышай сложность и не создавай непроходимые сочетания.', racing: 'Сделай понятные границы трассы, плавное управление и заметную реакцию на столкновение.' };
   if (genres[game.genre]) parts.push(genres[game.genre]);
   const styles = { paper: 'Используй слои бумажных форм, тёплую ограниченную палитру и мягкие тени.', neon: 'Используй тёмный игровой мир, два-три ярких акцента и умеренное свечение; сохраняй читаемость.', drawn: 'Используй мягкие рисованные силуэты, согласованную палитру и выразительные движения персонажей.', minimal: 'Используй чёткие силуэты, контраст фигуры и фона и различимые формы объектов.' };
   if (styles[game.style]) parts.push(styles[game.style]);
-  parts.push('Оформляй сам игровой мир: персонажей, препятствия, фон, движение и реакции. Не заменяй это декоративным меню вокруг простого поля. Не добавляй внешние зависимости и ресурсы кроме выбранной основы и перечисленных медиа.');
+  parts.push('Оформляй сам игровой мир: персонажей, препятствия, фон, движение и реакции. Не заменяй это декоративным меню вокруг простого поля. Не добавляй внешние зависимости и ресурсы кроме выбранной основы'+(physics ? ', cannon-es 0.20.0' : '')+' и перечисленных медиа.');
   if (game.load === 'light') parts.push('Ограничь частицы и эффекты, переиспользуй объекты, учитывай время кадра и небольшой экран.');
   if (game.sound !== 'none') parts.push('Запускай звук только после действия пользователя, обрабатывай отказ и дай возможность выключить звук. Для простых синтезируемых эффектов используй Web Audio без дополнительной библиотеки.');
   return parts.join(' ');
@@ -96,12 +103,13 @@ function aiGameConnections(code) {
   }
   return { found: [...found.values()], unknown: [...unknown] };
 }
-function aiGameConnectionText(code, profileId = '') {
+function aiGameConnectionText(code, profileId = '', settings = null) {
   const actual = aiGameConnections(code), parts = [];
   if (profileId && Object.hasOwn(aiGameCatalog, profileId)) {
-    const expected = aiGameCatalog[profileId]; parts.push('В запросе: ' + expected.title + '.');
+    const expected = aiGameCatalog[profileId], physics = settings && aiGameUsesPhysics(settings); parts.push('В запросе: ' + expected.title + (physics ? ' + cannon-es 0.20.0' : '') + '.');
     if (expected.key && !actual.found.some(ref => ref.key === expected.key)) parts.push('Ожидаемое подключение не найдено; ответ может использовать другую основу или способ подключения.');
-    if (actual.found.some(ref => ref.key !== expected.key)) parts.push('Есть отличающиеся версии или дополнительные библиотеки.');
+    if (physics && !actual.found.some(ref => ref.key === aiPhysicsKey)) parts.push('Ожидаемое подключение cannon-es не найдено.');
+    if (actual.found.some(ref => ref.key !== expected.key && !(physics && ref.key === aiPhysicsKey) && !(profileId === 'three' && ref.key === 'three-gltf@0.160.0'))) parts.push('Есть отличающиеся версии или дополнительные библиотеки.');
   }
   parts.push(actual.found.length ? 'В HTML распознано: ' + actual.found.map(ref => ref.title).join(', ') + '.' : 'Известные библиотеки в HTML не распознаны.');
   if (actual.unknown.length) parts.push('Другие подключения: ' + actual.unknown.slice(0, 6).map(url => url.slice(0, 160)).join(', ') + '.');
@@ -120,6 +128,7 @@ function renderAiGameControls() {
   const choice = aiGameChoice(aiGame);
   for (const key of Object.keys(aiGameOptions)) document.querySelector('#ai-game-' + key).value = aiGame[key];
   document.querySelector('#ai-game-recommendation').textContent = `${aiGameCatalog[choice.id].title}. ${choice.reason}` + (choice.id === 'phaser4' ? ' Новая ветка рендеринга, света и фильтров; не все примеры Phaser 3 совместимы.' : choice.id === 'babylon' ? ' Для 3D-сцен с готовыми камерами, материалами и инструментами движка.' : '');
+  if (aiGameUsesPhysics(aiGame)) document.querySelector('#ai-game-recommendation').textContent += ' Для вращения и равновесия: cannon-es 0.20.0.';
   document.querySelector('#ai-game-warning').textContent = aiGameWarnings(aiGame).join(' ');
 }
 function initAiGameProfiles() {

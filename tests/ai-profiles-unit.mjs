@@ -14,7 +14,12 @@ assert.match(api.aiGameInstructions({ dimension: '3d', basis: 'babylon' }), /bab
 assert.match(api.aiGameMediaRecipe('babylon'), /DynamicTexture/);
 assert.equal(api.aiGameChoice({ dimension: '3d', basis: 'phaser4' }).id, 'phaser4');
 assert(api.aiGameWarnings({ dimension: '3d', basis: 'phaser4' }).length);
-assert(api.aiGameWarnings({ dimension: '3d', physics: 'bodies' }).length);
+assert.equal(api.aiGameWarnings({ dimension: '3d', physics: 'bodies' }).length, 0);
+assert(api.aiGameWarnings({ dimension: '3d', basis: 'babylon', physics: 'bodies' }).length);
+assert.match(api.aiGameInstructions({ dimension: '3d', physics: 'bodies' }), /cannon-es@0\.20\.0/);
+assert.match(api.aiGameInstructions({ dimension: '3d', physics: 'bodies' }), /world\.step/);
+assert(!api.aiGameInstructions({ dimension: '3d', physics: 'simple' }).includes('cannon-es'));
+assert(!api.aiGameInstructions({ dimension: '2d', physics: 'bodies' }).includes('cannon-es'));
 assert.equal(api.normalizeAiGame({ basis: '__proto__', genre: '<script>', style: 'constructor' }).basis, 'auto');
 assert.equal(api.normalizeAiGame({ basis: { toString: null }, dimension: [] }).basis, 'auto');
 const phaser = 'https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.min.js';
