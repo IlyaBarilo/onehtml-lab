@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { basename, join, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium, webkit } from 'playwright';
+import { createServer } from 'node:http';
 
 const example = await readFile(new URL('../src/examples/performance-libraries.html', import.meta.url), 'utf8');
 const appUrl = new URL('../onehtml-lab.html', import.meta.url).href;
@@ -19,7 +20,19 @@ const assets = [
   ['phaser4', 'https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.min.js', 'https://cdn.jsdelivr.net/npm/phaser@4.2.1/LICENSE.md', 'window.Phaser={VERSION:"4.2.1"};'],
   ['babylon', 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/babylon.js', 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/license.md', 'window.BABYLON={Engine:{Version:"9.30.0"}};']
 ].map(([id, url, licenseUrl, source], index) => ({ id, url, licenseUrl, source: '/* ' + 'x'.repeat(2048 + index * 512) + ' */\n' + source }));
-const engines = process.argv.includes('--engines=chromium') ? [['chromium', chromium]] : [['chromium', chromium], ['webkit', webkit]];
+const cannonUrl = 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
+const cannonLicense = await readFile(new URL('../node_modules/cannon-es/LICENSE', import.meta.url), 'utf8');
+assets.push({ id: 'cannon', url: cannonUrl, licenseUrl: cannonUrl.replace('/dist/cannon-es.js', '/LICENSE'), source: await readFile(new URL('../node_modules/cannon-es/dist/cannon-es.js', import.meta.url), 'utf8') });
+const server = createServer((request, response) => {
+  const file = resolve(scratch, decodeURIComponent(request.url.slice(1)));
+  if (!file.startsWith(scratch + sep)) return response.writeHead(404).end();
+  readFile(file).then(bytes => response.writeHead(200, { 'Content-Type': file.endsWith('.js') ? 'text/javascript' : 'text/html' }).end(bytes)).catch(() => response.writeHead(404).end());
+});
+await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+const localHost = `http://127.0.0.1:${server.address().port}/`;
+const selected = process.argv.find(value => value.startsWith('--engines='))?.slice(10);
+const engines = [['chromium', chromium], ['webkit', webkit]].filter(([name]) => !selected || name === selected);
+assert(engines.length, 'Select chromium or webkit');
 const canvasSource = example.slice(example.indexOf('      function canvasShowcase()'), example.indexOf('      function threeColor('));
 
 async function checkCanvasRoute(page, name) {
@@ -130,7 +143,8 @@ async function libraryLabels(frame, status) {
     const size = await button.locator('.library-size').innerText();
     assert.match(size, /^Размер: (?:[\d\s,.]+ (?:Б|КБ)|\(нет данных\))$/);
     if (status === 'Встроена в HTML') {
-      assert.equal((await button.locator('.library-size').getAttribute('title')).replace(/[\u00a0\u202f]/g, ''), `${Buffer.byteLength('\n' + asset.source + '\n')} байт JS-кода; без сетевого сжатия`);
+      const bytes = asset.id === 'cannon' ? await frame.locator('script[type="importmap"]').evaluate((node, url) => atob(JSON.parse(node.textContent).imports[url].slice(28)).length, cannonUrl) : Buffer.byteLength('\n' + asset.source + '\n');
+      assert.equal((await button.locator('.library-size').getAttribute('title')).replace(/[\u00a0\u202f]/g, ''), `${bytes} байт JS-кода; без сетевого сжатия`);
     }
   }
 }
@@ -231,7 +245,7 @@ try {
           const isNotice = url === 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/NOTICE.md';
           assert(source || licensed || isNotice, 'Only the exact libraries, licenses and NOTICE may be requested');
           await route.fulfill({ contentType: source ? 'text/javascript' : 'text/plain',
-            headers: { 'access-control-allow-origin': '*' }, body: source ? source.source : isNotice ? notice : url.includes('babylonjs@') ? apache : license });
+            headers: { 'access-control-allow-origin': '*' }, body: source ? source.source : isNotice ? notice : url.includes('babylonjs@') ? apache : url.includes('cannon-es@') ? cannonLicense : license });
         });
         const page = await context.newPage();
         await useNativeEditor(page);
@@ -256,7 +270,7 @@ try {
         assert.equal(requests, 0, 'Opening the example must not download libraries without a click');
         await page.locator('#library-download').click();
         await page.locator('#library-request').waitFor({ state: 'hidden' });
-        assert.equal(requests, 11, 'Download five libraries, licenses and Babylon NOTICE');
+        assert.equal(requests, 13, 'Download six libraries, licenses and Babylon NOTICE');
         await page.locator('#run').click();
         const frame = page.frameLocator('#preview > iframe');
         await libraryLabels(frame, 'Встроена в HTML');
@@ -312,9 +326,10 @@ try {
         assert(await frame.locator('.load').isVisible());
         assert.equal((await frame.locator('#load-value').innerText()).replace(/\s/g, ''), '10000');
         await page.locator('#run').click();
-        assert.equal(requests, 11, 'Cached preview must not request external scripts');
+        assert.equal(requests, 13, 'Cached preview must not request external scripts');
         const embedded = await downloadHtml(page);
         assert.equal(embedded.match(/data-onehtml-bundle="1"/g)?.length, 5);
+        assert.equal(embedded.match(/data-onehtml-modules="1"/g)?.length, 1);
         assert.equal(embedded.match(/Copyright \(c\) Test library authors/g)?.length, 4);
         const embeddedPath = join(scratch, name + '-embedded.html');
         await writeFile(embeddedPath, embedded);
@@ -322,7 +337,7 @@ try {
         await useNativeEditor(saved);
         await saved.goto(pathToFileURL(embeddedPath).href);
         await libraryLabels(saved, 'Встроена в HTML');
-        assert.equal(requests, 11, 'Standalone embedded test must not request CDN resources');
+        assert.equal(requests, 13, 'Standalone embedded test must not request CDN resources');
         await checkCompactLayout(saved, name);
         await saved.close();
         const unchanged = await downloadHtml(page, false);
@@ -343,7 +358,7 @@ try {
         await page.locator('#confirm-save').click();
         await page.locator('#save-files').waitFor({ state: 'visible' });
         const names = await page.locator('#save-file-list button').allTextContents();
-        assert.equal(names.length, 6);
+        assert.equal(names.length, 7);
         const automaticCount = name === 'webkit' ? 1 : names.length;
         const deadline = Date.now() + 10_000;
         while (downloads.length < automaticCount && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 50));
@@ -362,16 +377,18 @@ try {
         const beforeLocal = requests;
         const local = await context.newPage();
         await useNativeEditor(local);
-        await local.goto(pathToFileURL(join(folder, 'game.html')).href);
+        // ES modules beside HTML require HTTP; embedded modules above run as one local file.
+        await local.goto(localHost + basename(folder) + '/game.html');
         await libraryLabels(local, 'Загружена из файла');
         assert.equal(requests, beforeLocal, 'Separate libraries must load from files beside HTML');
         await local.close();
         assert.deepEqual(errors, [], 'The application and Canvas test must execute without errors');
-        console.log(`${name} file: three modes, default showcase, descriptions, tower interaction, five library sizes, 10000 objects, FPS, taps and all exports passed.`);
+        console.log(`${name} file: three modes, default showcase, descriptions, tower interaction, six library sizes, 10000 objects, FPS, taps and classic/module exports passed.`);
       } finally { await context.close(); }
     } finally { await browser.close(); }
   }
 } finally {
+  await new Promise(resolve => server.close(resolve));
   assert(resolve(scratch).startsWith(resolve(tmpdir()) + sep) && basename(scratch).startsWith('onehtml-lab-performance-'));
   await rm(scratch, { recursive: true, force: true });
 }

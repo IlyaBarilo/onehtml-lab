@@ -20,7 +20,7 @@ const example = await readFile(new URL('../src/examples/performance-libraries.ht
 const threeSource = await readFile(new URL('../node_modules/three/build/three.min.js', import.meta.url), 'utf8');
 const threeProbe = `THREE.WebGLRenderer=new Proxy(THREE.WebGLRenderer,{construct(target,args){const renderer=Reflect.construct(target,args),render=renderer.render.bind(renderer);renderer.render=(scene,camera)=>{window.testThree={renderer,scene,camera};return render(scene,camera)};return renderer}});`;
 const fixture = example.replace(/<script src="https:[^"]+"><\/script>/g, tag => '<script>\n'
-  + (tag.includes(url) ? source : tag.includes('three@0.160.0') ? threeSource + '\n' + threeProbe : '') + '\n</script>');
+  + (tag.includes(url) ? source : tag.includes('three@0.160.0') ? threeSource + '\n' + threeProbe : '') + '\n</script>').replace(/<script type="module" id="cannon-module">[\s\S]*?<\/script>/, '');
 const scratch = await mkdtemp(join(tmpdir(), 'onehtml-babylon-'));
 await writeFile(join(scratch, 'example.html'), fixture);
 const server = createServer((request, response) => response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(request.url === '/example' ? fixture : app));

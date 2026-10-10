@@ -10,6 +10,8 @@ const selected = process.argv.find(arg => arg.startsWith('--engines='))?.slice(1
 const engines = [['chromium', chromium], ['webkit', webkit]].filter(([name]) => !selected || name === selected);
 assert(engines.length, 'Choose chromium or webkit');
 let fixture = await readFile(new URL('../src/examples/performance-libraries.html', import.meta.url), 'utf8');
+// This fixture tests Three.js materials; the physics module has its own real-engine checks.
+fixture = fixture.replace(/<script type="module" id="cannon-module">[\s\S]*?<\/script>/, '');
 fixture = fixture.replace(/<script src="https:[^"]+babylonjs[^"]*"><\/script>/g, '<script></script>');
 const source = await readFile(new URL('../node_modules/three/build/three.min.js', import.meta.url), 'utf8');
 const license = await readFile(new URL('../node_modules/three/LICENSE', import.meta.url), 'utf8');

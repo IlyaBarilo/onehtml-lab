@@ -29,6 +29,13 @@
     #three-quality[hidden] { display: none; }
     #three-quality button { min-height: 44px; padding: 5px 8px; font-size: 14px; }
     #three-quality button[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; }
+    #cannon-physics { display: flex; flex: none; gap: 4px; margin-top: 8px; }
+    #cannon-physics[hidden] { display: none; }
+    #cannon-physics button { min-height: 44px; padding: 5px 8px; font-size: 14px; }
+    #cannon-physics button[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; }
+    .cannon-description { flex-wrap: wrap; }
+    .cannon-description .library-description { flex-basis: 100%; }
+    .cannon-description #info-toggle { margin-left: auto; }
     .app.three-expanded .heading, .app.three-expanded .metrics, .app.three-expanded .modes, .app.three-expanded .details { display: none; }
     .app.three-expanded header { padding: 4px 10px; }
     #three-hints, #three-expand { width: 44px; padding: 0; flex: none; display: grid; place-items: center; }
@@ -78,7 +85,7 @@
     .metric strong { display: block; font-size: clamp(25px, 4vw, 34px); line-height: 1.1; font-variant-numeric: tabular-nums; }
     .metric span { display: block; margin-top: 4px; font-size: 13px; color: #a9bdd7; }
     #fps { color: #7cdbb0; }
-    .modes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+    .modes { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
     .mode { padding: 7px 10px; text-align: left; }
     .mode b { display: block; font-size: 15px; }
     .mode small { display: block; margin-top: 3px; color: #b4c6de; font-size: 12px; }
@@ -177,7 +184,8 @@
       .details { display: flex; overflow-x: auto; gap: 12px; margin-top: 4px; font-size: 12px; scrollbar-width: thin; }
       .details::-webkit-scrollbar { height: 4px; }
       #stage { min-height: 64px; }
-      .three-description .library-description { display: none; }
+      .three-description .library-description, .cannon-description .library-description { display: none; }
+      #cannon-physics { margin-top: 4px; }
     }
     @media (max-height: 360px) {
       body { overflow-y: auto; }
@@ -197,12 +205,13 @@
       <nav class="modes" aria-label="Выбор теста">
         <button class="mode" data-mode="canvas" data-state="ready" aria-pressed="true"><b>Canvas 2D</b><small>Без библиотек</small></button>
         <button class="mode" data-mode="three160" aria-pressed="false" disabled><b>Three.js r160</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
+        <button class="mode" data-mode="cannon" aria-pressed="false" disabled title="3D-физика для сцены Three.js"><b>cannon-es 0.20</b><small>Не загружена</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="babylon" aria-pressed="false" disabled><b>Babylon.js 9.30</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="matter" aria-pressed="false" disabled><b>Matter.js 0.20</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="phaser" aria-pressed="false" disabled><b>Phaser 3.90</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="phaser4" aria-pressed="false" disabled><b>Phaser 4.2.1</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
       </nav>
-      <div class="description-row"><p id="library-description" class="library-description"></p><div id="phaser-renderer" role="group" aria-label="Отрисовка Phaser" hidden><button data-renderer="canvas" aria-pressed="false">Canvas</button><button data-renderer="webgl" aria-pressed="true">WebGL</button></div><div id="three-quality" role="group" aria-label="Оформление Three.js" hidden><button data-quality="simple" aria-pressed="false">Простое</button><button data-quality="detailed" aria-pressed="true">Подробное</button></div><button id="info-toggle" title="Какую библиотеку и отрисовку выбрать" aria-label="Подробно о выбранной библиотеке" aria-expanded="false" aria-controls="library-info">?</button></div>
+      <div class="description-row"><p id="library-description" class="library-description"></p><div id="phaser-renderer" role="group" aria-label="Отрисовка Phaser" hidden><button data-renderer="canvas" aria-pressed="false">Canvas</button><button data-renderer="webgl" aria-pressed="true">WebGL</button></div><div id="three-quality" role="group" aria-label="Оформление Three.js" hidden><button data-quality="simple" aria-pressed="false">Простое</button><button data-quality="detailed" aria-pressed="true">Подробное</button></div><div id="cannon-physics" role="group" aria-label="Физика башни" hidden><button data-physics="simple" aria-pressed="false">Без физики</button><button data-physics="bodies" aria-pressed="true">cannon-es</button></div><button id="info-toggle" title="Какую библиотеку и отрисовку выбрать" aria-label="Подробно о выбранной библиотеке" aria-expanded="false" aria-controls="library-info">?</button></div>
     </header>
     <section id="stage" aria-label="Поле теста: нажимайте или касайтесь несколькими пальцами">
       <div id="scene"></div>
@@ -238,6 +247,7 @@
       const labels = {
         canvas: 'Движущиеся частицы · Canvas 2D',
         three160: 'Вращающиеся кубы · Three.js r160',
+        cannon: 'Физические блоки · Three.js + cannon-es',
         babylon: 'Вращающиеся кубы · Babylon.js 9.30.0',
         matter: 'Физика падающих шаров · Matter.js',
         phaser: 'Движущиеся частицы · Phaser 3',
@@ -246,6 +256,7 @@
       const descriptions = {
         canvas: 'Canvas 2D — рисование 2D без игровой библиотеки.',
         three160: 'Three.js — объёмные модели, камера, свет и тени.',
+        cannon: 'Three.js рисует, cannon-es рассчитывает движение и удары.',
         babylon: 'Babylon.js — 3D-движок: камеры, материалы и сцены.',
         matter: 'Matter.js — физика: масса, столкновения и связи.',
         phaser: 'Phaser 3 — движок для 2D-аркад и платформеров.',
@@ -262,6 +273,12 @@
           'Прицел отмечает металл, стекло, текстуру и тень. На паузе переключите Three.js / Babylon.js: ракурс и положение деталей сохраняются. Оба движка умеют PBR-материалы и тени; сравнивайте блики, прозрачность и мягкость тени, а также размер кода и FPS без паузы.',
           'Three.js — компактная основа собственной сцены. В подробном оформлении смотрите на металлические блики, покрытие корпуса и стекло. Для контактного затемнения (SSAO) нужны дополнительные модули; выбранное ядро Babylon.js включает этот эффект. Близкая картинка сама по себе не делает движок лучше.',
           'Проведите по сцене, чтобы повернуть камеру вокруг марсохода. В «Сравнении» шар и башня показаны в объёме.'
+        ],
+        cannon: [
+          'cannon-es добавляет физику в 3D-сцену. Three.js рисует предметы; cannon-es рассчитывает падение, вращение, трение, отскок и равновесие.',
+          'Подключайте для башен, ударов, катящихся предметов и физических головоломок. Для простого пересечения объектов и заранее заданного движения он необязателен. Matter.js решает похожие задачи в 2D.',
+          'Коснитесь башни или нажмите пробел. «Без физики» — упрощённое движение из обычного теста Three.js. Включите cannon-es: та же башня вращается, скользит и рассыпается в глубину.',
+          'В «Нагрузке» число задаёт количество блоков с физическими телами. Шар добавляет ещё одно тело. Больше тел и контактов — больше работа процессора; FPS зависит от устройства.'
         ],
         babylon: [
           'Babylon.js — 3D-движок с готовыми игровыми камерами, столкновениями и управлением сценой. Подходит для 3D-игр и интерактивных миров; ядро крупнее Three.js.',
@@ -285,6 +302,7 @@
       const showcaseLabels = {
         canvas: 'Набережная · касание переключает день и ночь',
         three160: 'Марсоход · проведите по сцене, чтобы повернуть камеру',
+        cannon: 'Шар и башня · коснитесь цели для выстрела',
         babylon: 'Марсоход · проведите по сцене, чтобы повернуть камеру',
         matter: 'Механизмы · перетаскивайте тела или толкните маятники',
         phaser: 'Лесная станция · Phaser 3',
@@ -301,6 +319,7 @@
       let phaserHintsEnabled = false;
       let phaserRenderer = 'webgl', phaserWebglUnavailable = false;
       let threeDetailed = true, threeHintsEnabled = false, threeExpanded = false;
+      let cannonEnabled = true;
       let roverViewState = null;
       let paused = false, tapCount = 0, peakPointers = 0, pendingInput = null;
       let frameStart = 0, frames = 0, lastFrame = null;
@@ -724,6 +743,66 @@
           tick(delta) { stepComparison(model, delta); blocks.forEach((mesh, index) => position(mesh, model.blocks[index])); position(ball, model.ball); renderer.render(scene, camera); comparisonStats(model); },
           tap(x, y) { comparisonShot(model, x, y); },
           dispose() { [blockGeometry, ballGeometry, floorGeometry].forEach(item => item.dispose()); [...materials, ballMaterial, floorMaterial].forEach(item => item.dispose()); renderer.dispose(); renderer.forceContextLoss(); }
+        };
+      }
+
+      function cannonScene(Three, Cannon) {
+        const load = scenario === 'load', model = comparisonLayout(), unit = 12 / width;
+        const count = load ? objectCount : 12, side = Math.ceil(Math.cbrt(count)), size = load ? .48 : model.size * unit;
+        const floorY = load ? 0 : (height / 2 - model.floor) * unit, span = Math.max(7, side * .66);
+        const renderer = new Three.WebGLRenderer({ antialias: !load });
+        renderer.setPixelRatio(Math.min(ratio, 1.5)); renderer.setSize(width, height); configureThreeRenderer(Three, renderer);
+        renderer.shadowMap.enabled = !load; renderer.shadowMap.type = Three.PCFSoftShadowMap; host.append(renderer.domElement);
+        const scene = new Three.Scene(); scene.background = threeColor(Three, '#0b1929');
+        const camera = new Three.PerspectiveCamera(38, width / height, .1, 500);
+        if (load) { const distance = (span + 4) * 1.6 * Math.max(1, 1 / camera.aspect); camera.position.set(distance * .3, distance * .45, distance); camera.lookAt(0, span * .3, 0); }
+        else { const distance = (height * unit + 1.8) / (2 * Math.tan(19 * Math.PI / 180)); camera.position.set(0, distance * .14, distance); camera.lookAt(0, 0, 0); }
+        scene.add(new Three.HemisphereLight(threeColor(Three, '#e8f2ff'), threeColor(Three, '#213547'), 1.5));
+        const light = new Three.DirectionalLight(threeColor(Three, '#fff1d7'), 3); light.position.set(-5, height * unit + 4, 8); light.castShadow = !load;
+        light.shadow.mapSize.set(1024, 1024); Object.assign(light.shadow.camera, { left: -9, right: 9, top: height * unit + 6, bottom: -height * unit - 6, far: 60 }); light.shadow.normalBias = .02; scene.add(light);
+        const geometry = new Three.BoxGeometry(size, size, load ? size : size * 1.5), radius = load ? .3 : model.radius * unit;
+        const ballGeometry = new Three.SphereGeometry(radius, 20, 14), floorGeometry = new Three.BoxGeometry(load ? span * 3 : 12.5, .25, load ? span * 3 : 3);
+        const material = new Three.MeshStandardMaterial({ roughness: .45 }), ballMaterial = new Three.MeshStandardMaterial(threeMaterialColors(Three, { color: '#efab6c', roughness: .25 }));
+        const floorMaterial = new Three.MeshStandardMaterial(threeMaterialColors(Three, { color: '#304966', roughness: .85 }));
+        const mesh = new Three.InstancedMesh(geometry, material, count); mesh.name = 'physics-blocks'; mesh.instanceMatrix.setUsage(Three.DynamicDrawUsage); mesh.castShadow = mesh.receiveShadow = !load; mesh.frustumCulled = false; scene.add(mesh);
+        const floorMesh = new Three.Mesh(floorGeometry, floorMaterial); floorMesh.position.y = floorY - .125; floorMesh.receiveShadow = true; scene.add(floorMesh);
+        const world = new Cannon.World({ gravity: new Cannon.Vec3(0, -9.81, 0), allowSleep: true }); world.broadphase = new Cannon.SAPBroadphase(world); world.broadphase.axisIndex = 0; world.solver.iterations = 10;
+        world.defaultContactMaterial.friction = .4; world.defaultContactMaterial.restitution = .15;
+        const ground = new Cannon.Body({ mass: 0, shape: new Cannon.Plane() }); ground.position.y = floorY; ground.quaternion.setFromEuler(-Math.PI / 2, 0, 0); world.addBody(ground);
+        const shape = new Cannon.Box(new Cannon.Vec3(size / 2, size / 2, (load ? size : size * 1.5) / 2)), bodies = [];
+        const dummy = new Three.Object3D();
+        for (let i = 0; i < count; i++) {
+          const body = new Cannon.Body({ mass: 1, shape, allowSleep: true, sleepSpeedLimit: .12, sleepTimeLimit: 1 });
+          if (load) body.position.set((i % side - (side - 1) / 2) * .66, .3 + Math.floor(i / (side * side)) * .66, (Math.floor(i / side) % side - (side - 1) / 2) * .66);
+          else body.position.set((model.blocks[i].x - width / 2) * unit, (height / 2 - model.blocks[i].y) * unit, 0);
+          body.previousPosition.copy(body.position); body.interpolatedPosition.copy(body.position); world.addBody(body); bodies.push({ body, start: body.position.clone() }); mesh.setColorAt(i, threeColor(Three, colors[i % colors.length]));
+        }
+        const ball = new Cannon.Body({ mass: 3, shape: new Cannon.Sphere(radius), allowSleep: true });
+        ball.position.set(load ? -span : (model.ball.x - width / 2) * unit, floorY + radius, 0); ball.previousPosition.copy(ball.position); ball.interpolatedPosition.copy(ball.position); world.addBody(ball);
+        const ballMesh = new Three.Mesh(ballGeometry, ballMaterial); ballMesh.castShadow = !load; scene.add(ballMesh);
+        let shots = 0, disposed = false;
+        const stats = () => {
+          if (load) $('scene-stats').textContent = `Тел: ${integer(count + 1)} · Спят: ${integer(bodies.filter(item => item.body.sleepState === Cannon.Body.SLEEPING).length)}`;
+          else { const moved = bodies.filter(item => item.body.position.distanceTo(item.start) > size * .6 || Math.abs(item.body.quaternion.w) < .99).length; $('scene-stats').textContent = `Сдвинуто: ${moved}/12 · Выстрелов: ${integer(shots)}`; }
+        };
+        const render = () => {
+          for (let i = 0; i < count; i++) { dummy.position.copy(bodies[i].body.interpolatedPosition); dummy.quaternion.copy(bodies[i].body.interpolatedQuaternion); dummy.updateMatrix(); mesh.setMatrixAt(i, dummy.matrix); }
+          mesh.instanceMatrix.needsUpdate = true; ballMesh.position.copy(ball.interpolatedPosition); ballMesh.quaternion.copy(ball.interpolatedQuaternion); renderer.render(scene, camera); stats();
+        };
+        const shoot = (x = width * .7, y = height * .65) => {
+          if (paused || infoOpen || document.hidden || disposed) return;
+          let origin, target;
+          if (load) { origin = camera.position.clone(); target = new Three.Vector3(0, span * .3, 0); }
+          else { origin = new Three.Vector3((model.ball.x - width / 2) * unit, floorY + radius, 0); target = new Three.Vector3((x - width / 2) * unit, Math.max(floorY + radius, (height / 2 - y) * unit), 0); }
+          const direction = target.clone().sub(origin).normalize(), speed = load ? Math.max(15, origin.distanceTo(target)) : 13.2, flight = origin.distanceTo(target) / speed;
+          ball.position.copy(origin); ball.previousPosition.copy(ball.position); ball.interpolatedPosition.copy(ball.position); ball.velocity.set(direction.x * speed, direction.y * speed + 9.81 * flight / 2, direction.z * speed); ball.angularVelocity.setZero(); ball.force.setZero(); ball.torque.setZero(); ball.wakeUp(); shots++;
+          for (const item of bodies) item.body.wakeUp(); stats();
+        };
+        host.dataset.physics = 'cannon'; host.dataset.physicsBlocks = String(count); render();
+        return {
+          tick(delta) { world.step(1 / 60, Math.min(delta / 1000, .05), 3); render(); }, tap: shoot,
+          pause(value) { world.accumulator = 0; if (value) render(); },
+          dispose() { disposed = true; delete host.dataset.physics; delete host.dataset.physicsBlocks; for (const body of [...world.bodies]) world.removeBody(body); mesh.dispose(); [geometry, ballGeometry, floorGeometry].forEach(item => item.dispose()); [material, ballMaterial, floorMaterial].forEach(item => item.dispose()); light.shadow.map?.dispose(); renderer.dispose(); renderer.forceContextLoss(); }
         };
       }
 
@@ -2229,18 +2308,27 @@
         }
         generation += 1;
         activeScene?.dispose();
-        activeScene = null;
+        activeScene = null; delete host.dataset.physics; delete host.dataset.physicsBlocks; host.removeAttribute('tabindex');
         host.replaceChildren();
         mode = nextMode;
         $('phaser-renderer').hidden = !mode.startsWith('phaser');
         $('three-quality').hidden = !is3DMode(mode) || scenario !== 'showcase';
+        $('cannon-physics').hidden = mode !== 'cannon' || scenario === 'load';
+        document.querySelector('.description-row').classList.toggle('cannon-description', mode === 'cannon');
+        $('cannon-physics').querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String((button.dataset.physics === 'bodies') === cannonEnabled)));
         $('three-quality').setAttribute('aria-label', mode === 'babylon' ? 'Оформление Babylon.js' : 'Оформление Three.js');
         document.querySelector('.description-row').classList.toggle('phaser-description', mode.startsWith('phaser'));
         document.querySelector('.description-row').classList.toggle('three-description', is3DMode(mode) && scenario === 'showcase');
         syncRendererButtons();
         $('message').textContent = '';
         try {
-          if (scenario === 'compare') {
+          if (mode === 'cannon') {
+            activeScene = cannonEnabled || scenario === 'load' ? cannonScene(libraries.three160, libraries.cannon) : threeComparison(libraries.three160);
+            host.dataset.physics = cannonEnabled || scenario === 'load' ? 'cannon' : 'simple';
+            if (!cannonEnabled && scenario !== 'load') activeScene.tick(0);
+            if (scenario === 'load' && objectCount > 500) $('message').textContent = `Большая физическая нагрузка: ${integer(objectCount)} блоков. На телефоне начните со 120.`;
+          }
+          else if (scenario === 'compare') {
             if (mode === 'canvas') activeScene = canvasComparison();
             else if (mode.startsWith('three')) activeScene = threeComparison(libraries[mode]);
             else if (mode === 'babylon') activeScene = babylonComparison(libraries.babylon);
@@ -2266,6 +2354,8 @@
           mode = 'canvas';
           $('phaser-renderer').hidden = true;
           $('three-quality').hidden = true;
+          $('cannon-physics').hidden = true;
+          document.querySelector('.description-row').classList.remove('cannon-description'); delete host.dataset.physics;
           threeExpanded = false; document.querySelector('.app').classList.remove('three-expanded');
           document.querySelector('.description-row').classList.remove('phaser-description');
           document.querySelector('.description-row').classList.remove('three-description');
@@ -2275,10 +2365,12 @@
           $('message').textContent = `${failedMode}: ${error.message}. Продолжаем в Canvas 2D.`;
         }
         activeScene.pause?.(paused || infoOpen || document.hidden);
+        if (mode === 'cannon') { host.tabIndex = 0; if (!paused && !infoOpen) host.focus({ preventScroll: true }); }
         $('scene-name').textContent = scenario === 'compare' ? 'Шар и башня · коснитесь цели для выстрела' : scenario === 'showcase' ? showcaseLabels[mode] : labels[mode];
         $('library-description').textContent = mode.startsWith('phaser') ? phaserRenderingDescription() : descriptions[mode];
         if (is3DMode(mode) && scenario === 'showcase') $('library-description').textContent = threeDetailed ? 'Текстуры, рельеф, отражения и тени' : 'Однотонные материалы · без теней';
-        $('scene-stats').hidden = scenario !== 'compare';
+        if (mode === 'cannon') $('library-description').textContent = scenario === 'load' ? 'Физические тела · движение рассчитывает cannon-es.' : cannonEnabled ? descriptions.cannon : 'Та же башня · упрощённое движение без физических тел.';
+        $('scene-stats').hidden = scenario !== 'compare' && mode !== 'cannon';
         if (scenario === 'compare') $('scene-stats').textContent = 'Сдвинуто: 0/12 · Выстрелов: 0';
         updateInfo();
         document.querySelector('.load').hidden = scenario !== 'load';
@@ -2317,7 +2409,7 @@
           const observer = new PerformanceObserver(list => {
             for (const entry of list.getEntries()) {
               const button = externalLibraryButtons.get(entry.name);
-              if (button) showLibrarySize(button, entry.decodedBodySize);
+              if (button) showLibrarySize(button, entry.decodedBodySize || Number(button.dataset.knownBytes));
             }
           });
           observer.observe({ type: 'resource', buffered: true });
@@ -2340,6 +2432,18 @@
           const entry = performance.getEntriesByName(libraryScript.src, 'resource').slice(-1)[0];
           showLibrarySize(button, entry?.decodedBodySize);
         } else showLibrarySize(button, null);
+      };
+
+      window.registerLabPhysics = (library, sourceUrl) => {
+        const button = document.querySelector('[data-mode="cannon"]'); libraries.cannon = library;
+        button.dataset.knownBytes = '346256';
+        button.disabled = !library?.World || !libraries.three160; button.dataset.state = button.disabled ? 'failed' : 'ready';
+        let url = sourceUrl;
+        try { const map = document.querySelector('script[type="importmap"]'); url = map ? JSON.parse(map.textContent).imports[sourceUrl] || sourceUrl : sourceUrl; } catch {}
+        const embedded = url.startsWith('data:text/javascript;base64,'), remote = /^(?:https?:)?\/\//i.test(url);
+        button.querySelector('small').textContent = button.disabled ? 'Не загружена' : embedded ? 'Встроена в HTML' : remote ? 'Загружена с CDN' : 'Загружена из файла';
+        if (embedded) { try { showLibrarySize(button, atob(url.slice(28)).length); } catch { showLibrarySize(button, null); } }
+        else { const absolute = new URL(url, location.href).href; externalLibraryButtons.set(absolute, button); const entry = performance.getEntriesByName(absolute, 'resource').at(-1); showLibrarySize(button, entry?.decodedBodySize || 346256); }
       };
 
       stage.addEventListener('pointerdown', event => {
@@ -2377,7 +2481,14 @@
       $('info-toggle').addEventListener('click', () => showInfo(!infoOpen));
       $('info-close').addEventListener('click', () => showInfo(false));
       document.addEventListener('keydown', event => { if (event.key === 'Escape' && infoOpen) showInfo(false); });
+      document.addEventListener('keydown', event => {
+        if (mode !== 'cannon' || paused || infoOpen || document.hidden || event.code !== 'Space' || event.repeat || /^(INPUT|BUTTON|SELECT)$/.test(event.target.tagName) || event.ctrlKey || event.metaKey || event.altKey) return;
+        event.preventDefault(); activeScene?.tap(width * .7, height * .65);
+      });
       $('scenario').addEventListener('change', event => { scenario = event.target.value; startScene(); });
+      $('cannon-physics').querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
+        const enabled = button.dataset.physics === 'bodies'; if (enabled === cannonEnabled) return; cannonEnabled = enabled; startScene();
+      }));
       $('phaser-renderer').querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
         if (button.dataset.renderer === phaserRenderer) return;
         phaserRenderer = button.dataset.renderer; startScene();
@@ -2440,5 +2551,6 @@
   <script>registerLabLibrary('phaser', window.Phaser?.VERSION === '3.90.0' ? window.Phaser : null);</script>
   <script src="https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.min.js"></script>
   <script>registerLabLibrary('phaser4', window.Phaser?.VERSION === '4.2.1' ? window.Phaser : null);</script>
+  <script type="module" id="cannon-module">import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js'; registerLabPhysics(CANNON, 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js');</script>
 </body>
 </html>

@@ -10,6 +10,8 @@ const selected = process.argv.find(arg => arg.startsWith('--engines='))?.slice(1
 const engines = [['chromium', chromium], ['webkit', webkit]].filter(([name]) => !selected || name === selected);
 assert(engines.length, 'Choose chromium or webkit');
 let fixture = await readFile(new URL('../src/examples/performance-libraries.html', import.meta.url), 'utf8');
+// This fixture tests Phaser rendering; physics is exercised separately with the real module.
+fixture = fixture.replace(/<script type="module" id="cannon-module">[\s\S]*?<\/script>/, '');
 fixture = fixture.replace(/<script src="https:[^"]+babylonjs[^"]*"><\/script>/g, '<script></script>');
 for (const [url, folder, codePath, licensePath] of [
   ['https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js', 'three', 'build/three.min.js', 'LICENSE'],
@@ -290,7 +292,7 @@ try {
         await context.route('https://**/*', route => { requests.push(route.request().url()); return route.abort(); });
         try {
           await page.goto(url);
-          assert.equal(await page.locator('.mode').count(), 6);
+          assert.equal(await page.locator('.mode').count(), 7);
           assert.equal(await page.locator('#info-toggle').innerText(), '?');
           const base = await scene(page, 'phaser');
           assert.equal(base.coins, 25); assert.equal(base.enemies, 5); assert.equal(base.health, 3); assert.equal(base.checkpoint, 110);

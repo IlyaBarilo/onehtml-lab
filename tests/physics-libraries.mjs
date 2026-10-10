@@ -121,3 +121,4 @@ try {
   }
 }finally{await new Promise(resolve=>server.close(resolve));}
 console.log('Physics screenshots: '+scratch);
+await import('./physics-benchmark.mjs');

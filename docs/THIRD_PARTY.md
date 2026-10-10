@@ -67,4 +67,4 @@ cannon-es is an optional 3D physics library under [MIT](licenses/cannon-es-0.20.
 
 cannon-es — необязательная библиотека 3D-физики под MIT. Поддерживается ES-модуль точной версии 0.20.0; он скачивается отдельно и не включён в редактор. Кэш, встроенные и отдельные копии сохраняют полный текст лицензии с авторскими правами. npm-пакет предоставляет настоящий дистрибутив для браузерных проверок.
 
-Project / Проект: [cannon-es](https://github.com/pmndrs/cannon-es). The tower example uses the project's MIT license. / Пример башни распространяется под MIT проекта.
+Project / Проект: [cannon-es](https://github.com/pmndrs/cannon-es). The tower example and library benchmark use the project's MIT license. / Пример башни и тест работы библиотек распространяются под MIT проекта.
