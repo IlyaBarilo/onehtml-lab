@@ -44,28 +44,32 @@ function validLibraryEntry(entry) {
 function libraryAssetIdentity(source, license, notice = '') { return source + '\0' + license + (notice ? '\0' + notice : ''); }
 function libraryLicenseText(entry) { return entry.license + (entry.notice ? '\nNOTICE:\n' + entry.notice : ''); }
 
+// Uncompressed classic builds measured from the pinned npm packages; other versions are unknown.
+const knownLibraryBytes = { 'three@0.160.0': 669884, 'matter-js@0.20.0': 83476,
+  'phaser@3.90.0': 1196122, 'phaser@4.2.1': 1375976, 'babylonjs@9.30.0': 8619713 };
+
 function libraryReference(url) {
   if (/^https:\/\/(?:cdn\.jsdelivr\.net\/npm\/|unpkg\.com\/)babylonjs@9\.30\.0\/babylon\.js$/.test(url)) {
-    return { key: 'babylonjs@9.30.0', title: 'Babylon.js 9.30.0', url, licenseType: 'Apache-2.0',
+    return { key: 'babylonjs@9.30.0', title: 'Babylon.js 9.30.0', url, downloadBytes: knownLibraryBytes['babylonjs@9.30.0'], licenseType: 'Apache-2.0',
       licenseUrl: 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/license.md', noticeUrl: 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/NOTICE.md' };
   }
   let match = /^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/three\.js\/r(\d{3})\/three\.min\.js$/.exec(url)
     || /^https:\/\/cdn\.jsdelivr\.net\/npm\/three@0\.(\d{3})\.0\/build\/three\.min\.js$/.exec(url);
   if (match && Number(match[1]) >= 128 && Number(match[1]) <= 160) {
     const revision = Number(match[1]);
-    return { key: `three@0.${revision}.0`, title: `Three.js r${revision}`, url,
+    return { key: `three@0.${revision}.0`, title: `Three.js r${revision}`, url, downloadBytes: knownLibraryBytes[`three@0.${revision}.0`],
       licenseUrl: `https://cdn.jsdelivr.net/npm/three@0.${revision}.0/LICENSE` };
   }
   match = /^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/matter-js\/(0\.\d+\.\d+)\/matter\.min\.js$/.exec(url)
     || /^https:\/\/cdn\.jsdelivr\.net\/npm\/matter-js@(0\.\d+\.\d+)\/build\/matter\.min\.js$/.exec(url);
   if (match && Number(match[1].split('.')[1]) >= 14 && Number(match[1].split('.')[1]) <= 20) {
-    return { key: `matter-js@${match[1]}`, title: `Matter.js ${match[1]}`, url,
+    return { key: `matter-js@${match[1]}`, title: `Matter.js ${match[1]}`, url, downloadBytes: knownLibraryBytes[`matter-js@${match[1]}`],
       licenseUrl: `https://cdn.jsdelivr.net/npm/matter-js@${match[1]}/LICENSE` };
   }
   match = /^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/phaser\/(3\.\d+\.\d+|4\.2\.1)\/phaser\.min\.js$/.exec(url)
     || /^https:\/\/cdn\.jsdelivr\.net\/npm\/phaser@(3\.\d+\.\d+|4\.2\.1)\/dist\/phaser\.min\.js$/.exec(url);
   if (match) {
-    return { key: `phaser@${match[1]}`, title: `Phaser ${match[1]}`, url,
+    return { key: `phaser@${match[1]}`, title: `Phaser ${match[1]}`, url, downloadBytes: knownLibraryBytes[`phaser@${match[1]}`],
       licenseUrl: `https://cdn.jsdelivr.net/npm/phaser@${match[1]}/LICENSE.md` };
   }
   return null;

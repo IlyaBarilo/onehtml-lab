@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { webcrypto } from 'node:crypto';
 import { runInNewContext } from 'node:vm';
 
@@ -10,6 +10,15 @@ const context = { TextEncoder, TextDecoder, Blob, crypto: webcrypto, window: {},
 runInNewContext(source + '\nthis.api = { libraryCache, libraryReference, localLibraryReference, validLibraryEntry, libraryAssetIdentity, downloadLibrary, prepareGameHtml, prepareGameFiles, planLibraryExtraction, retainExtractionAssets, importLocalLibrary, localLibraryNotices };', context);
 const api = context.api, url = 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/babylon.js', ref = api.libraryReference(url);
 assert.equal(ref.key, 'babylonjs@9.30.0');
+for (const [url, file] of [
+  ['https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js', 'three/build/three.min.js'],
+  ['https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js', 'matter-js/build/matter.min.js'],
+  ['https://cdnjs.cloudflare.com/ajax/libs/phaser/3.90.0/phaser.min.js', 'phaser3/dist/phaser.min.js'],
+  ['https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.min.js', 'phaser4/dist/phaser.min.js'],
+  [ref.url, 'babylonjs/babylon.js']
+]) assert.equal(api.libraryReference(url).downloadBytes, (await stat(new URL('../node_modules/' + file, import.meta.url))).size, 'Known sizes must match the pinned uncompressed builds');
+assert.equal(api.libraryReference('https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js').downloadBytes, undefined, 'Do not invent a size for another version');
+assert.equal(api.localLibraryReference('./unknown.js').downloadBytes, undefined, 'Do not invent the size of a local file');
 assert.equal(api.libraryReference(url.replace('cdn.jsdelivr.net/npm/', 'unpkg.com/')).key, ref.key);
 for (const version of ['latest', '9.29.0', '10.0.0']) assert.equal(api.libraryReference(url.replace('9.30.0', version)), null);
 for (const path of ['./babylon-9.30.0.js', '../lib/babylonjs@9.30.0/babylon.js', './vendor/babylon/9.30.0/babylon.min.js']) assert.equal(api.localLibraryReference(path).key, ref.key);

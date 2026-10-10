@@ -259,12 +259,14 @@
         three160: [
           'Three.js — объёмные модели, камеры, материалы, свет и тени. Подходит для 3D-игр и просмотра моделей. Правила игры и физику нужно добавить отдельно.',
           '«Простое» — матовые однотонные поверхности. «Подробное» — текстуры, мелкий рельеф, отражения и тени. Посмотрите на полосы металла, рисунок солнечных панелей и зернистый грунт. Модель и свет одинаковые; FPS зависит от устройства.',
-          'Текстуры создаются внутри примера без загрузки изображений. Прицел останавливает анимацию и отмечает металл, стекло, текстуру панели и место тени. Переключайте оформление; для сравнения FPS выключите паузу и подсказки. В маленьком поле разверните сцену кнопкой рядом.',
+          'Прицел отмечает металл, стекло, текстуру и тень. На паузе переключите Three.js / Babylon.js: ракурс и положение деталей сохраняются. Оба движка умеют PBR-материалы и тени; сравнивайте блики, прозрачность и мягкость тени, а также размер кода и FPS без паузы.',
+          'Three.js — компактная основа собственной сцены. В подробном оформлении смотрите на металлические блики, покрытие корпуса и стекло. Для контактного затемнения (SSAO) нужны дополнительные модули; выбранное ядро Babylon.js включает этот эффект. Близкая картинка сама по себе не делает движок лучше.',
           'Проведите по сцене, чтобы повернуть камеру вокруг марсохода. В «Сравнении» шар и башня показаны в объёме.'
         ],
         babylon: [
-          'Babylon.js — 3D-движок с готовыми камерами, материалами и управлением сценой. Подходит для 3D-игр и интерактивных миров. Three.js удобен для компактной сцены и собственной структуры приложения; Babylon.js — когда нужен более цельный движок.',
-          'Марсоход, камера, свет и рисунки поверхностей сопоставимы с Three.js. Переключайте «Простое» и «Подробное», поворачивайте камеру касанием или мышью. Близкая картинка нормальна: выбор движка зависит и от разработки, размер библиотеки и FPS — от поставки и устройства.',
+          'Babylon.js — 3D-движок с готовыми игровыми камерами, столкновениями и управлением сценой. Подходит для 3D-игр и интерактивных миров; ядро крупнее Three.js.',
+          'Тот же марсоход, палитра, рисунки поверхностей и расположение света, что в Three.js. «Простое» — однотонные материалы без теней; «Подробное» — PBR-материалы, рельеф, отражения и тени генераторов движка.',
+          'Прицел отмечает металл, стекло, текстуру и тень. В подробном оформлении Babylon.js добавляет SSAO из ядра: мягкое затемнение под колёсами и в стыках деталей. Оно доступно при поддержке WebGL 2; у Three.js для такого эффекта нужен дополнительный модуль. На паузе переключайте движки — ракурс и детали сохраняются. Для FPS выключите паузу и подсказки.',
           'В «Сравнении» тот же шар и башня, в «Нагрузке» — вращающиеся кубы. Полноценная физика, загрузчики моделей, WebGPU и GUI здесь не подключены.'
         ],
         matter: [
@@ -299,6 +301,7 @@
       let phaserHintsEnabled = false;
       let phaserRenderer = 'webgl', phaserWebglUnavailable = false;
       let threeDetailed = true, threeHintsEnabled = false, threeExpanded = false;
+      let roverViewState = null;
       let paused = false, tapCount = 0, peakPointers = 0, pendingInput = null;
       let frameStart = 0, frames = 0, lastFrame = null;
       let generation = 0;
@@ -997,6 +1000,51 @@
         return { size, canvases };
       }
 
+      function roverHintElements() {
+        const hintOverlay = document.createElement('div'); hintOverlay.className = 'three-hint-overlay';
+        const caption = document.createElement('div'); caption.className = 'three-hint-caption'; caption.setAttribute('role', 'status');
+        const marks = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); marks.setAttribute('aria-hidden', 'true');
+        const callouts = ['Металл', 'Стекло', 'Текстура', 'Тень'].map(label => {
+          const group = document.createElementNS(marks.namespaceURI, 'g');
+          const text = document.createElementNS(marks.namespaceURI, 'text'); text.textContent = label;
+          const circle = document.createElementNS(marks.namespaceURI, 'circle'); circle.setAttribute('r', '9');
+          const line = document.createElementNS(marks.namespaceURI, 'path');
+          for (const shape of [circle, line]) { shape.setAttribute('fill', 'none'); shape.setAttribute('stroke', '#9dccff'); shape.setAttribute('stroke-width', '1.6'); }
+          group.append(line, circle, text); marks.append(group); return { group, text, circle, line };
+        });
+        hintOverlay.append(marks, caption); host.append(hintOverlay);
+        return { hintOverlay, caption, marks, callouts };
+      }
+
+      // Match the tessellation and UV scale of the Three.js primitives in the other renderer.
+      function roverParametricMesh(B, scene, name, columns, rows, point, skipPole = () => false) {
+        const data = new B.VertexData(); data.positions = []; data.normals = []; data.uvs = []; data.indices = [];
+        for (let row = 0; row <= rows; row++) for (let column = 0; column <= columns; column++) {
+          const u = column / columns, v = row / rows, sample = point(u, v);
+          data.positions.push(...sample.position); data.normals.push(...sample.normal); data.uvs.push(u, 1 - v);
+        }
+        for (let row = 0; row < rows; row++) for (let column = 0; column < columns; column++) {
+          const a = row * (columns + 1) + column, b = a + columns + 1;
+          if (!skipPole(row, false)) data.indices.push(a, a + 1, b);
+          if (!skipPole(row, true)) data.indices.push(a + 1, b + 1, b);
+        }
+        const mesh = new B.Mesh(name, scene); data.applyToMesh(mesh); return mesh;
+      }
+
+      function roverSphere(B, scene, name, radius, columns, rows, arc = Math.PI) {
+        return roverParametricMesh(B, scene, name, columns, rows, (u, v) => {
+          const a = u * Math.PI * 2, b = v * arc, normal = [-Math.cos(a) * Math.sin(b), Math.cos(b), Math.sin(a) * Math.sin(b)];
+          return { position: normal.map(value => value * radius), normal };
+        }, (row, second) => !second && row === 0 || second && row === rows - 1 && arc === Math.PI);
+      }
+
+      function roverTorus(B, scene, radius, tube, rings = 36, sides = 12) {
+        return roverParametricMesh(B, scene, 'torus', rings, sides, (u, v) => {
+          const a = u * Math.PI * 2, b = v * Math.PI * 2, r = radius + tube * Math.cos(b);
+          return { position: [r * Math.cos(a), tube * Math.sin(b), r * Math.sin(a)], normal: [Math.cos(b) * Math.cos(a), Math.sin(b), Math.cos(b) * Math.sin(a)] };
+        });
+      }
+
       function threeShowcase(Three) {
         const renderer = new Three.WebGLRenderer({ antialias: true });
         renderer.setPixelRatio(Math.min(ratio, 1.5));
@@ -1184,7 +1232,8 @@
         const dustMaterial = new Three.PointsMaterial({ color: threeColor(Three, 0xdcb48c), size: .026, transparent: true, opacity: .42, depthWrite: false });
         materials.add(dustMaterial);
         const dust = new Three.Points(dustGeometry, dustMaterial); scene.add(dust);
-        let time = 0, angle = .65, elevation = .45, targetAngle = angle, targetElevation = elevation, controlledUntil = 0;
+        let { time, angle, elevation, targetAngle, targetElevation, controlledUntil } = roverViewState
+          || { time: 0, angle: .65, elevation: .45, targetAngle: .65, targetElevation: .45, controlledUntil: 0 };
         const orbit = (x, y) => {
           if (threeHintsEnabled) return;
           targetAngle = x / width * Math.PI * 2; targetElevation = .18 + (1 - y / height) * .7; controlledUntil = time + 8;
@@ -1195,18 +1244,7 @@
         const expand = document.createElement('button'); expand.id = 'three-expand';
         const still = document.createElement('canvas'); still.className = 'three-still'; still.hidden = true;
         const stillContext = still.getContext('2d'); host.append(still);
-        const hintOverlay = document.createElement('div'); hintOverlay.className = 'three-hint-overlay';
-        const caption = document.createElement('div'); caption.className = 'three-hint-caption'; caption.setAttribute('role', 'status');
-        const marks = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); marks.setAttribute('aria-hidden', 'true');
-        const callouts = ['Металл', 'Стекло', 'Текстура', 'Тень'].map(label => {
-          const group = document.createElementNS(marks.namespaceURI, 'g');
-          const text = document.createElementNS(marks.namespaceURI, 'text'); text.textContent = label;
-          const circle = document.createElementNS(marks.namespaceURI, 'circle'); circle.setAttribute('r', '9');
-          const line = document.createElementNS(marks.namespaceURI, 'path');
-          for (const shape of [circle, line]) { shape.setAttribute('fill', 'none'); shape.setAttribute('stroke', '#9dccff'); shape.setAttribute('stroke-width', '1.6'); }
-          group.append(line, circle, text); marks.append(group); return { group, text, circle, line };
-        });
-        hintOverlay.append(marks, caption); host.append(hintOverlay);
+        const { hintOverlay, caption, marks, callouts } = roverHintElements();
         const placeCamera = () => {
           const distance = 8 / Math.min(1, width / height);
           camera.position.set(Math.sin(angle) * distance * Math.cos(elevation), 1.3 + Math.sin(elevation) * distance, Math.cos(angle) * distance * Math.cos(elevation));
@@ -1216,7 +1254,7 @@
           if (!threeHintsEnabled) return;
           const compact = height < 220;
           caption.textContent = compact ? 'Разверните сцену для подсказок' : threeDetailed
-            ? 'Подробное · текстуры, рельеф, отражения и тени' : 'Простое · без текстур, отражений и теней';
+            ? 'Подробное · Three.js · текстуры, рельеф, отражения и тени' : 'Простое · Three.js · без текстур, отражений и теней';
           marks.style.visibility = compact ? 'hidden' : 'visible'; marks.setAttribute('viewBox', `0 0 ${width} ${height}`);
           if (compact) return;
           sun.shadow.updateMatrices(sun);
@@ -1306,9 +1344,17 @@
         expand.addEventListener('click', () => { threeExpanded = !threeExpanded; syncExpanded(); });
         document.addEventListener('keydown', escape);
         document.querySelector('.controls').append(hints, expand);
-        placeCamera(); setQuality(); syncHints(); syncExpanded();
+        const pose = () => {
+          placeCamera(); wheels.forEach(wheel => { wheel.rotation.x = -time * .45; });
+          wings.forEach((panel, index) => { panel.rotation.z = (index ? -1 : 1) * (.15 + Math.sin(time * .6) * .025); });
+          arm.rotation.x = -.6 + Math.sin(time * .7) * .3; elbow.rotation.x = -1.1 + Math.sin(time * .7 + 1) * .4;
+          scanner.rotation.y = Math.sin(time * .5) * .8; antenna.rotation.y = time * .12;
+          rover.position.y = Math.sin(time * 1.3) * .025; dust.rotation.y = time * .018;
+        };
+        pose(); setQuality(); syncHints(); syncExpanded();
         return {
           get ownLoop() { return threeHintsEnabled; },
+          getViewState() { return { time, angle, elevation, targetAngle, targetElevation, controlledUntil }; },
           setQuality,
           pause(value) { if (value) render(); },
           resize() {
@@ -1319,12 +1365,7 @@
             const seconds = delta / 1000; time += seconds;
             if (time > controlledUntil) targetAngle += seconds * .11;
             angle += (targetAngle - angle) * Math.min(1, seconds * 5); elevation += (targetElevation - elevation) * Math.min(1, seconds * 5);
-            placeCamera();
-            wheels.forEach(wheel => { wheel.rotation.x -= seconds * .45; });
-            wings.forEach((panel, index) => { panel.rotation.z = (index ? -1 : 1) * (.15 + Math.sin(time * .6) * .025); });
-            arm.rotation.x = -.6 + Math.sin(time * .7) * .3; elbow.rotation.x = -1.1 + Math.sin(time * .7 + 1) * .4;
-            scanner.rotation.y = Math.sin(time * .5) * .8; antenna.rotation.y = time * .12;
-            rover.position.y = Math.sin(time * 1.3) * .025; dust.rotation.y = time * .018;
+            pose();
             render();
           },
           tap: orbit, drag: orbit,
@@ -1388,46 +1429,53 @@
 
       function babylonShowcase(B) {
         const view = babylonContext(B), { scene, camera } = view;
-        scene.fogMode = B.Scene.FOGMODE_EXP2; scene.fogColor = B.Color3.FromHexString('#0d192b'); scene.fogDensity = .038;
+        const linearColor = color => B.Color3.FromHexString(color).toLinearSpace();
+        // Babylon PBR linearises fog visibility; compensate the exponent for comparable haze.
+        scene.fogMode = B.Scene.FOGMODE_EXP2; scene.fogColor = linearColor('#0d192b'); scene.fogDensity = .038 / Math.sqrt(2.2);
         const sky = Array.from({ length: 6 }, () => { const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 0, 128); g.addColorStop(0, '#8ab1d0'); g.addColorStop(.45, '#243952'); g.addColorStop(1, '#101b29'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); x.fillStyle = '#d6e7ff'; x.fillRect(20, 10, 12, 65); x.fillStyle = '#ffba70'; x.fillRect(100, 30, 16, 46); return new Uint8Array(x.getImageData(0, 0, 128, 128).data); });
         const environment = new B.RawCubeTexture(scene, sky, 128, B.Constants.TEXTUREFORMAT_RGBA, B.Constants.TEXTURETYPE_UNSIGNED_BYTE, true, false); environment.gammaSpace = true; scene.environmentTexture = environment;
-        const ambient = new B.HemisphericLight('ambient', new B.Vector3(0, 1, 0), scene); ambient.diffuse = B.Color3.FromHexString('#89bbff'); ambient.groundColor = B.Color3.FromHexString('#6a453b'); ambient.intensity = .8;
-        const sun = new B.DirectionalLight('sun', new B.Vector3(-5, -8, -4).normalize(), scene); sun.position.set(5, 8, 4); sun.diffuse = B.Color3.FromHexString('#ffd3a0'); sun.intensity = 3; sun.shadowMinZ = .5; sun.shadowMaxZ = 24;
-        const spotlight = new B.SpotLight('spotlight', new B.Vector3(-5, 6, -4), new B.Vector3(5, -5, 4).normalize(), 2 * Math.PI / 5, 1, scene); spotlight.diffuse = B.Color3.FromHexString('#68bcff'); spotlight.intensity = 10;
+        const ambient = new B.HemisphericLight('ambient', new B.Vector3(0, 1, 0), scene); ambient.diffuse = linearColor('#89bbff'); ambient.groundColor = linearColor('#6a453b'); ambient.intensity = .8;
+        const sun = new B.DirectionalLight('sun', new B.Vector3(-5, -8, -4).normalize(), scene); sun.position.set(5, 8, 4); sun.diffuse = linearColor('#ffd3a0'); sun.intensity = 3; sun.shadowMinZ = .5; sun.shadowMaxZ = 24;
+        const spotlight = new B.SpotLight('spotlight', new B.Vector3(-5, 6, -4), new B.Vector3(5, -5, 4).normalize(), 2 * Math.PI / 5, 1, scene); spotlight.diffuse = linearColor('#68bcff'); spotlight.intensity = 10; spotlight.range = 25;
         const shadows = [new B.ShadowGenerator(width < 700 ? 1024 : 2048, sun), new B.ShadowGenerator(512, spotlight)]; shadows.forEach(value => { value.usePercentageCloserFiltering = true; value.bias = .0003; value.normalBias = .035; });
+        const contactsName = 'rover-contacts';
+        const contacts = view.engine.webGLVersion > 1 && B.SSAO2RenderingPipeline.IsSupported
+          ? new B.SSAO2RenderingPipeline(contactsName, scene, { ssaoRatio: .5, blurRatio: .5 }, [], true) : null;
+        if (contacts) { contacts.samples = 8; contacts.radius = .3; contacts.totalStrength = .65; contacts.maxZ = 40; contacts.bilateralSamples = 8; }
+        let contactsAttached = false, readyFrame = null;
         const detailMaterials = new Map(), simpleMaterials = new Map();
         const surface = (kind, strength) => {
           const { size, canvases } = roverSurfaceCanvases(kind), pixels = canvases.map(c => c.getContext('2d').getImageData(0, 0, size, size).data);
           const normal = new Uint8Array(pixels[1].length), heightAt = (x, y) => pixels[1][((y + size) % size * size + (x + size) % size) * 4] / 255;
           for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) { const n = new B.Vector3((heightAt(x - 1, y) - heightAt(x + 1, y)) * strength, (heightAt(x, y - 1) - heightAt(x, y + 1)) * strength, 1).normalize(), i = (y * size + x) * 4; normal[i] = (n.x * .5 + .5) * 255; normal[i + 1] = (n.y * .5 + .5) * 255; normal[i + 2] = (n.z * .5 + .5) * 255; normal[i + 3] = 255; }
-          const texture = (data, name) => { const t = B.RawTexture.CreateRGBATexture(data, size, size, scene, true, false); t.name = name; t.wrapU = t.wrapV = ['soil', 'rock'].includes(kind) ? B.Texture.CLAMP_ADDRESSMODE : B.Texture.WRAP_ADDRESSMODE; return t; };
-          return { color: texture(pixels[0], kind + '.color'), normal: texture(normal, kind + '.normal') };
+          const texture = (data, name, gamma = false) => { const t = B.RawTexture.CreateRGBATexture(data, size, size, scene, true, false); t.name = name; t.gammaSpace = gamma; t.wrapU = t.wrapV = ['soil', 'rock'].includes(kind) ? B.Texture.CLAMP_ADDRESSMODE : B.Texture.WRAP_ADDRESSMODE; t.anisotropicFilteringLevel = 4; return t; };
+          return { color: texture(pixels[0], kind + '.color', true), normal: texture(normal, kind + '.normal'), roughness: texture(pixels[2], kind + '.roughness') };
         };
-        const material = (name, color, metal, roughness, kind, relief = 1) => { const m = new B.PBRMaterial(name, scene); m.albedoColor = B.Color3.FromHexString(color); m.metallic = metal; m.roughness = roughness; m.environmentIntensity = .6; if (kind) { const maps = surface(kind, relief); m.albedoTexture = maps.color; m.bumpTexture = maps.normal; } return m; };
+        const material = (name, color, metal, roughness, kind, relief = 1) => { const m = new B.PBRMaterial(name, scene); m.albedoColor = linearColor(color); m.metallic = metal; m.roughness = roughness; m.environmentIntensity = .6; if (kind) { const maps = surface(kind, relief); m.albedoTexture = maps.color; m.bumpTexture = maps.normal; m.metallicTexture = maps.roughness; m.useRoughnessFromMetallicTextureGreen = true; m.useRoughnessFromMetallicTextureAlpha = false; m.useMetallnessFromMetallicTextureBlue = false; } return m; };
         const paint = material('paint', '#d57b36', .55, .42, 'paint', .5); paint.clearCoat.isEnabled = true; paint.clearCoat.intensity = .45; paint.clearCoat.roughness = .3;
-        const metal = material('metal', '#aebbc9', .88, .42, 'metal', 1.5), dark = material('dark', '#202b3b', .7, .38), rubber = material('rubber', '#18202c', 0, .95, 'rubber', 1.5), solar = material('solar', '#244aa4', .55, .35, 'solar', .4), glow = material('glow', '#8aedff', 0, .25);
-        glow.emissiveColor = B.Color3.FromHexString('#3ea9d3').scale(2);
+        const metal = material('metal', '#aebbc9', .88, .42, 'metal', .3), dark = material('dark', '#202b3b', .7, .38), rubber = material('rubber', '#18202c', 0, .95, 'rubber', .5), solar = material('solar', '#244aa4', .55, .35, 'solar', .1), glow = material('glow', '#8aedff', 0, .25);
+        glow.emissiveColor = linearColor('#3ea9d3').scale(2);
         const glass = material('glass', '#75c5e5', .12, .08); glass.alpha = .52; glass.clearCoat.isEnabled = true;
         const group = (name, parent = null, x = 0, y = 0, z = 0) => { const node = new B.TransformNode(name, scene); node.parent = parent; node.position.set(x, y, z); return node; };
         const mesh = (value, parent, mat, x = 0, y = 0, z = 0, casts = true) => { value.parent = parent; value.material = mat; value.position.set(x, y, z); value.receiveShadows = true; detailMaterials.set(value, mat); if (casts) shadows.forEach(s => s.addShadowCaster(value)); return value; };
         const box = (parent, mat, sx, sy, sz, x = 0, y = 0, z = 0, casts = true) => mesh(B.MeshBuilder.CreateBox('box', { width: sx, height: sy, depth: sz }, scene), parent, mat, x, y, z, casts);
-        const cylinder = (parent, mat, radius, length, x = 0, y = 0, z = 0) => mesh(B.MeshBuilder.CreateCylinder('cylinder', { diameter: radius * 2, height: length, tessellation: 24 }, scene), parent, mat, x, y, z);
-        const joint = (parent, mat, x = 0, y = 0, z = 0) => mesh(B.MeshBuilder.CreateSphere('joint', { diameter: .22, segments: 12 }, scene), parent, mat, x, y, z);
-        const torus = (parent, mat, radius, tube, x = 0, y = 0, z = 0, casts = true) => mesh(B.MeshBuilder.CreateTorus('torus', { diameter: radius * 2, thickness: tube * 2, tessellation: 36 }, scene), parent, mat, x, y, z, casts);
+        const cylinder = (parent, mat, radius, length, x = 0, y = 0, z = 0, segments = 16) => mesh(B.MeshBuilder.CreateCylinder('cylinder', { diameter: radius * 2, height: length, tessellation: segments }, scene), parent, mat, x, y, z);
+        const joint = (parent, mat, x = 0, y = 0, z = 0) => mesh(roverSphere(B, scene, 'joint', .11, 12, 8), parent, mat, x, y, z);
+        const torus = (parent, mat, radius, tube, x = 0, y = 0, z = 0, casts = true, rings = 36, sides = 12) => mesh(roverTorus(B, scene, radius, tube, rings, sides), parent, mat, x, y, z, casts);
         const floor = mesh(B.MeshBuilder.CreateGround('floor', { width: 50, height: 50 }, scene), null, material('soil', '#55443e', 0, .95, 'soil', 3), 0, -.2, 0, false);
-        cylinder(null, dark, 3.4, .2, 0, -.08); torus(null, glow, 3.25, .024, 0, .03, 0, false);
+        cylinder(null, dark, 3.4, .2, 0, -.08); torus(null, glow, 3.25, .024, 0, .03, 0, false, 96, 8);
         for (let index = 0; index < 28; index++) { const angle = index / 28 * Math.PI * 2; box(null, metal, .025, .012, .22, Math.sin(angle) * 3, .025, Math.cos(angle) * 3, false).rotation.y = angle; }
         const rover = group('rover'); box(rover, dark, 2.1, .35, 3.1, 0, 1); box(rover, paint, 1.85, .45, 2.6, 0, 1.4); box(rover, metal, 1.95, .06, 2.7, 0, 1.67);
-        const dome = mesh(B.MeshBuilder.CreateSphere('dome', { diameter: 1.1, segments: 28, slice: .5 }, scene), rover, glass, 0, 1.7, -.55, false); dome.scaling.set(1, .72, 1.15); torus(rover, metal, .54, .035, 0, 1.7, -.55);
+        const dome = mesh(roverSphere(B, scene, 'dome', .55, 28, 18, Math.PI / 2), rover, glass, 0, 1.7, -.55, false); dome.scaling.set(1, .72, 1.15); torus(rover, metal, .54, .035, 0, 1.7, -.55, true, 32, 8);
         for (const side of [-1, 1]) { for (let index = 0; index < 14; index++) { box(rover, dark, .045, .26, .06, side * .94, 1.4, -1.1 + index * .16, false); joint(rover, metal, side * .93, 1.67, -1.18 + index * .18).scaling.setAll(.25); } box(rover, glow, .32, .12, .05, side * .64, 1.37, -1.34, false); }
-        const wheels = [], wings = [];
+        const wheels = [], wheelHubs = [], wings = [], solarCells = [];
         for (const side of [-1, 1]) for (const z of [-1.25, 0, 1.25]) {
-          const wheel = group('wheel', rover, side * 1.4, .54, z); wheels.push(wheel); torus(wheel, rubber, .39, .13).rotation.z = Math.PI / 2; cylinder(wheel, metal, .28, .3).rotation.z = Math.PI / 2;
+          const wheel = group('wheel', rover, side * 1.4, .54, z); wheels.push(wheel); torus(wheel, rubber, .39, .13).rotation.z = Math.PI / 2; const hub = cylinder(wheel, metal, .28, .3, 0, 0, 0, 24); hub.rotation.z = Math.PI / 2; wheelHubs.push(hub);
           for (let index = 0; index < 24; index++) { const angle = index / 24 * Math.PI * 2; box(wheel, rubber, .34, .065, .13, 0, Math.cos(angle) * .5, Math.sin(angle) * .5).rotation.x = angle; }
           for (let index = 0; index < 8; index++) box(wheel, paint, .32, .038, .48, 0, 0, 0, false).rotation.x = index / 8 * Math.PI;
           box(rover, metal, .62, .11, .1, side * 1.06, .86, z).rotation.z = side * -.45; cylinder(rover, dark, .08, .6, side * 1.15, .9, z).rotation.z = side * .35;
         }
-        for (const side of [-1, 1]) { const panel = group('panel', rover, side * 1.72, 1.8, .4); wings.push(panel); box(panel, dark, 1.15, .08, 2.25); for (let x = 0; x < 5; x++) for (let z = 0; z < 9; z++) box(panel, solar, .2, .018, .21, (x - 2) * .22, .054, (z - 4) * .24, false); for (const x of [-.58, .58]) box(panel, metal, .028, .035, 2.3, x, .04, 0, false); for (const z of [-1.14, 1.14]) box(panel, metal, 1.2, .035, .03, 0, .04, z, false); }
+        for (const side of [-1, 1]) { const panel = group('panel', rover, side * 1.72, 1.8, .4); wings.push(panel); box(panel, dark, 1.15, .08, 2.25); for (let x = 0; x < 5; x++) for (let z = 0; z < 9; z++) solarCells.push(box(panel, solar, .2, .018, .21, (x - 2) * .22, .054, (z - 4) * .24, false)); for (const x of [-.58, .58]) box(panel, metal, .028, .035, 2.3, x, .04, 0, false); for (const z of [-1.14, 1.14]) box(panel, metal, 1.2, .035, .03, 0, .04, z, false); }
         const mast = group('mast', rover, 0, 1.7, .9); cylinder(mast, metal, .055, 1.05, 0, .52); const scanner = group('scanner', mast, 0, 1.03); box(scanner, paint, .6, .28, .3); for (const x of [-.17, .17]) joint(scanner, glow, x, 0, -.2);
         const antenna = group('antenna', rover, -.6, 1.75, .65); cylinder(antenna, metal, .045, .6, 0, .3);
         const shape = Array.from({ length: 16 }, (_, index) => { const r = index / 15 * .42; return new B.Vector3(r, r * r * 1.2, 0); });
@@ -1436,18 +1484,71 @@
         for (const side of [-1, 1]) { box(claw, dark, .065, .26, .065, side * .11, .12).rotation.z = side * .25; box(claw, metal, .12, .05, .065, side * .07, .25); }
         const rockMaterial = material('rock', '#806252', 0, .93, 'rock', 2);
         for (let index = 0; index < 55; index++) { const angle = index * 2.399, radius = 4.1 + (index % 8) * .55, rock = mesh(B.MeshBuilder.CreatePolyhedron('rock', { type: 2, size: 1, flat: true }, scene), null, rockMaterial, Math.sin(angle) * radius, -.1, Math.cos(angle) * radius); rock.scaling.set(.15 + index % 3 * .13, .16 + index % 4 * .1, .2 + index % 5 * .07); rock.rotation.set(index, index * .7, index * .3); const uv = rock.getVerticesData(B.VertexBuffer.UVKind); if (uv) { const scale = .32 + roverSurfaceHash(index, 1) * .2, turn = roverSurfaceHash(index, 2) * Math.PI * 2, ox = .5 + (roverSurfaceHash(index, 3) - .5) * .25, oy = .5 + (roverSurfaceHash(index, 4) - .5) * .25; for (let i = 0; i < uv.length; i += 2) { const u = (uv[i] - .5) * scale, v = (uv[i + 1] - .5) * scale; uv[i] = ox + u * Math.cos(turn) - v * Math.sin(turn); uv[i + 1] = oy + u * Math.sin(turn) + v * Math.cos(turn); } rock.setVerticesData(B.VertexBuffer.UVKind, uv); } }
-        let time = 0, angle = .65, elevation = .45, targetAngle = angle, targetElevation = elevation, controlledUntil = 0;
+        let { time, angle, elevation, targetAngle, targetElevation, controlledUntil } = roverViewState
+          || { time: 0, angle: .65, elevation: .45, targetAngle: .65, targetElevation: .45, controlledUntil: 0 };
         const placeCamera = () => { const distance = 8 / Math.min(1, width / height); camera.position.set(Math.sin(angle) * distance * Math.cos(elevation), 1.3 + Math.sin(elevation) * distance, Math.cos(angle) * distance * Math.cos(elevation)); camera.setTarget(new B.Vector3(0, 1.3, 0)); };
-        const setQuality = () => { for (const [item, detail] of detailMaterials) { if (!simpleMaterials.has(detail)) { const m = new B.StandardMaterial('simple-' + detail.name, scene); m.diffuseColor = detail.albedoColor.clone(); m.emissiveColor = detail.emissiveColor.clone(); m.specularColor = B.Color3.Black(); m.alpha = detail.alpha; simpleMaterials.set(detail, m); } item.material = threeDetailed ? detail : simpleMaterials.get(detail); } scene.shadowsEnabled = threeDetailed; host.dataset.babylonQuality = threeDetailed ? 'detailed' : 'simple'; $('three-quality').querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String((button.dataset.quality === 'detailed') === threeDetailed))); $('library-description').textContent = threeDetailed ? 'Текстуры, рельеф, отражения и тени' : 'Однотонные материалы · без теней'; view.render(); };
+        const redrawWhenReady = () => { readyFrame = null; if (scene.isDisposed) return; view.render(); if (!scene.isReady() || contactsAttached && !contacts.isReady()) readyFrame = requestAnimationFrame(redrawWhenReady); };
+        const setQuality = () => {
+          for (const [item, detail] of detailMaterials) {
+            if (!simpleMaterials.has(detail)) { const m = new B.PBRMaterial('simple-' + detail.name, scene); m.albedoColor = detail.albedoColor.clone(); m.emissiveColor = detail.emissiveColor.clone(); m.metallic = 0; m.metallicF0Factor = 0; m.roughness = 1; m.environmentIntensity = 0; m.alpha = detail.alpha; simpleMaterials.set(detail, m); }
+            item.material = threeDetailed ? detail : simpleMaterials.get(detail);
+          }
+          if (contacts && contactsAttached !== threeDetailed) { scene.postProcessRenderPipelineManager[threeDetailed ? 'attachCamerasToRenderPipeline' : 'detachCamerasFromRenderPipeline'](contactsName, camera); contactsAttached = threeDetailed; }
+          const contactBuffer = contacts && scene.geometryBufferRenderer?.getGBuffer();
+          if (contactBuffer) { contactBuffer.renderList = threeDetailed ? null : []; contactBuffer.refreshRate = threeDetailed ? 1 : 0; }
+          scene.shadowsEnabled = threeDetailed; host.dataset.babylonQuality = threeDetailed ? 'detailed' : 'simple'; host.dataset.babylonContacts = String(contactsAttached);
+          $('three-quality').querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String((button.dataset.quality === 'detailed') === threeDetailed)));
+          $('library-description').textContent = threeDetailed ? 'Текстуры, рельеф, отражения и тени' : 'Однотонные материалы · без теней';
+          if (readyFrame !== null) cancelAnimationFrame(readyFrame); redrawWhenReady();
+        };
         const expand = document.createElement('button'); expand.id = 'three-expand'; const svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+        const hints = document.createElement('button'); hints.id = 'three-hints'; hints.innerHTML = svg + '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>';
+        const { hintOverlay, caption, marks, callouts } = roverHintElements();
+        const project = point => { const p = B.Vector3.Project(point, B.Matrix.Identity(), scene.getTransformMatrix(), new B.Viewport(0, 0, width, height)); return { x: p.x, y: p.y, z: p.z }; };
+        const visible = point => { const p = project(point); return p.z > 0 && p.z < 1 && p.x > 12 && p.x < width - 12 && p.y > 65 && p.y < height - 12; };
+        const pick = point => { const p = project(point); return scene.pick(p.x, p.y, item => detailMaterials.has(item))?.pickedMesh; };
+        const drawHints = () => {
+          if (!threeHintsEnabled) return;
+          const compact = height < 220;
+          caption.textContent = compact ? 'Разверните сцену для подсказок' : threeDetailed
+            ? 'Подробное · Babylon.js · ' + (contacts ? 'PBR и контактные тени' : 'PBR и тени · без SSAO') : 'Простое · Babylon.js · без текстур, отражений и теней';
+          marks.style.visibility = compact ? 'hidden' : 'visible'; marks.setAttribute('viewBox', `0 0 ${width} ${height}`);
+          if (compact) return;
+          const byDistance = (a, b) => B.Vector3.Distance(a, camera.position) - B.Vector3.Distance(b, camera.position);
+          const hub = wheelHubs.filter(item => item.parent.position.z === 0).map(item => item.getAbsolutePosition().clone()).sort(byDistance)[0];
+          const glassPoint = B.Vector3.TransformCoordinates(new B.Vector3(0, .28, 0), dome.getWorldMatrix());
+          const cells = solarCells.map(item => ({ item, point: B.Vector3.TransformCoordinates(new B.Vector3(0, .01, 0), item.getWorldMatrix()) })).sort((a, b) => byDistance(a.point, b.point));
+          const cell = cells.find(value => visible(value.point) && pick(value.point) === value.item)?.point;
+          const candidates = [];
+          for (const rock of scene.meshes.filter(item => item.name === 'rock')) {
+            const data = rock.getVerticesData(B.VertexBuffer.PositionKind), vertices = [];
+            for (let i = 0; i < data.length; i += 3) { const vertex = B.Vector3.TransformCoordinates(B.Vector3.FromArray(data, i), rock.getWorldMatrix()); if (vertex.y <= -.199) continue; const fall = (vertex.y + .199) / sun.position.y; vertices.push(new B.Vector3(vertex.x - sun.position.x * fall, -.199, vertex.z - sun.position.z * fall)); }
+            const center = vertices.reduce((sum, value) => sum.addInPlace(value), B.Vector3.Zero()).scale(1 / Math.max(1, vertices.length));
+            for (const vertex of vertices) { const point = B.Vector3.Lerp(center, vertex, .82); if (visible(point)) candidates.push({ point, size: rock.scaling.length() / B.Vector3.Distance(point, camera.position) }); }
+          }
+          candidates.sort((a, b) => b.size - a.size);
+          const shadow = candidates.find(value => pick(value.point) === floor)?.point;
+          [hub, glassPoint, cell, shadow].forEach((point, index) => {
+            const { group, text, circle, line } = callouts[index];
+            group.style.visibility = point && visible(point) ? '' : 'hidden'; if (!point) return;
+            const p = project(point), labelY = 80 + index * 38;
+            text.setAttribute('x', '12'); text.setAttribute('y', String(labelY)); circle.setAttribute('cx', String(p.x)); circle.setAttribute('cy', String(p.y));
+            line.setAttribute('d', `M80,${labelY - 5} L${p.x - 12},${p.y} m-7,-4 l7,4 l-7,4`);
+          });
+        };
+        const render = view.render; view.render = () => { render(); drawHints(); };
+        const syncHints = () => { hintOverlay.hidden = !threeHintsEnabled; host.dataset.threeHints = String(threeHintsEnabled); const label = threeHintsEnabled ? 'Выключить подсказки и продолжить анимацию' : 'Показать текстуры, материалы и тени со стрелками'; hints.title = label; hints.setAttribute('aria-label', label); hints.setAttribute('aria-pressed', String(threeHintsEnabled)); view.render(); resetFps(); };
         const syncExpanded = () => { document.querySelector('.app').classList.toggle('three-expanded', threeExpanded); expand.innerHTML = svg + (threeExpanded ? '<path d="M9 3v6H3m18 0h-6V3M3 15h6v6m6 0v-6h6"/>' : '<path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/>') + '</svg>'; const label = threeExpanded ? 'Вернуть показатели и выбор библиотек' : 'Развернуть сцену марсохода'; expand.title = label; expand.setAttribute('aria-label', label); expand.setAttribute('aria-pressed', String(threeExpanded)); };
-        const escape = event => { if (event.key === 'Escape' && !infoOpen && threeExpanded) expand.click(); };
-        placeCamera(); setQuality();
-        expand.addEventListener('click', () => { threeExpanded = !threeExpanded; syncExpanded(); }); document.addEventListener('keydown', escape); document.querySelector('.controls').append(expand);
-        syncExpanded();
-        const orbit = (x, y) => { targetAngle = x / width * Math.PI * 2; targetElevation = .18 + (1 - y / height) * .7; controlledUntil = time + 8; };
-        return { setQuality, tick(delta) { const seconds = delta / 1000; time += seconds; if (time > controlledUntil) targetAngle += seconds * .11; angle += (targetAngle - angle) * Math.min(1, seconds * 5); elevation += (targetElevation - elevation) * Math.min(1, seconds * 5); placeCamera(); wheels.forEach(w => { w.rotation.x -= seconds * .45; }); wings.forEach((p, index) => { p.rotation.z = (index ? -1 : 1) * (.15 + Math.sin(time * .6) * .025); }); arm.rotation.x = -.6 + Math.sin(time * .7) * .3; elbow.rotation.x = -1.1 + Math.sin(time * .7 + 1) * .4; scanner.rotation.y = Math.sin(time * .5) * .8; antenna.rotation.y = time * .12; rover.position.y = Math.sin(time * 1.3) * .025; view.render(); }, tap: orbit, drag: orbit,
-          pause(value) { if (value) view.render(); }, resize() { view.resize(); placeCamera(); view.render(); }, dispose() { document.removeEventListener('keydown', escape); expand.remove(); view.dispose(); } };
+        const escape = event => { if (event.key !== 'Escape' || infoOpen) return; if (threeHintsEnabled) hints.click(); else if (threeExpanded) expand.click(); };
+        const pose = () => { placeCamera(); wheels.forEach(w => { w.rotation.x = -time * .45; }); wings.forEach((p, index) => { p.rotation.z = (index ? -1 : 1) * (.15 + Math.sin(time * .6) * .025); }); arm.rotation.x = -.6 + Math.sin(time * .7) * .3; elbow.rotation.x = -1.1 + Math.sin(time * .7 + 1) * .4; scanner.rotation.y = Math.sin(time * .5) * .8; antenna.rotation.y = time * .12; rover.position.y = Math.sin(time * 1.3) * .025; };
+        pose(); setQuality();
+        hints.addEventListener('click', () => { threeHintsEnabled = !threeHintsEnabled; pendingInput = null; syncHints(); });
+        expand.addEventListener('click', () => { threeExpanded = !threeExpanded; syncExpanded(); }); document.addEventListener('keydown', escape); document.querySelector('.controls').append(hints, expand);
+        syncHints(); syncExpanded();
+        const orbit = (x, y) => { if (threeHintsEnabled) return; targetAngle = x / width * Math.PI * 2; targetElevation = .18 + (1 - y / height) * .7; controlledUntil = time + 8; };
+        return { get ownLoop() { return threeHintsEnabled; }, getViewState() { return { time, angle, elevation, targetAngle, targetElevation, controlledUntil }; }, setQuality,
+          tick(delta) { const seconds = delta / 1000; time += seconds; if (time > controlledUntil) targetAngle += seconds * .11; angle += (targetAngle - angle) * Math.min(1, seconds * 5); elevation += (targetElevation - elevation) * Math.min(1, seconds * 5); pose(); view.render(); }, tap: orbit, drag: orbit,
+          pause(value) { if (value) view.render(); }, resize() { view.resize(); placeCamera(); view.render(); }, dispose() { if (readyFrame !== null) cancelAnimationFrame(readyFrame); contacts?.dispose(true); document.removeEventListener('keydown', escape); hints.remove(); expand.remove(); hintOverlay.remove(); delete host.dataset.threeHints; delete host.dataset.babylonContacts; view.dispose(); } };
       }
 
       function matterShowcase(Matter) {
@@ -2118,7 +2219,8 @@
         (value ? $('info-close') : $('info-toggle')).focus();
       }
 
-      function startScene(nextMode = mode) {
+      function startScene(nextMode = mode, preserveRover = false) {
+        roverViewState = preserveRover && is3DMode(mode) && is3DMode(nextMode) && scenario === 'showcase' ? activeScene?.getViewState?.() || null : null;
         if (!is3DMode(nextMode) || scenario !== 'showcase') {
           threeExpanded = false; document.querySelector('.app').classList.remove('three-expanded');
         }
@@ -2271,7 +2373,7 @@
         $('finger-count').textContent = `${integer(pointers.size)} / ${integer(peakPointers)}`;
         drawTouches(performance.now());
       });
-      document.querySelectorAll('.mode').forEach(button => button.addEventListener('click', () => startScene(button.dataset.mode)));
+      document.querySelectorAll('.mode').forEach(button => button.addEventListener('click', () => startScene(button.dataset.mode, true)));
       $('info-toggle').addEventListener('click', () => showInfo(!infoOpen));
       $('info-close').addEventListener('click', () => showInfo(false));
       document.addEventListener('keydown', event => { if (event.key === 'Escape' && infoOpen) showInfo(false); });

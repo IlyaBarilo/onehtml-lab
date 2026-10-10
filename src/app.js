@@ -274,12 +274,14 @@ function libraryActionIsCurrent(pending) {
 function requestLibraries(prepared, action, code = codeField.value) {
   if (!prepared.missingLibraries?.length) return false;
   pendingLibraryAction = { action, code, references: prepared.missingLibraries, session: action === 'compare' ? comparisonSession : null, side: comparisonSide };
-  const titles = prepared.missingLibraries.map(item => item.title).join(', ');
+  const titles = prepared.missingLibraries.map(item => item.title
+    + (Number.isFinite(item.downloadBytes) && item.downloadBytes > 0 ? ` (≈${formatLibrarySize(item.downloadBytes)})` : '')).join(', ');
   const downloadable = prepared.missingLibraries.filter(item => item.url && item.licenseUrl);
   const local = prepared.missingLibraries.filter(item => item.localPath);
   const hosts = [...new Set(downloadable.flatMap(item => [item.url.split('/')[2], item.licenseUrl.split('/')[2]]))].join(', ');
   libraryRequestText.textContent = `Для автономной игры нужны: ${titles}.`
     + (downloadable.length ? ` Скачать с ${hosts}.` : '')
+    + (prepared.missingLibraries.some(item => item.downloadBytes > 0) ? ' Размер кода без сетевого сжатия.' : '')
     + (local.length ? ` Локальный файл: ${local[0].localPath}. Можно выбрать JS, полный текст лицензии MIT или Apache-2.0 и NOTICE.` : '')
     + (action === 'convert' ? ' После получения нажмите «Применить», чтобы встроить копию и лицензию в код.'
       : ' Копия будет доступна для предпросмотра и встраивания при сохранении.');
