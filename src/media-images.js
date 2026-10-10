@@ -255,7 +255,7 @@ function renderMediaStrip() {
       button.classList.toggle('is-selected', selected);
       if (selected) button.setAttribute('aria-description', 'Включён в запрос ИИ');
       if (entry.type.startsWith('image/')) { const image = document.createElement('img'); const url = URL.createObjectURL(entry.blob); mediaStripUrls.add(url); image.src = url; image.loading = 'lazy'; image.alt = ''; button.append(image); }
-      else { const icon = document.createElement('span'); icon.className = 'media-audio-icon'; icon.textContent = '♫'; icon.setAttribute('aria-hidden', 'true'); button.append(icon); }
+      else { const icon = document.createElement('span'); icon.className = 'media-audio-icon'; icon.textContent = entry.type === 'model/gltf-binary' ? '3D' : '♫'; icon.setAttribute('aria-hidden', 'true'); button.append(icon); }
       const label = document.createElement('span'); label.textContent = name; button.append(label);
       if (selected) { const mark = document.createElement('span'); mark.className = 'media-card-check'; mark.textContent = '✓'; mark.setAttribute('aria-hidden', 'true'); button.append(mark); }
       button.addEventListener('click', () => revealPromptMedia(entry, name)); return button;

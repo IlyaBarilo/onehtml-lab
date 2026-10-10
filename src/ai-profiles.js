@@ -43,15 +43,15 @@ function aiGameWarnings(value) {
   if (game.dimension === '2d' && ['behind', 'first'].includes(game.camera)) notes.push('Камера позади героя или от первого лица рассчитана на 3D.');
   return notes;
 }
-function aiGameInstructions(value) {
+function aiGameInstructions(value, models = false) {
   const game = normalizeAiGame(value), { id } = aiGameChoice(game), profile = aiGameCatalog[id];
   const parts = ['Сделай небольшую законченную игру с одной основной механикой, понятной целью, началом, завершением и повторным запуском.'];
   for (const [key, label] of Object.entries(aiGameLabels)) if (key !== 'basis' && game[key]) parts.push(`${label}: ${aiGameOptions[key][game[key]]}.`);
-  parts.push(profile.url ? `Используй ${profile.title}. Подключи до кода игры обычным скриптом <script src="${profile.url}"></script>. Не используй import, latest или другие версии. Не вставляй исходники библиотеки в ответ: OneHTML Lab подготовит их при сохранении.` : 'Используй HTML, Canvas 2D или SVG и обычный JavaScript без внешних библиотек.');
+  parts.push(models && id === 'three' ? 'Используй Three.js r160 как ES-модуль с GLTFLoader. Точные подключения и работа с GLB указаны в конце запроса. Не вставляй исходники библиотек в ответ.' : profile.url ? `Используй ${profile.title}. Подключи до кода игры обычным скриптом <script src="${profile.url}"></script>. Не используй import, latest или другие версии. Не вставляй исходники библиотеки в ответ: OneHTML Lab подготовит их при сохранении.` : 'Используй HTML, Canvas 2D или SVG и обычный JavaScript без внешних библиотек.');
   if (id.startsWith('phaser')) parts.push(`Используй встроенную ${game.physics === 'bodies' ? 'Matter Physics' : 'Arcade Physics при необходимости столкновений'}. Не подключай отдельный Matter.js. Создавай графику через Graphics/текстуры Phaser; не добавляй плагины. При повторном старте не дублируй обработчики и таймеры.`);
   if (id === 'matter') parts.push('Используй Matter.js для физических тел, а Canvas 2D для своей отрисовки. Связывай координаты и поворот рисунка с телом. При сбросе очищай тела и обработчики, не создавай второй цикл обновления.');
-  if (id === 'three') parts.push('Используй ядро Three.js через THREE, без addons, внешних моделей и загрузчиков. Строй сцену из геометрии, света и материалов; простые столкновения проверяй самостоятельно. Ограничь плотность пикселей и число теней на телефоне.');
-  if (id === 'babylon') parts.push('Используй ядро Babylon.js через BABYLON и Engine с WebGL. Не подключай WebGPU, Havok, GUI, инспектор или загрузчики моделей. Строй сцену из MeshBuilder, материалов, камеры и света; простые столкновения проверяй самостоятельно. Ограничь плотность пикселей и размер теней на телефоне. При сбросе освобождай прежнюю Scene и обработчики, не создавай второй цикл кадров.');
+  if (id === 'three') parts.push((models ? 'Загрузи выбранные GLB-модели через GLTFLoader той же версии. ' : 'Используй ядро Three.js через THREE, без addons, внешних моделей и загрузчиков. Строй сцену из геометрии, света и материалов; ')+'Простые столкновения проверяй самостоятельно. Ограничь плотность пикселей и число теней на телефоне.');
+  if (id === 'babylon') parts.push('Используй ядро Babylon.js через BABYLON и Engine с WebGL. Не подключай WebGPU, Havok, GUI или инспектор. '+(models ? 'Подключи GLB-загрузчик 9.30.0 по инструкции в конце запроса. ' : 'Не подключай загрузчики моделей. Строй сцену из MeshBuilder, материалов, камеры и света; ')+'Простые столкновения проверяй самостоятельно. Ограничь плотность пикселей и размер теней на телефоне. При сбросе освобождай прежнюю Scene и обработчики, не создавай второй цикл кадров.');
   const genres = { platformer: 'Прыжок должен быть предсказуемым; предусмотрено небольшое прощение раннего/позднего нажатия. Цель и опасные поверхности должны быть понятны.', arcade: 'Сделай заметную реакцию на попадание, понятное получение урона и короткую защиту от повторного урона.', puzzle: 'Покажи цель и текущее состояние головоломки. Сделай удобный сброс; начальное состояние должно позволять решение.', runner: 'Дай время увидеть препятствия, постепенно повышай сложность и не создавай непроходимые сочетания.', racing: 'Сделай понятные границы трассы, плавное управление и заметную реакцию на столкновение.' };
   if (genres[game.genre]) parts.push(genres[game.genre]);
   const styles = { paper: 'Используй слои бумажных форм, тёплую ограниченную палитру и мягкие тени.', neon: 'Используй тёмный игровой мир, два-три ярких акцента и умеренное свечение; сохраняй читаемость.', drawn: 'Используй мягкие рисованные силуэты, согласованную палитру и выразительные движения персонажей.', minimal: 'Используй чёткие силуэты, контраст фигуры и фона и различимые формы объектов.' };
@@ -89,6 +89,10 @@ function aiGameConnections(code) {
       const key = decodeScriptUrl(attrs.get('data-onehtml-catalog')?.value || attrs.get('data-onehtml-library').value), ref = libraryCatalogReference(key);
       if (ref) found.set(ref.key, { key: ref.key, title: ref.title }); else unknown.add('Встроенный скрипт с непроверенной версией');
     } else if (type === 'module' || type === 'importmap') unknown.add('Модульные подключения: см. диагностику библиотек');
+  }
+  if (typeof scanModules === 'function') for (const ref of scanModules(code).references) {
+    const key = /^three-esm@(0\.\d{3}\.0):/.exec(ref.key)?.[1];
+    found.set(key ? 'three@'+key : ref.key,{key:key ? 'three@'+key : ref.key,title:ref.title});
   }
   return { found: [...found.values()], unknown: [...unknown] };
 }

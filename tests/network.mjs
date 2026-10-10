@@ -68,7 +68,7 @@ try {
       assert.equal(await page.locator('#network-toggle').getAttribute('aria-pressed'), 'false');
       await page.locator('#code').fill(game);
       await page.locator('#run').click();
-      assert((await page.locator('#preview > iframe').getAttribute('srcdoc')).includes("connect-src 'none'"));
+      assert((await page.locator('#preview > iframe').getAttribute('srcdoc')).includes('connect-src data:'));
       await page.locator('#run').click();
       await page.locator('#network-toggle').click();
       assert.equal(await page.locator('#network-toggle').getAttribute('aria-pressed'), 'true');
@@ -151,7 +151,7 @@ try {
       await page.locator('#network-toggle').click();
       assert.equal(await page.locator('#network-toggle').getAttribute('aria-pressed'), 'false');
       assert(await firstFrame.evaluate(element => !element.isConnected));
-      assert((await page.locator('#preview > iframe').getAttribute('srcdoc')).includes("connect-src 'none'"));
+      assert((await page.locator('#preview > iframe').getAttribute('srcdoc')).includes('connect-src data:'));
       assert(await page.locator('#network-status').isHidden());
       assert.equal(await page.locator('#network-count').innerText(), '0');
       assert.equal(await page.locator('#code').inputValue(), game);
@@ -172,7 +172,7 @@ try {
       assert(await page.locator('#network-toggle').isVisible());
       assert.equal(await page.locator('#network-toggle').getAttribute('aria-pressed'), 'false');
       await page.locator('#run').click();
-      assert((await page.locator('#preview > iframe').getAttribute('srcdoc')).includes("connect-src 'none'"));
+      assert((await page.locator('#preview > iframe').getAttribute('srcdoc')).includes('connect-src data:'));
       await page.locator('#network-toggle').click();
       assert((await page.locator('#preview > iframe').getAttribute('srcdoc')).includes('connect-src https: wss:'));
       await page.locator('#network-toggle').click();

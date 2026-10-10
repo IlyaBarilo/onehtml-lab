@@ -124,7 +124,7 @@ function sameAiSnapshot(a, b) {
   return a && b && Object.keys(b).every(key => a[key] === b[key]);
 }
 
-function aiPromptText(snapshot, code, shortened, pastCode = snapshot.pastCode) {
+function aiPromptText(snapshot, code, shortened, pastCode = snapshot.pastCode, models = false) {
   const mobile = snapshot.platform === 'mobile';
   const screen = mobile ? 'телефона' : 'компьютера';
   const application = snapshot.project === 'application';
@@ -134,7 +134,7 @@ function aiPromptText(snapshot, code, shortened, pastCode = snapshot.pastCode) {
     : `Основное устройство — компьютер. В первую очередь продумай расположение элементов, размер текста и элементов управления для его экрана. ${subject} ${application ? 'должно использовать доступное окно браузера' : 'должна занимать всё окно браузера'} и удобно управляться мышью и клавиатурой. Также обеспечь работу на телефоне: адаптацию к небольшому экрану, читаемый текст, крупные экранные кнопки и управление касаниями.`;
   if (snapshot.mode === 'create') {
     if (application) return `Сделай мультимедийное приложение для ${screen}. Задача: ${snapshot.task || '[назначение приложения и пожелания]'}. Сделай одним файлом HTML со встроенными CSS и JavaScript. ${device} Предусмотри понятный основной сценарий, доступные элементы управления и учти предпочтение уменьшенного движения. Не добавляй внешние шрифты и библиотеки без моего запроса. Верни только полный HTML-код.`;
-    return `Сделай игру про ${snapshot.task || '[тема игры]'} для ${screen}. Сделай одним файлом HTML со встроенными CSS и JavaScript. ${device} Добавь возможность сыграть ещё раз. ${snapshot.game ? aiGameInstructions(JSON.parse(snapshot.game)) + ' ' : ''}Верни только полный HTML-код.`;
+    return `Сделай игру про ${snapshot.task || '[тема игры]'} для ${screen}. Сделай одним файлом HTML со встроенными CSS и JavaScript. ${device} Добавь возможность сыграть ещё раз. ${snapshot.game ? aiGameInstructions(JSON.parse(snapshot.game),models) + ' ' : ''}Верни только полный HTML-код.`;
   }
   if (snapshot.mode === 'explain' || snapshot.mode === 'check') {
     const parts = [snapshot.mode === 'explain'
@@ -332,7 +332,7 @@ async function prepareAiPrompt(snapshot, revision) {
     try{pastCode=(await planPromptMedia(pastCode,[],true)).html;}
     catch(error){notes.push('Медиа прошлой версии не сокращены: '+error.message);}
   }
-  if (snapshot.mode !== 'create' && snapshot.shorten && /data-onehtml-library\s*=/i.test(code)) {
+  if (snapshot.mode !== 'create' && snapshot.shorten && /data-onehtml-(?:library|modules)\s*=/i.test(code)) {
     try {
       if (aiSourcePlan?.code !== code) aiSourcePlan = { code, promise: planLibraryExtraction(code, 'cdn') };
       const plan = await aiSourcePlan.promise;
@@ -348,7 +348,7 @@ async function prepareAiPrompt(snapshot, revision) {
       notes = ['Не удалось проверить библиотеки. Код включён без сокращения.'];
     }
   }
-  if (pastCode !== null && snapshot.shorten && /data-onehtml-library\s*=/i.test(pastCode)) {
+  if (pastCode !== null && snapshot.shorten && /data-onehtml-(?:library|modules)\s*=/i.test(pastCode)) {
     try {
       if (aiPastSourcePlan?.code !== pastCode) aiPastSourcePlan = { code: pastCode, promise: planLibraryExtraction(pastCode, 'cdn') };
       const plan = await aiPastSourcePlan.promise;
@@ -362,10 +362,18 @@ async function prepareAiPrompt(snapshot, revision) {
   if (revision !== aiRevision || currentPanel() !== aiDialog || !sameAiSnapshot(snapshot, aiPromptSnapshot())) return;
   const game = snapshot.game ? JSON.parse(snapshot.game) : null;
   const actual = snapshot.project === 'game' && snapshot.mode !== 'create' ? aiGameConnections(code) : null;
-  const matched = actual?.found.length === 1 ? Object.entries(aiGameCatalog).find(([, profile]) => profile.key === actual.found[0].key)?.[0] : '';
+  const bases = actual?.found.filter(ref => Object.values(aiGameCatalog).some(profile => profile.key === ref.key)) || [];
+  const matched = bases.length === 1 ? Object.entries(aiGameCatalog).find(([, profile]) => profile.key === bases[0].key)?.[0] : '';
   const recipe = snapshot.project === 'game' && ['create', 'change', 'fix'].includes(snapshot.mode) ? (game ? aiGameChoice(game).id : matched) : '';
-  const mediaText = promptMediaIntro(mediaPlan.files).trim() + (mediaPlan.files.length && recipe ? '\n' + aiGameMediaRecipe(recipe) : '');
-  const text = aiPromptText(snapshot, code, shortened, pastCode) + (mediaText ? '\n\n' + mediaText : '');
+  const models = mediaPlan.files.some(file => /\.glb$/i.test(file.name));
+  const engine = game ? aiGameChoice(game).id : matched;
+  if (models && game && !['three','babylon'].includes(engine)) {
+    aiSummary.textContent = 'Для GLB-моделей выберите «3D» и основу Three.js или Babylon.js в требованиях игры.';
+    aiCopy.disabled = true; aiView.disabled = true; setAiNextStep(aiSummary.textContent, 'error'); return;
+  }
+  const modelEngine = models && !engine && snapshot.mode !== 'create' ? (aiGameConnections(code).found.some(ref => ref.key === 'babylonjs@9.30.0') ? 'babylon' : aiGameConnections(code).found.some(ref => ref.key === 'three@0.160.0') ? 'three' : '') : engine;
+  const mediaText = promptMediaIntro(mediaPlan.files,modelEngine,snapshot.mode !== 'create').trim() + (mediaPlan.files.some(file=>!/\.glb$/i.test(file.name)) && recipe ? '\n' + aiGameMediaRecipe(recipe) : '');
+  const text = aiPromptText(snapshot, code, shortened, pastCode,models) + (mediaText ? '\n\n' + mediaText : '');
   const saved = Math.max(0, symbolCount(snapshot.code) - symbolCount(code));
   aiOutput.value = text;
   aiSummary.textContent = `В запросе: ${formatSymbolCount(symbolCount(text))}` + (saved ? ` · убрано из кода: ${formatSymbolCount(saved)}` : '');

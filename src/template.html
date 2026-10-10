@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https: data:; style-src 'unsafe-inline' https:; img-src data: blob: https:; media-src data: blob: https:; font-src data: https:; connect-src https: wss:; webrtc 'block'; frame-src about:; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https: data:; style-src 'unsafe-inline' https:; img-src data: blob: https:; media-src data: blob: https:; font-src data: https:; connect-src https: wss: data: blob:; webrtc 'block'; frame-src about:; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <meta name="description" content="Вставьте HTML-игру, проверьте её в изолированном окне и сохраните одним файлом.">
@@ -85,8 +85,8 @@
         <div class="panel-body">
           <div class="diagnostic-actions media-prompt-actions"><button id="media-prompt-add" type="button">Добавить файлы</button><button id="media-prompt-paste" type="button">Вставить изображение</button><button id="media-prompt-ai" type="button">К запросу ИИ</button></div>
           <div id="media-paste-fallback" hidden><label for="media-paste-field">Вставка изображения из буфера</label><textarea id="media-paste-field" rows="2" aria-describedby="media-paste-help" placeholder="Нажмите здесь и выберите «Вставить» или Ctrl+V"></textarea><p id="media-paste-help" class="diagnostic-note">Если браузер не поддерживает вставку картинки, используйте «Добавить файлы». Звук добавляется через выбор файла.</p></div>
-          <p class="media-prompt-help">Отметьте файлы для запроса. Используйте их имена в пожеланиях: например, cat.png — герой, win.mp3 — звук победы.</p>
-          <label for="media-prompt-names">Имена выбранных файлов</label><textarea id="media-prompt-names" readonly rows="1" placeholder="Добавьте изображения или звук"></textarea>
+          <p class="media-prompt-help">Отметьте файлы для запроса. Используйте их имена в пожеланиях: cat.png — герой, win.mp3 — звук победы, robot.glb — 3D-модель.</p>
+          <label for="media-prompt-names">Имена выбранных файлов</label><textarea id="media-prompt-names" readonly rows="1" placeholder="Добавьте изображения, звук или GLB-модель"></textarea>
           <div class="diagnostic-actions"><button id="media-prompt-copy" type="button" disabled>Копировать имена</button></div>
           <p id="media-prompt-feedback" role="status" aria-live="polite" class="diagnostic-note"></p>
           <section id="media-image-edit" class="media-image-edit" aria-labelledby="media-image-title" hidden>
@@ -217,6 +217,7 @@
         <div class="library-extraction-body">
           <p class="library-extraction-intro">Встройте библиотеки в HTML или замените их ссылками, чтобы сократить код для ИИ.</p>
           <div class="platform-tabs" role="group" aria-label="Способ подключения библиотек"><button class="platform-tab library-extraction-mode" type="button" data-library-mode="embed" aria-pressed="false">Встроить</button><button class="platform-tab library-extraction-mode" type="button" data-library-mode="cdn" aria-pressed="true">CDN</button><button class="platform-tab library-extraction-mode" type="button" data-library-mode="files" aria-pressed="false">Файлы рядом</button></div>
+          <p id="library-placement-hint" class="diagnostic-note"></p>
           <ul id="library-extraction-list" class="library-extraction-list"></ul>
         </div>
         <div class="library-extraction-footer"><p id="library-extraction-summary" role="status" aria-live="polite"></p><div class="library-conversion-actions"><button id="library-convert-load" type="button" hidden>Получить копии</button><button id="library-extract-apply" type="button" disabled>Применить</button></div></div>
@@ -255,11 +256,11 @@
             <p id="diagnostic-cache-feedback" role="status" class="diagnostic-note"></p>
           </section>
           <section id="diagnostic-resources" hidden>
-            <h3>Свои изображения и звук</h3>
+            <h3>Свои медиа и модели</h3>
             <div class="diagnostic-actions"><button id="media-add" type="button">Добавить файлы</button></div>
-            <input id="media-input" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.mp3,.ogg,.wav" aria-label="Изображения и звук" hidden>
+            <input id="media-input" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.mp3,.ogg,.wav,.glb" aria-label="Изображения, звук и GLB-модели" hidden>
             <p id="media-summary" class="diagnostic-note"></p>
-            <details class="media-help"><summary>Как использовать файлы</summary><p class="diagnostic-note">«Вставить» добавляет img или audio на место курсора. «Привязать» использует точный относительный путь из HTML или встроенного CSS. Для изменения кода остановите игру и включите редактирование. До 8 МБ на файл, 16 МБ на документ, 32 МБ и 64 файла в кэше.</p></details>
+            <details class="media-help"><summary>Как использовать файлы</summary><p class="diagnostic-note">«Вставить» добавляет img, audio или data-model-src на место курсора. «Привязать» использует точный относительный путь из HTML или встроенного CSS. Для изменения кода остановите игру и включите редактирование. Большие файлы вызывают предупреждение; доступный объём определяется браузером.</p></details>
             <details id="media-binding-details" class="media-help"><summary>Привязки текущего кода</summary><p id="media-bindings" class="diagnostic-note media-bindings"></p></details>
             <ul id="media-list" class="diagnostic-list"></ul>
             <div id="media-delete-confirm" class="diagnostic-confirm" hidden><p id="media-delete-text"></p><div class="diagnostic-actions"><button id="media-delete-yes" type="button">Удалить файл</button><button id="media-delete-no" type="button">Отмена</button></div></div>
@@ -288,7 +289,7 @@
           <label id="save-libraries-option" class="save-library-option" for="save-libraries"><input id="save-libraries" type="checkbox" aria-describedby="save-libraries-hint"><span id="save-libraries-label">Встроить библиотеки в файл</span></label>
           <select id="save-libraries-mode" class="save-library-mode" aria-label="Как сохранить библиотеки" aria-describedby="save-libraries-hint" hidden><option value="inline">Внутри HTML</option><option value="files">Отдельные файлы</option></select>
           <p id="save-libraries-hint" class="save-library-hint"></p>
-          <div id="save-media-options" hidden><label class="save-library-option" for="save-media"><input id="save-media" type="checkbox" aria-describedby="save-media-hint"><span>Встроить изображения и звук</span></label><p id="save-media-hint" class="save-library-hint"></p></div>
+          <div id="save-media-options" hidden><label class="save-library-option" for="save-media"><input id="save-media" type="checkbox" aria-describedby="save-media-hint"><span>Встроить медиа и 3D-модели</span></label><p id="save-media-hint" class="save-library-hint"></p></div>
           <p id="save-result-size" class="save-library-hint" role="status"></p>
         </div>
         <div id="save-files" hidden>

@@ -35,7 +35,7 @@ function validLibraryAsset(source, license, notice = '') {
     && !/<\/script/i.test(source) && !/-->/.test(license) && typeof notice === 'string' && !/-->|<\/script/i.test(notice)
     && Boolean(libraryLicenseType(license));
 }
-function libraryNeedsNotice(entry) { return /^babylonjs@/.test(entry.catalogKey || entry.key || '') || /^Babylon\.js(?: |$)/.test(entry.title || ''); }
+function libraryNeedsNotice(entry) { return /^babylonjs(?:-loaders)?@/.test(entry.catalogKey || entry.key || '') || /^Babylon\.js(?: |$)/.test(entry.title || ''); }
 function validLibraryEntry(entry) {
   return entry && validLibraryAsset(entry.source, entry.license, entry.notice || '')
     && (!entry.licenseType || entry.licenseType === libraryLicenseType(entry.license))
@@ -46,9 +46,16 @@ function libraryLicenseText(entry) { return entry.license + (entry.notice ? '\nN
 
 // Uncompressed classic builds measured from the pinned npm packages; other versions are unknown.
 const knownLibraryBytes = { 'three@0.160.0': 669884, 'matter-js@0.20.0': 83476,
-  'phaser@3.90.0': 1196122, 'phaser@4.2.1': 1375976, 'babylonjs@9.30.0': 8619713 };
+  'phaser@3.90.0': 1196122, 'phaser@4.2.1': 1375976, 'babylonjs@9.30.0': 8619713,
+  'babylonjs-loaders@9.30.0:glTF2': 399422, 'babylonjs-loaders@9.30.0:all': 849596 };
 
 function libraryReference(url) {
+  const loader = /^https:\/\/(?:cdn\.jsdelivr\.net\/npm\/|unpkg\.com\/)babylonjs-loaders@9\.30\.0\/(babylon\.glTF2FileLoader|babylonjs\.loaders)\.min\.js$/.exec(url);
+  if (loader) {
+    const kind = loader[1] === 'babylon.glTF2FileLoader' ? 'glTF2' : 'all', key = 'babylonjs-loaders@9.30.0:' + kind;
+    return {key,title:'Babylon.js 9.30.0 · '+(kind === 'glTF2' ? 'GLB-загрузчик' : 'загрузчики'),url,downloadBytes:knownLibraryBytes[key],licenseType:'Apache-2.0',
+      licenseUrl:'https://cdn.jsdelivr.net/npm/babylonjs-loaders@9.30.0/license.md',noticeUrl:'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/NOTICE.md'};
+  }
   if (/^https:\/\/(?:cdn\.jsdelivr\.net\/npm\/|unpkg\.com\/)babylonjs@9\.30\.0\/babylon\.js$/.test(url)) {
     return { key: 'babylonjs@9.30.0', title: 'Babylon.js 9.30.0', url, downloadBytes: knownLibraryBytes['babylonjs@9.30.0'], licenseType: 'Apache-2.0',
       licenseUrl: 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/license.md', noticeUrl: 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/NOTICE.md' };
@@ -118,6 +125,12 @@ function localLibraryReference(url) {
     const version = (/[._-]v?([34]\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
       || folders.map(folder => /^(?:phaser[@._-])?v?([34]\.\d+\.\d+)$/i.exec(folder)).find(Boolean))?.[1];
     if (version) reference = libraryReference(`https://cdn.jsdelivr.net/npm/phaser@${version}/dist/phaser.min.js`);
+  } else if (/^(?:babylon[.-]glTF2(?:FileLoader)?|babylon(?:js)?[.-]loaders)(?:[._-]v?\d+\.\d+\.\d+)?(?:\.min)?\.js$/i.test(filename)) {
+    title = 'Babylon.js · загрузчик';
+    const version = (/[._-]v?(\d+\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
+      || folders.map(folder => /^(?:babylon(?:js)?(?:-loaders)?[@._-])?v?(\d+\.\d+\.\d+)$/i.exec(folder)).find(Boolean))?.[1];
+    const name = /gltf2/i.test(filename) ? 'babylon.glTF2FileLoader.min.js' : 'babylonjs.loaders.min.js';
+    if (version) reference = libraryReference(`https://cdn.jsdelivr.net/npm/babylonjs-loaders@${version}/${name}`);
   } else if (/^babylon(?:js)?(?:[._-]v?\d+\.\d+\.\d+)?(?:\.min)?\.js$/i.test(filename)) {
     title = 'Babylon.js';
     const version = (/[._-]v?(\d+\.\d+\.\d+)(?=[._-]|$)/i.exec(filename)
@@ -156,6 +169,7 @@ async function librarySourceHash(source) {
 }
 
 function libraryCatalogReference(key) {
+  if (/^babylonjs-loaders@9\.30\.0:(?:glTF2|all)$/.test(key || '')) return libraryReference('https://cdn.jsdelivr.net/npm/babylonjs-loaders@9.30.0/'+(key.endsWith(':glTF2') ? 'babylon.glTF2FileLoader.min.js' : 'babylonjs.loaders.min.js'));
   if (key === 'babylonjs@9.30.0') return libraryReference('https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/babylon.js');
   if (typeof moduleCatalog === 'function' && moduleCatalog(key)) return moduleCatalog(key);
   let match = /^three@0\.(\d{3})\.0$/.exec(key || '');
@@ -298,6 +312,8 @@ function libraryFilename(reference, entry) {
   const phaser = /^phaser@([\d.]+)$/.exec(key);
   if (phaser) return `phaser-${phaser[1]}.min.js`;
   if (key === 'babylonjs@9.30.0') return 'babylon-9.30.0.js';
+  if (key === 'babylonjs-loaders@9.30.0:glTF2') return 'babylon-glTF2-9.30.0.js';
+  if (key === 'babylonjs-loaders@9.30.0:all') return 'babylon-loaders-9.30.0.js';
   return 'library.js';
 }
 

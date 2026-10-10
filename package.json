@@ -20,6 +20,7 @@
     "test:game-storage": "node tests/game-storage.mjs",
     "test:libraries": "node tests/library-bundle.mjs",
     "test:modules": "node tests/module-libraries.mjs",
+    "test:models": "node tests/model-assets.mjs",
     "test:e2e": "node tests/browser.mjs",
     "test:workspace": "node tests/workspace.mjs",
     "test:editor": "node tests/editor.mjs",
@@ -45,12 +46,13 @@
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.43.13",
     "@lezer/highlight": "^1.2.5",
+    "babylonjs": "9.30.0",
+    "babylonjs-loaders": "9.30.0",
     "esbuild": "^0.28.2",
     "matter-js": "0.20.0",
     "phaser3": "npm:phaser@3.90.0",
     "phaser4": "npm:phaser@4.2.1",
     "playwright": "1.62.1",
-    "three": "0.160.0",
-    "babylonjs": "9.30.0"
+    "three": "0.160.0"
   }
 }

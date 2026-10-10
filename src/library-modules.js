@@ -2,16 +2,28 @@
 const moduleDataCache = new WeakMap();
 let moduleScanCache = { code: null, plan: null };
 function moduleReference(url) {
+  if (/^https:\/\/(?:cdn\.jsdelivr\.net\/npm|unpkg\.com)\/three@0\.160\.0\/examples\/jsm\/loaders\/GLTFLoader\.js$/.test(url)) return {
+    key: 'three-gltf@0.160.0', title: 'Three.js r160 · GLB-загрузчик', format: 'module', downloadBytes: 1413400,
+    url: 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js', originalUrl: url,
+    licenseUrl: 'https://cdn.jsdelivr.net/npm/three@0.160.0/LICENSE'
+  };
   const m = /^https:\/\/(?:cdn\.jsdelivr\.net\/npm|unpkg\.com)\/three@0\.(\d{3})\.0\/build\/(three\.module(?:\.min)?\.js)$/.exec(url);
   if (!m || +m[1] < 160 || +m[1] > 180) return null;
   const version = `0.${m[1]}.0`, name = m[2];
   return { key: `three-esm@${version}:${name}`, title: `Three.js r${m[1]} · модуль`, format: 'module',
+    downloadBytes: version === '0.160.0' ? (name === 'three.module.js' ? 1272972 : 670681) : undefined,
     url: `https://cdn.jsdelivr.net/npm/three@${version}/build/${name}`, originalUrl: url,
     licenseUrl: `https://cdn.jsdelivr.net/npm/three@${version}/LICENSE` };
 }
 function moduleCatalog(key) {
+  if (key === 'three-gltf@0.160.0') return moduleReference('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js');
   const m = /^three-esm@(0\.\d{3}\.0):(three\.module(?:\.min)?\.js)$/.exec(key || '');
   return m && moduleReference(`https://cdn.jsdelivr.net/npm/three@${m[1]}/build/${m[2]}`);
+}
+function moduleMappedUrl(value, imports) {
+  if (Object.hasOwn(imports,value)) return imports[value];
+  const prefix = Object.keys(imports).filter(key => key.endsWith('/') && value.startsWith(key)).sort((a,b) => b.length-a.length)[0];
+  return prefix && typeof imports[prefix] === 'string' && imports[prefix].endsWith('/') ? imports[prefix]+value.slice(prefix.length) : value;
 }
 function moduleString(text) {
   if (!/^["']/.test(text) || text.at(-1) !== text[0]) throw Error('Invalid import');
@@ -72,7 +84,7 @@ function scanModules(code) {
   } catch (error) { plan.reason = error.message || 'Некорректный importmap.'; }
   if(plan.reason) plan.issues.push({title:'Importmap',path:'',state:'Подмена не поддерживается',note:plan.reason});
   function add(value, record, position) {
-    const mapped = Object.hasOwn(plan.imports,value) ? plan.imports[value] : value;
+    const mapped = moduleMappedUrl(value,plan.imports);
     if(plan.map?.attrs.has('data-onehtml-modules') && typeof mapped==='string' && mapped.startsWith('data:text/javascript;base64,')) return;
     let ref = typeof mapped === 'string' && moduleReference(mapped);
     if (typeof mapped === 'string' && plan.map?.attrs.has('data-onehtml-module-links')) {
@@ -83,7 +95,7 @@ function scanModules(code) {
           filename:!/^https:/.test(mapped)?mapped.split('/').pop():'',modulePath:mapped,moduleLocal:!/^https:/.test(mapped)};
       } catch {}
     }
-    const reason = plan.reason || (!ref ? 'Поддерживается ядро Three.js r160–r180 с точной CDN-ссылкой. Дополнения, локальные пути и другие модули не встраиваются.' : '');
+    const reason = plan.reason || (!ref ? 'Поддерживаются ядро Three.js r160–r180 и GLTFLoader r160 с точными CDN-ссылками. Другие дополнения, локальные пути и модули не встраиваются.' : '');
     if (reason) plan.issues.push({ title:'Модуль JavaScript', path: typeof mapped === 'string' ? mapped : value, state:'Подмена не поддерживается', note:reason });
     else plan.references.push({ ...ref, index:record.index, record, value, position });
   }
@@ -98,11 +110,24 @@ function scanModules(code) {
       else add(item.value,record,item);
     }
   }
+  if (plan.references.some(ref => ref.key === 'three-gltf@0.160.0')) {
+    const core = typeof plan.imports.three === 'string' && (moduleReference(plan.imports.three) || plan.references.find(ref => ref.value === 'three'));
+    if (typeof plan.imports.three === 'string' && !core?.key.startsWith('three-esm@0.160.0:')
+      || plan.references.some(ref => ref.key.startsWith('three-esm@') && !ref.key.startsWith('three-esm@0.160.0:'))) {
+      plan.references = plan.references.filter(ref => ref.key !== 'three-gltf@0.160.0');
+      plan.issues.push({title:'GLTFLoader', path:'', state:'Подмена не поддерживается', note:'GLTFLoader r160 требует ядро Three.js той же версии. Существующая версия сохранена.'});
+    }
+  }
   moduleScanCache = { code, plan }; return plan;
 }
 function moduleFileUrl(path, base) {
-  const url = new URL(path,base).href, prefix = base.slice(0,base.lastIndexOf('/')+1);
-  if (!url.startsWith(prefix) || !/^three\.(?:module|core)(?:\.min)?\.js$/.test(url.slice(prefix.length))) throw Error('Неподдерживаемая зависимость ядра.');
+  const root = /^(https:\/\/cdn\.jsdelivr\.net\/npm\/three@0\.\d{3}\.0\/)/.exec(base)?.[1];
+  const addon = base.includes('/examples/jsm/');
+  const url = path === 'three' && addon ? root + 'build/three.module.js' : new URL(path,base).href;
+  const allowed = addon ? ['examples/jsm/loaders/GLTFLoader.js', 'examples/jsm/utils/BufferGeometryUtils.js', 'build/three.module.js'] : [];
+  if (!root || !url.startsWith(root) || !(allowed.includes(url.slice(root.length))
+    || /^build\/three\.(?:module|core)(?:\.min)?\.js$/.test(url.slice(root.length)))) throw Error('Неподдерживаемая зависимость модуля.');
+  if (addon && !root.includes('three@0.160.0/')) throw Error('Неподдерживаемая версия загрузчика.');
   return url;
 }
 function moduleEntryData(entry) {
@@ -132,12 +157,19 @@ async function downloadModule(reference) {
   const ref = moduleCatalog(reference.key);
   if (!ref || ref.url !== reference.url) throw Error('Unknown module');
   const response = await fetch(ref.licenseUrl,{credentials:'omit',redirect:'error'});
-  const license = await readLibraryResponse(response), files = [], queue = [ref.url];
+  const license = await readLibraryResponse(response), files = [], queue = [ref.url], reused = new Map();
+  for (const entry of libraryCache.values()) if (entry.format === 'module' && moduleCatalog(entry.key)) {
+    const data = moduleEntryData(entry);
+    if (data && entry.license.trim() === license.trim()) for (const file of data.files) reused.set(file.url,file.source);
+  }
   let bytes = 0;
   for (let i=0;i<queue.length;i++) {
-    const response=await fetch(queue[i],{credentials:'omit',redirect:'error'});
-    if(!/^(?:text|application)\/(?:javascript|ecmascript)(?:;|$)/i.test(response.headers.get('content-type') || '')) throw Error('Module MIME type');
-    const source = await readLibraryResponse(response);
+    let source = reused.get(queue[i]);
+    if (source === undefined) {
+      const response=await fetch(queue[i],{credentials:'omit',redirect:'error'});
+      if(!/^(?:text|application)\/(?:javascript|ecmascript)(?:;|$)/i.test(response.headers.get('content-type') || '')) throw Error('Module MIME type');
+      source = await readLibraryResponse(response);
+    }
     bytes += new TextEncoder().encode(source).length;
     if (!validLibraryAsset(source,license)) throw Error('Invalid module source or license');
     files.push({url:queue[i],source});
@@ -161,9 +193,13 @@ function moduleReplace(text, changes) {
   for (const change of changes.sort((a,b)=>b.from-a.from || b.to-a.to)) text=text.slice(0,change.from)+change.text+text.slice(change.to);
   return text;
 }
+function moduleNoticeReference(entry) {
+  return entry.key === 'three-gltf@0.160.0' || entry.catalogKey === 'three-gltf@0.160.0'
+    ? moduleReference('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js') : entry;
+}
 function moduleFileSource(file,entry,targets) {
   const changes=(file.imports || moduleImports(file.source)).map(item=>({from:item.from,to:item.to,text:JSON.stringify(targets.get(moduleFileUrl(item.value,file.url)) || moduleFileUrl(item.value,file.url))}));
-  return licensedLibrarySource(entry, { ...entry, source:moduleReplace(file.source,changes) });
+  return licensedLibrarySource(moduleNoticeReference(entry), { ...entry, source:moduleReplace(file.source,changes) });
 }
 async function prepareModuleLibraries(code, mode='inline', reserved=[], copies=new Map()) {
   const plan=scanModules(code), missingLibraries=[], bundledLibraries=[], bundledLibraryDetails=[], files=[], groups=[];
@@ -188,15 +224,23 @@ async function prepareModuleLibraries(code, mode='inline', reserved=[], copies=n
     names.add(name.toLowerCase()); outputs.set(file.url,{file,entry,name});
     if (mode==='files') targets.set(file.url,'./'+encodeURIComponent(name));
   }
+  const gltfCore = selected.has('three-gltf@0.160.0') && (plan.references.find(ref => ref.originalUrl === plan.imports.three && ref.key.startsWith('three-esm@0.160.0:'))
+    || plan.references.find(ref => ref.key.startsWith('three-esm@0.160.0:')));
+  const gltfCoreUrl = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+  if (gltfCore && gltfCore.url !== gltfCoreUrl) outputs.delete(gltfCoreUrl);
+  if (mode === 'files' && gltfCore && targets.has(gltfCore.url)) targets.set(gltfCoreUrl,targets.get(gltfCore.url));
   for (const [url,item] of outputs) {
     const source=moduleFileSource(item.file,item.entry,mode==='files'?targets:new Map());
     if (mode==='files') files.push({name:item.name,content:source});
     else targets.set(url,'data:text/javascript;base64,'+moduleBase64(source));
     imports[url]=targets.get(url);
   }
+  if (selected.has('three-gltf@0.160.0')) {
+    if (gltfCore && targets.has(gltfCore.url)) { targets.set(gltfCoreUrl,targets.get(gltfCore.url)); imports[gltfCoreUrl]=targets.get(gltfCore.url); }
+  }
   for (const ref of plan.references) if (selected.has(ref.key)) {
     imports[ref.originalUrl]=targets.get(ref.url);
-    if (Object.hasOwn(plan.imports,ref.value)) imports[ref.value]=targets.get(ref.url);
+    if (Object.hasOwn(plan.imports,ref.value) || moduleMappedUrl(ref.value,plan.imports) !== ref.value) imports[ref.value]=targets.get(ref.url);
   }
   for (const {entry,data} of selected.values()) {
     groups.push({key:data.ref.key,license:entry.license,files:data.files.map(file=>({url:file.url}))});
@@ -244,7 +288,7 @@ async function embeddedModulePlan(code,mode='cdn') {
       const ref=moduleCatalog(group.key);if(!ref || !Array.isArray(group.files) || group.files.length>3) throw Error('Неподдерживаемая копия модуля.');
       const files=group.files.map(file=>{
         const value=imports[file.url];if(typeof value!=='string' || !value.startsWith('data:text/javascript;base64,')) throw Error('Модульная копия неполная.');
-        const source=moduleDecode(value.slice(28)), prefix=licensedLibrarySource(ref,{source:'',license:group.license});
+        const source=moduleDecode(value.slice(28)), prefix=licensedLibrarySource(moduleNoticeReference(ref),{source:'',license:group.license});
         if(!source.startsWith(prefix)) throw Error('Не найдена лицензия модуля.');
         return {url:file.url,source:source.slice(prefix.length)};
       });

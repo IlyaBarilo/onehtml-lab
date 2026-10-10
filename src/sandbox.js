@@ -7,7 +7,7 @@ function previewPolicy(networkAllowed) {
     `img-src data: blob:${networkAllowed ? ' https:' : ''}`,
     `media-src data: blob:${networkAllowed ? ' https:' : ''}`,
     `font-src data:${networkAllowed ? ' https:' : ''}`,
-    `connect-src ${networkAllowed ? 'https: wss:' : "'none'"}`,
+    `connect-src ${networkAllowed ? 'https: wss: data: blob:' : 'data: blob:'}`,
     "webrtc 'block'", "frame-src 'none'", "object-src 'none'",
     "base-uri 'none'", "form-action 'none'", "worker-src 'none'"
   ].join('; ');

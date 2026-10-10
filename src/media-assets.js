@@ -1,7 +1,8 @@
 // Local user-selected media only. Neither scanning nor attachment executes HTML.
 const mediaCache = new Map();
 const mediaPersisted = new Set();
-const mediaTypes = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', mp3: 'audio/mpeg', ogg: 'audio/ogg', wav: 'audio/wav' };
+const mediaTypes = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', mp3: 'audio/mpeg', ogg: 'audio/ogg', wav: 'audio/wav', glb: 'model/gltf-binary' };
+function mediaKindMatches(type, kind) { return kind === 'model' ? type === 'model/gltf-binary' : type?.startsWith(kind + '/'); }
 let mediaDatabasePromise;
 let mediaBusy = false;
 let mediaFeedback = '';
@@ -49,6 +50,7 @@ function mediaSignature(bytes, type) {
   if (type === 'audio/wav') return bytes.length >= 44 && starts('RIFF') && String.fromCharCode(...bytes.slice(8,12)) === 'WAVE';
   if (type === 'audio/ogg') return bytes.length >= 27 && starts('OggS');
   if (type === 'audio/mpeg') return bytes.length >= 4 && (starts('ID3') || (bytes[0] === 255 && (bytes[1] & 224) === 224));
+  if (type === 'model/gltf-binary') return bytes.length >= 20 && starts('glTF') && new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(4, true) === 2;
   return false;
 }
 
@@ -57,6 +59,7 @@ async function validMediaEntry(entry) {
     || !Object.values(mediaTypes).includes(entry.type) || !(entry.blob instanceof Blob) || entry.blob.type !== entry.type
     || !entry.blob.size) return false;
   const bytes = new Uint8Array(await entry.blob.arrayBuffer());
+  if (entry.type === 'model/gltf-binary') { try { glbInfo(bytes); } catch { return false; } }
   return mediaSignature(bytes, entry.type) && await mediaHash(bytes) === entry.id;
 }
 
@@ -76,7 +79,8 @@ async function loadMediaCache() {
       if (!await validMediaEntry(entry)) continue;
       const image = typeof mediaImageInfo === 'function' ? mediaImageInfo(new Uint8Array(await entry.blob.arrayBuffer()),entry.type) : null;
       const originalId = /^[a-f\d]{64}$/.test(entry.originalId || '') && entry.originalId !== entry.id ? entry.originalId : undefined;
-      mediaCache.set(entry.id, {id:entry.id,name:entry.name,type:entry.type,blob:entry.blob,image,originalId});
+      const model = entry.type === 'model/gltf-binary' ? glbInfo(new Uint8Array(await entry.blob.arrayBuffer())) : null;
+      mediaCache.set(entry.id, {id:entry.id,name:entry.name,type:entry.type,blob:entry.blob,image,model,originalId});
       mediaPersisted.add(entry.id);
     }
   } catch { mediaFeedback = 'Хранилище медиа недоступно. Новые файлы будут доступны только до закрытия редактора.'; }
@@ -85,15 +89,16 @@ async function loadMediaCache() {
 
 async function addMediaFile(file, originalId) {
   const type = mediaTypes[(/\.([a-z]+)$/i.exec(file.name)?.[1] || '').toLowerCase()];
-  if (!type) throw Error('Выберите PNG, JPEG, WebP, MP3, OGG или WAV.');
+  if (!type) throw Error('Выберите PNG, JPEG, WebP, MP3, OGG, WAV или GLB.');
   if (!file.size) throw Error('Файл пуст.');
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (!mediaSignature(bytes, type)) throw Error('Содержимое файла не соответствует его формату.');
+  const model = type === 'model/gltf-binary' ? glbInfo(bytes) : null;
   const id = await mediaHash(bytes);
   if (mediaCache.has(id)) return mediaCache.get(id);
   const name = file.name.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 170) || 'media';
   originalId = /^[a-f\d]{64}$/.test(originalId || '') && originalId !== id ? originalId : undefined;
-  const entry = { id, name, type, blob: new Blob([bytes], { type }), originalId, image: typeof mediaImageInfo === 'function' ? mediaImageInfo(bytes,type) : null };
+  const entry = { id, name, type, blob: new Blob([bytes], { type }), originalId, model, image: typeof mediaImageInfo === 'function' ? mediaImageInfo(bytes,type) : null };
   try { await mediaTransaction('readwrite', store => store.put({id,name,type,originalId,bytes:bytes.buffer})); mediaPersisted.add(id); }
   catch { /* Keep the file for this session; its row makes the limitation explicit. */ }
   mediaCache.set(id, entry);
@@ -107,7 +112,7 @@ function scanMedia(code) {
   let templateDepth = 0, audioDepth = 0, markers = 0;
   function add(path, kind, from, to, context) {
     path = decodeScriptUrl(path);
-    const embedded = /^data:(?:image\/(?:png|jpeg|webp)|audio\/(?:mpeg|ogg|wav));base64,/i.test(path);
+    const embedded = /^data:(?:image\/(?:png|jpeg|webp)|audio\/(?:mpeg|ogg|wav)|model\/gltf-binary);base64,/i.test(path);
     if (!embedded && !mediaPath(path)) return;
     (embedded ? result.embedded : result.refs).push({ path, kind, from, to, context });
   }
@@ -157,6 +162,7 @@ function scanMedia(code) {
         add(value, tag === 'audio' || tag === 'source' ? 'audio' : 'image', from, from + attr[2].length, 'attribute');
       }
       if (key === 'style' && quoted) css(value, from + 1, true);
+      if (key === 'data-model-src') add(value, 'model', from, from + attr[2].length, 'attribute');
     }
     if (tag === 'style') css(token[3] || '', token.index + tag.length + attrs.length + 2);
   }
@@ -170,7 +176,7 @@ function mediaBindings(code) {
   return scan.refs.map(ref => {
     const link = scan.links.find(link => link.path === ref.path);
     const entry = link && mediaCache.get(link.id);
-    return { ...ref, id: link?.id, entry: entry?.type.startsWith(ref.kind + '/') ? entry : null };
+    return { ...ref, id: link?.id, entry: mediaKindMatches(entry?.type, ref.kind) ? entry : null };
   });
 }
 
@@ -179,7 +185,7 @@ function attachMedia(code, path, entry) {
   if (scan.reason) throw Error(scan.reason);
   const refs = scan.refs.filter(ref => ref.path === path);
   if (!mediaPath(path) || !refs.length) throw Error('В текущем HTML или стилях нет такого относительного пути.');
-  if (refs.some(ref => !entry.type.startsWith(ref.kind + '/'))) throw Error('Тип файла не подходит к выбранному подключению.');
+  if (refs.some(ref => !mediaKindMatches(entry.type, ref.kind))) throw Error('Тип файла не подходит к выбранному подключению.');
   const links = [...scan.links.filter(link => link.path !== path && scan.refs.some(ref => ref.path === link.path)), { path, id: entry.id }];
   const marker = `<!--onehtml-media:1:${moduleBase64(JSON.stringify(links))}-->`;
   if (scan.marker) return moduleReplace(code, [{ ...scan.marker, text: marker }]);
@@ -298,13 +304,14 @@ function renderMediaAssets() {
       img.addEventListener('error',()=>{if(!note.textContent.includes('Изображение не прочитано'))note.textContent+=' · Изображение не прочитано браузером.';});
       li.prepend(img);
     }
-    else {
+    else if (entry.type.startsWith('audio/')) {
       const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=url;audio.setAttribute('aria-label',`Прослушать ${entry.name}`);
       const unsupported=' · Прослушивание недоступно в этом браузере. Файл можно встроить.';
       if(!audio.canPlayType(entry.type))note.textContent+=unsupported;
       audio.addEventListener('error',()=>{if(!note.textContent.includes('Прослушивание недоступно'))note.textContent+=unsupported;});
       li.append(audio);
     }
+    else appendModelDetails(li, entry);
     const actions = document.createElement('div'); actions.className = 'media-actions';
     const insert = diagnosticButton('Вставить', () => {
       const before=codeField.value, at=mediaSelection;
@@ -312,7 +319,7 @@ function renderMediaAssets() {
       try {
         const ext = Object.keys(mediaTypes).find(key => mediaTypes[key] === entry.type);
         const path=`./media-${entry.id.slice(0,12)}.${ext}`;
-        const fragment=entry.type.startsWith('image/') ? `<img src="${path}" alt="Описание изображения">` : `<audio controls src="${path}"></audio>`;
+        const fragment=entry.type.startsWith('image/') ? `<img src="${path}" alt="Описание изображения">` : entry.type.startsWith('audio/') ? `<audio controls src="${path}"></audio>` : `<div id="model-${entry.id.slice(0,12)}" data-model-src="${path}" hidden></div>`;
         const raw=before.slice(0,at.start)+fragment+before.slice(at.end);
         const next=attachMedia(raw,path,entry), shift=next.length-raw.length;
         // The marker is inserted before the fragment or replaced in the head.
@@ -323,7 +330,7 @@ function renderMediaAssets() {
     insert.disabled=blocked;actions.append(insert);
     const path=document.createElement('input');path.className='media-path';path.type='text';path.placeholder='images/photo.jpg';
     path.setAttribute('aria-label',`Путь для ${entry.name}`);path.autocomplete='off';path.autocapitalize='off';path.inputMode='url';path.spellcheck=false;path.disabled=blocked;
-    const choices=[...new Set(refs.filter(ref=>entry.type.startsWith(ref.kind+'/')).map(ref=>ref.path))];
+    const choices=[...new Set(refs.filter(ref=>mediaKindMatches(entry.type,ref.kind)).map(ref=>ref.path))];
     path.value=choices.length===1?choices[0]:'';
     const options=document.createElement('datalist');options.id=`media-path-${entry.id}`;path.setAttribute('list',options.id);
     for(const value of choices){const option=document.createElement('option');option.value=value;options.append(option);}

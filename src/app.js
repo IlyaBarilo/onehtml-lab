@@ -473,6 +473,17 @@ function renderExamples() {
     const actions = document.createElement('div');
     actions.className = 'example-actions';
     actions.append(button);
+    if (example.id === 'glb-model') {
+      const modelButton = document.createElement('button'); modelButton.type = 'button'; modelButton.textContent = 'Скачать GLB';
+      modelButton.addEventListener('click', () => {
+        try {
+          const data = /data-model-src="data:model\/gltf-binary;base64,([A-Za-z\d+/=]+)"/.exec(example.code)?.[1];
+          const bytes = Uint8Array.from(atob(data || ''), char => char.charCodeAt(0)); glbInfo(bytes);
+          downloadBlob(new Blob([bytes], {type:glbType}), 'satellite.glb');
+        } catch { inform('Не удалось подготовить модель.', true); }
+      });
+      actions.append(modelButton);
+    }
     card.append(title, description, actions);
     appendExampleLesson(card, actions, example);
     exampleList.append(card);
@@ -675,6 +686,12 @@ function formatLibrarySize(bytes) {
   return bytes < 1024 ? `${formatUIInteger(bytes)} Б` : `${(bytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} КБ`;
 }
 
+function libraryPlacementHint(mode) {
+  if (mode === 'files') return 'На телефоне скачанный HTML часто не может прочитать JS-файлы рядом в «Загрузках». Встройте библиотеки в HTML или используйте ссылки через интернет. На сервере файлы рядом работают.';
+  if (mode === 'embed' || mode === 'inline') return 'Размер HTML увеличится; повторное редактирование такого файла будет сложнее. Для анализа ИИ можно снова заменить библиотеки ссылками.';
+  return 'Библиотеки подключаются ссылками через интернет. Для запуска сохранённого файла понадобится доступ к сети.';
+}
+
 function closeLibraryExtraction() {
   if (!extractionOpen) return;
   extractionOpen = false;
@@ -697,6 +714,7 @@ async function refreshLibraryExtraction() {
   extractionApply.disabled = true;
   conversionLoad.hidden = true;
   extractionSummary.textContent = 'Проверяю библиотеки…';
+  document.querySelector('#library-placement-hint').textContent = libraryPlacementHint(extractionMode);
   try {
     const plan = extractionMode === 'embed' ? await planLibraryEmbedding(code) : await planLibraryExtraction(code, extractionMode);
     if (!extractionOpen || request !== extractionRequest) return;
@@ -1542,7 +1560,7 @@ function updateSaveLibrariesDescription() {
   saveLibrariesMode.disabled = !checked;
   saveLibrariesLabel.textContent = separate ? 'Сохранить библиотеки рядом с HTML' : 'Встроить библиотеки в файл';
   if (checked && separate) {
-    saveLibrariesHint.textContent = 'HTML и JS скачаются отдельными файлами. Сохраните их в одну папку. Лицензии включены в JS.'
+    saveLibrariesHint.textContent = 'HTML и JS скачаются отдельными файлами. Сохраните их в одну папку. Лицензии включены в JS. ' + libraryPlacementHint('files')
       + (modules ? ' Модульные файлы требуют HTTP: для запуска без сервера выберите встраивание в HTML.' : '')
       + (missing ? ' Неподготовленные библиотеки останутся по исходным ссылкам.' : '');
   } else if (checked) {
@@ -1568,7 +1586,7 @@ async function updateSaveMediaDescription() {
   const bytes = ids.reduce((sum,id) => sum + mediaCache.get(id).blob.size,0);
   hint.textContent = field.checked && !field.disabled
     ? `Медиа будут внутри HTML: ${diagnosticSize(bytes)} исходных файлов. При встраивании объём данных увеличивается примерно на треть.`
-    : 'Изображения и звук сохранятся как в коде, без подстановки файлов из кэша.';
+    : 'Медиа и модели сохранятся как в коде, без подстановки файлов из кэша.';
   if (refs.some(ref => !ref.entry)) hint.textContent += ' Часть выбранных файлов отсутствует. Выберите их снова в «Ресурсах».';
   if (scanMedia(codeField.value).reason) hint.textContent += ' ' + scanMedia(codeField.value).reason;
   const result = document.querySelector('#save-result-size');

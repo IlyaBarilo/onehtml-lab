@@ -103,11 +103,11 @@ async function planPromptMedia(code,selected,shorten) {
   if(shorten) {
     for(const ref of scan.embedded) {
       try {
-        const match=/^data:(image\/(?:png|jpeg|webp)|audio\/(?:mpeg|ogg|wav));base64,([A-Za-z\d+/=\s]+)$/i.exec(ref.path);
+        const match=/^data:(image\/(?:png|jpeg|webp)|audio\/(?:mpeg|ogg|wav)|model\/gltf-binary);base64,([A-Za-z\d+/=\s]+)$/i.exec(ref.path);
         if(!match)continue;
         const base64=match[2].replace(/\s/g,'');
         const binary=atob(base64),bytes=Uint8Array.from(binary,char=>char.charCodeAt(0)),type=match[1].toLowerCase();
-        if(!type.startsWith(ref.kind+'/'))throw Error('Тип data URL не подходит к подключению.');
+        if(!mediaKindMatches(type,ref.kind))throw Error('Тип data URL не подходит к подключению.');
         if(!bytes.length || !mediaSignature(bytes,type))throw Error('Не удалось проверить формат медиа.');
         const id=await mediaHash(bytes);
         let entry=mediaCache.get(id),name=selected.find(file=>file.id===id)?.name || entry?.name;
@@ -125,11 +125,13 @@ async function planPromptMedia(code,selected,shorten) {
   return {html:moduleReplace(code,changes),files:result,notes:[...new Set(notes)]};
 }
 
-function promptMediaIntro(files) {
+function promptMediaIntro(files, engine = '', existing = false) {
   if(!files.length)return '';
-  return 'Доступные медиафайлы:\n'+files.map(file=>'- '+file.name+(mediaDimensions(mediaCache.get(file.id)) ? ' — '+mediaDimensions(mediaCache.get(file.id)) : '')).join('\n')
+  const models = files.some(file => /\.glb$/i.test(file.name));
+  return 'Доступные медиафайлы:\n'+files.map(file=>'- '+file.name+(mediaDimensions(mediaCache.get(file.id)) ? ' — '+mediaDimensions(mediaCache.get(file.id)) : '')+(/\.glb$/i.test(file.name) ? ' — '+modelSummary(mediaCache.get(file.id)) : '')).join('\n')
     +'\n\nВ ответе используй ссылки с исходными именами файлов, без подкаталогов. При сохранении файлы будут встроены в HTML в формате data URL. Не кодируй содержимое файлов самостоятельно. Для имён с пробелами или специальными символами используй URL-кодирование.'
-    +'\nПодключай изображения через img src или url(...) во встроенном CSS, звук — через audio src либо source внутри audio. Для Canvas используй изображение из img; для звука обращайся к audio по id. Не создавай пути к этим файлам в JavaScript, srcset или внешнем CSS.\n\n';
+    +'\nПодключай изображения через img src или url(...) во встроенном CSS, звук — через audio src либо source внутри audio. Для Canvas используй изображение из img; для звука обращайся к audio по id. Не создавай пути к этим файлам в JavaScript, srcset или внешнем CSS.'
+    +(models ? '\n'+modelPromptInstructions(engine,existing) : '')+'\n\n';
 }
 
 async function promptClipboardImage(blob) {
@@ -208,7 +210,8 @@ function renderPromptMedia() {
     });remove.className='expert-icon-button';remove.disabled=mediaBusy;remove.title=`Удалить ${name}`;remove.setAttribute('aria-label',`Удалить ${name}`);remove.append(document.querySelector('#clear svg').cloneNode(true));li.append(remove);
     const url=URL.createObjectURL(entry.blob);promptMediaUrls.add(url);
     if(entry.type.startsWith('image/')){const image=document.createElement('img');image.src=url;image.alt=name;image.loading='lazy';image.className='media-thumbnail';li.append(image);}
-    else{const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=url;audio.setAttribute('aria-label',`Прослушать ${name}`);audio.addEventListener('error',()=>{note.textContent+=' · Прослушивание недоступно в этом браузере.';},{once:true});li.append(audio);}
+    else if(entry.type.startsWith('audio/')){const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=url;audio.setAttribute('aria-label',`Прослушать ${name}`);audio.addEventListener('error',()=>{note.textContent+=' · Прослушивание недоступно в этом браузере.';},{once:true});li.append(audio);}
+    else appendModelDetails(li,entry);
     li.append(actions);return li;
   }));
 }

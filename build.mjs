@@ -17,7 +17,7 @@ for (const name of ['app', 'paste', 'clear', 'save', 'share', 'play', 'stop', 'e
   template = template.replace(`<!-- ICON:${name} -->`, () => icon.trim());
 }
 const css = await readFile(join(root, 'src/styles.css'), 'utf8');
-const files = ['format.js', 'vendor/codemirror.bundle.js', 'game-storage.js', 'library-bundle.js', 'library-modules.js', 'media-assets.js', 'media-prompts.js', 'media-images.js', 'quality.js', 'sandbox.js', 'exporter.js', 'library-extract.js', 'draft.js', 'compare.js', 'comparison-game.js', 'workspace.js', 'syntax.js', 'editor.js', 'alternative-editor.js', 'desktop.js', 'readiness.js', 'diagnostics.js', 'ai-profiles.js', 'ai-prompts.js', 'ai-session.js', 'preview-picker.js', 'example-lessons.js', 'code-guide.js', 'app.js'];
+const files = ['format.js', 'vendor/codemirror.bundle.js', 'game-storage.js', 'library-bundle.js', 'library-modules.js', 'media-models.js', 'media-assets.js', 'media-prompts.js', 'media-images.js', 'quality.js', 'sandbox.js', 'exporter.js', 'library-extract.js', 'draft.js', 'compare.js', 'comparison-game.js', 'workspace.js', 'syntax.js', 'editor.js', 'alternative-editor.js', 'desktop.js', 'readiness.js', 'diagnostics.js', 'ai-profiles.js', 'ai-prompts.js', 'ai-session.js', 'preview-picker.js', 'example-lessons.js', 'code-guide.js', 'app.js'];
 const exampleFiles = [
   { id: 'catch-circle', platform: 'mobile', title: 'Поймай круг', description: 'Касайтесь цели на всём экране.' },
   { id: 'memory', platform: 'mobile', title: 'Найди пару', description: 'Открывайте пары касанием карточек.' },
@@ -27,6 +27,7 @@ const exampleFiles = [
   { id: 'interactive-infographic', category: 'media', platform: 'mobile', title: 'Интерактивная инфографика', description: 'Данные, диаграмма и пояснения по нажатию.' },
   { id: 'sound-panel', category: 'media', platform: 'all', title: 'Звуковая панель', description: 'Четыре синтезируемых звука, формы и цвета. Работает без внешних ресурсов.' },
   { id: '3d-showcase', category: 'media', platform: 'all', title: '3D-витрина', description: 'Лампа, материалы, свет и тени. Three.js r160 можно встроить при сохранении.' },
+  { id: 'glb-model', category: 'media', platform: 'all', title: '3D-модель GLB', description: 'Спутник с текстурой и анимацией. Вращение касанием или мышью, масштаб и скачивание модели.' },
   { id: 'snake', platform: 'desktop', title: 'Змейка', description: 'Управляйте стрелками или WASD.' },
   { id: 'falling-stars', platform: 'desktop', title: 'Лови звёзды', description: 'Двигайте платформу мышью.' },
   { id: 'space-reaction', platform: 'desktop', title: 'Реакция на пробел', description: 'Нажмите пробел после сигнала.' },
@@ -34,10 +35,11 @@ const exampleFiles = [
   { id: 'snake3d-turns', category: 'fix', platform: 'mobile', title: 'Змейка 3D: повороты', description: 'Первый ответ ИИ: повороты влево и вправо перепутаны.' },
   { id: 'snake3d-rewrite', category: 'fix', platform: 'mobile', title: 'Змейка 3D: после правки', description: 'Следующий ответ ИИ: игра переписана, камера смотрит сквозь голову.' }
 ];
-const examples = await Promise.all(exampleFiles.map(async entry => ({
-  ...entry,
-  code: await readFile(join(root, 'src/examples', entry.id + '.html'), 'utf8')
-})));
+const examples = await Promise.all(exampleFiles.map(async entry => {
+  let code = await readFile(join(root, 'src/examples', entry.id + '.html'), 'utf8');
+  if (entry.id === 'glb-model') code = code.replace('data-model-src="satellite.glb"', `data-model-src="data:model/gltf-binary;base64,${(await readFile(join(root,'src/examples/satellite.glb'))).toString('base64')}"`);
+  return { ...entry, code };
+}));
 const script = '(function () {\n"use strict";\n'
   + `const examples = ${JSON.stringify(examples)};\n`
   + (await Promise.all(files.map(name => readFile(join(root, 'src', name), 'utf8')))).join('\n') + '\n})();';

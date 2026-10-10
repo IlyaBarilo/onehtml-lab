@@ -49,4 +49,14 @@ Babylon.js 9.30.0 is an optional game engine under Apache-2.0. Its WebGL core is
 
 Babylon.js 9.30.0 — необязательный игровой движок под Apache-2.0. Профиль игры и тест библиотек подключают его ядро WebGL; в редактор оно не включено. Точная зависимость npm предоставляет настоящий дистрибутив для проверок. При загрузке, встраивании, сохранении отдельного JS и сокращении копий сохраняются полные LICENSE и NOTICE из пакета по ссылкам выше. Лицензия OneHTML Lab остаётся MIT.
 
-Project / Проект: [Babylon.js](https://www.babylonjs.com/). Exact release / Точный выпуск: [9.30.0](https://github.com/BabylonJS/Babylon.js/releases/tag/9.30.0). GUI, Havok, model loaders, inspector and WebGPU are not part of the supported profile. / GUI, Havok, загрузчики моделей, инспектор и WebGPU в поддерживаемый профиль не входят.
+Project / Проект: [Babylon.js](https://www.babylonjs.com/). Exact release / Точный выпуск: [9.30.0](https://github.com/BabylonJS/Babylon.js/releases/tag/9.30.0). GUI, Havok, inspector and WebGPU are not part of the supported profile. / GUI, Havok, инспектор и WebGPU в поддерживаемый профиль не входят.
+
+## GLB loaders and sample / Загрузчики GLB и пример
+
+Three.js r160 GLTFLoader and BufferGeometryUtils use the same full MIT notice as the Three.js package. Babylon.js loaders 9.30.0 use [Apache-2.0](licenses/babylonjs-loaders-9.30.0-LICENSE.txt). These optional modules are downloaded separately and are not bundled with the editor. Embedded and adjacent copies retain their full licenses; Babylon loader copies also carry the Babylon project NOTICE linked above. The loader npm package does not supply a separate NOTICE file.
+
+GLTFLoader и BufferGeometryUtils версии Three.js r160 используют полный текст MIT из пакета Three.js. Загрузчики Babylon.js 9.30.0 распространяются под Apache-2.0 по ссылке выше. Эти необязательные компоненты скачиваются отдельно и не входят в редактор. Встроенные и отдельные копии сохраняют полные лицензии; к загрузчику Babylon также добавляется NOTICE проекта Babylon по ссылке выше. Отдельного NOTICE в npm-пакете загрузчика нет.
+
+The satellite model, its texture and animation are authored for OneHTML Lab and covered by the project MIT license. User-supplied models retain their own terms; importing a model does not relicense it.
+
+Модель спутника, текстура и анимация созданы для OneHTML Lab и распространяются под MIT проекта. Загруженные пользователем модели сохраняют собственные условия использования; добавление модели не меняет её лицензию.
