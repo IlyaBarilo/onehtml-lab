@@ -20,11 +20,21 @@ const engines = process.argv.includes('--engines=chromium') ? [['chromium', chro
 const canvasSource = example.slice(example.indexOf('      function canvasShowcase()'), example.indexOf('      function threeColor('));
 
 async function checkCanvasRoute(page, name) {
-  for (const width of [320, 1365]) {
-    const result = await page.evaluate(({ source, width }) => {
-      const height = 420, canvas = document.createElement('canvas');
+  let wideGeometry;
+  for (const [width, height] of [[320, 420], [1365, 420], [2560, 420], [2560, 240], [2560, 840]]) {
+    const result = await page.evaluate(({ source, width, height }) => {
+      const canvas = document.createElement('canvas');
       canvas.width = width; canvas.height = height;
       const context = canvas.getContext('2d', { willReadFrequently: true });
+      const geometry = { windows: [], facades: [], supports: [], cars: [], cabins: [] }, fillRect = context.fillRect.bind(context);
+      let captureGeometry = true;
+      context.fillRect = (x, y, width, height) => {
+        if (captureGeometry) {
+          const group = { '#afcfd3': 'windows', '#608594': 'facades', '#536473': 'supports', '#d29359': 'cars', '#b87646': 'cabins' }[context.fillStyle];
+          if (group) geometry[group].push({ x, y, width, height });
+        }
+        fillRect(x, y, width, height);
+      };
       let waveLines = [], pathStart, pathEnd;
       const moveTo = context.moveTo.bind(context), lineTo = context.lineTo.bind(context), stroke = context.stroke.bind(context);
       context.moveTo = (x, y) => { pathStart = x; moveTo(x, y); };
@@ -41,6 +51,7 @@ async function checkCanvasRoute(page, name) {
         return max < 0 ? null : { min, max };
       };
       scene.tick(0);
+      captureGeometry = false;
       const day = canvas.toDataURL('image/png');
       const roadBandTop = Math.floor(height * .59) - 40;
       const roadPixels = context.getImageData(0, roadBandTop, width, 50).data;
@@ -57,8 +68,8 @@ async function checkCanvasRoute(page, name) {
           waveWraps += 1;
         }
         previousWaves = waveLines;
-        for (const x of [.21, .77]) {
-          const pillar = context.getImageData(Math.floor(width * x), Math.floor(height * .59) - 32, 1, 27).data;
+        for (const support of geometry.supports) {
+          const pillar = context.getImageData(Math.floor(support.x + support.width / 2), Math.floor(height * .59) - 32, 1, 27).data;
           for (let i = 0; i < pillar.length; i += 4) if (pillar[i] !== 83 || pillar[i + 1] !== 100 || pillar[i + 2] !== 115) throw new Error('The car or its lights painted over a foreground bridge support');
         }
         const current = bounds();
@@ -79,13 +90,33 @@ async function checkCanvasRoute(page, name) {
       for (let step = 0; step < 80; step += 1) scene.tick(50);
       const night = canvas.toDataURL('image/png');
       scene.dispose();
-      return { day, night, exits, entries, waveWraps };
-    }, { source: canvasSource, width });
+      return { day, night, exits, entries, waveWraps, geometry };
+    }, { source: canvasSource, width, height });
+    const { windows, supports, facades, cars, cabins } = result.geometry;
+    assert(windows.length > 0 && supports.length === 2 && facades.length >= 18, 'Measure actual skyline and bridge drawing');
+    assert(cars.length === 1 && cabins.length === 1, 'Measure actual car body and boat cabin dimensions');
+    for (const window of windows) {
+      assert(Math.abs(window.height / window.width - 1.2) < .0001, 'Window proportions must stay fixed on every screen');
+      if (width > height * 2) assert(window.height >= height * .01, 'Windows must remain readable in tall desktop scenes');
+      assert(facades.some(facade => window.x >= facade.x && window.x + window.width <= facade.x + facade.width && window.y >= facade.y && window.y + window.height <= facade.y + facade.height), 'Every window must fit inside its facade');
+    }
+    for (const support of supports) assert(support.width / support.height <= .087, 'Bridge supports must keep their slender proportions');
+    for (const facade of facades) assert(facade.width <= height * .162 + .0001, 'Wide screens must not stretch buildings');
+    if (width === 1365) wideGeometry = result.geometry;
+    if (width === 2560) {
+      assert.deepEqual(cars.map(({ width, height }) => [width, height]), wideGeometry.cars.map(({ width, height }) => [width, height]), 'Car dimensions must stay unchanged across desktop scene sizes');
+      assert.deepEqual(cabins.map(({ width, height }) => [width, height]), wideGeometry.cabins.map(({ width, height }) => [width, height]), 'Boat dimensions must stay unchanged across desktop scene sizes');
+    }
+    if (width === 2560 && height === 420) {
+      assert.equal(windows[0].width, wideGeometry.windows[0].width, 'Same scene height keeps the same window size');
+      assert.equal(supports[0].width, wideGeometry.supports[0].width, 'Same scene height keeps the same support width');
+      assert(facades.length > wideGeometry.facades.length, 'Wider screens show more buildings');
+    }
     assert(result.exits >= 2 && result.entries >= 2, 'Check multiple complete crossings and returns');
     assert(result.waveWraps > 10, 'Check waves entering from outside the scene across multiple rows');
-    for (const theme of ['day', 'night']) await writeFile(join(tmpdir(), `onehtml-lab-canvas-${name}-${width}-${theme}.png`), Buffer.from(result[theme].split(',')[1], 'base64'));
+    for (const theme of ['day', 'night']) await writeFile(join(tmpdir(), `onehtml-lab-canvas-${name}-${width}x${height}-${theme}.png`), Buffer.from(result[theme].split(',')[1], 'base64'));
   }
-  console.log(`${name}: Canvas wheels follow the road, supports cover the car, and vehicles/waves wrap outside the frame on phone and desktop.`);
+  console.log(`${name}: Canvas windows, buildings and supports keep their proportions on phone, desktop and ultrawide screens; road occlusion and offscreen wrapping passed.`);
 }
 
 async function libraryLabels(frame, status) {
