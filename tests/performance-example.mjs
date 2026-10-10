@@ -341,3 +341,4 @@ try {
   await rm(scratch, { recursive: true, force: true });
 }
 await import('./phaser-versions.mjs');
+await import('./three-quality.mjs');

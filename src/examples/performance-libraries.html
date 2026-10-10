@@ -25,6 +25,23 @@
     #phaser-renderer button { min-height: 44px; padding: 5px 8px; font-size: 14px; }
     #phaser-renderer button[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; color: #eaf2ff; }
     #phaser-renderer button:focus-visible { outline: 3px solid #82bdff; outline-offset: 2px; }
+    #three-quality { flex: none; display: flex; gap: 4px; margin-top: 8px; }
+    #three-quality[hidden] { display: none; }
+    #three-quality button { min-height: 44px; padding: 5px 8px; font-size: 14px; }
+    #three-quality button[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; }
+    .app.three-expanded .heading, .app.three-expanded .metrics, .app.three-expanded .modes, .app.three-expanded .details { display: none; }
+    .app.three-expanded header { padding: 4px 10px; }
+    #three-hints, #three-expand { width: 44px; padding: 0; flex: none; display: grid; place-items: center; }
+    #three-hints svg, #three-expand svg { width: 22px; height: 22px; }
+    #three-hints[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; }
+    .three-hint-overlay { position: absolute; inset: 0; pointer-events: none; }
+    .three-hint-overlay[hidden] { display: none; }
+    .three-hint-caption { position: absolute; top: 8px; left: 10px; right: 10px; width: fit-content; max-width: calc(100% - 20px); padding: 7px 10px; border: 1px solid #88bbff; border-radius: 8px; background: #091e31; font-size: 14px; line-height: 1.35; }
+    .three-hint-overlay > svg { width: 100%; height: 100%; overflow: hidden; }
+    .three-still { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    #scene .three-still[hidden] { display: none; }
+    .three-hint-overlay text { fill: #dcecff; font: 600 14px system-ui, sans-serif; paint-order: stroke; stroke: #091e31; stroke-width: 4px; }
+    #stage:has(.three-hint-overlay:not([hidden])) #paused, #stage:has(.three-hint-overlay:not([hidden])) .stage-note { visibility: hidden; }
     #info-toggle { flex: none; width: 32px; min-height: 32px; margin-top: 8px; padding: 0; font-size: 20px; }
     .info-panel { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; background: #101e30; touch-action: auto; }
     .info-panel[hidden] { display: none; }
@@ -123,6 +140,11 @@
       .controls:has(#phaser-hints) { gap: 4px; }
       .controls:has(#phaser-hints) button { padding: 0 4px; }
       .controls #phaser-hints, .controls #phaser-expand, .controls #phaser-effects { padding: 0; flex: none; }
+      .controls #three-hints, .controls #three-expand { padding: 0; }
+      .three-description { flex-wrap: wrap; gap: 4px 8px; }
+      .three-description .library-description { flex-basis: 100%; margin-top: 4px; }
+      .three-description #three-quality, .three-description #info-toggle { margin-top: 0; }
+      .three-description #info-toggle { margin-left: auto; }
       .details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; }
       .details span { white-space: nowrap; }
       .details span:last-child { grid-column: 1 / -1; }
@@ -155,6 +177,7 @@
       .details { display: flex; overflow-x: auto; gap: 12px; margin-top: 4px; font-size: 12px; scrollbar-width: thin; }
       .details::-webkit-scrollbar { height: 4px; }
       #stage { min-height: 64px; }
+      .three-description .library-description { display: none; }
     }
     @media (max-height: 360px) {
       body { overflow-y: auto; }
@@ -178,7 +201,7 @@
         <button class="mode" data-mode="phaser" aria-pressed="false" disabled><b>Phaser 3.90</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="phaser4" aria-pressed="false" disabled><b>Phaser 4.2.1</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
       </nav>
-      <div class="description-row"><p id="library-description" class="library-description"></p><div id="phaser-renderer" role="group" aria-label="Отрисовка Phaser" hidden><button data-renderer="canvas" aria-pressed="false">Canvas</button><button data-renderer="webgl" aria-pressed="true">WebGL</button></div><button id="info-toggle" title="Какую библиотеку и отрисовку выбрать" aria-label="Подробно о выбранной библиотеке" aria-expanded="false" aria-controls="library-info">?</button></div>
+      <div class="description-row"><p id="library-description" class="library-description"></p><div id="phaser-renderer" role="group" aria-label="Отрисовка Phaser" hidden><button data-renderer="canvas" aria-pressed="false">Canvas</button><button data-renderer="webgl" aria-pressed="true">WebGL</button></div><div id="three-quality" role="group" aria-label="Оформление Three.js" hidden><button data-quality="simple" aria-pressed="false">Простое</button><button data-quality="detailed" aria-pressed="true">Подробное</button></div><button id="info-toggle" title="Какую библиотеку и отрисовку выбрать" aria-label="Подробно о выбранной библиотеке" aria-expanded="false" aria-controls="library-info">?</button></div>
     </header>
     <section id="stage" aria-label="Поле теста: нажимайте или касайтесь несколькими пальцами">
       <div id="scene"></div>
@@ -232,6 +255,8 @@
         ],
         three160: [
           'Three.js — объёмные модели, камеры, материалы, свет и тени. Подходит для 3D-игр и просмотра моделей. Правила игры и физику нужно добавить отдельно.',
+          '«Простое» — матовые материалы без отражений и теней. «Подробное» — металл, блики на стекле и тени от модели. Модель и источники света одинаковые; подробное оформление требует больше вычислений. FPS зависит от устройства.',
+          'Прицел внизу останавливает анимацию и отмечает металл, стекло и место тени. Переключайте оформление, чтобы увидеть разницу. В маленьком поле разверните сцену кнопкой рядом.',
           'Проведите по сцене, чтобы повернуть камеру вокруг марсохода. В «Сравнении» шар и башня показаны в объёме.'
         ],
         matter: [
@@ -264,6 +289,7 @@
       let phaserEffectsEnabled = true;
       let phaserHintsEnabled = false;
       let phaserRenderer = 'webgl', phaserWebglUnavailable = false;
+      let threeDetailed = true, threeHintsEnabled = false, threeExpanded = false;
       let paused = false, tapCount = 0, peakPointers = 0, pendingInput = null;
       let frameStart = 0, frames = 0, lastFrame = null;
       let generation = 0;
@@ -914,7 +940,7 @@
         scene.background = threeColor(Three, 0x0d192b);
         scene.fog = new Three.FogExp2(threeColor(Three, 0x0d192b), .038);
         const camera = new Three.PerspectiveCamera(42, width / height, .1, 80);
-        const geometries = new Set(), materials = new Set(), textures = new Set();
+        const geometries = new Set(), materials = new Set(), textures = new Set(), simpleMaterials = new Map();
         const skyFaces = Array.from({ length: 6 }, () => {
           const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
           const ctx = canvas.getContext('2d');
@@ -933,6 +959,14 @@
           const mat = new Three.MeshStandardMaterial({ envMap: environment, envMapIntensity: .6, ...threeMaterialColors(Three, settings) });
           materials.add(mat); return mat;
         };
+        const simpleMaterial = original => {
+          if (!simpleMaterials.has(original)) {
+            const value = new Three.MeshLambertMaterial({ color: original.color.clone(), emissive: original.emissive.clone(),
+              emissiveIntensity: original.emissiveIntensity, transparent: original.transparent, opacity: original.opacity, side: original.side });
+            simpleMaterials.set(original, value); materials.add(value);
+          }
+          return simpleMaterials.get(original);
+        };
         const paint = material({ color: 0xd57b36, metalness: .55, roughness: .32 });
         const metal = material({ color: 0xaebbc9, metalness: .88, roughness: .25 });
         const dark = material({ color: 0x202b3b, metalness: .7, roughness: .38 });
@@ -947,6 +981,7 @@
         const jointGeometry = geometry(new Three.SphereGeometry(.11, 12, 8));
         const mesh = (parent, geo, mat, x = 0, y = 0, z = 0, casts = true) => {
           const item = new Three.Mesh(geo, mat); item.position.set(x, y, z);
+          item.userData.detailedMaterial = mat;
           item.castShadow = casts; item.receiveShadow = true; parent.add(item); return item;
         };
         const box = (parent, mat, sx, sy, sz, x, y, z, casts = true) => {
@@ -989,13 +1024,13 @@
           }
           box(rover, glow, .32, .12, .05, side * .64, 1.37, -1.34, false);
         }
-        const wheels = [];
+        const wheels = [], wheelHubs = [];
         const tireGeometry = geometry(new Three.TorusGeometry(.39, .13, 12, 36));
         const hubGeometry = geometry(new Three.CylinderGeometry(.28, .28, .3, 24));
         for (let side of [-1, 1]) for (let z of [-1.25, 0, 1.25]) {
           const wheel = new Three.Group(); wheel.position.set(side * 1.4, .54, z); rover.add(wheel); wheels.push(wheel);
           mesh(wheel, tireGeometry, rubber).rotation.y = Math.PI / 2;
-          mesh(wheel, hubGeometry, metal).rotation.z = Math.PI / 2;
+          const hub = mesh(wheel, hubGeometry, metal); hub.rotation.z = Math.PI / 2; wheelHubs.push(hub);
           for (let index = 0; index < 24; index += 1) {
             const angle = index / 24 * Math.PI * 2;
             const tread = box(wheel, rubber, .34, .065, .13, 0, Math.cos(angle) * .5, Math.sin(angle) * .5);
@@ -1029,6 +1064,7 @@
         });
         const dish = mesh(antenna, geometry(new Three.LatheGeometry(dishPoints, 32)), metal, 0, .62, 0);
         dish.material = material({ color: 0xd1dae5, metalness: .5, roughness: .28, side: Three.DoubleSide });
+        dish.userData.detailedMaterial = dish.material;
         dish.rotation.z = -.5;
         cylinder(antenna, glow, .018, .45, 0, .72, 0);
         const arm = new Three.Group(); arm.position.set(.75, 1.6, -1.1); rover.add(arm);
@@ -1043,10 +1079,12 @@
         }
         const rockGeometry = geometry(new Three.DodecahedronGeometry(1, 0));
         const rockMaterial = material({ color: 0x806252, roughness: .93 });
+        const rocks = [];
         for (let index = 0; index < 55; index += 1) {
           const angle = index * 2.399, radius = 4.1 + (index % 8) * .55;
           const rock = mesh(scene, rockGeometry, rockMaterial, Math.sin(angle) * radius, -.1, Math.cos(angle) * radius);
           rock.scale.set(.15 + index % 3 * .13, .16 + index % 4 * .1, .2 + index % 5 * .07); rock.rotation.set(index, index * .7, index * .3);
+          rocks.push(rock);
         }
         const dustPositions = new Float32Array(180 * 3);
         for (let index = 0; index < dustPositions.length; index += 3) {
@@ -1058,24 +1096,148 @@
         materials.add(dustMaterial);
         const dust = new Three.Points(dustGeometry, dustMaterial); scene.add(dust);
         let time = 0, angle = .65, elevation = .45, targetAngle = angle, targetElevation = elevation, controlledUntil = 0;
-        const orbit = (x, y) => { targetAngle = x / width * Math.PI * 2; targetElevation = .18 + (1 - y / height) * .7; controlledUntil = time + 8; };
+        const orbit = (x, y) => {
+          if (threeHintsEnabled) return;
+          targetAngle = x / width * Math.PI * 2; targetElevation = .18 + (1 - y / height) * .7; controlledUntil = time + 8;
+        };
+        const svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+        const hints = document.createElement('button'); hints.id = 'three-hints';
+        hints.innerHTML = svg + '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>';
+        const expand = document.createElement('button'); expand.id = 'three-expand';
+        const still = document.createElement('canvas'); still.className = 'three-still'; still.hidden = true;
+        const stillContext = still.getContext('2d'); host.append(still);
+        const hintOverlay = document.createElement('div'); hintOverlay.className = 'three-hint-overlay';
+        const caption = document.createElement('div'); caption.className = 'three-hint-caption'; caption.setAttribute('role', 'status');
+        const marks = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); marks.setAttribute('aria-hidden', 'true');
+        const callouts = ['Металл', 'Стекло', 'Тень'].map(label => {
+          const group = document.createElementNS(marks.namespaceURI, 'g');
+          const text = document.createElementNS(marks.namespaceURI, 'text'); text.textContent = label;
+          const circle = document.createElementNS(marks.namespaceURI, 'circle'); circle.setAttribute('r', '9');
+          const line = document.createElementNS(marks.namespaceURI, 'path');
+          for (const shape of [circle, line]) { shape.setAttribute('fill', 'none'); shape.setAttribute('stroke', '#9dccff'); shape.setAttribute('stroke-width', '1.6'); }
+          group.append(line, circle, text); marks.append(group); return { group, text, circle, line };
+        });
+        hintOverlay.append(marks, caption); host.append(hintOverlay);
+        const placeCamera = () => {
+          const distance = 8 / Math.min(1, width / height);
+          camera.position.set(Math.sin(angle) * distance * Math.cos(elevation), 1.3 + Math.sin(elevation) * distance, Math.cos(angle) * distance * Math.cos(elevation));
+          camera.lookAt(0, 1.3, 0); camera.updateMatrixWorld();
+        };
+        const drawHints = () => {
+          if (!threeHintsEnabled) return;
+          const compact = height < 220;
+          caption.textContent = compact ? 'Разверните сцену для подсказок' : threeDetailed
+            ? 'Подробное · отражения, блики и тени' : 'Простое · без отражений и теней';
+          marks.style.visibility = compact ? 'hidden' : 'visible'; marks.setAttribute('viewBox', `0 0 ${width} ${height}`);
+          if (compact) return;
+          sun.shadow.updateMatrices(sun);
+          const hub = wheelHubs.filter(item => item.parent.position.z === 0).reduce((nearest, item) => item.getWorldPosition(new Three.Vector3()).distanceTo(camera.position)
+            < nearest.getWorldPosition(new Three.Vector3()).distanceTo(camera.position) ? item : nearest);
+          const hubPoint = hub.getWorldPosition(new Three.Vector3());
+          const shadowCandidates = [];
+          for (const rock of rocks) {
+            const vertices = [], positions = rock.geometry.attributes.position;
+            for (let i = 0; i < positions.count; i++) {
+              const vertex = new Three.Vector3().fromBufferAttribute(positions, i).applyMatrix4(rock.matrixWorld);
+              if (vertex.y <= -.199) continue;
+              const fall = (vertex.y + .199) / sun.position.y;
+              vertices.push(new Three.Vector3(vertex.x - sun.position.x * fall, -.199, vertex.z - sun.position.z * fall));
+            }
+            const center = vertices.reduce((sum, value) => sum.add(value), new Three.Vector3()).multiplyScalar(1 / Math.max(1, vertices.length));
+            for (const vertex of vertices) {
+              const point = center.clone().lerp(vertex, .82), projected = point.clone().project(camera);
+              const x = (projected.x + 1) * width / 2, y = (1 - projected.y) * height / 2, shadowView = point.clone().project(sun.shadow.camera);
+              if (Math.abs(shadowView.x) >= .9 || Math.abs(shadowView.y) >= .9 || projected.z <= -1 || projected.z >= 1
+                || x <= 24 || x >= width - 24 || y <= 80 || y >= height - 28) continue;
+              shadowCandidates.push({ point, projected, size: rock.scale.length() / point.distanceTo(camera.position) });
+            }
+          }
+          shadowCandidates.sort((a, b) => b.size - a.size);
+          const meshes = []; scene.traverse(item => { if (item.isMesh) meshes.push(item); });
+          const ray = new Three.Raycaster();
+          const visibleShadow = shadowCandidates.find(value => {
+            ray.setFromCamera(new Three.Vector2(value.projected.x, value.projected.y), camera);
+            return ray.intersectObjects(meshes, false)[0]?.object === floor;
+          });
+          const shadow = visibleShadow?.point;
+          const points = [hubPoint, dome.localToWorld(new Three.Vector3(0, .28, 0)), shadow];
+          points.forEach((value, index) => {
+            if (!value) { callouts[index].group.style.visibility = 'hidden'; return; }
+            const point = value.project(camera), { group, text, circle, line } = callouts[index];
+            const x = (point.x + 1) * width / 2, y = (1 - point.y) * height / 2;
+            group.style.visibility = point.z > -1 && point.z < 1 && x > 9 && x < width - 9 && y > 50 && y < height - 9 ? '' : 'hidden';
+            const labelY = 80 + index * 38;
+            text.setAttribute('x', '12'); text.setAttribute('y', String(labelY));
+            circle.setAttribute('cx', String(x)); circle.setAttribute('cy', String(y));
+            const endX = x - 12, endY = y;
+            line.setAttribute('d', `M80,${labelY - 5} L${endX},${endY} m-7,-4 l7,4 l-7,4`);
+          });
+        };
+        const render = () => {
+          renderer.render(scene, camera);
+          const frozen = paused || threeHintsEnabled || infoOpen || document.hidden;
+          if (frozen) {
+            if (still.width !== renderer.domElement.width) still.width = renderer.domElement.width;
+            if (still.height !== renderer.domElement.height) still.height = renderer.domElement.height;
+            stillContext.drawImage(renderer.domElement, 0, 0);
+          }
+          still.hidden = !frozen; drawHints();
+        };
+        const setQuality = () => {
+          scene.traverse(item => { if (item.isMesh) item.material = threeDetailed ? item.userData.detailedMaterial : simpleMaterial(item.userData.detailedMaterial); });
+          renderer.shadowMap.enabled = threeDetailed;
+          host.dataset.threeQuality = threeDetailed ? 'detailed' : 'simple';
+          $('three-quality').querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String((button.dataset.quality === 'detailed') === threeDetailed)));
+          $('library-description').textContent = threeDetailed ? 'Материалы, отражения и тени' : 'Матовые материалы · без теней';
+          render();
+        };
+        const syncHints = () => {
+          hintOverlay.hidden = !threeHintsEnabled; host.dataset.threeHints = String(threeHintsEnabled);
+          const label = threeHintsEnabled ? 'Выключить подсказки и продолжить анимацию' : 'Показать материалы и тени со стрелками';
+          hints.title = label; hints.setAttribute('aria-label', label); hints.setAttribute('aria-pressed', String(threeHintsEnabled));
+          render(); resetFps();
+        };
+        const syncExpanded = () => {
+          document.querySelector('.app').classList.toggle('three-expanded', threeExpanded);
+          expand.innerHTML = svg + (threeExpanded ? '<path d="M9 3v6H3m18 0h-6V3M3 15h6v6m6 0v-6h6"/>' : '<path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/>') + '</svg>';
+          const label = threeExpanded ? 'Вернуть показатели и выбор библиотек' : 'Развернуть сцену марсохода';
+          expand.title = label; expand.setAttribute('aria-label', label); expand.setAttribute('aria-pressed', String(threeExpanded));
+        };
+        const escape = event => {
+          if (event.key !== 'Escape' || infoOpen) return;
+          if (threeHintsEnabled) hints.click(); else if (threeExpanded) expand.click();
+        };
+        hints.addEventListener('click', () => { threeHintsEnabled = !threeHintsEnabled; pendingInput = null; syncHints(); });
+        expand.addEventListener('click', () => { threeExpanded = !threeExpanded; syncExpanded(); });
+        document.addEventListener('keydown', escape);
+        document.querySelector('.controls').append(hints, expand);
+        placeCamera(); setQuality(); syncHints(); syncExpanded();
         return {
+          get ownLoop() { return threeHintsEnabled; },
+          setQuality,
+          pause(value) { if (value) render(); },
+          resize() {
+            camera.aspect = width / height; camera.updateProjectionMatrix();
+            renderer.setPixelRatio(Math.min(ratio, 1.5)); renderer.setSize(width, height); placeCamera(); render();
+          },
           tick(delta) {
             const seconds = delta / 1000; time += seconds;
             if (time > controlledUntil) targetAngle += seconds * .11;
             angle += (targetAngle - angle) * Math.min(1, seconds * 5); elevation += (targetElevation - elevation) * Math.min(1, seconds * 5);
-            const distance = 8 / Math.min(1, width / height);
-            camera.position.set(Math.sin(angle) * distance * Math.cos(elevation), 1.3 + Math.sin(elevation) * distance, Math.cos(angle) * distance * Math.cos(elevation));
-            camera.lookAt(0, 1.3, 0);
+            placeCamera();
             wheels.forEach(wheel => { wheel.rotation.x -= seconds * .45; });
             wings.forEach((panel, index) => { panel.rotation.z = (index ? -1 : 1) * (.15 + Math.sin(time * .6) * .025); });
             arm.rotation.x = -.6 + Math.sin(time * .7) * .3; elbow.rotation.x = -1.1 + Math.sin(time * .7 + 1) * .4;
             scanner.rotation.y = Math.sin(time * .5) * .8; antenna.rotation.y = time * .12;
             rover.position.y = Math.sin(time * 1.3) * .025; dust.rotation.y = time * .018;
-            renderer.render(scene, camera);
+            render();
           },
           tap: orbit, drag: orbit,
-          dispose() { geometries.forEach(value => value.dispose()); materials.forEach(value => value.dispose()); textures.forEach(value => value.dispose()); renderer.dispose(); renderer.forceContextLoss(); }
+          dispose() {
+            document.removeEventListener('keydown', escape); hints.remove(); expand.remove(); hintOverlay.remove(); still.remove();
+            delete host.dataset.threeQuality; delete host.dataset.threeHints;
+            geometries.forEach(value => value.dispose()); materials.forEach(value => value.dispose()); textures.forEach(value => value.dispose()); renderer.dispose(); renderer.forceContextLoss();
+          }
         };
       }
 
@@ -1748,6 +1910,9 @@
       }
 
       function startScene(nextMode = mode) {
+        if (!nextMode.startsWith('three') || scenario !== 'showcase') {
+          threeExpanded = false; document.querySelector('.app').classList.remove('three-expanded');
+        }
         if (!nextMode.startsWith('phaser') || scenario !== 'showcase') {
           phaserExpanded = false; document.querySelector('.app').classList.remove('phaser-expanded');
         }
@@ -1757,7 +1922,9 @@
         host.replaceChildren();
         mode = nextMode;
         $('phaser-renderer').hidden = !mode.startsWith('phaser');
+        $('three-quality').hidden = !mode.startsWith('three') || scenario !== 'showcase';
         document.querySelector('.description-row').classList.toggle('phaser-description', mode.startsWith('phaser'));
+        document.querySelector('.description-row').classList.toggle('three-description', mode.startsWith('three') && scenario === 'showcase');
         syncRendererButtons();
         $('message').textContent = '';
         try {
@@ -1781,7 +1948,10 @@
           const failedMode = mode;
           mode = 'canvas';
           $('phaser-renderer').hidden = true;
+          $('three-quality').hidden = true;
+          threeExpanded = false; document.querySelector('.app').classList.remove('three-expanded');
           document.querySelector('.description-row').classList.remove('phaser-description');
+          document.querySelector('.description-row').classList.remove('three-description');
           delete host.dataset.phaserRenderer;
           host.replaceChildren();
           activeScene = scenario === 'compare' ? canvasComparison() : scenario === 'showcase' ? canvasShowcase() : canvasScene();
@@ -1790,6 +1960,7 @@
         activeScene.pause?.(paused || infoOpen || document.hidden);
         $('scene-name').textContent = scenario === 'compare' ? 'Шар и башня · коснитесь цели для выстрела' : scenario === 'showcase' ? showcaseLabels[mode] : labels[mode];
         $('library-description').textContent = mode.startsWith('phaser') ? phaserRenderingDescription() : descriptions[mode];
+        if (mode.startsWith('three') && scenario === 'showcase') $('library-description').textContent = threeDetailed ? 'Материалы, отражения и тени' : 'Матовые материалы · без теней';
         $('scene-stats').hidden = scenario !== 'compare';
         if (scenario === 'compare') $('scene-stats').textContent = 'Сдвинуто: 0/12 · Выстрелов: 0';
         updateInfo();
@@ -1893,6 +2064,11 @@
       $('phaser-renderer').querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
         if (button.dataset.renderer === phaserRenderer) return;
         phaserRenderer = button.dataset.renderer; startScene();
+      }));
+      $('three-quality').querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
+        const detailed = button.dataset.quality === 'detailed';
+        if (detailed === threeDetailed) return;
+        threeDetailed = detailed; activeScene?.setQuality?.(); resetFps();
       }));
       $('load').addEventListener('input', event => { $('load-value').textContent = integer(Number(event.target.value)); });
       $('load').addEventListener('change', event => { objectCount = Number(event.target.value); startScene(); });
