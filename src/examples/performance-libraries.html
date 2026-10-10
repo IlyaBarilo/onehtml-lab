@@ -91,6 +91,22 @@
     .phaser-hint-view.phaser-compact .phaser-hint-caption b { display: none; }
     #scene-stats { position: absolute; bottom: 8px; left: 10px; padding: 5px 8px; border-radius: 6px; background: #091321cc; pointer-events: none; font-size: 14px; }
     .load[hidden] { display: none; }
+    .native-unavailable { position: absolute; inset: 0; display: grid; place-content: center; gap: 10px; padding: 24px; text-align: center; color: #c6daf1; }
+    .native-unavailable b { font-size: 20px; }
+    .native-unavailable p { max-width: 520px; margin: 0; line-height: 1.5; }
+    .native-dom { position: absolute; inset: 0; overflow: hidden; perspective: 800px; }
+    svg.native-dom { display: block; width: 100%; height: 100%; }
+    .native-dot { position: absolute; top: 0; left: 0; border-radius: 50%; }
+    .native-poster { display: flex; align-items: center; justify-content: center; gap: clamp(8px, 3vw, 32px); padding: 16px; }
+    .native-card { position: relative; width: clamp(72px, 22vw, 220px); height: clamp(96px, 33vw, 280px); max-height: 75%; border-radius: 18px; background: #172b45; border: 1px solid #739bc1; display: grid; place-content: center; text-align: center; transform-style: preserve-3d; }
+    .native-card b { font-size: clamp(20px, 5vw, 48px); }
+    .native-card span { font-size: clamp(12px, 2vw, 18px); margin-top: 10px; }
+    .native-card::before { content: ''; position: absolute; inset: 10px; border: 1px solid #ffffff44; border-radius: 12px; transform: translateZ(18px); }
+    .native-card.is-selected { background: #315875; border-color: #9fe5ce; }
+    #native-webgl { display: flex; gap: 4px; }
+    #native-webgl[hidden] { visibility: hidden; pointer-events: none; }
+    #native-webgl button { min-height: 44px; padding: 5px 8px; font-size: 14px; }
+    #native-webgl button[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; }
     .metrics { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-start; gap: 2px 12px; color: #b8cce5; font-size: 14px; line-height: 18px; font-variant-numeric: tabular-nums; }
     .metric { display: inline-flex; align-items: baseline; gap: 4px; white-space: nowrap; }
     .metric strong { color: #eaf2ff; font-size: inherit; font-weight: 600; }
@@ -102,7 +118,10 @@
     #input-time { min-width: 16ch; }
     #coordinates { min-width: 14ch; }
     #fps { color: #7cdbb0; }
-    .modes { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+    .modes { display: flex; overflow-x: auto; gap: 8px; margin-top: 6px; padding-bottom: 4px; }
+    .mode { flex: 0 0 150px; }
+    .modes::-webkit-scrollbar { height: 6px; }
+    .modes::-webkit-scrollbar-thumb { background: #4c7097; border-radius: 3px; }
     .mode { padding: 7px 10px; text-align: left; }
     .mode b { display: block; font-size: 15px; }
     .mode small { display: block; margin-top: 3px; color: #b4c6de; font-size: 12px; }
@@ -202,12 +221,18 @@
           <div class="metric" title="Текущее и максимальное число одновременных касаний"><span>Касания:</span><strong id="finger-count">0 / 0</strong></div>
           <span id="coordinates" title="Координаты последнего нажатия по сцене">X/Y: —</span>
         </div>
-        <select id="scenario" aria-label="Режим теста для всех движков"><option value="showcase">Возможности</option><option value="compare">Сравнение</option><option value="load">Нагрузка</option></select>
-        <div class="controls" aria-label="Управление тестом"><div class="primary-controls"><button id="pause" aria-pressed="false" aria-label="Пауза" title="Пауза"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg></button><button id="reset" aria-label="Сброс" title="Сброс"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1.6 7M4 4v6h6"/></svg></button><button id="info-toggle" title="Какую библиотеку и отрисовку выбрать" aria-label="Подробно о выбранной библиотеке" aria-expanded="false" aria-controls="library-info">?</button></div><div class="scene-controls"></div></div>
+        <select id="scenario" aria-label="Режим теста для всех технологий и движков"><option value="showcase">Возможности</option><option value="compare">Сравнение</option><option value="load">Нагрузка</option></select>
+        <div class="controls" aria-label="Управление тестом"><div class="primary-controls"><button id="pause" aria-pressed="false" aria-label="Пауза" title="Пауза"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg></button><button id="reset" aria-label="Сброс" title="Сброс"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1.6 7M4 4v6h6"/></svg></button><button id="info-toggle" title="Какую технологию и отрисовку выбрать" aria-label="Подробно о выбранной технологии" aria-expanded="false" aria-controls="library-info">?</button></div><div class="scene-controls"></div></div>
       </div>
       <div class="load"><label for="load">Объектов: <b id="load-value">120</b></label><input id="load" type="range" min="20" max="10000" step="20" value="120"></div>
       <nav class="modes" aria-label="Выбор теста">
         <button class="mode" data-mode="canvas" data-state="ready" aria-pressed="true"><b>Canvas 2D</b><small>Без библиотек</small></button>
+        <button class="mode" data-mode="webgl" data-state="ready" aria-pressed="false"><b>WebGL</b><small>Без библиотек</small></button>
+        <button class="mode" data-mode="svg" data-state="ready" aria-pressed="false"><b>SVG</b><small>Без библиотек</small></button>
+        <button class="mode" data-mode="dom" data-state="ready" aria-pressed="false"><b>HTML/CSS</b><small>Web Animations</small></button>
+        <button class="mode" data-mode="audio" data-state="ready" aria-pressed="false"><b>Web Audio</b><small>Звук без файлов</small></button>
+        <button class="mode" data-mode="worker" data-state="ready" aria-pressed="false"><b>OffscreenCanvas</b><small>Отдельный поток</small></button>
+        <button class="mode" data-mode="webgpu" data-state="ready" aria-pressed="false"><b>WebGPU</b><small>Эксперимент</small></button>
         <button class="mode" data-mode="three160" aria-pressed="false" disabled><b>Three.js r160</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="cannon" aria-pressed="false" disabled title="3D-физика для сцены Three.js"><b>cannon-es 0.20</b><small>Не загружена</small><span class="library-size">Размер: —</span></button>
         <button class="mode" data-mode="babylon" aria-pressed="false" disabled><b>Babylon.js 9.30</b><small>Загрузка…</small><span class="library-size">Размер: —</span></button>
@@ -223,7 +248,7 @@
       <div class="stage-note"><span id="scene-name">Набережная · коснитесь сцены, чтобы сменить день и ночь</span><span id="message" role="status"></span></div>
       <div id="scene-stats" hidden></div>
       <div id="paused" hidden>Пауза</div>
-      <section id="library-info" class="info-panel" aria-label="Описание библиотеки" hidden><div class="info-heading"><h2 id="info-title"></h2><button id="info-close" aria-label="Закрыть описание">×</button></div><div id="info-body" class="info-body"></div></section>
+      <section id="library-info" class="info-panel" aria-label="Описание технологии" hidden><div class="info-heading"><h2 id="info-title"></h2><button id="info-close" aria-label="Закрыть описание">×</button></div><div id="info-body" class="info-body"></div></section>
     </section>
   </main>
   <script>
@@ -415,10 +440,12 @@
       }
 
       function particles() {
+        let seed = 17321;
+        const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
         return Array.from({ length: objectCount }, (_, index) => ({
-          x: Math.random() * width, y: Math.random() * height,
-          vx: (Math.random() - .5) * 180, vy: (Math.random() - .5) * 180,
-          r: 3 + Math.random() * 5, color: colors[index % colors.length]
+          x: random() * width, y: random() * height,
+          vx: (random() - .5) * 180, vy: (random() - .5) * 180,
+          r: 3 + random() * 5, color: colors[index % colors.length]
         }));
       }
 
@@ -434,7 +461,7 @@
       function canvasScene() {
         const context = makeCanvas();
         const items = particles();
-        return {
+        const scene = {
           tick(delta) {
             context.clearRect(0, 0, width, height);
             for (const item of items) {
@@ -454,6 +481,7 @@
           },
           dispose() {}
         };
+        scene.tick(0); return scene;
       }
 
       function threeScene(Three) {
@@ -2264,6 +2292,244 @@
         };
       }
 
+      const nativeModes = new Set(['webgl', 'svg', 'dom', 'audio', 'worker', 'webgpu']);
+      let nativeGLVersion = 2, nativeYaw = 0;
+      Object.assign(labels, { webgl: 'Движущиеся частицы · чистый WebGL', svg: 'Движущиеся частицы · SVG', dom: 'Движущиеся элементы · HTML/CSS', audio: 'Частицы и звук · Web Audio', worker: 'Движущиеся частицы · отдельный поток', webgpu: 'Движущиеся частицы · WebGPU' });
+      Object.assign(showcaseLabels, { webgl: 'Шар и башня · касание: выстрел, движение: камера', svg: 'Векторные орбиты · касание меняет направление', dom: 'Живая афиша · коснитесь карточки', audio: 'Звуковая палитра · коснитесь для звука', worker: 'Набережная · отрисовка в отдельном потоке', webgpu: 'Шар и башня · WebGPU без библиотек' });
+      Object.assign(descriptions, { webgl: 'WebGL — 2D/3D через шейдеры, без движка.', svg: 'SVG — векторные фигуры как элементы страницы.', dom: 'HTML/CSS — элементы страницы и Web Animations.', audio: 'Web Audio — синтез звука; изображение рисует Canvas.', worker: 'OffscreenCanvas — Canvas 2D в отдельном потоке.', webgpu: 'WebGPU — эксперимент: графика через современный GPU API.' });
+      Object.assign(explanations, {
+        webgl: ['WebGL встроен в браузер. Шейдеры и геометрия находятся в этом HTML, загружать библиотеку не нужно. Камеру, свет, материалы и правила игры здесь создаёт собственный код.', 'В «Нагрузке» Canvas, WebGL, SVG, HTML/CSS, OffscreenCanvas и WebGPU получают одни и те же частицы, начальные позиции, движение и разрешение. Сравнивайте FPS и время кадра на своём устройстве; простая сцена может выглядеть одинаково.', 'В «Сравнении» та же башня и шар, что в Three.js/Babylon.js: размеры, палитра и начальная камера совпадают. Упрощённое движение общее с Canvas; WebGL сам не рассчитывает физику. В «Возможностях» проведите по сцене: видны глубина, освещение и рисунок из шейдера. Блики и тени готовых движков могут отличаться.', 'Canvas удобен для небольших 2D-игр. WebGL полезен для большого количества объектов, шейдерных эффектов и 3D. Three.js/Babylon.js дают готовые инструменты поверх графического API. WebGL 2 расширяет WebGL 1; этот пример использует общий набор возможностей, поэтому картинка одинакова.'],
+        svg: ['SVG хранит каждую фигуру как элемент страницы. Подходит для интерактивных схем, инфографики и векторных игр: фигуры остаются чёткими при масштабировании.', 'Коснитесь орбит, чтобы изменить направление. В «Сравнении» та же 2D-башня; в «Нагрузке» — общий набор частиц. Тысячи элементов увеличивают работу с деревом страницы; для массового рисования часто удобнее Canvas/WebGL.'],
+        dom: ['HTML/CSS удобны для карточек, викторин, интерактивных плакатов и интерфейсов. Текст остаётся текстом, а элементы доступны браузеру. CSS perspective создаёт пространственные преобразования, но не заменяет движок объёмных моделей.', 'Афиша использует Web Animations: коснитесь карточки для выделения. Пауза останавливает анимацию. В «Сравнении» и «Нагрузке» движение то же, что в Canvas; отдельные HTML-элементы показывают цену работы с большим деревом страницы.'],
+        audio: ['Web Audio создаёт звук без аудиофайлов: генератор, огибающая и анализатор. Коснитесь палитры: положение меняет ноту, а линия показывает звуковую волну. Звук начинается после нажатия.', 'Это дополнение к графике, а не другой способ рисования. Изображение создаёт Canvas 2D. В «Нагрузке» ползунок меняет число видимых частиц, а не число одновременно звучащих нот. Пауза и уход из вкладки приостанавливают звук.'],
+        worker: ['OffscreenCanvas передаёт Canvas отдельному Worker. Здесь он рисует ту же набережную, башню и частицы; главный поток принимает нажатия и обслуживает интерфейс.', 'FPS и задержка до кадра учитывают сообщения о действительно нарисованных кадрах из Worker. Отдельный поток помогает отзывчивости, но не гарантирует больший FPS. Для него нужен браузер с OffscreenCanvas и Worker. Код потока находится внутри HTML; интернет не нужен.'],
+        webgpu: ['WebGPU — современный встроенный API графики и вычислений. Этот эксперимент рисует те же частицы и объёмную башню без библиотек. Шейдер написан на WGSL; WebGL использует GLSL.', 'Поддержка зависит от браузера, видеоускорителя и безопасного контекста. В изолированном предпросмотре API может быть недоступен: тогда попробуйте сохранённый HTML отдельно в совместимом браузере. Отсутствие поддержки не означает ошибку игры.', 'Сравнивайте с WebGL на той же сцене и устройстве. Здесь показана отрисовка; вычислительные шейдеры и сложные модели не подключены. Для обычной 2D-игры WebGPU может быть избыточным.']
+      });
+      const nativeControls = document.createElement('div'); nativeControls.id = 'native-webgl'; nativeControls.hidden = true;
+      nativeControls.setAttribute('role', 'group'); nativeControls.setAttribute('aria-label', 'Версия WebGL');
+      for (const version of [1, 2]) { const button = document.createElement('button'); button.textContent = 'WebGL ' + version; button.dataset.version = version;
+        button.addEventListener('click', () => { nativeGLVersion = version; startScene(); }); nativeControls.append(button); }
+      document.querySelector('.description-row').append(nativeControls);
+
+      function nativeStatus(state) { host.dataset.nativeMode = mode; host.dataset.nativeState = state; }
+      function nativeUnavailable(message) {
+        nativeStatus('unavailable'); $('message').textContent = '';
+        const panel = document.createElement('div'); panel.className = 'native-unavailable'; panel.setAttribute('role', 'status');
+        const title = document.createElement('b'), text = document.createElement('p'); title.textContent = document.querySelector(`[data-mode="${mode}"] b`).textContent + ' недоступен'; text.textContent = message;
+        panel.append(title, text); host.replaceChildren(panel); resetFps();
+        return { ownLoop: true, tick() {}, tap() {}, dispose() {} };
+      }
+      function nativeAsync(init) {
+        let closed = false, current = null;
+        nativeStatus('loading'); $('message').textContent = 'Подготовка…';
+        const scene = { get ownLoop() { return current ? Boolean(current.ownLoop) : true; }, tick(delta) { current?.tick?.(delta); }, tap(...args) { current?.tap?.(...args); }, drag(...args) { current?.drag?.(...args); },
+          pause(value) { current?.pause?.(value); }, dispose() { closed = true; current?.dispose(); } };
+        Promise.resolve().then(() => closed ? null : init(() => !closed)).then(value => {
+          if (!value) return;
+          if (closed) { value.dispose(); return; }
+          current = value; nativeStatus('ready'); $('message').textContent = '';
+          current.pause?.(paused || infoOpen || document.hidden); resetFps();
+        }).catch(error => { if (!closed) current = nativeUnavailable(error.message || 'Браузер не поддерживает эту технологию.'); });
+        return scene;
+      }
+      function nativeColor(hex) { return [1, 3, 5].map(at => parseInt(hex.slice(at, at + 2), 16) / 255); }
+      function nativeCanvas() {
+        const canvas = document.createElement('canvas'); canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio);
+        canvas.style.width = width + 'px'; canvas.style.height = height + 'px'; host.append(canvas); return canvas;
+      }
+      function nativeKick(items, x, y) { for (const item of items) { const dx = item.x - x, dy = item.y - y, d = Math.max(20, Math.hypot(dx, dy)); item.vx += dx / d * 60; item.vy += dy / d * 60; } }
+      function nativeParticleData(items, delta, data) {
+        items.forEach((p, i) => { moveParticle(p, delta / 1000); const at = i * 7; data[at] = p.x; data[at + 1] = p.y; data[at + 2] = p.r; data.set(p.rgb, at + 3); data[at + 6] = 0; });
+      }
+      function nativeTriangles(model) {
+        const unit = 12 / width, distance = (height * unit + 1.8) / (2 * Math.tan(19 * Math.PI / 180));
+        const eye = [Math.sin(nativeYaw) * distance, distance * .14, Math.cos(nativeYaw) * distance];
+        const norm = a => { const length = Math.hypot(...a); return a.map(x => x / length); }, dot = (a, b) => a.reduce((s, x, i) => s + x * b[i], 0);
+        const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+        const z = norm(eye), x = norm(cross([0, 1, 0], z)), y = cross(z, x), f = 1 / Math.tan(19 * Math.PI / 180), values = [];
+        const vertex = (position, normal, color, uv) => {
+          const relative = position.map((v, i) => v - eye[i]), depth = dot(relative, z), near = .1, far = 100;
+          values.push(dot(relative, x) * f / (width / height), dot(relative, y) * f, depth * (near + far) / (near - far) + 2 * near * far / (near - far), -depth, ...normal, ...color, ...uv);
+        };
+        const box = (cx, cy, cz, sx, sy, sz, angle, hex) => {
+          const corners = [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]], color = nativeColor(hex), c = Math.cos(angle), s = Math.sin(angle);
+          const faces = [[4,5,6,7,0,0,1],[1,0,3,2,0,0,-1],[5,1,2,6,1,0,0],[0,4,7,3,-1,0,0],[7,6,2,3,0,1,0],[0,1,5,4,0,-1,0]];
+          for (const face of faces) for (const i of [0,1,2,0,2,3]) { const p = corners[face[i]], a = p[0] * sx / 2, b = p[1] * sy / 2;
+            vertex([cx + a * c - b * s, cy + a * s + b * c, cz + p[2] * sz / 2], [face[4] * c - face[5] * s, face[4] * s + face[5] * c, face[6]], color, [[0,0],[1,0],[1,1],[0,1]][i]); }
+        };
+        box(0, (height / 2 - model.floor) * unit - .125, 0, 12.5, .25, 3, 0, '#304966');
+        for (const block of model.blocks) box((block.x - width / 2) * unit, (height / 2 - block.y) * unit, 0, model.size * unit, model.size * unit, model.size * unit * 1.5, block.angle, block.color);
+        const center = [(model.ball.x - width / 2) * unit, (height / 2 - model.ball.y) * unit, 0], radius = model.radius * unit, color = nativeColor('#efab6c');
+        for (let row = 0; row < 12; row++) for (let col = 0; col < 18; col++) {
+          const point = (u, v) => { const theta = u / 18 * Math.PI * 2, phi = v / 12 * Math.PI; const n = [Math.sin(phi) * Math.cos(theta), Math.cos(phi), Math.sin(phi) * Math.sin(theta)]; vertex(n.map((a, i) => center[i] + a * radius), n, color, [u / 18, v / 12]); };
+          for (const [a, b] of [[0,0],[1,0],[1,1],[0,0],[1,1],[0,1]]) point(col + a, row + b);
+        }
+        return new Float32Array(values);
+      }
+      function nativeWebGL() {
+        const canvas = nativeCanvas(), options = { alpha: false, antialias: scenario !== 'load' };
+        let gl = canvas.getContext(nativeGLVersion === 2 ? 'webgl2' : 'webgl', options), actual = nativeGLVersion;
+        if (!gl && nativeGLVersion === 2) { gl = canvas.getContext('webgl', options); actual = 1; }
+        if (!gl) throw Error('WebGL отключён или не поддерживается видеоускорителем. Выберите Canvas 2D.');
+        host.dataset.nativeApi = 'webgl' + actual;
+        nativeControls.querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.version) === actual)));
+        const load = scenario === 'load', items = load ? particles().map(p => ({ ...p, rgb: nativeColor(p.color) })) : null, model = load ? null : comparisonLayout();
+        const shaders = [], programs = [], buffers = []; let disposed = false;
+        const shader = (type, text) => { const value = gl.createShader(type); shaders.push(value);
+          if (actual === 2) text = '#version 300 es\n' + text.replace(/attribute /g, 'in ').replace(/varying /g, type === gl.VERTEX_SHADER ? 'out ' : 'in ').replace(/gl_FragColor/g, 'fragmentColor');
+          if (actual === 2 && type === gl.FRAGMENT_SHADER) text = text.replace('precision mediump float;', 'precision mediump float;\nout vec4 fragmentColor;');
+          gl.shaderSource(value, text); gl.compileShader(value); if (!gl.getShaderParameter(value, gl.COMPILE_STATUS)) throw Error('Не удалось подготовить шейдер WebGL.'); return value; };
+        const dispose = () => { if (disposed) return; disposed = true; canvas.removeEventListener('webglcontextlost', lost); shaders.forEach(s => gl.deleteShader(s)); programs.forEach(p => gl.deleteProgram(p)); buffers.forEach(b => gl.deleteBuffer(b)); gl.getExtension('WEBGL_lose_context')?.loseContext(); if(host.contains(canvas))delete host.dataset.nativeApi; };
+        const scene = { tick, tap(x, y) { load ? nativeKick(items, x, y) : comparisonShot(model, x, y); }, drag(x) { if (!load && scenario === 'showcase') nativeYaw = (x / width - .5) * 1.1; }, dispose };
+        function lost(event) { event.preventDefault(); if (!disposed) { scene.ownLoop = true; nativeUnavailable('Контекст WebGL потерян. Нажмите «Сброс» или выберите Canvas.'); } }
+        canvas.addEventListener('webglcontextlost', lost);
+        try {
+          const vertex = load ? 'attribute vec2 p; attribute float r; attribute vec3 color; uniform vec2 bounds; uniform float pixelRatio; varying vec3 c; void main(){ gl_Position=vec4(p.x/bounds.x*2.0-1.0,1.0-p.y/bounds.y*2.0,0.0,1.0); gl_PointSize=r*2.0*pixelRatio; c=color; }'
+            : 'attribute vec4 p; attribute vec3 normal; attribute vec3 color; attribute vec2 uv; varying vec3 n; varying vec3 c; varying vec2 t; void main(){gl_Position=p;n=normal;c=color;t=uv;}';
+          const fragment = load ? 'precision mediump float; varying vec3 c; void main(){float d=length(gl_PointCoord*2.0-1.0);if(d>1.0)discard;gl_FragColor=vec4(c,1.0-smoothstep(.85,1.0,d));}'
+            : 'precision mediump float; varying vec3 n; varying vec3 c; varying vec2 t; uniform float textureOn; void main(){float light=.38+.62*max(0.0,dot(normalize(n),normalize(vec3(-.4,.8,.6))));float pattern=mix(1.0,.91+.09*mod(floor(t.x*8.0)+floor(t.y*8.0),2.0),textureOn);gl_FragColor=vec4(c*light*pattern,1.0);}';
+          const program = gl.createProgram(); programs.push(program); gl.attachShader(program, shader(gl.VERTEX_SHADER, vertex)); gl.attachShader(program, shader(gl.FRAGMENT_SHADER, fragment)); gl.linkProgram(program);
+          if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw Error('Браузер не смог связать программу WebGL.');
+          gl.useProgram(program); const buffer = gl.createBuffer(); buffers.push(buffer); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+          const attributes = load ? [['p',2,0],['r',1,8],['color',3,12]] : [['p',4,0],['normal',3,16],['color',3,28],['uv',2,40]];
+          for (const [name, size, offset] of attributes) { const at = gl.getAttribLocation(program, name); gl.enableVertexAttribArray(at); gl.vertexAttribPointer(at, size, gl.FLOAT, false, load ? 28 : 48, offset); }
+          if (load) { gl.uniform2f(gl.getUniformLocation(program, 'bounds'), width, height); gl.uniform1f(gl.getUniformLocation(program, 'pixelRatio'), ratio); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); }
+          else { gl.enable(gl.DEPTH_TEST); gl.uniform1f(gl.getUniformLocation(program, 'textureOn'), scenario === 'showcase' ? 1 : 0); }
+          gl.viewport(0, 0, canvas.width, canvas.height); gl.clearColor(11/255, 25/255, 41/255, 1);
+          scene.data = load ? new Float32Array(items.length * 7) : null; nativeStatus('ready'); tick(0); return scene;
+        } catch (error) { dispose(); throw error; }
+        function tick(delta) { if (disposed || gl.isContextLost()) return; let data;
+          if (load) { nativeParticleData(items, delta, scene.data); data = scene.data; } else { stepComparison(model, delta); data = nativeTriangles(model); if (scenario === 'compare') comparisonStats(model); }
+          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.bufferData(gl.ARRAY_BUFFER, data, gl.DYNAMIC_DRAW); gl.drawArrays(load ? gl.POINTS : gl.TRIANGLES, 0, data.length / (load ? 7 : 12)); }
+      }
+      function nativeElements(svg) {
+        const ns = 'http://www.w3.org/2000/svg', element = tag => svg ? document.createElementNS(ns, tag) : document.createElement(tag);
+        const root = element(svg ? 'svg' : 'div'); root.classList.add('native-dom'); if (svg) root.setAttribute('viewBox', `0 0 ${width} ${height}`); host.append(root);
+        const comparison = scenario === 'compare', model = comparison ? comparisonLayout() : null, items = comparison ? [...model.blocks, model.ball] : particles();
+        const nodes = items.map(p => { const node = element(svg ? (p === model?.ball || !comparison ? 'circle' : 'rect') : 'div');
+          if (svg) { node.setAttribute('fill', p.color || '#efab6c'); if (!comparison) node.setAttribute('r', p.r); }
+          else { node.className = 'native-dot'; node.style.background = p.color || '#efab6c'; if (comparison && p !== model.ball) node.style.borderRadius = '0'; }
+          root.append(node); return node; });
+        if (model) { const floor = element(svg ? 'rect' : 'div'); if (svg) { for (const [key, value] of Object.entries({ x: 0, y: model.floor, width, height: height - model.floor, fill: '#304966' })) floor.setAttribute(key, value); }
+          else floor.style.cssText = `position:absolute;left:0;top:${model.floor}px;width:100%;height:${height-model.floor}px;background:#304966`; root.prepend(floor); }
+        nativeStatus('ready'); const scene = { tick(delta) { if (model) { stepComparison(model, delta); comparisonStats(model); }
+          items.forEach((p, i) => { if (!model) moveParticle(p, delta / 1000); const radius = model ? p === model.ball ? model.radius : model.size / 2 : p.r, node = nodes[i];
+            if (svg) { if (node.tagName === 'circle') { node.setAttribute('cx', p.x); node.setAttribute('cy', p.y); node.setAttribute('r', radius); }
+              else { node.setAttribute('x', p.x - radius); node.setAttribute('y', p.y - radius); node.setAttribute('width', radius * 2); node.setAttribute('height', radius * 2); node.setAttribute('transform', `rotate(${p.angle * 180 / Math.PI} ${p.x} ${p.y})`); } }
+            else { node.style.width = node.style.height = radius * 2 + 'px'; node.style.transform = `translate(${p.x-radius}px,${p.y-radius}px) rotate(${p.angle || 0}rad)`; } }); },
+          tap(x, y) { model ? comparisonShot(model, x, y) : nativeKick(items, x, y); }, dispose() {} }; scene.tick(0); return scene;
+      }
+      function nativeSVGShowcase() {
+        const ns = 'http://www.w3.org/2000/svg', root = document.createElementNS(ns, 'svg'); root.setAttribute('viewBox', '-160 -160 320 320'); root.classList.add('native-dom'); host.append(root);
+        const add = (tag, attributes, text) => { const e = document.createElementNS(ns, tag); for (const [key, value] of Object.entries(attributes)) e.setAttribute(key, value); if (text) e.textContent = text; root.append(e); return e; };
+        for (const radius of [52,88,124]) add('circle', { r: radius, fill: 'none', stroke: '#335979', 'stroke-width': 1.5 });
+        add('circle', { r: 23, fill: '#ffc777' }); const nodes = [52,88,124].map((r,i) => add('circle', { r: 10 + i * 2, fill: colors[i] }));
+        add('text', { x: 0, y: 153, fill: '#c6daf1', 'text-anchor': 'middle', 'font-size': 12 }, 'SVG · отдельные векторные фигуры');
+        let time = 0, direction = 1; nativeStatus('ready');
+        const scene = { tick(delta) { time += delta / 1000 * direction; nodes.forEach((node,i) => { const a = time * (.6 - i * .12) + i * 2, r = [52,88,124][i]; node.setAttribute('cx', Math.cos(a)*r); node.setAttribute('cy', Math.sin(a)*r); }); }, tap() { direction *= -1; }, dispose() {} }; scene.tick(0); return scene;
+      }
+      function nativeDOMShowcase() {
+        const root = document.createElement('div'); root.className = 'native-dom native-poster'; host.append(root); const animations = [];
+        for (const [i, word] of ['Форма','Движение','Цвет'].entries()) { const card = document.createElement('div'); card.className = 'native-card';
+          const title = document.createElement('b'), note = document.createElement('span'); title.textContent = ['A','B','C'][i]; note.textContent = word; card.append(title, note); root.append(card);
+          if (!card.animate) throw Error('Web Animations не поддерживается этим браузером.');
+          const animation = card.animate([{ transform: `rotateY(${-12+i*5}deg) translateY(6px)` }, { transform: `rotateY(${12-i*5}deg) translateY(-6px)` }], { duration: 2400+i*400, iterations: Infinity, direction: 'alternate', easing: 'ease-in-out' }); animation.pause(); animations.push(animation); }
+        let time = 0; nativeStatus('ready'); return { tick(delta) { time += delta; animations.forEach((a,i) => a.currentTime = time + i * 400); },
+          tap(x) { const index = Math.max(0, Math.min(2, Math.floor(x / width * 3))); [...root.children].forEach((card,i) => card.classList.toggle('is-selected', i === index)); }, dispose() { animations.forEach(a => a.cancel()); } };
+      }
+      function nativeAudio() {
+        const Constructor = window.AudioContext || window.webkitAudioContext; if (!Constructor) throw Error('Web Audio не поддерживается этим браузером.');
+        const drawing = scenario === 'showcase' ? null : scenario === 'compare' ? canvasComparison() : canvasScene();
+        const context = drawing ? null : makeCanvas(); let audio = null, analyser = null, wave = null, closed = false; const voices = new Set();
+        nativeStatus('ready'); host.dataset.nativeAudio = 'silent';
+        const scene = { tick(delta) { drawing?.tick(delta); if (!context) return;
+          context.fillStyle = '#0b1929'; context.fillRect(0,0,width,height); for (let i=0;i<5;i++) { context.fillStyle = colors[i]; context.globalAlpha = .65; context.fillRect(i*width/5+4, height*.2, width/5-8, height*.5); } context.globalAlpha=1;
+          context.fillStyle = '#eaf2ff'; context.textAlign='center'; context.font='16px system-ui'; context.fillText('Коснитесь: нота зависит от положения', width/2, height*.12);
+          if (analyser) { analyser.getByteTimeDomainData(wave); context.strokeStyle='#eaf2ff'; context.lineWidth=2; context.beginPath(); for(let i=0;i<wave.length;i++) { const x=i/(wave.length-1)*width,y=height*.82+(wave[i]-128)/128*height*.12; i?context.lineTo(x,y):context.moveTo(x,y); } context.stroke(); } },
+          tap(x,y) { drawing?.tap(x,y); void play(x,y); }, pause(value) { if (audio && audio.state !== 'closed') { if (value) { for(const osc of voices)try{osc.stop();}catch{} void audio.suspend().catch(()=>{}); } } },
+          dispose() { closed=true; drawing?.dispose(); for(const osc of voices)try{osc.stop();}catch{} if(audio)void audio.close().catch(()=>{}); voices.clear(); delete host.dataset.nativeAudio; } };
+        async function play(x,y) { try { if (!audio) { audio=new Constructor(); analyser=audio.createAnalyser(); analyser.fftSize=512; wave=new Uint8Array(analyser.fftSize); analyser.connect(audio.destination); }
+          await audio.resume(); if(closed || paused || infoOpen || document.hidden)return;
+          const osc=audio.createOscillator(), gain=audio.createGain(), now=audio.currentTime, note=Math.min(14,Math.floor(x/width*15));
+          osc.type=['sine','triangle','sine'][note%3]; osc.frequency.value=220*Math.pow(2,note/12); gain.gain.setValueAtTime(0,now); gain.gain.linearRampToValueAtTime(.12,now+.015); gain.gain.exponentialRampToValueAtTime(.0001,now+.42);
+          osc.connect(gain); gain.connect(analyser); voices.add(osc); host.dataset.nativeAudio=audio.state; osc.onended=()=>{voices.delete(osc);osc.disconnect();gain.disconnect();}; osc.start();osc.stop(now+.45);
+        } catch { if(!closed) $('message').textContent='Не удалось включить звук. Проверьте разрешение браузера.'; } }
+        scene.tick(0); return scene;
+      }
+      function offscreenThread() {
+        let canvas, scene, stopped=true, last=null, frame=null, timer=false;
+        const cancel=()=>{if(frame!==null){timer?clearTimeout(frame):cancelAnimationFrame(frame);frame=null;}};
+        const schedule=()=>{timer=typeof requestAnimationFrame!=='function';frame=timer?setTimeout(()=>draw(performance.now()),16):requestAnimationFrame(draw);};
+        const notify=()=>{const message={type:'frame'};if(threadModel)message.stats={moved:threadModel.blocks.filter(p=>Math.hypot(p.x-p.startX,p.y-p.startY)>threadModel.size*.6||Math.abs(p.angle)>.25).length,shots:threadModel.shots};postMessage(message);};
+        function draw(now){frame=null;if(stopped)return;scene.tick(last===null?0:Math.min(40,now-last));last=now;notify();schedule();}
+        onmessage=event=>{const m=event.data;try{
+          if(m.type==='init'){canvas=m.canvas;threadCanvas=canvas;width=m.width;height=m.height;const ctx=canvas.getContext('2d');if(!ctx)throw Error('Нет 2D-контекста OffscreenCanvas');ctx.scale(m.ratio,m.ratio);
+            if(m.scenario==='showcase')scene=canvasShowcase();
+            else if(m.scenario==='compare'){threadModel=m.model;scene={tick(d){stepComparison(threadModel,d);drawComparison(ctx,threadModel);},tap(x,y){comparisonShot(threadModel,x,y);}};}
+            else {const items=m.items;scene={tick(d){ctx.clearRect(0,0,width,height);for(const p of items){moveParticle(p,d/1000);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}},tap(x,y){nativeKick(items,x,y);}};}
+            scene.tick(0);postMessage({type:'ready'});stopped=m.paused;if(!stopped)schedule();
+          }else if(m.type==='pause'){stopped=m.value;cancel();last=null;if(!stopped)schedule();}
+          else if(m.type==='tap'){scene.tap(m.x,m.y);if(!stopped){scene.tick(0);notify();}}
+        }catch(error){stopped=true;cancel();postMessage({type:'error',message:error.message});}};
+      }
+      function nativeWorker() { return nativeAsync(async isCurrent => {
+        if(!window.Worker || !window.OffscreenCanvas || !HTMLCanvasElement.prototype.transferControlToOffscreen)throw Error('Браузер не поддерживает Worker с OffscreenCanvas. Выберите Canvas.');
+        const canvas=nativeCanvas(), code='let width=1,height=1,threadModel=null,threadCanvas=null;\nfunction makeCanvas(){return threadCanvas.getContext("2d");}\n'+[moveParticle,nativeKick,comparisonShot,stepComparison,drawComparison,canvasShowcase,offscreenThread].map(fn=>fn.toString()).join('\n')+'\noffscreenThread();';
+        const url=URL.createObjectURL(new Blob([code],{type:'text/javascript'}));let worker,closed=false,settled=false,timer;
+        const dispose=()=>{closed=true;clearTimeout(timer);worker?.terminate();URL.revokeObjectURL(url);if(host.contains(canvas))delete host.dataset.nativeWorker;};
+        try { worker=new Worker(url); const scene={ownLoop:true,tap(x,y){worker.postMessage({type:'tap',x,y});},pause(value){worker.postMessage({type:'pause',value});},dispose};
+          await new Promise((resolve,reject)=>{timer=setTimeout(()=>reject(Error('Отдельный поток не запустился. Попробуйте сохранённый HTML в другом браузере.')),6000);
+            worker.onerror=event=>{event.preventDefault();const error=Error('Браузер не разрешил локальный Worker. Выберите Canvas.');if(!settled)reject(error);else if(!closed){dispose();if(isCurrent())nativeUnavailable(error.message);}};
+            worker.onmessage=event=>{if(closed)return;const message=event.data;if(message.type==='ready'){settled=true;clearTimeout(timer);if(isCurrent())host.dataset.nativeWorker='running';resolve();}
+              else if(message.type==='error'){if(!settled)reject(Error(message.message));else{dispose();if(isCurrent())nativeUnavailable('Отрисовка потока остановлена. Нажмите «Сброс».');}}
+              else if(message.type==='frame'&&isCurrent()&&!paused&&!infoOpen&&!document.hidden){if(message.stats)$('scene-stats').textContent=`Сдвинуто: ${message.stats.moved}/12 · Выстрелов: ${integer(message.stats.shots)}`;frameRendered(performance.now());}};
+            const transferred=canvas.transferControlToOffscreen();worker.postMessage({type:'init',canvas:transferred,width,height,ratio,scenario,items:scenario==='load'?particles():null,model:scenario==='compare'?comparisonLayout():null,paused:paused||infoOpen||document.hidden},[transferred]);
+          });URL.revokeObjectURL(url);return scene;
+        }catch(error){dispose();throw error;}
+      }); }
+      function nativeWebGPU() { return nativeAsync(async isCurrent => {
+        if(!isSecureContext)throw Error('WebGPU нужен безопасный контекст. Попробуйте сохранённый HTML в совместимом браузере или страницу по HTTPS.');
+        if(!navigator.gpu)throw Error('WebGPU недоступен в этом браузере или изолированном предпросмотре. Можно проверить сохранённый HTML отдельно.');
+        const adapter=await navigator.gpu.requestAdapter();if(!isCurrent())return null;if(!adapter)throw Error('Браузер не предоставил видеоускоритель для WebGPU. Выберите WebGL или Canvas.');
+        const device=await adapter.requestDevice();if(!isCurrent()){device.destroy();return null;}let canvas=null,ctx=null,disposed=false,depth=null;const buffers=[];
+        const dispose=()=>{if(disposed)return;disposed=true;buffers.forEach(b=>b.destroy());depth?.destroy();ctx?.unconfigure();device.destroy();if(host.contains(canvas))delete host.dataset.nativeApi;};
+        try {
+          canvas=nativeCanvas();ctx=canvas.getContext('webgpu');if(!ctx)throw Error('Браузер не предоставил поверхность WebGPU.');
+          ctx.configure({device,format:navigator.gpu.getPreferredCanvasFormat(),alphaMode:'opaque'});const load=scenario==='load',items=load?particles().map(p=>({...p,rgb:nativeColor(p.color)})):null,model=load?null:comparisonLayout();
+          const createBuffer=(size,usage)=>{const b=device.createBuffer({size:Math.max(16,Math.ceil(size/4)*4),usage});buffers.push(b);return b;};
+          const bounds=createBuffer(16,GPUBufferUsage.UNIFORM|GPUBufferUsage.COPY_DST);device.queue.writeBuffer(bounds,0,new Float32Array([width,height,scenario==='showcase'?1:0,0]));
+          const source=load?`
+            struct Out { @builtin(position) p:vec4f, @location(0) uv:vec2f, @location(1) color:vec3f }
+            @group(0) @binding(0) var<uniform> bounds:vec4f;
+            @vertex fn vs(@builtin(vertex_index) i:u32,@location(0) center:vec2f,@location(1) radius:f32,@location(2) color:vec3f)->Out {
+              let q=array<vec2f,6>(vec2f(-1,-1),vec2f(1,-1),vec2f(1,1),vec2f(-1,-1),vec2f(1,1),vec2f(-1,1))[i];let p=center+q*radius;var o:Out;o.p=vec4f(p.x/bounds.x*2-1,1-p.y/bounds.y*2,0,1);o.uv=q;o.color=color;return o;
+            }
+            @fragment fn fs(o:Out)->@location(0) vec4f {let d=length(o.uv);if(d>1){discard;}return vec4f(o.color,1-smoothstep(.85,1,d));}`:`
+            struct Out { @builtin(position) p:vec4f,@location(0) normal:vec3f,@location(1) color:vec3f,@location(2) uv:vec2f }
+            @group(0) @binding(0) var<uniform> bounds:vec4f;
+            @vertex fn vs(@location(0) p:vec4f,@location(1) normal:vec3f,@location(2) color:vec3f,@location(3) uv:vec2f)->Out {var o:Out;o.p=vec4f(p.xy,(p.z+p.w)*.5,p.w);o.normal=normal;o.color=color;o.uv=uv;return o;}
+            @fragment fn fs(o:Out)->@location(0) vec4f {let light=.38+.62*max(0,dot(normalize(o.normal),normalize(vec3f(-.4,.8,.6))));let check=(u32(floor(o.uv.x*8))+u32(floor(o.uv.y*8)))%2;let pattern=mix(1,.91+.09*f32(check),bounds.z);return vec4f(o.color*light*pattern,1);}`;
+          device.pushErrorScope('validation');const shader=device.createShaderModule({code:source});const format=navigator.gpu.getPreferredCanvasFormat();
+          const pipeline=device.createRenderPipeline({layout:'auto',vertex:{module:shader,entryPoint:'vs',buffers:[{arrayStride:load?28:48,stepMode:load?'instance':'vertex',attributes:load?[{shaderLocation:0,offset:0,format:'float32x2'},{shaderLocation:1,offset:8,format:'float32'},{shaderLocation:2,offset:12,format:'float32x3'}]:[{shaderLocation:0,offset:0,format:'float32x4'},{shaderLocation:1,offset:16,format:'float32x3'},{shaderLocation:2,offset:28,format:'float32x3'},{shaderLocation:3,offset:40,format:'float32x2'}]}]},fragment:{module:shader,entryPoint:'fs',targets:[{format,...(load?{blend:{color:{srcFactor:'src-alpha',dstFactor:'one-minus-src-alpha'},alpha:{srcFactor:'one',dstFactor:'one-minus-src-alpha'}}}: {})}]},primitive:{topology:'triangle-list'},...(!load?{depthStencil:{format:'depth24plus',depthWriteEnabled:true,depthCompare:'less'}}:{})});
+          const validation=await device.popErrorScope();if(!isCurrent()){dispose();return null;}if(validation)throw Error('Не удалось подготовить шейдер WebGPU: '+validation.message);
+          const group=device.createBindGroup({layout:pipeline.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:bounds}}]});
+          let data=load?new Float32Array(items.length*7):nativeTriangles(model);const vertices=createBuffer(data.byteLength,GPUBufferUsage.VERTEX|GPUBufferUsage.COPY_DST);
+          if(!load)depth=device.createTexture({size:[canvas.width,canvas.height],format:'depth24plus',usage:GPUTextureUsage.RENDER_ATTACHMENT});
+          host.dataset.nativeApi='webgpu';const scene={tick(delta){if(disposed)return;if(load)nativeParticleData(items,delta,data);else{stepComparison(model,delta);data=nativeTriangles(model);if(scenario==='compare')comparisonStats(model);}
+              device.queue.writeBuffer(vertices,0,data);const encoder=device.createCommandEncoder(),pass=encoder.beginRenderPass({colorAttachments:[{view:ctx.getCurrentTexture().createView(),clearValue:{r:11/255,g:25/255,b:41/255,a:1},loadOp:'clear',storeOp:'store'},],...(!load?{depthStencilAttachment:{view:depth.createView(),depthClearValue:1,depthLoadOp:'clear',depthStoreOp:'store'}}:{})});
+              pass.setPipeline(pipeline);pass.setBindGroup(0,group);pass.setVertexBuffer(0,vertices);load?pass.draw(6,items.length):pass.draw(data.length/12);pass.end();device.queue.submit([encoder.finish()]);},
+            tap(x,y){load?nativeKick(items,x,y):comparisonShot(model,x,y);},drag(x){if(!load&&scenario==='showcase')nativeYaw=(x/width-.5)*1.1;},dispose};
+          device.lost.then(info=>{if(!disposed&&info.reason!=='destroyed'){dispose();scene.ownLoop=true;nativeUnavailable('Соединение с видеоускорителем WebGPU потеряно. Нажмите «Сброс».');}});
+          device.addEventListener('uncapturederror',event=>{event.preventDefault();if(!disposed){dispose();scene.ownLoop=true;nativeUnavailable('WebGPU остановлен из-за ошибки отрисовки. Попробуйте WebGL.');}});
+          scene.tick(0);return scene;
+        }catch(error){dispose();throw error;}
+      }); }
+      function nativeScene() {
+        nativeStatus('ready');
+        if(mode==='webgl')return nativeWebGL();if(mode==='webgpu')return nativeWebGPU();if(mode==='worker')return nativeWorker();if(mode==='audio')return nativeAudio();
+        if(mode==='svg'&&scenario==='showcase')return nativeSVGShowcase();if(mode==='dom'&&scenario==='showcase')return nativeDOMShowcase();return nativeElements(mode==='svg');
+      }
+
       function updateInfo() {
         $('info-title').textContent = document.querySelector(`[data-mode="${mode}"] b`).textContent;
         const paragraphs = explanations[mode].map(text => { const paragraph = document.createElement('p'); paragraph.textContent = text; return paragraph; });
@@ -2275,7 +2541,7 @@
             ['Phaser 4', '— для новых 2D-игр: новый рендерер, фильтры и тени на поверхности.'],
             ['Phaser 3', '— готовый код, уроки и плагины версии 3. Переход на 4 может потребовать правок.'],
             ['Рекомендация', '— с нуля: Phaser 4 + WebGL. Работающую игру на Phaser 3 можно оставить на 3. FPS зависит от игры и устройства.'],
-            ['На что смотреть', '— включите прицел внизу: панель крупно со стрелкой. Ночью в WebGL у Phaser 4 темнее пазы. Днём и в Canvas разница мала.']
+            ['На что смотреть', '— включите прицел вверху: панель крупно со стрелкой. Ночью в WebGL у Phaser 4 темнее пазы. Днём и в Canvas разница мала.']
           ]) {
             const paragraph = document.createElement('p'), heading = document.createElement('b'); heading.textContent = title;
             paragraph.append(heading, ' ' + text); if (title === 'Рекомендация') paragraph.className = 'recommendation'; paragraphs.push(paragraph);
@@ -2305,8 +2571,10 @@
         generation += 1;
         activeScene?.dispose();
         activeScene = null; delete host.dataset.physics; delete host.dataset.physicsBlocks; host.removeAttribute('tabindex');
+        for(const key of ['nativeMode','nativeState','nativeApi','nativeWorker','nativeAudio'])delete host.dataset[key];
         host.replaceChildren();
         mode = nextMode;
+        nativeControls.hidden = mode !== 'webgl';
         $('phaser-renderer').hidden = !mode.startsWith('phaser');
         $('three-quality').hidden = !is3DMode(mode) || scenario !== 'showcase';
         $('cannon-physics').hidden = mode !== 'cannon' || scenario === 'load';
@@ -2318,7 +2586,8 @@
         syncRendererButtons();
         $('message').textContent = '';
         try {
-          if (mode === 'cannon') {
+          if (nativeModes.has(mode)) activeScene = nativeScene();
+          else if (mode === 'cannon') {
             activeScene = cannonEnabled || scenario === 'load' ? cannonScene(libraries.three160, libraries.cannon) : threeComparison(libraries.three160);
             host.dataset.physics = cannonEnabled || scenario === 'load' ? 'cannon' : 'simple';
             if (!cannonEnabled && scenario !== 'load') activeScene.tick(0);
@@ -2345,6 +2614,8 @@
           else activeScene = phaserScene(libraries[mode], generation);
           pendingBabylonView = null;
         } catch (error) {
+          if (nativeModes.has(mode)) activeScene = nativeUnavailable(error.message);
+          else {
           pendingBabylonView?.dispose(); pendingBabylonView = null;
           const failedMode = mode;
           mode = 'canvas';
@@ -2359,6 +2630,7 @@
           host.replaceChildren();
           activeScene = scenario === 'compare' ? canvasComparison() : scenario === 'showcase' ? canvasShowcase() : canvasScene();
           $('message').textContent = `${failedMode}: ${error.message}. Продолжаем в Canvas 2D.`;
+          }
         }
         activeScene.pause?.(paused || infoOpen || document.hidden);
         if (mode === 'cannon') { host.tabIndex = 0; if (!paused && !infoOpen) host.focus({ preventScroll: true }); }
@@ -2508,6 +2780,7 @@
         resetFps();
       });
       $('reset').addEventListener('click', () => {
+        nativeYaw = 0;
         tapCount = 0; peakPointers = pointers.size; rings = []; pendingInput = null;
         $('tap-count').textContent = '0';
         $('finger-count').textContent = `${integer(pointers.size)} / ${integer(peakPointers)}`;
@@ -2532,7 +2805,8 @@
         if (paused || infoOpen || document.hidden || activeScene?.ownLoop) return;
         const delta = lastFrame === null ? 1000 / 60 : Math.min(40, time - lastFrame);
         lastFrame = time;
-        activeScene?.tick(delta);
+        if(nativeModes.has(mode)) { try { activeScene?.tick(delta); } catch { activeScene?.dispose(); activeScene=nativeUnavailable('Отрисовка остановлена. Нажмите «Сброс» или выберите другую технологию.'); return; } }
+        else activeScene?.tick(delta);
         frameRendered(performance.now());
       }
       requestAnimationFrame(animate);

@@ -292,7 +292,7 @@ try {
         await context.route('https://**/*', route => { requests.push(route.request().url()); return route.abort(); });
         try {
           await page.goto(url);
-          assert.equal(await page.locator('.mode').count(), 7);
+          for (const mode of ['canvas','three160','cannon','babylon','matter','phaser','phaser4']) assert.equal(await page.locator(`.mode[data-mode="${mode}"]`).count(), 1);
           assert.equal(await page.locator('#info-toggle').innerText(), '?');
           const base = await scene(page, 'phaser');
           assert.equal(base.coins, 25); assert.equal(base.enemies, 5); assert.equal(base.health, 3); assert.equal(base.checkpoint, 110);

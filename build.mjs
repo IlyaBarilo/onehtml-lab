@@ -32,7 +32,7 @@ const exampleFiles = [
   { id: 'snake', platform: 'desktop', title: 'Змейка', description: 'Управляйте стрелками или WASD.' },
   { id: 'falling-stars', platform: 'desktop', title: 'Лови звёзды', description: 'Двигайте платформу мышью.' },
   { id: 'space-reaction', platform: 'desktop', title: 'Реакция на пробел', description: 'Нажмите пробел после сигнала.' },
-  { id: 'performance-libraries', category: 'tests', platform: 'all', title: 'Тест работы библиотек', description: 'Возможности движков, общая сцена сравнения и нагрузка до 10 000 объектов. Пояснения, FPS, касания, размеры и подключение библиотек.' },
+  { id: 'performance-libraries', category: 'tests', platform: 'all', title: 'Тест работы библиотек', description: 'Canvas, WebGL, SVG, HTML/CSS, звук и движки. Общая сцена сравнения, нагрузка до 10 000 объектов, FPS и пояснения.' },
   { id: 'snake3d-turns', category: 'fix', platform: 'mobile', title: 'Змейка 3D: повороты', description: 'Первый ответ ИИ: повороты влево и вправо перепутаны.' },
   { id: 'snake3d-rewrite', category: 'fix', platform: 'mobile', title: 'Змейка 3D: после правки', description: 'Следующий ответ ИИ: игра переписана, камера смотрит сквозь голову.' }
 ];
