@@ -93,7 +93,8 @@ async function textureEffects(page) {
       const shades = new Set(); for (let i = 0; i < data.length; i += 4) shades.add(data[i]);
       return { name: texture.name, pixels: canvas.width * canvas.height, shades: shades.size,
         colorSpace: texture.colorSpace === (texture.name.endsWith('.color') ? THREE.SRGBColorSpace : THREE.NoColorSpace),
-        repeat: texture.wrapS === THREE.RepeatWrapping && texture.wrapT === THREE.RepeatWrapping,
+        wrapping: texture.wrapS === texture.wrapT && texture.wrapS === (/^(soil|rock)\./.test(texture.name)
+          ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping), repeat: texture.repeat.toArray(),
         anisotropy: texture.anisotropy <= Math.min(4, renderer.capabilities.getMaxAnisotropy()) };
     });
     window.testSurfaceTextures = [...textures].map(texture => {
@@ -122,14 +123,22 @@ async function textureEffects(page) {
       }
       read();
     }
+    const rockUVs = []; scene.traverse(item => {
+      if (item.isMesh && item.material.map?.name === 'rock.color') rockUVs.push([...item.geometry.attributes.uv.array]);
+    });
     return { profiles, plain, flatPixels: flat * gl.drawingBufferWidth * gl.drawingBufferHeight,
+      rockUVs: new Set(rockUVs.map(values => JSON.stringify(values))).size,
+      validRockUVs: rockUVs.every(values => values.every(value => value >= 0 && value <= 1)),
       physicalPaint: [...materials].some(material => material.map.name === 'paint.color' && material.clearcoat > 0),
       allocated: renderer.info.memory.textures };
   });
   assert.equal(result.profiles.length, 18, 'Six shared surface sets need only three small maps each');
   assert.deepEqual(result.profiles.map(value => value.name).sort(), ['paint', 'metal', 'rubber', 'solar', 'soil', 'rock']
     .flatMap(kind => ['color', 'height', 'roughness'].map(role => kind + '.' + role)).sort());
-  assert(result.profiles.every(value => value.colorSpace && value.repeat && value.anisotropy && value.shades > 1));
+  assert(result.profiles.every(value => value.colorSpace && value.wrapping && value.anisotropy && value.shades > 1));
+  assert(result.profiles.filter(value => value.name.startsWith('soil.')).every(value => value.repeat.every(scale => scale === 1)),
+    'The ground must use one continuous map across the scene, without a repeated tile grid');
+  assert(result.rockUVs === 55 && result.validRockUVs, 'Rocks must sample distinct in-bounds crops and orientations of their shared maps');
   assert(result.profiles.reduce((sum, value) => sum + value.pixels, 0) <= 450000, 'Texture resolution must remain small for phones');
   assert(result.physicalPaint, 'Paint uses the agreed restrained reflective coating');
   assert(result.plain > .008, 'Textures must visibly change the rendered surfaces with identical light and geometry: ' + result.plain);
