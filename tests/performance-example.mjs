@@ -406,3 +406,4 @@ try {
 }
 await import('./phaser-versions.mjs');
 await import('./three-quality.mjs');
+await import('./benchmark-panel.mjs');

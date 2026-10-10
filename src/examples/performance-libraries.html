@@ -26,24 +26,23 @@
     #pause[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; }
     h1 { margin: 0; font-size: clamp(18px, 2.5vw, 24px); }
     #scenario { width: 140px; min-height: 44px; padding: 5px 8px; border: 1px solid #3b5676; border-radius: 8px; background: #17283e; color: #eaf2ff; font: inherit; font-size: 14px; }
-    .library-description { margin: 4px 0 0; color: #b8cce5; font-size: 14px; line-height: 1.4; }
-    .description-row { display: flex; align-items: center; gap: 6px 8px; }
-    .description-row p { flex: 1; min-width: 0; }
-    #phaser-renderer { flex: none; display: flex; gap: 4px; margin-top: 4px; }
-    #phaser-renderer[hidden] { display: none; }
+    .library-description { margin: 0; color: #b8cce5; font-size: 14px; line-height: 1.4; }
+    .description-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; min-height: 48px; margin-top: 4px; }
+    .description-row p { grid-area: 1 / 1; min-width: 0; }
+    .description-row > div { grid-area: 1 / 2; justify-self: end; }
+    #phaser-renderer { display: flex; gap: 4px; }
+    #phaser-renderer[hidden] { visibility: hidden; pointer-events: none; }
     #phaser-renderer button { min-height: 44px; padding: 5px 8px; font-size: 14px; }
     #phaser-renderer button[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; color: #eaf2ff; }
     #phaser-renderer button:focus-visible { outline: 3px solid #82bdff; outline-offset: 2px; }
-    #three-quality { flex: none; display: flex; gap: 4px; margin-top: 4px; }
-    #three-quality[hidden] { display: none; }
+    #three-quality { display: flex; gap: 4px; }
+    #three-quality[hidden] { visibility: hidden; pointer-events: none; }
     #three-quality button { min-height: 44px; padding: 5px 8px; font-size: 14px; }
     #three-quality button[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; }
-    #cannon-physics { display: flex; flex: none; gap: 4px; margin-top: 4px; }
-    #cannon-physics[hidden] { display: none; }
+    #cannon-physics { display: flex; gap: 4px; }
+    #cannon-physics[hidden] { visibility: hidden; pointer-events: none; }
     #cannon-physics button { min-height: 44px; padding: 5px 8px; font-size: 14px; }
     #cannon-physics button[aria-pressed="true"] { background: #234775; border-color: #7fb8fc; }
-    .cannon-description { flex-wrap: wrap; }
-    .cannon-description .library-description { flex-basis: 100%; }
 
     .app.three-expanded .heading h1, .app.three-expanded #scenario, .app.three-expanded .metrics, .app.three-expanded .modes, .app.three-expanded .load { display: none; }
     .app.three-expanded .heading { display: flex; justify-content: flex-end; }
@@ -162,8 +161,9 @@
       .mode { flex: 0 0 150px; min-height: 70px; }
       .mode:first-child { flex-basis: 110px; }
       .mode:first-child small { margin-top: 3px; }
-      .description-row { flex-wrap: wrap; }
-      .description-row .library-description { flex-basis: 100%; }
+      .description-row { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(40px, auto) 44px; min-height: 88px; }
+      .description-row p { align-self: start; }
+      .description-row > div { grid-area: 2 / 1; justify-self: start; }
       .app.phaser-expanded .controls, .app.three-expanded .controls { display: flex; }
     }
     @media (max-height: 580px) {
@@ -172,13 +172,18 @@
       .mode { padding: 5px 8px; }
       .library-size { margin-top: 2px; }
       .description-row .library-description { display: none; }
-      .description-row { display: none; }
-      .description-row:has(:where(#phaser-renderer, #three-quality, #cannon-physics):not([hidden])) { display: flex; }
+      .description-row { grid-template-columns: minmax(0, 1fr); grid-template-rows: 44px; min-height: 44px; margin-top: 2px; }
+      .description-row > div { grid-area: 1 / 1; }
       #stage { min-height: 64px; }
     }
     @media (max-height: 580px) and (max-width: 800px) {
       .mode { flex-basis: 160px; min-height: 64px; }
       .modes { padding-bottom: 2px; }
+    }
+    @media (max-height: 420px) and (max-width: 800px) {
+      .metrics { font-size: 12px; line-height: 16px; gap: 2px 4px; }
+      #fps { font-size: 14px; }
+      #coordinates { min-width: 12ch; }
     }
     @media (max-height: 360px) {
       body { overflow-y: auto; }
