@@ -94,13 +94,7 @@ async function installLibraryPack(entries) {
   for (const entry of entries) if (!await allowedLibraryCacheEntry(entry)) throw Error('Некорректная копия библиотеки.');
   let persistent = false;
   try {
-    const database = await libraryDatabase();
-    await new Promise((resolve, reject) => {
-      const tx = database.transaction('libraries', 'readwrite');
-      tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
-      try { const store = tx.objectStore('libraries'); for (const entry of entries) store.put(entry); }
-      catch (error) { tx.abort(); reject(error); }
-    });
+    await storeLibraryEntries(entries);
     persistent = true;
   } catch {}
   for (const entry of entries) {

@@ -26,6 +26,7 @@ function downloadBlob(blob, filename) {
 async function prepareGameFiles(code, filename) {
   const htmlName = packageFilename(htmlFilename(filename));
   const matches = await resolvedLibraryMatches(code);
+  await Promise.all(matches.map(readCachedLibrary));
   const missingLibraries = [...new Map(matches.filter(ref => !cachedLibrary(ref)).map(ref => [ref.key, ref])).values()];
   const reservedNames = new Set([htmlName.toLowerCase(), ...missingLibraries.filter(ref => ref.filename).map(ref => packageFilename(ref.filename).toLowerCase())]);
   const assets = new Map();

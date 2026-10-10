@@ -53,8 +53,8 @@ assert.equal((await a.readRawLibraryFiles(br,[file('babylon.js',babylon.source),
 assert.deepEqual(JSON.parse((await a.readRawLibraryFiles(mr,[...graph.map(f=>file(new URL(f.url).pathname.split('/').pop(),f.source)),file('LICENSE',license)]))[0].source),graph);
 await assert.rejects(a.readRawLibraryFiles(mr,[file('GLTFLoader.js',graph[0].source),file('LICENSE',license)]),/модуля/);
 let writes=[];
-function database(fail=false){return {transaction(){const tx={error:Error('quota'),objectStore(){return {put(entry){writes.push(entry.key);}}},abort(){queueMicrotask(()=>tx.onabort?.());}};queueMicrotask(()=>fail?tx.onabort?.():tx.oncomplete?.());return tx;}};}
-a.setDatabase(database());assert.equal(await a.installLibraryPack(decoded),true);assert.equal(writes.length,3);assert.equal(a.persistedLibraries.size,3);
+function database(fail=false){return {transaction(stores){assert.deepEqual(Array.from(stores),['libraries','library-metadata']);const tx={error:Error('quota'),objectStore(name){return {put(entry){writes.push({store:name,key:entry.key});}}},abort(){queueMicrotask(()=>tx.onabort?.());}};queueMicrotask(()=>fail?tx.onabort?.():tx.oncomplete?.());return tx;}};}
+a.setDatabase(database());assert.equal(await a.installLibraryPack(decoded),true);assert.equal(writes.length,6);assert.equal(writes.filter(item=>item.store==='libraries').length,3);assert.equal(writes.filter(item=>item.store==='library-metadata').length,3);assert.equal(a.persistedLibraries.size,3);
 writes=[];await assert.rejects(a.installLibraryPack([decoded[0],{...decoded[2],notice:''}]));assert.equal(writes.length,0,'Validation must finish before any write');
 a.setDatabase(database(true));const temporary={...decoded[0],source:decoded[0].source+'// session'};assert.equal(await a.installLibraryPack([temporary]),false);assert.equal(a.libraryCache.get(temporary.key),temporary);assert.notEqual(a.persistedLibraries.get(temporary.key),temporary);
 console.log('Portable libraries: exact bytes, store/deflate ZIP, dependencies, licenses/NOTICE, corruption guards and atomic/session storage passed.');

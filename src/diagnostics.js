@@ -107,7 +107,7 @@ function renderDiagnosticErrors() {
 }
 
 function diagnosticBytes(source) { return new TextEncoder().encode(source || '').length; }
-function diagnosticCacheBytes(entry) { return (entry.format === 'module' ? moduleEntryData(entry)?.bytes || 0 : diagnosticBytes(entry.source)) + diagnosticBytes(entry.license) + diagnosticBytes(entry.notice || ''); }
+function diagnosticCacheBytes(entry) { return entry.lazy ? entry.storageBytes : (entry.format === 'module' ? moduleEntryData(entry)?.bytes || 0 : diagnosticBytes(entry.source)) + diagnosticBytes(entry.license) + diagnosticBytes(entry.notice || ''); }
 function diagnosticSize(bytes) { return `${formatUIInteger(bytes)} байт`; }
 
 async function inspectDiagnosticLibraries(code) {
@@ -119,13 +119,13 @@ async function inspectDiagnosticLibraries(code) {
     usedKey: libraryCache.has(row.key) ? row.key : row.assetKey && libraryCache.has(row.assetKey) ? row.assetKey : null }));
   const modules = scanModules(code), copies = await embeddedModulePlan(code);
   for (const ref of new Map(modules.references.map(item => [item.key, item])).values()) {
-    const entry=cachedLibrary(ref), data=entry && moduleEntryData(entry);
+    const entry=cachedLibrary(ref), data=entry && (entry.lazy ? { files: entry.moduleFiles || [], bytes: entry.bytes } : moduleEntryData(entry));
     if(ref.moduleLocal && data) {
       const targets=new Map(data.files.map(file=>[file.url,modules.imports[file.url]]));
       for(const file of data.files) {
         const path=targets.get(file.url) || ref.modulePath;
         rows.push({title:ref.title,path,filename:decodeScriptUrl(path.split('/').pop()),state:'Есть сохранённая копия',
-          bytes:diagnosticBytes(moduleFileSource(file,entry,targets)),usedKey:entry.key,reference:ref,note:'Модульные файлы рядом требуют HTTP.'});
+          bytes:entry.lazy ? file.bytes : diagnosticBytes(moduleFileSource(file,entry,targets)),usedKey:entry.key,reference:ref,note:'Модульные файлы рядом требуют HTTP.' + (entry.lazy ? ' Размер исходного JS до добавления лицензии.' : '')});
       }
       continue;
     }
@@ -145,8 +145,8 @@ async function inspectDiagnosticLibraries(code) {
     const cached = ref && cachedLibrary(ref);
     rows.push({ title: ref?.title || path.split('/').pop() || 'Внешний скрипт', path, filename: ref?.localPath ? ref.filename : '',
       state: cached ? 'Есть сохранённая копия' : ref ? (ref.url ? 'Нужно скачать' : 'Нужно выбрать файл') : 'Подмена не поддерживается',
-      bytes: cached ? diagnosticBytes(cached.source) : null, usedKey: cached?.key, reference: ref,
-      note: ref ? '' : 'Подключение остаётся как в коде. Версия автоматически не заменяется.' });
+      bytes: cached ? cached.lazy ? cached.bytes : diagnosticBytes(cached.source) : null, usedKey: cached?.key, reference: ref,
+      note: cached?.cacheError || (ref ? '' : 'Подключение остаётся как в коде. Версия автоматически не заменяется.') });
   }
   return rows;
 }
@@ -203,7 +203,7 @@ function renderDiagnosticCache() {
     const used = diagnosticLibraries.some(row => row.usedKey === entry.key);
     const persisted = persistedLibraries.get(entry.key) === entry;
     const row = diagnosticRow(entry.title || entry.filename || 'Библиотека',
-      `${diagnosticSize(diagnosticCacheBytes(entry))} · ${persisted ? 'В браузере' : 'Только этот сеанс'}${used ? ' · Нужна текущему коду' : ''}\n${entry.sourceUrl || entry.localPath || entry.originalUrl || entry.filename || ''}`);
+      `${diagnosticSize(diagnosticCacheBytes(entry))} · ${persisted ? 'В браузере' : 'Только этот сеанс'}${used ? ' · Нужна текущему коду' : ''}\n${entry.sourceUrl || entry.localPath || entry.originalUrl || entry.filename || ''}${entry.cacheError ? '\n' + entry.cacheError : ''}`);
     appendResourceWarning(row, resourceSizeWarning(diagnosticCacheBytes(entry), 'library'));
     const button = diagnosticButton('Удалить', () => confirmDiagnosticDelete([entry]));
     button.disabled = blocked; row.append(button); return row;

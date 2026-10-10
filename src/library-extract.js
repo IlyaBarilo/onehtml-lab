@@ -18,7 +18,7 @@ async function embeddedLibraryRows(code) {
     const value = name => decodeScriptUrl(attributes.get(`data-onehtml-${name}`)?.value || '');
     const key = value('library');
     if (!key || attributes.has('src')) continue;
-    const cached = libraryCache.get(key);
+    const cached = value('bundle') === '1' ? libraryCache.get(key) : await readCachedLibrary({ key });
     const catalog = libraryCatalogReference(value('catalog') || cached?.catalogKey || key);
     const originalUrl = value('source') || cached?.localPath || cached?.sourceUrl || '';
     const filename = packageFilename(value('filename') || libraryFilename({ filename: cached?.filename

@@ -6,6 +6,8 @@ const toneDistributionLicense = /* TONE_LICENSE */ null;
 const persistedLibraries = new Map();
 let libraryCachePersistent = false;
 let libraryDatabasePromise;
+const libraryPendingReads = new WeakMap();
+const libraryMetadataStore = 'library-metadata';
 const libraryScriptTag = /<!--[\s\S]*?-->|<(style|textarea|title|xmp|iframe|noembed|noframes)\b(?:[^"'<>]|"[^"]*"|'[^']*')*>[\s\S]*?<\/\1\s*>|<script\b((?:[^"'<>]|"[^"]*"|'[^']*')*)>[\s\S]*?<\/script\s*>/gi;
 const localDocumentScopes = new Map();
 let localSessionScope = 0;
@@ -204,11 +206,19 @@ function libraryInlineAttributes(attributes) {
 function libraryDatabase() {
   if (!libraryDatabasePromise) libraryDatabasePromise = new Promise((resolve, reject) => {
     if (!window.indexedDB) return reject(new Error('IndexedDB unavailable'));
-    const request = indexedDB.open('onehtml-lab-libraries', 1);
-    request.onupgradeneeded = () => request.result.createObjectStore('libraries', { keyPath: 'key' });
-    request.onsuccess = () => resolve(request.result);
+    const request = indexedDB.open('onehtml-lab-libraries', 2); let blocked = false;
+    request.onupgradeneeded = () => {
+      if (!request.result.objectStoreNames.contains('libraries')) request.result.createObjectStore('libraries', { keyPath: 'key' });
+      if (!request.result.objectStoreNames.contains(libraryMetadataStore)) request.result.createObjectStore(libraryMetadataStore, { keyPath: 'key' });
+    };
+    request.onsuccess = () => {
+      const database = request.result;
+      if (blocked) { database.close(); return; }
+      database.onversionchange = () => { database.close(); libraryDatabasePromise = null; };
+      resolve(database);
+    };
     request.onerror = () => reject(request.error);
-    request.onblocked = () => reject(new Error('IndexedDB blocked'));
+    request.onblocked = () => { blocked = true; reject(new Error('IndexedDB blocked')); };
   });
   return libraryDatabasePromise;
 }
@@ -226,36 +236,144 @@ async function allowedLibraryCacheEntry(entry) {
   return Boolean(entry.format === 'module' ? module : known || local || extracted);
 }
 
+function libraryCacheMessage(error, fallback) { return error?.libraryCacheRead ? error.message : fallback; }
+function libraryCacheProgress(message, error = false, startup = false) {
+  // Keep the more urgent draft-storage warning visible during startup.
+  if (startup && typeof draftAvailable !== 'undefined' && !draftAvailable) return;
+  if (typeof inform === 'function') inform(message, error, error);
+}
+function libraryRecordIdentity(entry) {
+  return JSON.stringify(['key','title','format','catalogKey','sourceUrl','licenseUrl','noticeUrl','localPath','documentScope','filename','originalUrl','licenseType','source','license','notice']
+    .map(key => entry[key] ?? null));
+}
+async function libraryMetadata(entry) {
+  const hash = await librarySourceHash(libraryRecordIdentity(entry));
+  if (!hash) throw Error('Недоступна проверка сохранённой библиотеки.');
+  const metadata = { key: entry.key, lazy: true, version: 1, hash, savedAt: entry.savedAt };
+  for (const key of ['title','format','catalogKey','sourceUrl','licenseUrl','noticeUrl','localPath','documentScope','filename','originalUrl','licenseType']) {
+    if (typeof entry[key] === 'string') metadata[key] = entry[key];
+  }
+  const encoder = new TextEncoder(), data = entry.format === 'module' && moduleEntryData(entry);
+  metadata.bytes = data ? data.bytes : encoder.encode(entry.source).length;
+  metadata.storageBytes = metadata.bytes + encoder.encode(entry.license).length + encoder.encode(entry.notice || '').length;
+  if (data) metadata.moduleFiles = data.files.map(file => ({ url: file.url, bytes: encoder.encode(file.source).length }));
+  return metadata;
+}
+function validLibraryMetadata(entry) {
+  return entry && typeof entry.key === 'string' && entry.version === 1 && entry.lazy === true
+    && !['source','license','notice'].some(key => Object.hasOwn(entry, key))
+    && Number.isSafeInteger(entry.bytes) && entry.bytes >= 0
+    && Number.isSafeInteger(entry.storageBytes) && entry.storageBytes >= entry.bytes
+    && (entry.invalid === true ? typeof entry.cacheError === 'string' : /^[a-f\d]{64}$/.test(entry.hash))
+    && (entry.format !== 'module' || Array.isArray(entry.moduleFiles) && entry.moduleFiles.length > 0
+      && entry.moduleFiles.every(file => file && typeof file.url === 'string' && Number.isSafeInteger(file.bytes) && file.bytes >= 0));
+}
+function libraryStoreRead(database, store, method, key) {
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(store, 'readonly'), request = transaction.objectStore(store)[method](key);
+    let result;
+    request.onsuccess = () => { result = request.result; };
+    request.onerror = () => reject(request.error);
+    transaction.oncomplete = () => resolve(result);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+async function migrateLibraryMetadata(database, key) {
+  const entry = await libraryStoreRead(database, 'libraries', 'get', key);
+  if (!entry) return null;
+  const valid = await allowedLibraryCacheEntry(entry);
+  const bytes = Number.isSafeInteger(entry.bytes) && entry.bytes >= 0 ? entry.bytes : 0;
+  const metadata = valid ? await libraryMetadata(entry) : { key, title: entry.title, lazy: true, version: 1, invalid: true,
+    cacheError: 'Сохранённая копия неполная или содержит неподходящую лицензию.', bytes, storageBytes: bytes };
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(['libraries', libraryMetadataStore], 'readwrite');
+    const request = transaction.objectStore('libraries').get(key); let saved = false;
+    request.onsuccess = () => {
+      // Another tab may have replaced the copy while its index was being prepared.
+      if (request.result && libraryRecordIdentity(request.result) === libraryRecordIdentity(entry)) {
+        transaction.objectStore(libraryMetadataStore).put(metadata); saved = true;
+      }
+    };
+    transaction.oncomplete = () => resolve(saved ? metadata : null);
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
 async function loadLibraryCache() {
   try {
     const database = await libraryDatabase();
-    const entries = await new Promise((resolve, reject) => {
-      const transaction = database.transaction('libraries', 'readonly');
-      const request = transaction.objectStore('libraries').getAll();
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-      transaction.onabort = () => reject(transaction.error);
-    });
-    for (const entry of entries) {
-      if (await allowedLibraryCacheEntry(entry)) {
-        libraryCache.set(entry.key, entry);
-        persistedLibraries.set(entry.key, entry);
-      }
+    const [metadata, keys] = await Promise.all([
+      libraryStoreRead(database, libraryMetadataStore, 'getAll'), libraryStoreRead(database, 'libraries', 'getAllKeys')
+    ]);
+    const index = new Map(metadata.filter(validLibraryMetadata).map(entry => [entry.key, entry]));
+    const missing = keys.filter(key => index.get(key)?.version !== 1);
+    if (missing.length) libraryCacheProgress('Подготавливаю сведения о ранее сохранённых библиотеках…', false, true);
+    for (const key of missing) {
+      // The old database is indexed one record at a time, never as one array of sources.
+      const entry = await migrateLibraryMetadata(database, key);
+      if (entry) index.set(key, entry);
+    }
+    for (const key of keys) {
+      const entry = index.get(key); if (!entry) continue;
+      if (!libraryCache.has(key)) libraryCache.set(key, entry);
+      if (persistedLibraries.get(key) !== libraryCache.get(key)) persistedLibraries.set(key, entry);
     }
     libraryCachePersistent = true;
+    if (missing.length) libraryCacheProgress('Сведения о библиотеках готовы. Сохранённые копии доступны.', false, true);
   } catch {
     libraryCachePersistent = false;
+    libraryCacheProgress('Не удалось прочитать список сохранённых библиотек. Если редактор открыт в другой вкладке, закройте её и повторно откройте файл. Сохранённые данные не удалены.', true, true);
   }
 }
 
-function saveLibraryToCache(entry) {
-  return libraryDatabase().then(database => new Promise((resolve, reject) => {
-    const transaction = database.transaction('libraries', 'readwrite');
-    transaction.objectStore('libraries').put(entry);
-    transaction.oncomplete = () => { persistedLibraries.set(entry.key, entry); resolve(); };
+async function storeLibraryEntries(entries) {
+  const metadata = [];
+  for (const entry of entries) metadata.push(await libraryMetadata(entry));
+  const database = await libraryDatabase();
+  await new Promise((resolve, reject) => {
+    const transaction = database.transaction(['libraries', libraryMetadataStore], 'readwrite');
+    transaction.oncomplete = resolve;
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);
-  }));
+    try {
+      for (let i = 0; i < entries.length; i++) {
+        transaction.objectStore('libraries').put(entries[i]);
+        transaction.objectStore(libraryMetadataStore).put(metadata[i]);
+      }
+    } catch (error) { transaction.abort(); reject(error); }
+  });
+  for (const entry of entries) persistedLibraries.set(entry.key, entry);
+}
+function saveLibraryToCache(entry) { return storeLibraryEntries([entry]); }
+
+async function readCachedLibrary(reference) {
+  const entry = cachedLibrary(reference);
+  if (!entry || !entry.lazy) return entry;
+  if (libraryPendingReads.has(entry)) return libraryPendingReads.get(entry);
+  const pending = Promise.resolve().then(async () => {
+    libraryCacheProgress(`Читаю сохранённую библиотеку: ${entry.title || entry.key}…`);
+    try {
+      if (entry.invalid) throw Error(entry.cacheError);
+      const database = await libraryDatabase(), copy = await libraryStoreRead(database, 'libraries', 'get', entry.key);
+      if (libraryCache.get(entry.key) !== entry) return readCachedLibrary(reference);
+      if (!copy) throw Error('Сохранённый файл отсутствует.');
+      if (!await allowedLibraryCacheEntry(copy) || !entry.hash || await librarySourceHash(libraryRecordIdentity(copy)) !== entry.hash) {
+        throw Error('Код, зависимости, лицензия или NOTICE сохранённой копии изменены либо повреждены.');
+      }
+      // Deletion/replacement during validation must not restore an obsolete copy.
+      if (libraryCache.get(entry.key) !== entry) return readCachedLibrary(reference);
+      libraryCache.set(entry.key, copy); persistedLibraries.set(entry.key, copy);
+      libraryCacheProgress(`Библиотека готова: ${entry.title || entry.key}.`);
+      return copy;
+    } catch (cause) {
+      if (libraryCache.get(entry.key) !== entry) return readCachedLibrary(reference);
+      const error = new Error(`Не удалось прочитать «${entry.title || entry.key}». ${cause?.message || 'Хранилище недоступно.'} Загрузите копию заново или импортируйте сохранённый набор.`);
+      error.libraryCacheRead = true; entry.cacheError = error.message;
+      libraryCacheProgress(error.message, true); throw error;
+    } finally { libraryPendingReads.delete(entry); }
+  });
+  libraryPendingReads.set(entry, pending); return pending;
 }
 
 async function removeLibraryCopies(entries) {
@@ -264,9 +382,9 @@ async function removeLibraryCopies(entries) {
   if (saved.length) {
     const database = await libraryDatabase();
     await new Promise((resolve, reject) => {
-      const transaction = database.transaction('libraries', 'readwrite');
+      const transaction = database.transaction(['libraries', libraryMetadataStore], 'readwrite');
       const store = transaction.objectStore('libraries');
-      try { for (const entry of saved) store.delete(entry.key); }
+      try { for (const entry of saved) { store.delete(entry.key); transaction.objectStore(libraryMetadataStore).delete(entry.key); } }
       catch (error) { transaction.abort(); reject(error); }
       transaction.oncomplete = resolve;
       transaction.onerror = () => reject(transaction.error);
@@ -358,6 +476,7 @@ async function embeddedLibraryTag(reference, entry) {
 async function prepareGameHtml(code, replaceLibraries = true) {
   if (!replaceLibraries) return { html: code, bundledLibraries: [], bundledLibraryDetails: [], missingLibraries: [] };
   const matches = await resolvedLibraryMatches(code);
+  await Promise.all(matches.map(readCachedLibrary));
   const missingLibraries = [...new Map(matches.filter(ref => !cachedLibrary(ref)).map(ref => [ref.key, ref])).values()];
   let html = '';
   let cursor = 0;

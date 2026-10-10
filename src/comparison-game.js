@@ -96,10 +96,10 @@ async function startComparisonGame(replaceLibraries = true) {
       comparisonGameWarning.textContent = prepared.mediaReason || `Нет выбранных файлов: ${prepared.missingMedia.join(', ')}.`;
       comparisonGameWarning.hidden = false;
     }
-  } catch {
+  } catch (error) {
     if (request !== comparisonRequest) return;
     comparisonGameStatus.textContent = comparisonLabel();
-    comparisonGameError.textContent = 'Не удалось запустить эту версию. Код редактора сохранён.';
+    comparisonGameError.textContent = libraryCacheMessage(error, 'Не удалось запустить эту версию. Код редактора сохранён.');
     comparisonGameError.hidden = false;
   }
 }

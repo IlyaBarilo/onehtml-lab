@@ -179,13 +179,22 @@ async function downloadModule(reference, options = {}) {
   const fetchOptions = {credentials:'omit',redirect:'error',...options};
   const response = await fetch(ref.licenseUrl,fetchOptions);
   const license = await readLibraryResponse(response), files = [], queue = [ref.url], reused = new Map();
-  for (const entry of libraryCache.values()) if (entry.format === 'module' && moduleCatalog(entry.key)) {
+  for (const entry of libraryCache.values()) if (!entry.lazy && entry.format === 'module' && moduleCatalog(entry.key)) {
     const data = moduleEntryData(entry);
     if (data && entry.license.trim() === license.trim()) for (const file of data.files) reused.set(file.url,file.source);
   }
   let bytes = 0;
   for (let i=0;i<queue.length;i++) {
     let source = reused.get(queue[i]);
+    if (source === undefined) {
+      const stored = [...libraryCache.values()].find(entry => entry.lazy && !entry.cacheError && entry.format === 'module'
+        && moduleCatalog(entry.key) && entry.moduleFiles?.some(file => file.url === queue[i]));
+      if (stored) {
+        const copy = await readCachedLibrary({ key: stored.key }), data = copy && moduleEntryData(copy);
+        if (data && copy.license.trim() === license.trim()) for (const file of data.files) reused.set(file.url, file.source);
+        source = reused.get(queue[i]);
+      }
+    }
     if (source === undefined) {
       const response=await fetch(queue[i],fetchOptions);
       if(!/^(?:text|application)\/(?:javascript|ecmascript)(?:;|$)/i.test(response.headers.get('content-type') || '')) throw Error('Module MIME type');
@@ -232,7 +241,7 @@ async function prepareModuleLibraries(code, mode='inline', reserved=[], copies=n
   if (!plan.references.length) return {html:code,missingLibraries,bundledLibraries,bundledLibraryDetails,files,modules:false};
   const selected=new Map();
   for (const ref of plan.references) {
-    const entry=copies.get(ref.assetKey) || cachedLibrary(ref), data=entry && moduleEntryData(entry);
+    const entry=copies.get(ref.assetKey) || await readCachedLibrary(ref), data=entry && moduleEntryData(entry);
     if (!data) { if (!missingLibraries.some(r=>r.key===ref.key)) missingLibraries.push(ref); }
     else selected.set(ref.key,{entry,data});
   }

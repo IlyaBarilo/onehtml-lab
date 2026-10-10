@@ -45,7 +45,7 @@ function renderLibraryPreparation() {
     const text = document.createElement('span'), name = document.createElement('strong'), detail = document.createElement('span');
     name.textContent = ref?.title || entry?.title || key;
     const bytes = entry ? diagnosticCacheBytes(entry) : ref?.downloadBytes;
-    const state = entry ? persistedLibraries.get(key)===entry ? 'В браузере' : 'Только этот сеанс' : 'Не загружена';
+    const state = entry?.cacheError ? 'Копия требует проверки или повторной загрузки' : entry ? persistedLibraries.get(key)===entry ? 'В браузере' : 'Только этот сеанс' : 'Не загружена';
     detail.textContent = `${bytes ? diagnosticSize(bytes) : 'Размер неизвестен'} · ${state}\n${note}`;
     text.append(name, detail); label.append(checkbox,text); row.append(label);
     if (ref) {
@@ -76,12 +76,22 @@ async function preparationDownload(keys) {
       if(preparationController.signal.aborted) break;
       const ref = libraryCatalogReference(key); if(!ref) continue;
       preparationMessage(`Подготовка ${formatUIInteger(done+1)} из ${formatUIInteger(chosen.length)}: ${ref.title}${ref.downloadBytes ? ' · ' + diagnosticSize(ref.downloadBytes) : ''}`);
-      try { if(!libraryCache.has(key)) await downloadLibrary(ref,{signal:preparationController.signal}); done++; }
+      try {
+        const entry = libraryCache.get(key);
+        let ready = false;
+        if (entry && !entry.cacheError) {
+          try { ready = Boolean(await readCachedLibrary({ key })); }
+          catch (error) { if (!error.libraryCacheRead) throw error; }
+        }
+        if (!ready) await downloadLibrary(ref,{signal:preparationController.signal});
+        done++;
+      }
       catch(error) { if(preparationController.signal.aborted) break; failures.push(ref.title + ': ' + error.message); }
       renderLibraryPreparation();
     }
     const temporary = chosen.filter(key=>libraryCache.has(key) && persistedLibraries.get(key)!==libraryCache.get(key)).length;
     preparationMessage(`${preparationController.signal.aborted ? 'Загрузка остановлена. ' : ''}Готово: ${formatUIInteger(done)} из ${formatUIInteger(chosen.length)}.${temporary ? ` Только этот сеанс: ${formatUIInteger(temporary)}; сохраните набор в файлы.` : ''}${failures.length ? '\nНе загружены: ' + failures.join('\n') : ''}`);
+    if (!failures.length && !preparationController.signal.aborted) libraryCacheProgress('Выбранные библиотеки готовы.');
   });
 }
 async function preparationImport(input, key) {
@@ -105,7 +115,13 @@ async function preparationExport(all) {
   await preparationOperation(async () => {
     const keys = all ? [...libraryCache.keys()] : preparationDependencies([...preparationSelection]);
     if(!keys.length) throw Error('Выберите сохранённые библиотеки.');
-    const entries = keys.map(key=> { const entry=libraryCache.get(key); if(!entry) throw Error('Сначала загрузите библиотеку: ' + (libraryCatalogReference(key)?.title || key)); return entry; });
+    preparationMessage('Читаю выбранные сохранённые библиотеки…');
+    const entries = [];
+    for (const key of keys) {
+      const entry = await readCachedLibrary({ key });
+      if (!entry) throw Error('Сначала загрузите библиотеку: ' + (libraryCatalogReference(key)?.title || key));
+      entries.push(entry);
+    }
     const files = await makeLibraryPack(entries), size = files.reduce((sum,file)=>sum+file.bytes.length,0);
     const warning = resourceSizeWarning(size,'cache');
     if(document.querySelector('#library-export-format').value==='zip') {

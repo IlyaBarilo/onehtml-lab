@@ -750,8 +750,8 @@ async function refreshLibraryExtraction() {
       : extractionMode === 'embed' ? 'Поддерживаемые ссылки на библиотеки не найдены.' : 'Встроенные копии OneHTML Lab не найдены.';
     conversionLoad.hidden = !plan.missingLibraries?.length;
     extractionApply.disabled = !plan.count;
-  } catch {
-    if (request === extractionRequest && extractionOpen) extractionSummary.textContent = 'Не удалось проверить библиотеки. Код сохранён.';
+  } catch (error) {
+    if (request === extractionRequest && extractionOpen) extractionSummary.textContent = libraryCacheMessage(error, 'Не удалось проверить библиотеки. Код сохранён.');
   } finally {
     if (request === extractionRequest) extractionBusy = false;
   }
@@ -1403,10 +1403,10 @@ async function startPreview(replaceLibraries = true) {
       || resourceSizeWarning((prepared.bundledLibraryDetails || []).reduce((max, item) => Math.max(max, item.addedBytes), 0), 'library');
     mediaPreparationWarning(prepared);
     updateLocalAccessHint();
-  } catch {
+  } catch (error) {
     if (request !== previewRequest) return;
     stopPreview();
-    inform('Не удалось открыть игру. Код остался в поле.', true);
+    inform(libraryCacheMessage(error, 'Не удалось открыть игру. Код остался в поле.'), true);
   } finally {
     if (request === previewRequest) updateControls();
   }
@@ -1602,8 +1602,8 @@ async function updateSaveMediaDescription() {
     const warning = resourceSizeWarning(total, 'document');
     result.textContent = `Размер HTML: ${diagnosticSize(bytes)}${prepared.files?.length > 1 ? '; все файлы: ' + diagnosticSize(total) + '. JS скачаются отдельно.' : '.'}${warning ? ' ' + warning : ''}`;
     result.classList.toggle('resource-warning', Boolean(warning));
-  } catch {
-    if (revision === saveMediaRevision) result.textContent = 'Размер не рассчитан. Попробуйте открыть сохранение ещё раз.';
+  } catch (error) {
+    if (revision === saveMediaRevision) result.textContent = libraryCacheMessage(error, 'Размер не рассчитан. Попробуйте открыть сохранение ещё раз.');
   } finally {
     if (revision === saveMediaRevision) confirmSaveButton.disabled = false;
   }
@@ -1670,8 +1670,8 @@ shareButton.addEventListener('click', async () => {
     if (result === 'unsupported') {
       inform('Передача HTML-файла здесь недоступна. Сохраните его и отправьте через приложение «Файлы».');
     }
-  } catch {
-    inform('Не удалось отправить HTML-файл. Сохраните его и отправьте через приложение «Файлы».', true);
+  } catch (error) {
+    inform(libraryCacheMessage(error, 'Не удалось отправить HTML-файл. Сохраните его и отправьте через приложение «Файлы».'), true);
   }
 });
 cancelSaveButton.addEventListener('click', () => closeWorkspacePanel());
@@ -1723,9 +1723,9 @@ document.querySelector('#save-form').addEventListener('submit', async event => {
       inform('Файл передан браузеру для сохранения.');
       mediaPreparationWarning(prepared);
     }
-  } catch {
+  } catch (error) {
     if (saveFilesPanel.hidden && currentPanel() === saveDialog) closeWorkspacePanel();
-    inform('Не удалось передать все файлы браузеру. Код остался в поле.', true);
+    inform(libraryCacheMessage(error, 'Не удалось передать все файлы браузеру. Код остался в поле.'), true);
   } finally {
     confirmSaveButton.disabled = false;
   }
