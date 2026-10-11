@@ -28,7 +28,7 @@ for (const [name, engine] of engines) {
         await page.goto(url);
         await page.waitForFunction(() => !document.querySelector('#code').disabled);
         assert(await page.locator('#help-panel').isHidden(), 'No automatic help on first launch');
-        for (const size of [320, 390, 600, 700, 701, 844, 1365]) {
+        for (const size of [320, 390, 560, 580, 600, 620, 675, 700, 701, 844, 1365]) {
           await page.setViewportSize({ width: size, height: 844 });
           const box = await page.locator('#help-open').boundingBox();
           assert(box.width >= 44 && box.height >= 44 && box.x >= 0 && box.x + box.width <= size);
@@ -36,6 +36,10 @@ for (const [name, engine] of engines) {
           const controls = await page.locator('.actions').boundingBox();
           const brand = await page.locator('.brand').boundingBox();
           assert(brand.y + brand.height <= controls.y + 1 || brand.x + brand.width <= controls.x, 'Brand and controls do not overlap');
+          const layout=await page.locator('.toolbar').evaluate(el=>{const css=getComputedStyle(el),buttons=el.querySelector('.actions'),b=el.querySelector('.brand').getBoundingClientRect(),a=buttons.getBoundingClientRect(),h=el.getBoundingClientRect();return {space:h.width-parseFloat(css.paddingLeft)-parseFloat(css.paddingRight)-parseFloat(css.columnGap)-b.width-a.width,sameRow:Math.abs(b.y+b.height/2-a.y-a.height/2)<1,right:Math.abs(h.right-parseFloat(css.paddingRight)-a.right),gap:getComputedStyle(buttons).justifyContent};});
+          assert(layout.space<1 || layout.sameRow,'Keep controls beside the brand whenever they fit: '+JSON.stringify({size,...layout}));
+          if(size>=600)assert(layout.sameRow,'The default toolbar must fit one row from 600 px');
+          assert(layout.right<1 && layout.gap===(layout.sameRow?'flex-end':'space-evenly'),'Controls stay right aligned in one row and spread in the second');
         }
         await page.setViewportSize({ width, height: 844 });
         await page.locator('#help-open').click();

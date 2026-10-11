@@ -1,4 +1,3 @@
-// Workspace screens keep the editor and game mounted, preserving their state.
 const appElement = document.querySelector('.app');
 const workspaceElement = document.querySelector('.workspace');
 const expandButton = document.querySelector('#preview-expand');
@@ -27,6 +26,13 @@ function restoreEditorPosition() {
 }
 
 function currentPanel() { return workspacePanels.at(-1)?.panel; }
+
+function updateToolbarWrap() {
+  const bar=appElement.querySelector('.toolbar'),[brand,actions]=bar.children,css=getComputedStyle(bar);
+  const buttons=[...actions.children].filter(b=>b.offsetWidth),gap=parseFloat(getComputedStyle(actions).columnGap)||0;
+  const width=buttons.reduce((sum,b)=>sum+b.offsetWidth+(parseFloat(getComputedStyle(b).marginLeft)||0),gap*Math.max(0,buttons.length-1));
+  bar.classList.toggle('two-rows',brand.offsetWidth>0 && brand.offsetWidth+width+parseFloat(css.columnGap)>bar.clientWidth-parseFloat(css.paddingLeft)-parseFloat(css.paddingRight)+.5);
+}
 
 function showWorkspacePanel(panel, nested = false, preserveComparison = false) {
   if (currentPanel() === panel) { closeWorkspacePanel(); return; }
@@ -102,6 +108,7 @@ function updateWorkspaceUI() {
   activityToggle.setAttribute('aria-expanded', String(currentPanel() === activityPanel));
   updateWorkspaceViewport();
   updateDesktopUI();
+  updateToolbarWrap();
 }
 
 function updateActivitySummary() {
@@ -153,5 +160,6 @@ function initWorkspaceUI() {
   window.visualViewport?.addEventListener('resize', updateWorkspaceViewport);
   window.visualViewport?.addEventListener('scroll', updateWorkspaceViewport);
   window.addEventListener('resize', updateWorkspaceViewport);
+  new ResizeObserver(updateToolbarWrap).observe(appElement.querySelector('.toolbar'));
   updateWorkspaceUI();
 }
