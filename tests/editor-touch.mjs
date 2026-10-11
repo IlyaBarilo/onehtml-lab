@@ -6,6 +6,46 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 const output=join(tmpdir(),'onehtml-lab-editor-touch');await mkdir(output,{recursive:true});
 const engines=process.argv.includes('--engines=chromium')?[['chromium',chromium]]:[['chromium',chromium],['webkit',webkit]];
+async function checkCodeScreens(browser,name,width) {
+  const page=await browser.newPage({viewport:{width,height:680},hasTouch:true});await useNativeEditor(page);page.setDefaultTimeout(8000);
+  try {
+    await page.goto(new URL('../onehtml-lab.html',import.meta.url).href);await page.locator('#expert-toggle').click();
+    const original='<!doctype html>\n'+Array.from({length:80},(_,i)=>`<p>Строка ${i}: ${'Текст '.repeat(5)}</p>`).join('\n');
+    await page.locator('#code').fill(original);
+    for(let i=0;i<3;i++) {const next=original.replace('Строка 0',`Версия ${i}`);await page.locator('#import-file').setInputFiles({name:'sample.html',mimeType:'text/html',buffer:Buffer.from(next)});await page.locator('#replace-dialog button[value="replace"]').click();await page.waitForFunction(value=>document.querySelector('#code').value===value,next);}
+    const source=await page.locator('#code').inputValue();
+    for(const engine of ['native','codemirror']) for(const dark of [false,true]) {
+      if((await page.locator('html').evaluate(el=>el.classList.contains('theme-dark')))!==dark)await page.locator('#theme-toggle').click();
+      await page.locator('#edit-open').click();await page.locator('#editor-engine').selectOption(engine);
+      if(await page.locator('#edit-panel').isHidden())await page.locator('#edit-open').click();
+      const panel=await page.locator('#edit-panel').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth,theme:el.querySelector('[data-panel-theme]').getBoundingClientRect().right,right:el.getBoundingClientRect().right,fonts:[...el.querySelectorAll('input:not([type=checkbox]),select')].map(n=>parseFloat(getComputedStyle(n).fontSize))}));
+      assert(panel.scroll<=panel.width && panel.right-panel.theme<=16 && panel.fonts.every(n=>n>=16),'Editor settings fit and remain readable: '+JSON.stringify(panel));
+      await page.screenshot({path:join(output,`${name}-${width}-${engine}-${dark?'dark':'light'}-settings.png`)});
+      await page.locator('#edit-panel-find').click();await page.locator('#edit-query').fill('Строка');
+      if(await page.locator('#edit-replace-box').isHidden())await page.locator('#edit-replace-toggle').click();
+      await page.locator('#edit-replacement').fill('Новая строка');
+      await page.setViewportSize({width,height:400});
+      await page.waitForTimeout(100);
+      const search=await page.locator('#edit-inline').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth,box:el.getBoundingClientRect().bottom,actions:[...el.querySelectorAll('button')].map(b=>{const r=b.getBoundingClientRect();return {width:r.width,height:r.height,bottom:r.bottom};})}));
+      assert(search.scroll<=search.width && search.actions.every(r=>r.width>=44 && r.height>=44),'Search actions remain touchable: '+JSON.stringify(search));
+      await page.locator('#edit-replace-all').scrollIntoViewIfNeeded();
+      assert((await page.locator('#edit-replace-all').boundingBox()).y+44<=(await page.locator('#edit-inline').boundingBox()).y+(await page.locator('#edit-inline').boundingBox()).height+1,'Replacement stays reachable in a short viewport');
+      await page.locator('#edit-inline').evaluate(el=>{el.scrollTop=0;});
+      const visibleTheme=await page.locator('#theme-toggle svg').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length);assert.equal(visibleTheme,1,'Only the current theme icon is visible');
+      await page.screenshot({path:join(output,`${name}-${width}-${engine}-${dark?'dark':'light'}-search.png`)});
+      await page.locator('#edit-find-close').click();await page.locator('#history-open').click();
+      const history=await page.locator('#history-view').evaluate(el=>{const current=el.querySelector('#history-current'),body=el.querySelector('#history-body'),top=current.getBoundingClientRect().top;body.scrollTop=body.scrollHeight;return {width:el.clientWidth,scroll:el.scrollWidth,fixed:current.getBoundingClientRect().top===top,bodyScroll:body.scrollWidth,bodyWidth:body.clientWidth,buttons:[...el.querySelectorAll('button')].map(b=>b.getBoundingClientRect().width)};});
+      assert(history.scroll<=history.width && history.bodyScroll<=history.bodyWidth && history.fixed && history.buttons.every(n=>n>=44),'History stays dense, fixed and touchable');
+      await page.screenshot({path:join(output,`${name}-${width}-${engine}-${dark?'dark':'light'}-history.png`)});
+      await page.locator('.history-entry').first().getByRole('button',{name:'Сравнить эту версию с текущей',exact:true}).click();
+      assert.equal(await page.locator('#comparison-code-tab svg').count(),1);assert.equal(await page.locator('#comparison-game-tab svg').count(),1);
+      await page.locator('#comparison-compact').click();assert.equal(await page.locator('#comparison-compact svg').count(),1);await page.locator('#comparison-compact').click();
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await page.locator('#code').inputValue(),source);
+      await page.screenshot({path:join(output,`${name}-${width}-${engine}-${dark?'dark':'light'}-comparison.png`)});
+      await page.locator('#comparison-close').click();await page.setViewportSize({width,height:680});
+    }
+  } catch(error) {await page.screenshot({path:join(output,`${name}-${width}-code-ui-failure.png`)});throw error;} finally {await page.close();}
+}
 for(const [name,engine] of engines) {
   const browser=await engine.launch();
   try { for(const width of [320,1365]) {
@@ -65,7 +105,8 @@ for(const [name,engine] of engines) {
       }
       await page.screenshot({path:join(output,`${name}-${width}.png`)});
       assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(errors,[]);
-      console.log(`${name} ${width}: touch edits, undo, ranges, copy fallback, inline highlight, keyboard height and readonly passed.`);
+      await checkCodeScreens(browser,name,width);
+      console.log(`${name} ${width}: touch edits, undo, ranges, copy fallback, inline highlight, keyboard height, readonly and code screens in both editors/themes passed.`);
     } catch(error) {await page.screenshot({path:join(output,`${name}-${width}-failure.png`)});throw error;}finally{await page.close();}
   }}finally{await browser.close();}
 }

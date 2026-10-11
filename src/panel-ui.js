@@ -18,6 +18,13 @@ function panelIcon(icon) {
     compare: '<path d="M4 5h16M4 19h16M8 9l-3 3 3 3m8-6 3 3-3 3"/>',
     back: '<path d="m10 5-7 7 7 7M3 12h18"/>',
     target: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>',
+    undo: '<path d="m8 4-5 5 5 5M3 9h10a7 7 0 0 1 7 7v4"/>',
+    redo: '<path d="m16 4 5 5-5 5m5-5H11a7 7 0 0 0-7 7v4"/>',
+    up: '<path d="m6 15 6-6 6 6"/>',
+    down: '<path d="m6 9 6 6 6-6"/>',
+    replace: '<path d="M4 7h13m-4-4 4 4-4 4M20 17H7m4-4-4 4 4 4"/>',
+    replaceAll: '<path d="M4 5h16M4 19h16M4 9h13m-3-3 3 3-3 3M20 15H7m3-3-3 3 3 3"/>',
+    fold: '<path d="M4 4h16M4 20h16m-12-12 4 4 4-4m-8 8 4-4 4 4"/>',
     speed: '<path d="M3 18a9 9 0 1 1 18 0M12 13l4-5M5 14h2m10 0h2M12 4v2"/>',
     share: '<circle cx="6" cy="12" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><path d="m9 10 6-3m-6 7 6 3"/>',
     audio: '<path d="M9 17V5l11-2v12M9 8l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/>'

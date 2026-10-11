@@ -879,7 +879,7 @@ function openHistory() {
   codeField.hidden = true;
   historyView.hidden = false;
   historyOpen = true;
-  historyView.scrollTop = 0;
+  document.querySelector('#history-body').scrollTop = 0;
   updateControls();
 }
 
@@ -1011,7 +1011,7 @@ function renderComparisonContent() {
   });
   diffContent.replaceChildren(...nodes);
   comparisonCompactButton.setAttribute('aria-pressed', String(comparisonCompact));
-  comparisonCompactButton.textContent = comparisonCompact ? 'Кратко' : 'Полностью';
+  aiLabelButton(comparisonCompactButton,'fold',comparisonCompact ? 'Кратко' : 'Полностью');
   comparisonCompactButton.title = comparisonCompact ? 'Показать все строки' : 'Скрыть одинаковые строки';
   renderComparisonEditor(comparisonParts);
   updateComparisonScrollbar();

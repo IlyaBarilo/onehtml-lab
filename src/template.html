@@ -136,14 +136,14 @@
       <div id="code-lines" aria-hidden="true" hidden></div>
       <div id="edit-highlight" aria-hidden="true" hidden></div>
       <div id="code-measure" aria-hidden="true"></div>
-      <section id="edit-inline" aria-label="Поиск в коде" hidden>
-        <div class="edit-find-row"><input id="edit-query" type="text" aria-label="Найти текст" placeholder="Найти в коде" autocomplete="off" autocapitalize="off" spellcheck="false"><button id="edit-prev" type="button" aria-label="Предыдущее совпадение" disabled>↑</button><button id="edit-next" type="button" aria-label="Следующее совпадение" disabled>↓</button><button id="edit-find-close" type="button" aria-label="Закрыть поиск">✕</button></div>
-        <div class="edit-find-options"><output id="edit-result" aria-live="polite"></output><label title="Учитывать регистр"><input id="edit-case" type="checkbox" aria-label="Учитывать регистр">Aa</label><button id="edit-replace-toggle" type="button" aria-expanded="false" aria-controls="edit-replace-box">Замена</button></div>
-        <div id="edit-replace-box" hidden><input id="edit-replacement" type="text" aria-label="Заменить на" placeholder="Заменить на" autocomplete="off" autocapitalize="off" spellcheck="false"><div class="edit-find-options"><button id="edit-replace" type="button" disabled>Заменить</button><button id="edit-replace-all" type="button" disabled>Все</button><span id="edit-feedback" role="status"></span></div></div>
+      <section id="edit-inline" class="code-ui" aria-label="Поиск в коде" hidden>
+        <div class="edit-find-row"><input id="edit-query" type="text" aria-label="Найти текст" placeholder="Найти в коде" autocomplete="off" autocapitalize="off" spellcheck="false"><button id="edit-prev" type="button" aria-label="Предыдущее совпадение" disabled data-panel-icon="up"></button><button id="edit-next" type="button" aria-label="Следующее совпадение" disabled data-panel-icon="down"></button><button id="edit-find-close" type="button" aria-label="Закрыть поиск" data-panel-icon="close"></button></div>
+        <div class="edit-find-options"><output id="edit-result" aria-live="polite"></output><label title="Учитывать регистр"><input id="edit-case" type="checkbox" aria-label="Учитывать регистр">Aa</label><button id="edit-replace-toggle" type="button" aria-expanded="false" aria-controls="edit-replace-box" aria-label="Замена" data-panel-icon="replace"></button></div>
+        <div id="edit-replace-box" hidden><div class="edit-find-row"><input id="edit-replacement" type="text" aria-label="Заменить на" placeholder="Заменить на" autocomplete="off" autocapitalize="off" spellcheck="false"><button id="edit-replace" type="button" data-panel-icon="replace" aria-label="Заменить" disabled></button><button id="edit-replace-all" type="button" data-panel-icon="replaceAll" aria-label="Заменить все" disabled></button></div><span id="edit-feedback" role="status"></span></div>
       </section>
-      <div id="edit-quick" role="group" aria-label="Правка кода" hidden>
+      <div id="edit-quick" class="code-ui" role="group" aria-label="Правка кода" hidden>
         <div id="edit-quick-tools">
-        <button id="edit-find" type="button" aria-label="Поиск в коде" title="Поиск в коде"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"></circle><path d="m15 15 6 6"></path></svg></button><button id="edit-quick-undo" type="button" aria-label="Отменить" title="Отменить">↶</button><button id="edit-quick-redo" type="button" aria-label="Повторить" title="Повторить">↷</button>
+        <button id="edit-find" type="button" aria-label="Поиск в коде" title="Поиск в коде"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"></circle><path d="m15 15 6 6"></path></svg></button><button id="edit-quick-undo" type="button" aria-label="Отменить" title="Отменить" data-panel-icon="undo"></button><button id="edit-quick-redo" type="button" aria-label="Повторить" title="Повторить" data-panel-icon="redo"></button>
         <button id="edit-copy-selection" type="button" aria-label="Копировать выделенное" title="Копировать выделенное" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"></rect><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"></path></svg></button>
         <button id="edit-fold-structure" type="button" aria-label="Умное сворачивание" aria-pressed="false" title="Включить умное сворачивание" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16M4 10h16M4 16h16M4 21h10M7 6v2m5-2v2m5-2v2M7 12v2m5-2v2m5-2v2"></path></svg></button>
         <button id="edit-unfold-all" type="button" aria-label="Развернуть всё" title="Развернуть всё" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14M5 21h14m-11-10 4-4 4 4m-8 2 4 4 4-4"></path></svg></button>
@@ -159,12 +159,11 @@
         </div>
       </div>
       <section id="media-strip" aria-label="Доступные медиа" hidden><div class="media-strip-heading"><button id="media-strip-toggle" type="button" aria-label="Свернуть медиа" aria-expanded="true" aria-controls="media-strip-list"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button><span id="media-strip-count"></span></div><div id="media-strip-list" role="group" aria-label="Изображения и звук"></div></section>
-      <section id="edit-panel" class="work-panel" aria-labelledby="edit-title" hidden>
-        <div class="panel-heading"><h2 id="edit-title">Редактирование</h2><button id="edit-close" type="button" aria-label="Закрыть редактирование">✕</button></div>
+      <section id="edit-panel" class="work-panel panel-ui tool-screen code-tools" aria-labelledby="edit-title" hidden>
+        <div class="panel-heading"><h2 id="edit-title">Редактирование</h2><button id="edit-close" type="button" aria-label="Закрыть редактирование" data-panel-icon="close"></button></div>
         <div class="panel-body edit-body">
-          <div class="edit-actions"><button id="edit-undo" type="button" disabled>↶ Отменить</button><button id="edit-redo" type="button" disabled>↷ Повторить</button></div>
-          <div class="edit-actions"><button id="edit-panel-find" type="button">Поиск и замена в коде</button></div>
-          <section class="edit-section" aria-label="Помощь с текущим кодом"><div class="edit-actions"><button id="edit-explain" type="button">Объяснить код</button><button id="edit-check" type="button">Проверить изменение</button></div><p class="edit-note">Подготовить запрос внешнему ИИ. Для объяснения можно заранее выделить фрагмент в редакторе.</p></section>
+          <div class="edit-actions edit-primary-actions"><button id="edit-undo" type="button" disabled aria-label="Отменить" data-panel-icon="undo"></button><button id="edit-redo" type="button" disabled aria-label="Повторить" data-panel-icon="redo"></button><button id="edit-panel-find" type="button" aria-label="Поиск и замена в коде" data-ai-icon="search">Поиск и замена в коде</button></div>
+          <section class="edit-section" aria-label="Помощь с текущим кодом"><div class="edit-actions"><button id="edit-explain" type="button" aria-label="Объяснить код" data-ai-icon="lesson">Объяснить код</button><button id="edit-check" type="button" aria-label="Проверить изменение" data-ai-icon="check">Проверить изменение</button></div><p class="edit-note">Подготовить запрос внешнему ИИ. Для объяснения можно заранее выделить фрагмент в редакторе.</p></section>
           <section id="code-guide" class="edit-section" aria-labelledby="code-guide-title" hidden><h3 id="code-guide-title">Разбор примера</h3><p class="edit-note">Нажмите на название участка, чтобы выделить его в текущем коде.</p><ul id="code-guide-list"></ul></section>
           <p id="code-guide-note" class="edit-note">Разбор участков доступен для открытых копий «Поймай круг» и мультимедийных примеров. Для другого HTML используйте поиск и объяснение кода.</p>
           <form id="edit-line-form" class="edit-section">
@@ -186,22 +185,22 @@
             <label class="edit-font-row" for="edit-colors">Подсветка<select id="edit-colors"><option value="off">Без подсветки</option><option value="syntax">Синтаксис</option><option value="accents" selected>Синтаксис и акценты</option></select></label>
             <p id="edit-colors-note" class="edit-note">Подсветка не меняет код. Большие файлы автоматически показываются обычным текстом.</p>
           </section>
-        </div>
+        </div><div class="panel-ui-footer"><span>Настройки сохраняются в браузере</span><button type="button" class="panel-ui-theme" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div>
       </section>
-      <div id="comparison" class="comparison" role="region" aria-label="Сравнение с прошлым кодом" hidden>
-        <div class="comparison-heading"><strong id="comparison-source"></strong><button id="comparison-close" type="button" aria-label="Закрыть сравнение и вернуться к редактору" title="Вернуться к редактору">✕</button><div class="comparison-modes" role="group" aria-label="Вид сравнения"><button id="comparison-code-tab" type="button" aria-pressed="true">Код</button><button id="comparison-game-tab" type="button" aria-pressed="false">Игра</button><button id="comparison-compact" type="button" aria-pressed="true" aria-label="Сокращённое сравнение" title="Показать все строки">Кратко</button></div></div>
-        <div id="comparison-versions" role="group" aria-label="Версия игры" hidden><button id="comparison-current" type="button" aria-pressed="true">Текущая</button><button id="comparison-past" type="button" aria-pressed="false">Выбранная <small id="comparison-date"></small></button><button id="comparison-restart" type="button" aria-label="Перезапустить сравниваемую игру" title="Перезапустить">↻</button></div>
+      <div id="comparison" class="comparison code-ui" role="region" aria-label="Сравнение с прошлым кодом" hidden>
+        <div class="comparison-heading"><strong id="comparison-source"></strong><button id="comparison-close" type="button" aria-label="Закрыть сравнение и вернуться к редактору" title="Вернуться к редактору" data-panel-icon="close"></button><div class="comparison-modes" role="group" aria-label="Вид сравнения"><button id="comparison-code-tab" type="button" aria-pressed="true" aria-label="Код" data-ai-icon="code">Код</button><button id="comparison-game-tab" type="button" aria-pressed="false" aria-label="Игра" data-ai-icon="games">Игра</button><button id="comparison-compact" type="button" aria-pressed="true" aria-label="Сокращённое сравнение" title="Показать все строки">Кратко</button></div></div>
+        <div id="comparison-versions" role="group" aria-label="Версия игры" hidden><button id="comparison-current" type="button" aria-pressed="true">Текущая</button><button id="comparison-past" type="button" aria-pressed="false">Выбранная <small id="comparison-date"></small></button><button id="comparison-restart" type="button" aria-label="Перезапустить сравниваемую игру" title="Перезапустить" data-panel-icon="restart"></button></div>
         <div class="comparison-legend"><span class="legend-total" title="Символов в текущем коде">Всего: <b id="comparison-total">0 символов</b></span><span class="legend-added">Добавлено: <b id="comparison-added">0 символов</b></span><span class="legend-removed">Удалено: <b id="comparison-removed">0 символов</b></span></div>
         <pre id="diff-content" class="diff-content"></pre>
         <div id="comparison-editor" hidden></div>
         <section id="comparison-game" aria-label="Проверка выбранной версии игры" hidden><p id="comparison-game-status" role="status"></p><div id="comparison-messages"><div id="comparison-game-error" role="status" hidden></div><div id="comparison-game-warning" role="status" hidden></div></div><div id="comparison-stage"></div></section>
       </div>
       <div id="comparison-scrollbar" class="comparison-scrollbar" role="scrollbar" aria-label="Прокрутка сравнения" aria-controls="comparison" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0" hidden><div id="comparison-scrollbar-thumb" class="comparison-scrollbar-thumb"></div></div>
-      <section id="history-view" class="history-view" aria-labelledby="history-title" hidden>
-        <div class="history-heading"><h2 id="history-title">История версий</h2><button id="history-close" type="button" aria-label="Закрыть историю" title="Закрыть историю">✕</button></div>
+      <section id="history-view" class="history-view panel-ui" aria-labelledby="history-title" hidden>
+        <div class="history-heading"><h2 id="history-title">История версий</h2><button id="history-close" type="button" aria-label="Закрыть историю" title="Закрыть историю" data-panel-icon="close"></button></div>
         <div id="history-current" class="history-row history-current-row"></div>
-        <p id="history-empty" class="history-empty" hidden>Прошлых версий пока нет.</p>
-        <ol id="history-list" class="history-list"></ol>
+        <div id="history-body" class="panel-body"><p id="history-empty" class="history-empty" hidden>Прошлых версий пока нет.</p>
+        <ol id="history-list" class="history-list"></ol></div><div class="panel-ui-footer"><span class="history-help">Сравнить · удалить · вернуть</span><button type="button" class="panel-ui-theme" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div>
       </section>
       <div id="preview" hidden></div>
       <div id="split-divider" role="separator" aria-label="Ширина редактора" aria-orientation="vertical" aria-valuemin="30" aria-valuemax="70" aria-valuenow="50" tabindex="0" hidden></div>
