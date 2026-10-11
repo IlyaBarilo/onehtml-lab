@@ -67,7 +67,11 @@ try {
           const observed=await page.locator('#resource-observed-list').innerText();assert.match(observed,/Загрузка замечена/);
           await page.screenshot({path:join(output,`${name}-${width}-resources.png`)});
           await page.locator('[data-diagnostic-tab="speed"]').click();
-          assert.match(await page.locator('#speed-result').innerText(),/FPS \d+/);
+          assert.match(await page.locator('#speed-result').innerText(),/FPS\s+\d+/);
+          assert.equal(await page.locator('#speed-result .diagnostic-stat').count(),3);
+          await page.locator('#diagnostic-speed .media-help summary').click();
+          assert(await page.locator('#diagnostic-speed .media-help').evaluate(el=>el.open));
+          await page.locator('#diagnostic-speed .media-help summary').click();
           await page.screenshot({path:join(output,`${name}-${width}-speed.png`)});
           // A message from the host window cannot impersonate the active game frame.
           await page.evaluate(()=>window.postMessage({type:'onehtml-lab:resource-result',url:'https://spoof.test/',status:'blocked'},'*'));

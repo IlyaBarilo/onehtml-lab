@@ -326,9 +326,9 @@ function renderQuality() {
     const actions = row => {
       const group = document.createElement('div'); group.className = 'diagnostic-actions';
       if (row.element) {
-        const show = diagnosticButton('Показать',()=>showQualityTarget(row)); show.disabled = modeBusy || !running || !qualityTargetCurrent(row); group.append(show);
+        const show = diagnosticButton('Показать',()=>showQualityTarget(row)); panelIconButton(show,'target','Показать'); show.disabled = modeBusy || !running || !qualityTargetCurrent(row); group.append(show);
       }
-      const fix = diagnosticButton('Исправить с ИИ',()=>fixQualityFinding(row)); fix.disabled = modeBusy || Boolean(row.layout && !qualityTargetCurrent(row)); group.append(fix);
+      const fix = diagnosticButton('Исправить с ИИ',()=>fixQualityFinding(row)); aiLabelButton(fix,'change','Исправить с ИИ'); fix.disabled = modeBusy || Boolean(row.layout && !qualityTargetCurrent(row)); group.append(fix);
       return group;
     };
     if (row.element || row.fix) detail.append(actions(row));
@@ -372,7 +372,7 @@ function initQuality() {
   for (const [id, title, description] of qualityChecks) {
     const label = document.createElement('div'); label.className = 'quality-check';
     const text = document.createElement('span'), heading = document.createElement('strong'), detail = document.createElement('span');
-    heading.textContent = title; detail.textContent = description; text.append(heading, detail);
+    heading.textContent = title; detail.textContent = description; text.append(heading);
     const select = document.createElement('select'); select.id = 'quality-' + id; select.setAttribute('aria-label', title);
     for (const [value, caption] of Object.entries(qualityStates)) { const option = document.createElement('option'); option.value = value; option.textContent = caption; select.append(option); }
     select.addEventListener('change', () => {
@@ -385,7 +385,7 @@ function initQuality() {
     });
     label.append(text, select); list.append(label);
     const notes = document.createElement('details'); notes.className = 'quality-note';
-    const summary = document.createElement('summary'); summary.textContent = 'Заметка'; notes.append(summary);
+    const summary = document.createElement('summary'); summary.textContent = 'Подробности и заметка'; notes.append(summary,detail);
     const noteLabel = document.createElement('label'); noteLabel.className = 'quality-note-label'; noteLabel.textContent = 'Что именно проверить или исправить';
     const note = document.createElement('textarea'); note.id = 'quality-note-' + id; note.rows = 2; note.maxLength = 1000; note.setAttribute('aria-label','Заметка — ' + title); note.placeholder = 'Например: кнопка прыжка не реагирует после поворота экрана';
     note.addEventListener('input',()=>{

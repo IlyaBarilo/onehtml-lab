@@ -136,7 +136,12 @@ function renderReadiness() {
   if (currentPanel() !== activityPanel) return;
   document.querySelector('#resources-run-note').textContent = readinessRunLabel();
   document.querySelector('#speed-run-note').textContent = readinessRunLabel();
-  document.querySelector('#speed-result').textContent = speedText();
+  const result=document.querySelector('#speed-result'), stats=diagnosticRun?.speed;
+  result.textContent = stats?.frames ? '' : speedText();
+  if(stats?.frames) for(const [label,value] of [['FPS',Math.round(stats.frames*1000/stats.elapsed)],['Макс. пауза, мс',Math.round(stats.max)],['Пауз >100 мс',stats.slow]]) {
+    const card=document.createElement('span'), title=document.createElement('small'), number=document.createElement('strong');
+    card.className='diagnostic-stat';title.textContent=label;number.textContent=formatUIInteger(value);card.append(title,number);result.append(card);
+  }
   document.querySelector('#speed-toggle').checked = speedEnabled;
   document.querySelector('#speed-state').textContent = speedEnabled ? (running ? 'Измерение продолжается после возврата к игре.' : 'Измерение начнётся при запуске игры.') : 'Измерение выключено. Последний результат сохранён до нового запуска.';
   document.querySelector('#resource-observed-note').textContent = `${diagnosticRun?.resources?.size ? 'Замеченные обращения; повторные загрузки объединены.' : 'Обращений пока не зарегистрировано.'}${diagnosticRun?.resourcesOverflow ? ' Показаны первые 200 адресов.' : ''}`;

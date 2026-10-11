@@ -34,6 +34,30 @@ async function open(page, tab = 'errors') {
 async function close(page) { await page.locator('#activity-close').click(); }
 async function cacheCount(page, count) { await page.waitForFunction(n => document.querySelectorAll('#diagnostic-cache-list > li').length === n, count); }
 async function source(page, text) { if (await page.locator('#activity-panel').isVisible()) await close(page); await page.locator('#code').fill(text); }
+async function checkDiagnosticScreen(page, width) {
+  const viewport = page.viewportSize();
+  for (const dark of [false, true]) {
+    if ((await page.locator('html').evaluate(el => el.classList.contains('theme-dark'))) !== dark) await page.locator('.diagnostic-footer [data-panel-theme]').click();
+    await page.setViewportSize({width, height:400});
+    const layout = await page.evaluate(() => {
+      const box = el => { const r=el.getBoundingClientRect(); return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}; };
+      const row = document.querySelector('.diagnostic-error-row');
+      const [meta,text] = [...row.children].map(box);
+      const nav = document.querySelector('#diagnostic-tabs');
+      const body = document.querySelector('.activity-body');
+      body.scrollTop=body.scrollHeight;
+      return {meta,text,font:parseFloat(getComputedStyle(row).fontSize),buttons:[...nav.querySelectorAll('button'),...document.querySelectorAll('.diagnostic-footer button:not([hidden])'),document.querySelector('#activity-close')].map(box),body:box(body),nav:box(nav),footer:box(document.querySelector('.diagnostic-footer')),scroll:document.documentElement.scrollWidth,colors:[getComputedStyle(row).color,getComputedStyle(document.querySelector('.is-warning.diagnostic-error-row')).color,getComputedStyle(document.querySelector('#activity-panel')).backgroundColor]};
+    });
+    assert(layout.text.top >= layout.meta.bottom - 1, 'Message text must follow its metadata on a separate line');
+    assert(layout.font >= 16, 'Messages must be readable on phones');
+    assert(layout.buttons.every(r=>r.width>=44 && r.height>=44 && r.left>=0 && r.right<=width+1 && r.top>=0 && r.bottom<=400), 'Navigation and footer remain touchable in a short viewport');
+    assert(layout.body.height>=70 && layout.body.top>=layout.nav.bottom-1 && layout.body.bottom<=layout.footer.top+1, 'Only results scroll between navigation and actions');
+    assert(layout.scroll<=width && new Set(layout.colors).size===3, 'Errors and warnings remain distinct in both themes without overflow');
+    await page.screenshot({path:join(output,`diagnostic-ui-${width}-${dark?'dark':'light'}.png`)});
+  }
+  await page.locator('.diagnostic-footer [data-panel-theme]').click();
+  await page.setViewportSize(viewport);
+}
 async function checkToolbarLayout(page, width) {
   const layout = await page.evaluate(() => {
     const status = document.querySelector('#draft-status').getBoundingClientRect();
@@ -139,6 +163,20 @@ try {
           assert((await page.locator('#ai-output').inputValue()).includes(game));
           await page.locator('#ai-close').click();
           await page.screenshot({ path: join(output, `${name}-${width}-errors.png`) });
+          await checkDiagnosticScreen(page, width);
+          await open(page, 'resources');
+          const png=await page.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=2;canvas.height=2;return canvas.toDataURL('image/png').split(',')[1];});
+          await page.locator('#media-input').setInputFiles({name:'diagnostic.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});
+          const media=page.locator('#media-list .media-row');await media.waitFor();
+          assert(await media.getByRole('button',{name:'Вставить',exact:true}).isDisabled());
+          assert(await media.getByRole('button',{name:'Привязать',exact:true}).isDisabled());
+          assert.equal(await media.locator('button svg').count(),3);
+          const controls=await media.locator('.media-actions').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth,buttons:[...el.querySelectorAll('button')].map(b=>b.getBoundingClientRect().width)}));
+          assert(controls.scroll<=controls.width+1 && controls.buttons.every(w=>w>=44), 'Resource icons and path must fit the phone');
+          await media.getByRole('button',{name:'Удалить',exact:true}).click();await page.locator('#media-delete-no').click();assert.equal(await media.count(),1);
+          const group=page.locator('.diagnostic-resource-group').first();await group.locator('summary').click();assert(!(await group.evaluate(el=>el.open)));await group.locator('summary').click();
+          assert.equal(await page.locator('#code').inputValue(),game);
+          await page.screenshot({path:join(output,`${name}-${width}-media-controls.png`)});
           // Cache deletion never restarts the frame or changes editor text.
           await open(page, 'libraries');
           await libraryTab(page,'saved');await page.locator('#diagnostic-cache-list > li').filter({ hasText: 'Three.js' }).getByRole('button',{name:'Удалить',exact:true}).click();

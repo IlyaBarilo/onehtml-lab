@@ -18,6 +18,7 @@ function panelIcon(icon) {
     compare: '<path d="M4 5h16M4 19h16M8 9l-3 3 3 3m8-6 3 3-3 3"/>',
     back: '<path d="m10 5-7 7 7 7M3 12h18"/>',
     target: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>',
+    speed: '<path d="M3 18a9 9 0 1 1 18 0M12 13l4-5M5 14h2m10 0h2M12 4v2"/>',
     share: '<circle cx="6" cy="12" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><path d="m9 10 6-3m-6 7 6 3"/>',
     audio: '<path d="M9 17V5l11-2v12M9 8l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/>'
   };
@@ -36,7 +37,7 @@ function aiLabelButton(button, icon, label, short = label) {
 }
 
 function initAiUI() {
-  for (const button of document.querySelectorAll('[data-ai-icon]')) aiLabelButton(button, button.dataset.aiIcon, button.textContent.trim());
+  for (const button of document.querySelectorAll('[data-ai-icon]')) aiLabelButton(button, button.dataset.aiIcon, button.textContent.trim(), button.dataset.short);
   const icons = { create: 'create', change: 'change', fix: 'fix', explain: 'lesson', check: 'check' };
   const shortLabels = { create: 'Создать', change: 'Правка', fix: 'Ошибка', explain: 'Разбор', check: 'Проверка' };
   for (const button of document.querySelectorAll('[data-ai-mode]')) aiLabelButton(button, icons[button.dataset.aiMode], button.textContent.trim(), shortLabels[button.dataset.aiMode]);
@@ -74,9 +75,9 @@ function initPanelUI() {
     button.prepend(panelIcon(button.dataset.tabIcon));
     button.title = button.getAttribute('aria-label');
   }
-  for (const group of document.querySelectorAll('#examples-dialog [role=tablist]')) group.addEventListener('keydown', event => {
+  for (const group of document.querySelectorAll('#examples-dialog [role=tablist], #diagnostic-tabs')) group.addEventListener('keydown', event => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-    const tabs = [...group.querySelectorAll('[role=tab]')];
+    const tabs = [...group.querySelectorAll('[role=tab], [data-diagnostic-tab]')];
     const index = tabs.indexOf(event.target);
     if (index < 0) return;
     event.preventDefault();
@@ -89,5 +90,10 @@ function initPanelUI() {
     button.setAttribute('aria-expanded', String(!help.hidden));
   });
   for (const button of document.querySelectorAll('[data-panel-theme]')) button.addEventListener('click', () => document.querySelector('#theme-toggle').click());
+  const icons = {errors:'fix',libraries:'code',resources:'media',speed:'speed',quality:'check'};
+  for (const button of document.querySelectorAll('[data-diagnostic-tab]')) {
+    const label=button.textContent;button.setAttribute('aria-label',label);button.title=label;
+    const text=document.createElement('span');text.textContent=label;button.replaceChildren(panelIcon(icons[button.dataset.diagnosticTab]),text);
+  }
   document.querySelector('#example-search').addEventListener('input', renderExamples);
 }

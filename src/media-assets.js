@@ -327,7 +327,7 @@ function renderMediaAssets() {
         mediaChangeCode(before,next,{start,end:start+fragment.length});
       } catch(error) { mediaFeedback=error.message;mediaRendered=null;renderMediaAssets(); }
     });
-    insert.disabled=blocked;actions.append(insert);
+    panelIconButton(insert,'create','Вставить');insert.disabled=blocked;actions.append(insert);
     const path=document.createElement('input');path.className='media-path';path.type='text';path.placeholder='images/photo.jpg';
     path.setAttribute('aria-label',`Путь для ${entry.name}`);path.autocomplete='off';path.autocapitalize='off';path.inputMode='url';path.spellcheck=false;path.disabled=blocked;
     const choices=[...new Set(refs.filter(ref=>mediaKindMatches(entry.type,ref.kind)).map(ref=>ref.path))];
@@ -337,14 +337,14 @@ function renderMediaAssets() {
     const bind=diagnosticButton('Привязать',()=>{
       try { const before=codeField.value;mediaChangeCode(before,attachMedia(before,path.value.trim(),entry)); }
       catch(error){mediaFeedback=error.message;mediaRendered=null;renderMediaAssets();}
-    });bind.disabled=blocked;actions.append(path,options,bind);
+    });panelIconButton(bind,'target','Привязать');bind.disabled=blocked;actions.append(path,options,bind);
     const remove=diagnosticButton('Удалить',()=>{
       if(mediaBusy)return;mediaDelete=entry;
       const uses=mediaUsage(entry.id);
       document.querySelector('#media-delete-text').textContent=`Удалить ${entry.name} из браузера?${uses ? ` Файл нужен ${formatUIInteger(uses)} версиям кода. Для их запуска потребуется выбрать его снова.` : ''} Уже сохранённые автономные HTML сохранят файл.`;
       document.querySelector('#media-delete-confirm').hidden=false;
       document.querySelector('#media-delete-no').focus({preventScroll:true});
-    });remove.disabled=mediaBusy;actions.append(remove);li.append(actions);return li;
+    });panelIconButton(remove,'trash','Удалить');remove.disabled=mediaBusy;actions.append(remove);li.append(actions);return li;
   }));
 }
 

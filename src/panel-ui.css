@@ -131,3 +131,62 @@
 }
 
 @media (max-height:400px) { .library-extraction > .panel-ui-controls { max-height:25%; } }
+
+/* Diagnostics keep navigation and actions outside the scrolling results. */
+.diagnostic-screen { --diag-error:#b64430; --diag-warning:#92651a; }
+.theme-dark .diagnostic-screen { --diag-error:#ffae99; --diag-warning:#ecd090; }
+.diagnostic-screen > .panel-heading { position:absolute; top:0; right:0; z-index:2; width:48px; height:48px; min-height:48px; padding:2px; border:0; }
+.diagnostic-screen .panel-heading h2 { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.diagnostic-screen #diagnostic-tabs { display:flex; flex:none; position:static; margin:0 48px 0 0; min-height:48px; gap:2px; padding:3px 4px; border-bottom:1px solid var(--lib-line); background:var(--lib-surface); }
+.diagnostic-screen #diagnostic-tabs button { display:flex; align-items:center; justify-content:center; flex:1; min-width:44px; gap:7px; padding:7px 8px; font-size:16px; color:var(--lib-muted); background:transparent; border:0; }
+.diagnostic-screen #diagnostic-tabs button[aria-pressed=true] { color:var(--lib-blue); background:var(--lib-selected); }
+.diagnostic-screen > .activity-body { padding-top:8px; }
+.diagnostic-screen.library-screen > .activity-body { padding:0; overflow:hidden; display:flex; }
+.diagnostic-screen.library-screen > .diagnostic-footer { display:none; }
+.diagnostic-screen .diagnostic-footer { flex-wrap:nowrap; }
+.diagnostic-screen #quality-measure { margin-left:auto; }
+.diagnostic-screen :is(h3,h4) { margin:14px 0 8px; font-size:17px; font-weight:600; color:var(--lib-text); }
+.diagnostic-section-heading { display:flex; align-items:center; gap:8px; }
+.diagnostic-section-heading :is(h3,h4) { flex:1; }
+.diagnostic-screen .diagnostic-note { margin:8px 0; color:var(--lib-muted); }
+.diagnostic-screen .diagnostic-actions { margin:6px 0; }
+.diagnostic-screen .runtime-error { flex-wrap:wrap; gap:4px; padding:10px 12px; margin:8px 0; border:1px solid var(--lib-line); border-left:3px solid var(--diag-error); border-radius:9px; font-size:16px; background:var(--lib-bg); color:var(--diag-error); }
+.diagnostic-screen .runtime-error.is-warning { border-left-color:var(--diag-warning); color:var(--diag-warning); }
+.diagnostic-screen .runtime-error .diagnostic-actions { width:100%; justify-content:flex-end; margin:0; }
+.diagnostic-screen #diagnostic-error-list button { display:grid; grid-template-columns:minmax(0,1fr); justify-content:stretch; width:100%; gap:4px; min-height:60px; padding:10px 8px; font-size:16px; text-align:left; overflow-wrap:anywhere; border:0; border-bottom:1px solid var(--lib-line); background:transparent; color:var(--diag-error); }
+.diagnostic-screen #diagnostic-error-list .is-warning { color:var(--diag-warning); }
+.diagnostic-screen #diagnostic-error-list [aria-pressed=true] { background:var(--lib-selected); }
+.diagnostic-screen .diagnostic-error-meta { font-size:14px; color:var(--lib-muted); }
+.diagnostic-screen .diagnostic-library-row { padding:10px 4px; border-bottom:1px solid var(--lib-line); }
+.diagnostic-screen .diagnostic-library-row strong { font-size:17px; overflow-wrap:anywhere; }
+.diagnostic-screen .diagnostic-library-row p { margin:4px 0; font-size:14px; line-height:1.45; white-space:pre-line; overflow-wrap:anywhere; color:var(--lib-muted); }
+.diagnostic-screen :is(.media-help,.diagnostic-resource-group) { border-bottom:1px solid var(--lib-line); }
+.diagnostic-screen summary { min-height:44px; padding:10px 4px; font-size:16px; cursor:pointer; color:var(--lib-text); }
+.diagnostic-screen .media-row { padding:10px 4px; border-color:var(--lib-line); }
+.diagnostic-screen .media-details strong { font-size:17px; }
+.diagnostic-screen .media-thumbnail { width:56px; height:56px; border-color:var(--lib-line); background:var(--lib-bg); }
+.diagnostic-screen .media-path { color:var(--lib-text); background:var(--lib-bg); border-color:var(--lib-line); font-size:16px; }
+.diagnostic-screen .media-actions { flex-wrap:nowrap; }
+.diagnostic-screen .media-actions .media-path { min-width:0; width:100%; }
+.diagnostic-screen #speed-result { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; font-size:16px; font-weight:400; }
+.diagnostic-stat { display:flex; flex-direction:column; gap:4px; padding:12px 10px; background:var(--lib-soft); border-radius:9px; }
+.diagnostic-stat small { font-size:14px; color:var(--lib-muted); }
+.diagnostic-stat strong { font-size:26px; font-weight:600; color:var(--lib-text); }
+.diagnostic-screen .quality-finding { border-bottom:1px solid var(--lib-line); }
+.diagnostic-screen .quality-finding summary { font-weight:600; }
+.diagnostic-screen .quality-finding p { margin:0 4px 8px; font-size:15px; line-height:1.5; color:var(--lib-muted); overflow-wrap:anywhere; }
+.diagnostic-screen .quality-check { display:grid; grid-template-columns:minmax(0,1fr) 170px; gap:4px 12px; align-items:center; padding:8px 4px; border-bottom:1px solid var(--lib-line); }
+.diagnostic-screen .quality-check strong { font-size:17px; font-weight:600; }
+.diagnostic-screen .quality-check select { width:100%; min-height:44px; padding:8px 4px; font:16px/1.4 system-ui,sans-serif; }
+.diagnostic-screen .quality-note > span { display:block; margin:0 4px 8px; font-size:14px; color:var(--lib-muted); }
+.diagnostic-screen .quality-note summary { font-size:14px; color:var(--lib-blue); }
+.diagnostic-screen .quality-note-label textarea { display:block; width:100%; height:68px; margin:5px 0; padding:8px; font:16px/1.4 system-ui,sans-serif; }
+@media (max-width:600px) {
+  .diagnostic-screen #diagnostic-tabs { min-height:60px; }
+  .diagnostic-screen > .panel-heading { top:6px; }
+  .diagnostic-screen #diagnostic-tabs button { flex-direction:column; gap:3px; padding:5px 2px; }
+  .diagnostic-screen #diagnostic-tabs button span { display:none; font-size:14px; }
+  .diagnostic-screen #diagnostic-tabs button[aria-pressed=true] { flex:1.9; }
+  .diagnostic-screen #diagnostic-tabs button[aria-pressed=true] span { display:block; }
+  .diagnostic-screen .quality-check { grid-template-columns:minmax(0,1fr) 136px; }
+}

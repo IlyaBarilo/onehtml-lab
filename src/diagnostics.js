@@ -227,6 +227,7 @@ function setDiagnosticTab(tab) {
   for (const name of ['errors', 'libraries', 'resources', 'speed', 'quality']) document.querySelector(`#diagnostic-${name}`).hidden = diagnosticTab !== name;
   for (const button of document.querySelectorAll('[data-diagnostic-tab]')) button.setAttribute('aria-pressed', String(button.dataset.diagnosticTab === diagnosticTab));
   activityPanel.classList.toggle('library-screen', diagnosticTab === 'libraries');
+  for (const button of document.querySelectorAll('[data-diagnostic-action]')) button.hidden = button.dataset.diagnosticAction !== diagnosticTab;
   document.querySelector('#activity-title').textContent = diagnosticTab === 'libraries' ? 'Библиотеки' : 'Диагностика';
   closeLibraryMenu();
 }
