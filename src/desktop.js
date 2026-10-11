@@ -1,4 +1,3 @@
-// Layout changes resize the existing frame; only an explicit run replaces it.
 const splitButton = document.querySelector('#split-toggle');
 const splitDivider = document.querySelector('#split-divider');
 const previewTools = document.querySelector('#preview-tools');
@@ -71,7 +70,9 @@ function updateDesktopUI() {
   codeField.hidden = (running && !split) || historyOpen || comparisonOpen || extractionOpen;
   preview.hidden = !running;
   previewRestart.disabled = modeBusy || desktopStarting || readingClipboard || !codeField.value.trim();
-  previewRestart.textContent = running ? 'Перезапустить' : 'Запустить';
+  const label = running ? 'Перезапустить' : 'Запустить';
+  if (previewRestart.getAttribute('aria-label') !== label) aiLabelButton(previewRestart, running ? 'restart' : 'play', label);
+  previewRestart.title = 'Запустить актуальный код · Ctrl+Enter';
   previewChanges.hidden = !running || previewCode === codeField.value;
   document.querySelector('#preview-settings').hidden = !expertMode;
   previewDevice.value = desktopView.device;

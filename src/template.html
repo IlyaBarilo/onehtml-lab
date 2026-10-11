@@ -17,7 +17,7 @@
 </head>
 <body>
   <main class="app">
-    <header class="toolbar">
+    <header class="toolbar workspace-chrome">
       <div class="brand">
         <!-- ICON:app -->
         <h1>OneHTML <span>Lab</span></h1>
@@ -52,7 +52,7 @@
         <button id="preview-expand" class="icon-button" type="button" aria-label="Развернуть игру" aria-pressed="false" title="Развернуть игру" hidden><!-- ICON:expand --></button>
       </div>
     </header>
-    <div id="expert-tools" class="expert-tools" hidden>
+    <div id="expert-tools" class="expert-tools workspace-chrome" hidden>
       <div class="expert-actions">
         <button id="import" class="import-button" type="button" aria-label="Открыть HTML-файл с устройства" title="Открыть HTML-файл с устройства"><!-- ICON:import --> <span>Открыть HTML</span></button>
         <button id="edit-open" class="expert-icon-button" type="button" aria-label="Редактирование" aria-pressed="false" title="Редактирование кода"><!-- ICON:edit --></button>
@@ -63,15 +63,15 @@
         <button id="library-extract-open" class="expert-icon-button" type="button" aria-label="Библиотеки в коде" aria-pressed="false" title="Встроить библиотеки или заменить их ссылками" disabled><!-- ICON:library-out --></button>
       </div>
       <div class="expert-resource-actions">
-        <button id="ai-open" class="import-button" type="button" title="ИИ-боты и готовые запросы">ИИ и запросы</button>
-        <button id="media-open" class="import-button" type="button" title="Добавить изображения и звук для запроса ИИ">Медиа</button>
-        <button id="examples-open" class="import-button" type="button" title="Открыть примеры и задания">Примеры</button>
+        <button id="ai-open" data-ai-icon="change" class="import-button" type="button" title="ИИ-боты и готовые запросы">ИИ и запросы</button>
+        <button id="media-open" data-ai-icon="media" class="import-button" type="button" title="Добавить изображения и звук для запроса ИИ">Медиа</button>
+        <button id="examples-open" data-ai-icon="games" class="import-button" type="button" title="Открыть примеры и задания">Примеры</button>
         <button id="diagnostic-open" class="expert-icon-button" type="button" title="Диагностика и библиотеки" aria-label="Диагностика и библиотеки" aria-pressed="false"><!-- ICON:diagnostics --></button>
       </div>
       <span id="draft-status" class="draft-status" role="status" aria-live="polite"></span>
       <input id="import-file" type="file" accept=".html,.htm,text/html" hidden>
     </div>
-    <button id="activity-toggle" class="activity-toggle" type="button" aria-label="Открыть сообщения" aria-expanded="false" aria-controls="activity-panel" hidden><span id="activity-summary" role="status" aria-live="polite"></span><span aria-hidden="true">›</span></button>
+    <button id="activity-toggle" class="activity-toggle" type="button" aria-label="Открыть сообщения" aria-expanded="false" aria-controls="activity-panel" hidden><span id="activity-summary" role="status" aria-live="polite"></span><span aria-hidden="true" data-panel-icon="down"></span></button>
     <p id="speed-strip" hidden></p>
     <div id="picker-bar" hidden>
       <span id="picker-description" role="status" aria-live="polite"></span>
@@ -104,8 +104,8 @@
         </div>
         <div class="panel-ui-footer media-footer"><div class="media-list-actions"><span id="media-selection-count" role="status" aria-live="polite"></span><button id="media-prompt-copy" type="button" data-panel-icon="copy" aria-label="Копировать имена выбранных файлов" disabled></button><button id="media-prompt-ai" type="button" class="ai-primary" data-ai-icon="change">К запросу</button></div><div class="media-image-actions"><button id="media-image-restore" type="button" data-panel-icon="history" aria-label="Вернуть оригинал" hidden></button><button id="media-image-preview" type="button" data-panel-icon="media" aria-label="Предпросмотр"></button><button id="media-image-apply" type="button" class="ai-primary" data-ai-icon="check" disabled>Применить копию</button></div><button type="button" class="panel-ui-theme" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div>
       </section>
-      <section id="help-panel" class="work-panel" aria-labelledby="help-title" hidden>
-        <div class="panel-heading"><h2 id="help-title">Как пользоваться</h2><button id="help-close" type="button" aria-label="Закрыть памятку">✕</button></div>
+      <section id="help-panel" class="work-panel panel-ui help-screen" aria-labelledby="help-title" hidden>
+        <div class="panel-heading"><h2 id="help-title">Как пользоваться</h2><button id="help-close" type="button" aria-label="Закрыть памятку" data-panel-icon="close"></button></div>
         <div class="panel-body help-body">
           <div class="help-content">
             <p class="help-intro">От идеи до своей игры — на телефоне или компьютере.</p>
@@ -121,7 +121,7 @@
             <details class="help-details"><summary>Если не получается</summary><p><strong>Вставился только кусок:</strong> скопируйте весь HTML, выделите всё в поле и вставьте заново. Обычная вставка работает в позиции курсора.</p><p><strong>Ошибка или пустой экран:</strong> откройте строку сообщений. В экспертном режиме доступна «Диагностика и библиотеки»: скопируйте отчёт для ИИ. Если ошибок нет, опишите боту, что видите и что ожидали.</p><p><strong>Нужна библиотека:</strong> подключитесь к сети и подтвердите её загрузку в сообщениях. Для занятия без сети выберите готовый пример без библиотек.</p><p><strong>Не найти файл:</strong> проверьте загрузки браузера или папку «Загрузки». Если скачалось несколько файлов, соберите HTML и JS в одной папке с исходными именами.</p></details>
             <p class="help-note">Перед завершением сохраните HTML-файл. Черновик в браузере помогает продолжить работу, но не заменяет отдельную копию.</p>
           </div>
-        </div>
+        </div><div class="panel-ui-footer"><span>Памятка доступна без сети</span><button type="button" class="panel-ui-theme" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div>
       </section>
       <div id="code-colors" aria-hidden="true" hidden></div>
       <textarea id="code" aria-label="HTML-код" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Вставьте HTML-код…"></textarea>
@@ -204,9 +204,9 @@
       </section>
       <div id="preview" hidden></div>
       <div id="split-divider" role="separator" aria-label="Ширина редактора" aria-orientation="vertical" aria-valuemin="30" aria-valuemax="70" aria-valuenow="50" tabindex="0" hidden></div>
-      <div id="preview-tools" hidden>
+      <div id="preview-tools" class="code-ui" hidden>
         <div id="preview-settings"><select id="preview-device" aria-label="Размер предпросмотра"><option value="free">По размеру области</option><option value="phone">Телефон · 390 × 844</option></select><button id="preview-rotate" class="icon-button" type="button" aria-label="Повернуть экран телефона" aria-pressed="false" title="Повернуть горизонтально" hidden><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="5" width="8" height="14" rx="2"/><path d="M3 10a9 9 0 0 1 16-4m0-4v4h-4M21 14a9 9 0 0 1-16 4m0 4v-4h4"/></svg></button></div>
-        <span id="preview-changes" role="status" hidden>Есть изменения</span><button id="preview-restart" type="button" title="Запустить актуальный код · Ctrl+Enter" disabled>Запустить</button>
+        <span id="preview-changes" role="status" hidden>Есть изменения</span><button id="preview-restart" data-ai-icon="play" type="button" title="Запустить актуальный код · Ctrl+Enter" disabled>Запустить</button>
       </div>
       <div id="preview-empty" hidden>Нажмите «Запустить», чтобы проверить игру.</div>
       <section id="library-extraction" class="library-extraction panel-ui" aria-labelledby="library-extraction-title" hidden>
@@ -318,14 +318,14 @@
       <div class="dialog-actions panel-ui-footer"><button id="cancel-save" type="button" data-panel-icon="back" aria-label="Отмена"></button><button id="save-send" type="button" data-panel-icon="share" aria-label="Отправить HTML-файл" disabled></button><button id="confirm-save" class="ai-primary" type="submit" data-ai-icon="open">Сохранить</button><button type="button" class="panel-ui-theme" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div>
     </form>
   </section>
-  <dialog id="clear-dialog" aria-labelledby="clear-title">
+  <dialog class="panel-ui" id="clear-dialog" aria-labelledby="clear-title">
     <form id="clear-form">
       <h2 id="clear-title">Очистить код?</h2>
       <p class="dialog-copy">Весь код в поле будет удалён. Это действие нельзя отменить.</p>
       <div class="dialog-actions"><button id="cancel-clear" type="button">Отмена</button><button class="primary" type="submit">Очистить</button></div>
     </form>
   </dialog>
-  <dialog id="replace-dialog" aria-labelledby="replace-title">
+  <dialog class="panel-ui" id="replace-dialog" aria-labelledby="replace-title">
     <form method="dialog">
       <h2 id="replace-title">Заменить код?</h2>
       <p id="replace-copy" class="dialog-copy">Текущий код будет заменён и сохранён в истории версий. Для отдельной копии сохраните его HTML-файлом.</p>

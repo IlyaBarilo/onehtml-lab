@@ -25,6 +25,8 @@ function panelIcon(icon) {
     replace: '<path d="M4 7h13m-4-4 4 4-4 4M20 17H7m4-4-4 4 4 4"/>',
     replaceAll: '<path d="M4 5h16M4 19h16M4 9h13m-3-3 3 3-3 3M20 15H7m3-3-3 3 3 3"/>',
     fold: '<path d="M4 4h16M4 20h16m-12-12 4 4 4-4m-8 8 4-4 4 4"/>',
+    restart: '<path d="M3 10a9 9 0 1 1 2 8M3 4v6h6"/>',
+    play: '<path d="m8 4 12 8-12 8Z"/>',
     speed: '<path d="M3 18a9 9 0 1 1 18 0M12 13l4-5M5 14h2m10 0h2M12 4v2"/>',
     share: '<circle cx="6" cy="12" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><path d="m9 10 6-3m-6 7 6 3"/>',
     audio: '<path d="M9 17V5l11-2v12M9 8l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/>'

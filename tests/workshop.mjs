@@ -44,7 +44,7 @@ for (const [name, engine] of engines) {
         assert.equal(await page.locator('#help-open').getAttribute('aria-expanded'), 'true');
         await page.screenshot({ path: join(output, `${name}-${width}-help.png`) });
         await page.getByText('Без интернета', { exact: true }).click();
-        assert.match(await page.locator('details[open]').innerText(), /Поймай круг/);
+        assert.match(await page.locator('#help-panel details[open]').innerText(), /Поймай круг/);
         await page.locator('#help-close').click();
         assert(await page.locator('#code').isVisible());
         await page.locator('#help-open').click();

@@ -8,7 +8,8 @@ import { tmpdir } from 'node:os';
 const url = new URL('../onehtml-lab.html', import.meta.url).href;
 const output = join(tmpdir(), 'onehtml-lab-workspace');
 await mkdir(output, { recursive: true });
-const engines = process.argv.includes('--engines=chromium') ? [['chromium', chromium]] : [['chromium', chromium], ['webkit', webkit]];
+const requested=process.argv.find(arg=>arg.startsWith('--engines='))?.slice(10).split(',');
+const engines=[['chromium',chromium],['webkit',webkit]].filter(([name])=>!requested || requested.includes(name));
 const game = '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;min-height:100vh;display:grid;place-content:center;background:#eaf3ff;font:20px system-ui}button{padding:16px;font:inherit}</style></head><body><h1>Проверка игры</h1><button id="score">Счёт: 0</button><script>let n=0;document.querySelector("button").onclick=()=>document.querySelector("button").textContent="Счёт: "+(++n);window.ticks=0;setInterval(()=>window.ticks++,20);</script><!--\n' + 'Строка кода для проверки сохранения прокрутки и выделения.\n'.repeat(180) + '--></body></html>';
 
 async function assertFitsViewport(page, label) {
@@ -32,9 +33,38 @@ async function checkResourceToolbar(page, label) {
   await page.locator('#activity-close').click();
 }
 
+async function checkChrome(browser, name, width) {
+  const page=await browser.newPage({viewport:{width,height:740},hasTouch:width<900});await useNativeEditor(page);page.setDefaultTimeout(8000);
+  try {
+    await page.goto(url);await page.locator('#code').fill(game);
+    for(const engine of ['native','codemirror']) {
+      await page.locator('#expert-toggle').click();await page.locator('#edit-open').click();await page.locator('#editor-engine').selectOption(engine);
+      if(await page.locator('#edit-panel').isVisible())await page.locator('#edit-close').click();
+      await page.locator('#expert-toggle').click();
+      for(const dark of [false,true]) {
+        if((await page.locator('html').evaluate(el=>el.classList.contains('theme-dark')))!==dark)await page.locator('#theme-toggle').click();
+        for(const expert of [false,true]) {
+          if((await page.locator('#expert-toggle').getAttribute('aria-pressed'))!==String(expert))await page.locator('#expert-toggle').click();
+          const icons=await page.locator('.workspace-chrome button svg').evaluateAll(nodes=>nodes.filter(n=>n.getBoundingClientRect().width).map(n=>{const a=n.getBoundingClientRect(),b=n.closest('button').getBoundingClientRect();return {x:Math.abs(a.x+a.width/2-b.x-b.width/2),y:Math.abs(a.y+a.height/2-b.y-b.height/2),width:b.width,height:b.height};}));
+          assert(icons.every(p=>p.y<=.6 && p.width>=44 && p.height>=44),'Chrome buttons remain centered and touchable: '+JSON.stringify(icons));
+          const iconOnly=await page.locator('.workspace-chrome :is(.icon-button,.expert-icon-button) svg').evaluateAll(nodes=>nodes.filter(n=>n.getBoundingClientRect().width).map(n=>{const a=n.getBoundingClientRect(),b=n.closest('button').getBoundingClientRect();return Math.abs(a.x+a.width/2-b.x-b.width/2);}));assert(iconOnly.every(x=>x<=.6));
+          await assertFitsViewport(page,'Chrome');await page.screenshot({path:join(output,`${name}-${width}-${engine}-${dark?'dark':'light'}-${expert?'expert':'simple'}.png`)});
+        }
+        await page.locator('#help-open').click();
+        assert.equal(await page.locator('#help-panel .help-steps li').count(),6);
+        const help=await page.locator('#help-panel').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth,font:parseFloat(getComputedStyle(el.querySelector('.help-content')).fontSize),right:el.getBoundingClientRect().right,theme:el.querySelector('[data-panel-theme]').getBoundingClientRect().right}));assert(help.scroll<=help.width && help.font>=16 && help.right-help.theme<=16);
+        await page.locator('#help-panel .panel-body').evaluate(el=>{el.scrollTop=el.scrollHeight;});await page.screenshot({path:join(output,`${name}-${width}-${engine}-${dark?'dark':'light'}-help.png`)});
+        await page.locator('#help-close').click();assert.equal(await page.locator('#code').inputValue(),game);
+      }
+      if(await page.locator('#expert-toggle').getAttribute('aria-pressed')==='true')await page.locator('#expert-toggle').click();
+    }
+  } finally {await page.close();}
+}
+
 for (const [engineName, engine] of engines) {
   const browser = await engine.launch();
   try {
+    for(const width of [320,675,1365])await checkChrome(browser,engineName,width);
     for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 844, height: 390 }, { width: 1365, height: 900 }]) {
       const context = await browser.newContext({ viewport, hasTouch: viewport.width < 900, acceptDownloads: true });
       context.setDefaultTimeout(8000);
