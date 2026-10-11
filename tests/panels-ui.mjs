@@ -30,6 +30,16 @@ for(const [name,engine] of engines){
    assert(value.footer<=value.bottom+1&&value.right-value.theme<=16,JSON.stringify(value));assert(value.bodyHeight>100,JSON.stringify(value));
   }
   await page.locator('#examples-open').click();
+  const tabs=await page.locator('.example-category').evaluateAll(nodes=>nodes.map(node=>{const rect=node.getBoundingClientRect();return {left:rect.left,right:rect.right,top:rect.top,height:rect.height,icon:!!node.querySelector('svg')};}));
+  assert(tabs.every(tab=>tab.icon&&tab.left>=0&&tab.right<=width&&tab.height>=44),JSON.stringify(tabs));
+  assert(tabs.every(tab=>Math.abs(tab.top-tabs[0].top)<1),'All sections fit one row');
+  const device=page.locator('#example-platform-tabs');
+  await device.getByRole('tab',{name:'Компьютер',exact:true}).click();
+  assert.equal(await device.getByRole('tab',{name:'Компьютер',exact:true}).getAttribute('aria-selected'),'true');
+  await device.getByRole('tab',{name:'Компьютер',exact:true}).press('ArrowLeft');
+  assert.equal(await device.getByRole('tab',{name:'Телефон',exact:true}).getAttribute('aria-selected'),'true');
+  const deviceLayout=await device.evaluate(node=>{const rect=node.getBoundingClientRect(),search=document.querySelector('#example-search').getBoundingClientRect();return {top:rect.top,bottom:rect.bottom,searchTop:search.top,searchBottom:search.bottom};});
+  assert(deviceLayout.top<=deviceLayout.searchBottom&&deviceLayout.bottom>=deviceLayout.searchTop,'Device choice stays beside search');
   await page.locator('#example-search').fill('Поймай');assert.equal(await page.locator('.example-card').count(),1);
   const card=page.locator('[data-example-id="catch-circle"]');
   await card.getByRole('button',{name:'Задание',exact:true}).click();
