@@ -473,8 +473,11 @@ copyTextField.addEventListener('copy', event => {
 
 function renderExamples() {
   exampleList.replaceChildren();
-  for (const example of examples.filter(item => (item.category || 'games') === selectedExampleCategory &&
-    (selectedExampleCategory !== 'games' || item.platform === selectedPlatform))) {
+  const query = document.querySelector('#example-search').value.trim().toLocaleLowerCase('ru');
+  const visible = examples.filter(item => (item.category || 'games') === selectedExampleCategory &&
+    (selectedExampleCategory !== 'games' || item.platform === selectedPlatform) &&
+    `${item.title} ${item.description}`.toLocaleLowerCase('ru').includes(query));
+  for (const example of visible) {
     const card = document.createElement('div');
     card.className = 'example-card';
     card.dataset.exampleId = example.id;
@@ -484,7 +487,8 @@ function renderExamples() {
     description.textContent = example.description;
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = 'Открыть копию';
+    panelIconButton(button, 'open', 'Открыть копию');
+    button.classList.add('example-open-copy');
     button.addEventListener('click', async () => {
       closeWorkspacePanels();
       if (!await confirmReplacement(example.code)) return;
@@ -502,7 +506,7 @@ function renderExamples() {
     actions.className = 'example-actions';
     actions.append(button);
     if (example.id === 'glb-model') {
-      const modelButton = document.createElement('button'); modelButton.type = 'button'; modelButton.textContent = 'Скачать GLB';
+      const modelButton = document.createElement('button'); modelButton.type = 'button'; panelIconButton(modelButton, 'download', 'Скачать GLB');
       modelButton.addEventListener('click', () => {
         try {
           const data = /data-model-src="data:model\/gltf-binary;base64,([A-Za-z\d+/=]+)"/.exec(example.code)?.[1];
@@ -512,9 +516,17 @@ function renderExamples() {
       });
       actions.append(modelButton);
     }
-    card.append(title, description, actions);
+    const content = document.createElement('div'); content.className = 'example-details';
+    content.append(title, description);
+    card.append(content, actions);
     appendExampleLesson(card, actions, example);
     exampleList.append(card);
+  }
+  document.querySelector('#example-count').textContent = `Показано: ${formatUIInteger(visible.length)}`;
+  if (!visible.length) {
+    const empty = document.createElement('p'); empty.className = 'panel-ui-empty';
+    empty.textContent = 'Ничего не найдено. Измените запрос или выберите другой раздел.';
+    exampleList.append(empty);
   }
   updateExampleLessonControls();
 }
@@ -551,6 +563,7 @@ for (const tab of document.querySelectorAll('.platform-tab')) {
 for (const tab of document.querySelectorAll('.example-category')) {
   tab.addEventListener('click', () => setExampleCategory(tab.dataset.exampleCategory));
 }
+initPanelUI();
 renderExamples();
 aiButton.addEventListener('click', () => openAiPrompts());
 examplesButton.addEventListener('click', () => { if (expertMode && !modeBusy) showWorkspacePanel(examplesDialog); });
@@ -757,6 +770,9 @@ async function refreshLibraryExtraction() {
       const title = document.createElement('strong');
       title.textContent = row.title;
       item.append(title);
+      if (row.filename) {
+        const filename = document.createElement('span'); filename.className = 'extraction-file'; filename.textContent = row.filename; item.append(filename);
+      }
       if (row.removable) {
         const size = document.createElement('span');
         size.className = 'extraction-size';

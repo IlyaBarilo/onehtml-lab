@@ -1,6 +1,6 @@
 export const browserGroups = Object.freeze({
   core: ['browser', 'workspace', 'editor', 'alternative-editor', 'syntax', 'desktop'],
-  ai: ['ai-prompts', 'ai-session', 'preview-picker', 'quality', 'workshop', 'comparison-game', 'learning-examples'],
+  ai: ['ai-prompts', 'ai-session', 'preview-picker', 'quality', 'workshop', 'comparison-game', 'learning-examples', 'panels-ui'],
   libraries: ['stage7', 'network', 'library-bundle', 'module-libraries', 'library-preparation', 'library-ui', 'library-download-errors', 'library-mirrors', 'library-cache', 'model-assets', 'physics-libraries', 'babylon-libraries', 'native-technologies', 'tone-download', 'tone-libraries', 'pixi-libraries', 'additional-libraries', 'diagnostics', 'game-storage', 'code-guide'],
   media: ['media-assets', 'media-examples', 'readiness', 'draft', 'previous', 'reliability']
 });

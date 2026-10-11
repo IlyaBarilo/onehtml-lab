@@ -212,15 +212,17 @@
         <span id="preview-changes" role="status" hidden>Есть изменения</span><button id="preview-restart" type="button" title="Запустить актуальный код · Ctrl+Enter" disabled>Запустить</button>
       </div>
       <div id="preview-empty" hidden>Нажмите «Запустить», чтобы проверить игру.</div>
-      <section id="library-extraction" class="library-extraction" aria-labelledby="library-extraction-title" hidden>
-        <div class="history-heading library-extraction-heading"><h2 id="library-extraction-title">Библиотеки в коде</h2><button id="library-extract-close" type="button" aria-label="Закрыть преобразование библиотек" title="Вернуться к редактору">✕</button></div>
-        <div class="library-extraction-body">
-          <p class="library-extraction-intro">Встройте библиотеки в HTML или замените их ссылками, чтобы сократить код для ИИ.</p>
+      <section id="library-extraction" class="library-extraction panel-ui" aria-labelledby="library-extraction-title" hidden>
+        <div class="history-heading library-extraction-heading"><h2 id="library-extraction-title">Библиотеки в коде</h2><button type="button" data-panel-help="library-conversion-help" data-panel-icon="help" aria-label="О преобразовании библиотек" aria-expanded="false" aria-controls="library-conversion-help"></button><button id="library-extract-close" type="button" data-panel-icon="close" aria-label="Закрыть преобразование библиотек" title="Вернуться к редактору"></button></div>
+        <div class="panel-ui-controls">
+          <p id="library-conversion-help" class="panel-ui-help" hidden>Встройте библиотеки в HTML или замените их ссылками, чтобы сократить код для ИИ. Изменения появятся в редакторе после нажатия «Применить». Предыдущая версия останется в истории.</p>
           <div class="platform-tabs" role="group" aria-label="Способ подключения библиотек"><button class="platform-tab library-extraction-mode" type="button" data-library-mode="embed" aria-pressed="false">Встроить</button><button class="platform-tab library-extraction-mode" type="button" data-library-mode="cdn" aria-pressed="true">CDN</button><button class="platform-tab library-extraction-mode" type="button" data-library-mode="files" aria-pressed="false">Файлы рядом</button></div>
           <p id="library-placement-hint" class="diagnostic-note"></p>
+        </div>
+        <div class="library-extraction-body">
           <ul id="library-extraction-list" class="library-extraction-list"></ul>
         </div>
-        <div class="library-extraction-footer"><p id="library-extraction-summary" role="status" aria-live="polite"></p><div class="library-conversion-actions"><button id="library-convert-load" type="button" hidden>Получить копии</button><button id="library-extract-apply" type="button" disabled>Применить</button></div></div>
+        <div class="library-extraction-footer panel-ui-footer"><p id="library-extraction-summary" role="status" aria-live="polite"></p><div class="library-conversion-actions"><button id="library-convert-load" type="button" hidden>Получить копии</button><button id="library-extract-apply" class="panel-ui-primary" type="button" disabled>Применить</button></div><button type="button" class="panel-ui-theme" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div>
       </section>
       <section id="activity-panel" class="work-panel" aria-labelledby="activity-title" hidden>
         <div class="panel-heading"><h2 id="activity-title">Диагностика</h2><button id="activity-close" type="button" aria-label="Закрыть сообщения">✕</button></div>
@@ -422,22 +424,28 @@
     </div>
     <div class="ai-answer-footer"><button id="ai-answer-compare" type="button" disabled>Сравнить</button><button id="ai-answer-apply" type="button" disabled>Заменить код</button></div>
   </section>
-  <section id="examples-dialog" class="work-panel guide-panel" aria-labelledby="examples-title" hidden>
-    <div class="panel-heading"><h2 id="examples-title">Примеры</h2><button id="examples-close" type="button" aria-label="Закрыть примеры">✕</button></div>
-    <div class="panel-body">
+  <section id="examples-dialog" class="work-panel guide-panel panel-ui" aria-labelledby="examples-title" hidden>
+    <div class="panel-heading"><h2 id="examples-title">Примеры</h2><button type="button" data-panel-help="example-guide" data-panel-icon="help" aria-label="Как использовать примеры" aria-expanded="false" aria-controls="example-guide"></button><button id="examples-close" type="button" data-panel-icon="close" aria-label="Закрыть примеры"></button></div>
+    <div class="panel-ui-controls">
     <div class="example-categories" role="tablist" aria-label="Раздел примеров">
       <button class="example-category" type="button" role="tab" data-example-category="games" aria-selected="true">Готовые игры</button>
       <button class="example-category" type="button" role="tab" data-example-category="media" aria-selected="false">Мультимедиа</button>
       <button class="example-category" type="button" role="tab" data-example-category="fix" aria-selected="false">Исправление ошибок</button>
       <button class="example-category" type="button" role="tab" data-example-category="tests" aria-selected="false">Тесты</button>
     </div>
-    <p id="example-guide">Откройте копию примера, измените код и сохраните свою версию.</p>
+    <p id="example-guide" class="panel-ui-help" hidden>Откройте копию примера, измените код и сохраните свою версию.</p>
+    <div class="example-tools">
+    <label class="panel-ui-search"><span data-panel-icon="search"></span><input id="example-search" type="search" placeholder="Найти в разделе" aria-label="Найти пример в разделе"></label>
     <div id="example-platform-tabs" class="platform-tabs" role="tablist" aria-label="Устройство для примеров">
       <button class="platform-tab" type="button" role="tab" data-platform="mobile" aria-selected="true">Телефон</button>
       <button class="platform-tab" type="button" role="tab" data-platform="desktop" aria-selected="false">Компьютер</button>
     </div>
+    </div>
+    </div>
+    <div class="panel-body">
     <div id="example-list" class="example-list"></div>
     </div>
+    <div class="panel-ui-footer"><span id="example-count" role="status" aria-live="polite"></span><button type="button" class="panel-ui-theme" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div>
   </section>
   <section id="copy-dialog" class="work-panel" aria-labelledby="copy-title" hidden>
     <div class="panel-heading"><h2 id="copy-title">Скопируйте текст</h2><button id="copy-close" type="button" aria-label="Закрыть копирование">✕</button></div>

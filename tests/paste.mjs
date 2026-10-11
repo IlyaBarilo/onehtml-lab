@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { runInNewContext } from 'node:vm';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const source = await readFile(join(root, 'src/app.js'), 'utf8');
+const source = (await Promise.all(['format.js', 'app.js'].map(file => readFile(join(root, 'src', file), 'utf8')))).join('\n');
 
 async function createApp(clipboard) {
   const elements = new Map();
@@ -19,6 +19,7 @@ async function createApp(clipboard) {
       showModal() { this.open = true; },
       close() { this.open = false; },
       replaceChildren() {},
+      append() {},
       focus() { this.focused = true; },
       blur() {},
       select() { this.selected = true; }
@@ -26,7 +27,7 @@ async function createApp(clipboard) {
     return elements.get(selector);
   }
   const sandbox = {
-    document: { querySelector: element, querySelectorAll: () => [], addEventListener() {} },
+    document: { querySelector: element, querySelectorAll: () => [], createElement: element, addEventListener() {} },
     window: { addEventListener() {} },
     navigator: { clipboard },
     // Clipboard unit tests isolate layout; workspace transitions have browser coverage.
@@ -35,7 +36,7 @@ async function createApp(clipboard) {
     initAiPrompts() {}, updateAiControls() {}, openAiPrompts() {},
     initPreviewPicker() {}, updatePreviewPicker() {}, cancelPreviewPicker() {}, updateQualityState() {},
     setAiProject() {}, saveAiPromptSettings() {}, loadAiPromptSettings() {},
-    updateExampleLessonControls() {},
+    initPanelUI() {}, updateExampleLessonControls() {},
     updateCodeGuide() {},
     initDesktopWorkspace() {}, sizeDesktopPreview() {}, isSplitWorkspace: () => false,
     initDiagnostics() {}, updateDiagnostics() {}, beginDiagnosticRun() {},

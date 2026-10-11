@@ -61,8 +61,8 @@ function appendExampleLesson(card, actions, example) {
   if (!lesson) return;
   const toggle = document.createElement('button');
   toggle.type = 'button';
-  toggle.textContent = 'Задание';
   toggle.className = 'example-task-toggle';
+  panelIconButton(toggle, 'lesson', 'Задание');
   const body = document.createElement('section');
   body.className = 'example-task';
   body.id = `lesson-${example.id}`;
