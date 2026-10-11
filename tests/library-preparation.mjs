@@ -1,3 +1,4 @@
+import {libraryMenu,libraryTab} from './library-ui-helpers.mjs';
 import assert from 'node:assert/strict';
 import { readFile, mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -26,7 +27,7 @@ const engines=process.argv.includes('--engines=chromium')?[['chromium',chromium]
 async function panel(page) {
   if(await page.locator('#expert-toggle').getAttribute('aria-pressed')!=='true')await page.locator('#expert-toggle').click();
   if(await page.locator('#activity-panel').isHidden())await page.locator('#diagnostic-open').click();await page.locator('[data-diagnostic-tab="libraries"]').click();
-  if(!await page.locator('#library-preparation').evaluate(e=>e.open))await page.locator('#library-preparation summary').click();
+  await libraryTab(page,'catalog');
 }
 async function settled(page) {
   try {await page.waitForFunction(()=>!document.querySelector('#library-download-all').disabled);}
@@ -39,13 +40,13 @@ async function importFiles(page,files) {
 }
 async function importArchive(page,file) {
   await page.evaluate(()=>{window.preparationArchiveChanged=false;document.querySelector('#library-preparation-archive').addEventListener('change',()=>{window.preparationArchiveChanged=true;},{once:true});});
-  const choosing=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Загрузить из архива…',exact:true}).click();
+  await libraryMenu(page,'import');const choosing=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Загрузить из архива…',exact:true}).click();
   const chooser=await choosing;assert.equal(chooser.isMultiple(),false);await chooser.setFiles(file);
   await page.waitForFunction(()=>window.preparationArchiveChanged);await settled(page);
   assert.equal(await page.locator('#library-preparation-archive').inputValue(),'','The archive picker can load the same file again');
 }
 async function archive(page,all=true) {
-  await page.locator('#library-export-format').selectOption('zip');const waiting=page.waitForEvent('download');
+  await libraryMenu(page,'export');await page.locator('#library-export-format').selectOption('zip');const waiting=page.waitForEvent('download');
   await page.locator(all?'#library-export-all':'#library-export-selected').click();const download=await waiting;
   assert.equal(download.suggestedFilename(),'onehtml-libraries.zip');return {name:download.suggestedFilename(),mimeType:'application/zip',buffer:await readFile(await download.path())};
 }
@@ -86,24 +87,24 @@ try {
         assert.equal(await page.locator('#library-experimental-list li').count(),1);
         assert.match(await page.locator('#library-experimental-list').innerText(),/p5\.js.*Экспериментальная/s);
         assert(!await page.locator('#library-include-experimental').isChecked(),'Experimental bulk download must be off by default');
-        assert(await page.getByRole('button',{name:'Скачать все библиотеки',exact:true}).isEnabled());
-        assert(await page.getByRole('button',{name:'Сохранить все библиотеки',exact:true}).isDisabled());
-        assert(await page.evaluate(()=>document.querySelector('#library-export-all').getBoundingClientRect().bottom<=document.querySelector('#library-preparation-list').getBoundingClientRect().top),'Saving the complete set must be available before the long catalog');
-        await page.locator('#library-download-all').click();await settled(page);
+        await libraryMenu(page,'more');assert(await page.getByRole('button',{name:'Скачать все библиотеки',exact:true}).isEnabled());
+        await libraryMenu(page,'export');assert(await page.getByRole('button',{name:'Сохранить все библиотеки',exact:true}).isDisabled());
+        assert(await page.locator('#library-export-open').isVisible(),'Export stays reachable without scrolling the catalog');
+        await libraryMenu(page,'more');await page.locator('#library-download-all').click();await settled(page);
         assert.match(await page.locator('#library-preparation-status').innerText(),/Не загружены.*Matter/s,JSON.stringify(requests));
         assert.equal(await page.locator('#diagnostic-cache-list li').count(),17);
         assert(!requests.some(url=>url.includes('p5@')||url.includes('processing/p5.js')),'Download all must exclude experimental p5 and its source files');
         failMatter=false;const check=page.locator('input[data-library-key="matter-js@0.20.0"]');await check.check();
         await page.locator('#library-download-selected').click();await settled(page);assert.equal(await page.locator('#diagnostic-cache-list li').count(),18);
-        const before=requests.length;await page.locator('#library-download-all').click();await settled(page);assert.equal(requests.length,before,'Prepared copies must not be downloaded again');
-        await page.locator('#library-include-experimental').check();await page.locator('#library-download-all').click();await settled(page);
-        assert.equal(await page.locator('#diagnostic-cache-list li').count(),19,'Opting in must include experimental p5 in bulk download');await page.locator('#library-include-experimental').uncheck();
+        const before=requests.length;await libraryMenu(page,'more');await page.locator('#library-download-all').click();await settled(page);assert.equal(requests.length,before,'Prepared copies must not be downloaded again');
+        await libraryMenu(page,'more');await page.locator('#library-include-experimental').check();await libraryMenu(page,'more');await page.locator('#library-download-all').click();await settled(page);
+        assert.equal(await page.locator('#diagnostic-cache-list li').count(),19,'Opting in must include experimental p5 in bulk download');await libraryMenu(page,'more');await page.locator('#library-include-experimental').uncheck();await page.keyboard.press('Escape');
         const experimental=page.locator('input[data-library-key="p5@2.3.4"]');await experimental.check();const cached=requests.length;await page.locator('#library-download-selected').click();await settled(page);assert.equal(requests.length,cached);await experimental.uncheck();
         assert.equal(await page.locator('#code').inputValue(),game,'Preparation must not edit the game');
         assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Catalog must fit the phone');
         await page.locator('#activity-close').click();await page.locator('#theme-toggle').click();await panel(page);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
         const chosenPack=await archive(page,false),pack=await archive(page);assert(pack.buffer.length>10000,'Full licenses and NOTICE must be transported');
-        await page.locator('#library-export-format').selectOption('files');await page.locator('#library-export-all').click();await settled(page);
+        await libraryMenu(page,'export');await page.locator('#library-export-format').selectOption('files');await page.locator('#library-export-all').click();await settled(page);
         const count=await page.locator('#library-export-file-list button').count();assert(count>22);
         const individual=storedFiles(pack.buffer);assert.equal(individual.length,count);
         for(const index of [0,1]) {
@@ -142,7 +143,7 @@ try {
         await page.addInitScript(()=>Object.defineProperty(window,'indexedDB',{get(){throw Error('storage disabled');}}));
         await page.goto(new URL('onehtml-lab.html',root).href);await panel(page);
         // A raw import must be tied to the explicit catalog version, as a real file-picker action is.
-        const chooser=page.waitForEvent('filechooser');await page.locator('#library-preparation-list li').filter({has:page.locator('input[data-library-key="three@0.160.0"]')}).getByRole('button').click();
+        await page.locator('#library-preparation-list li').filter({has:page.locator('input[data-library-key="three@0.160.0"]')}).locator('.library-row-details').click();const chooser=page.waitForEvent('filechooser');await page.locator('.library-detail-content:visible').getByRole('button',{name:'Установить из файлов…',exact:true}).click();
         await (await chooser).setFiles([{name:'three.min.js',mimeType:'text/javascript',buffer:Buffer.from(classic)},{name:'LICENSE',mimeType:'text/plain',buffer:Buffer.from(license)}]);await settled(page);
         assert.match(await page.locator('#library-preparation-status').innerText(),/Только этот сеанс/);assert.equal(await page.locator('#diagnostic-cache-list li').count(),1);
         await context.close();console.log('Raw local JS + license and unavailable-storage fallback passed.');

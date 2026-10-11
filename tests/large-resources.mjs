@@ -82,7 +82,7 @@ for(const [name,engine] of engines) {
       assert.match(await page.locator('#local-access-status').innerText(),/Большой объём/);
       await page.locator('#run').click();
       await page.locator('#diagnostic-open').click();await page.locator('[data-diagnostic-tab="libraries"]').click();
-      await page.locator('#diagnostic-cache-list .resource-warning').first().waitFor();
+      await page.locator('#library-tab-saved').click();await page.locator('#diagnostic-cache-list .resource-warning').first().waitFor();
       await page.locator('#activity-close').click();
       await code(page,'<!doctype html><img id="photo" src="big.png"><img src="big.png"><img src="big.png">');
       await resources(page);

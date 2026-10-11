@@ -35,52 +35,19 @@ function preparationDependencies(keys) {
 function preparationMessage(text) { document.querySelector('#library-preparation-status').textContent = text; }
 function preparationControls() {
   const blocked = diagnosticCacheBusy || Boolean(pendingLibraryAction);
-  for (const element of document.querySelectorAll('#library-preparation button, #library-preparation input, #library-preparation select')) element.disabled = blocked;
+  for (const element of document.querySelectorAll('#library-preparation [data-library-mutation], #library-preparation input[type=checkbox], #library-preparation select, #library-download-all, #library-import-archive, #library-import-pack, #library-export-files-all, #library-export-file-list button')) element.disabled = blocked || element.hasAttribute('data-library-downloaded') || (element.hasAttribute('data-library-ready') && !diagnosticReportReady);
   document.querySelector('#library-download-selected').disabled = blocked || !preparationSelection.size;
   document.querySelector('#library-export-selected').disabled = blocked || ![...preparationSelection].some(key=>libraryCache.has(key));
   document.querySelector('#library-export-all').disabled = blocked || !libraryCache.size;
   const cancel = document.querySelector('#library-preparation-cancel');
   cancel.hidden = !preparationController; cancel.disabled = !preparationController;
+  document.querySelector('#library-download-selected').hidden = Boolean(preparationController);
+  updateLibraryBrowserSelection();
 }
-function renderLibraryPreparation() {
-  const list = document.querySelector('#library-preparation-list'); if (!list) return;
-  const catalog = [...preparationCatalog, ...experimentalPreparationCatalog];
-  for (const entry of libraryCache.values()) if (!catalog.some(([key])=>key===entry.key)) catalog.push([entry.key,'Сохранённая копия.']);
-  const rows = catalog.map(([key,note]) => {
-    const ref = libraryCatalogReference(key), entry = libraryCache.get(key);
-    const row = document.createElement('li'); row.className = 'library-preparation-row';
-    const label = document.createElement('label'), checkbox = document.createElement('input');
-    checkbox.type = 'checkbox'; checkbox.dataset.libraryKey = key; checkbox.checked = preparationSelection.has(key);
-    checkbox.addEventListener('change', () => { if(checkbox.checked) preparationSelection.add(key); else preparationSelection.delete(key); preparationControls(); });
-    const text = document.createElement('span'), name = document.createElement('strong'), detail = document.createElement('span');
-    name.textContent = ref?.title || entry?.title || key;
-    const bytes = entry ? diagnosticCacheBytes(entry) : ref?.downloadBytes;
-    const state = entry?.cacheError ? 'Копия требует проверки или повторной загрузки' : entry ? persistedLibraries.get(key)===entry ? 'В браузере' : 'Только этот сеанс' : 'Не загружена';
-    detail.textContent = `${bytes ? diagnosticSize(bytes) : 'Размер неизвестен'} · ${state}\n${note}`;
-    text.append(name, detail); label.append(checkbox,text); row.append(label);
-    if (ref) {
-      const button = diagnosticButton('Из файлов…', () => {
-        if(diagnosticCacheBusy || pendingLibraryAction) return;
-        preparationRawKey = key;
-        preparationMessage(`Выберите файлы именно для «${ref.title}»: JS и полный LICENSE${libraryNeedsNotice(ref) ? ' и NOTICE' : ''}. Для модулей — все зависимости с исходными именами.`);
-        document.querySelector('#library-preparation-raw').click();
-      });
-      row.append(button);
-    }
-    if (key === 'p5@2.3.4' && entry) row.append(diagnosticButton('Исходники p5', async () => {
-      try { const copy = await readCachedLibrary({ key }), bytes = p5SourceArchive(copy); if (!bytes) throw Error();
-        const url = URL.createObjectURL(new Blob([bytes], { type: 'application/gzip' })), link = document.createElement('a'); link.href = url; link.download = 'p5-source-2.3.4.tar.gz'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 30000);
-      } catch { preparationMessage('Не удалось прочитать исходники p5.js. Загрузите копию библиотеки заново.'); }
-    }));
-    return row;
-  });
-  const experimental = new Set(experimentalPreparationCatalog.map(([key])=>key));
-  list.replaceChildren(...rows.filter((row,index)=>!experimental.has(catalog[index][0])));
-  document.querySelector('#library-experimental-list').replaceChildren(...rows.filter((row,index)=>experimental.has(catalog[index][0])));
-  preparationControls();
-}
+function renderLibraryPreparation() { renderLibraryBrowser(); preparationControls(); }
 async function preparationOperation(action) {
   if (!expertMode || diagnosticCacheBusy || pendingLibraryAction) return;
+  closeLibraryMenu();
   diagnosticCacheBusy = true; renderDiagnosticCache();
   try { await action(); }
   catch(error) { preparationMessage(error?.message || 'Не удалось подготовить библиотеки.'); }
@@ -129,9 +96,9 @@ function preparationFileDownload(file) {
   const type = /\.js$/i.test(file.name) ? 'text/javascript' : /\.json$/i.test(file.name) ? 'application/json' : 'text/plain';
   downloadBlob(new Blob([file.bytes],{type}),file.name);
 }
-async function preparationExport(all) {
+async function preparationExport(all, explicitKeys = null) {
   await preparationOperation(async () => {
-    const keys = all ? [...libraryCache.keys()] : preparationDependencies([...preparationSelection]);
+    const keys = explicitKeys ? preparationDependencies(explicitKeys) : all ? [...libraryCache.keys()] : preparationDependencies([...preparationSelection]);
     if(!keys.length) throw Error('Выберите сохранённые библиотеки.');
     preparationMessage('Читаю выбранные сохранённые библиотеки…');
     const entries = [];
@@ -152,11 +119,13 @@ async function preparationExport(all) {
       list.replaceChildren(...files.map(file => { const row=document.createElement('li');
         row.append(diagnosticButton(`${file.name} · ${diagnosticSize(file.bytes.length)}`,()=>preparationFileDownload(file))); return row; }));
       document.querySelector('#library-export-files').hidden = false;
+      document.querySelector('#library-export-files').scrollIntoView({ block: 'nearest' });
       preparationMessage(`${formatUIInteger(files.length)} файлов · ${diagnosticSize(size)}. Скачайте их в одну папку. Для установки выберите манифест вместе со всеми файлами.${warning ? ' ' + warning : ''}`);
     }
   });
 }
 function initLibraryPreparation() {
+  initLibraryBrowser();
   document.querySelector('#library-download-selected').addEventListener('click',()=>void preparationDownload([...preparationSelection]));
   document.querySelector('#library-download-all').addEventListener('click',()=>void preparationDownload([
     ...preparationCatalog, ...(document.querySelector('#library-include-experimental').checked ? experimentalPreparationCatalog : [])

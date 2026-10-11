@@ -171,24 +171,9 @@ function diagnosticLibraryDescription(item) {
 }
 
 function renderDiagnosticLibraries(rows) {
-  const inspectedCode = diagnosticSnapshot?.code;
-  const list = document.querySelector('#diagnostic-library-list');
   document.querySelector('#diagnostic-library-note').textContent = rows.length
     ? 'Подключения в текущем тексте редактора. Динамические загрузки из JavaScript не разбираются.'
     : 'Подключений библиотек в HTML не найдено. Динамические загрузки из JavaScript не разбираются.';
-  list.replaceChildren(...rows.map(item => {
-    const row = diagnosticRow(item.title, diagnosticLibraryDescription(item));
-    appendResourceWarning(row, resourceSizeWarning(item.bytes, 'library'));
-    if (item.reference && !item.usedKey) {
-      const ref = item.reference;
-      row.append(diagnosticButton(ref.url ? 'Загрузить…' : 'Выбрать файл…', () => {
-        if (diagnosticCacheBusy) return;
-        if (!diagnosticReportReady || inspectedCode !== codeField.value) { diagnosticSnapshot = null; updateDiagnostics(); return; }
-        requestLibraries({ missingLibraries: [ref] }, 'inspect');
-      }));
-    }
-    return row;
-  }));
   renderDiagnosticCache();
 }
 
@@ -199,19 +184,11 @@ function renderDiagnosticCache() {
     ? `${formatUIInteger(entries.length)} копий · JS и лицензии: ${diagnosticSize(total)}${resourceSizeWarning(total, 'cache') ? ' · ' + resourceSizeWarning(total, 'cache') : ''}` : 'Сохранённых копий нет.';
   const blocked = diagnosticCacheBusy || Boolean(pendingLibraryAction) || !diagnosticReportReady;
   document.querySelector('#diagnostic-cache-clear').disabled = !entries.length || blocked;
-  document.querySelector('#diagnostic-cache-list').replaceChildren(...entries.map(entry => {
-    const used = diagnosticLibraries.some(row => row.usedKey === entry.key);
-    const persisted = persistedLibraries.get(entry.key) === entry;
-    const row = diagnosticRow(entry.title || entry.filename || 'Библиотека',
-      `${diagnosticSize(diagnosticCacheBytes(entry))} · ${persisted ? 'В браузере' : 'Только этот сеанс'}${used ? ' · Нужна текущему коду' : ''}\n${entry.sourceUrl || entry.localPath || entry.originalUrl || entry.filename || ''}${entry.cacheError ? '\n' + entry.cacheError : ''}`);
-    appendResourceWarning(row, resourceSizeWarning(diagnosticCacheBytes(entry), 'library'));
-    const button = diagnosticButton('Удалить', () => confirmDiagnosticDelete([entry]));
-    button.disabled = blocked; row.append(button); return row;
-  }));
   renderLibraryPreparation();
 }
 
 function confirmDiagnosticDelete(entries) {
+  closeLibraryMenu();
   if (diagnosticCacheBusy || pendingLibraryAction || !diagnosticReportReady || diagnosticSnapshot?.code !== codeField.value) return;
   diagnosticDelete = entries;
   const used = entries.some(entry => diagnosticLibraries.some(row => row.usedKey === entry.key));
@@ -249,6 +226,9 @@ function setDiagnosticTab(tab) {
   diagnosticTab = expertMode && ['libraries', 'resources', 'speed', 'quality'].includes(tab) ? tab : 'errors';
   for (const name of ['errors', 'libraries', 'resources', 'speed', 'quality']) document.querySelector(`#diagnostic-${name}`).hidden = diagnosticTab !== name;
   for (const button of document.querySelectorAll('[data-diagnostic-tab]')) button.setAttribute('aria-pressed', String(button.dataset.diagnosticTab === diagnosticTab));
+  activityPanel.classList.toggle('library-screen', diagnosticTab === 'libraries');
+  document.querySelector('#activity-title').textContent = diagnosticTab === 'libraries' ? 'Библиотеки' : 'Диагностика';
+  closeLibraryMenu();
 }
 
 function openDiagnostics(tab = 'errors') {

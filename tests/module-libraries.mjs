@@ -163,7 +163,7 @@ try {
         await page.waitForFunction(()=>!document.querySelector('#diagnostic-copy').disabled);
         const list=await page.locator('#diagnostic-library-list').innerText();
         assert.match(list,/three-r180-three\.module\.js/);assert.match(list,/three-r180-three\.core\.js/);
-        assert.equal(await page.locator('#diagnostic-library-list .diagnostic-library-row').count(),2,'Each relative module file must have its own size');
+        assert.equal(await page.locator('#diagnostic-library-list .library-browser-row').count(),2,'Each relative module file must have its own size');
         await page.locator('#activity-close').click();
         await page.locator('#save').click();await page.locator('#save-libraries-mode').selectOption('files');
         assert.match(await page.locator('#save-libraries-hint').innerText(),/HTTP.*без сервера/);

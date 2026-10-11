@@ -1,3 +1,4 @@
+import {libraryMenu,libraryTab} from './library-ui-helpers.mjs';
 import { useNativeEditor } from './native-editor.mjs';
 import assert from 'node:assert/strict';
 import { chromium, webkit } from 'playwright';
@@ -24,9 +25,11 @@ if (process.argv.includes('--http')) {
 }
 const engines = process.argv.includes('--engines=chromium') ? [['chromium', chromium]] : [['chromium', chromium], ['webkit', webkit]];
 async function open(page, tab = 'errors') {
+  if(await page.locator('#expert-toggle').getAttribute('aria-pressed')!=='true')await page.locator('#expert-toggle').click();
   if (await page.locator('#activity-panel').isHidden()) await page.locator('#diagnostic-open').click();
   await page.locator(`[data-diagnostic-tab="${tab}"]`).click();
   await page.waitForFunction(() => !document.querySelector('#diagnostic-copy').disabled);
+  if(tab==='libraries')await libraryTab(page,'code');
 }
 async function close(page) { await page.locator('#activity-close').click(); }
 async function cacheCount(page, count) { await page.waitForFunction(n => document.querySelectorAll('#diagnostic-cache-list > li').length === n, count); }
@@ -81,12 +84,12 @@ try {
           assert.match(await page.locator('#diagnostic-library-list').innerText(), /Подмена не поддерживается/);
           assert.match(await page.locator('#diagnostic-library-list > li').filter({ hasText: 'custom.js' }).innerText(), /Файл: custom\.js · \(нет данных\)/);
           assert.equal(requests, 0, 'Inspection must not download or execute source');
-          await page.locator('#diagnostic-library-list > li').filter({ hasText: 'Three.js' }).getByRole('button').click();
+          await page.locator('#diagnostic-library-list > li').filter({ hasText: 'Three.js' }).getByRole('button',{name:'Загрузить…',exact:true}).click();
           await page.locator('#library-download').click();
           await cacheCount(page, 1);
           assert.equal(requests, 1);
           assert.match(await page.locator('#diagnostic-cache-list').innerText(), /Нужна текущему коду/);
-          await page.locator('#diagnostic-library-list > li').filter({ hasText: 'custom.js' }).getByRole('button').click();
+          await page.locator('#diagnostic-library-list > li').filter({ hasText: 'custom.js' }).getByRole('button',{name:'Выбрать файл…',exact:true}).click();
           await page.locator('#library-files').setInputFiles([
             { name: 'custom.js', mimeType: 'text/javascript', buffer: Buffer.from('window.custom=true;') },
             { name: 'LICENSE', mimeType: 'text/plain', buffer: Buffer.from(license) }
@@ -107,14 +110,14 @@ try {
           await source(page, fixture); await open(page, 'libraries');
           // Transaction failure must leave both memory and persistent data intact.
           await page.evaluate(() => { window.originalDelete = IDBObjectStore.prototype.delete; let count = 0; IDBObjectStore.prototype.delete = function(...args) { if (++count === 2) throw new Error('denied'); return window.originalDelete.apply(this, args); }; });
-          await page.locator('#diagnostic-cache-clear').click();
+          await libraryMenu(page,'more');await page.locator('#diagnostic-cache-clear').click();
           await page.locator('#diagnostic-delete-yes').click();
           await page.waitForFunction(() => document.querySelector('#diagnostic-cache-feedback').textContent.includes('Не удалось'));
           await cacheCount(page, 2);
           await page.evaluate(() => { IDBObjectStore.prototype.delete = window.originalDelete; });
           await page.reload(); await page.waitForFunction(() => !document.querySelector('#code').disabled);
           await open(page, 'libraries'); await cacheCount(page, 2);
-          await page.locator('#diagnostic-cache-clear').click(); await page.locator('#diagnostic-delete-no').click(); await cacheCount(page, 2);
+          await libraryMenu(page,'more');await page.locator('#diagnostic-cache-clear').click(); await page.locator('#diagnostic-delete-no').click(); await cacheCount(page, 2);
           await source(page, game);
           await page.locator('#run').click();
           const element = await page.locator('#preview > iframe').elementHandle();
@@ -138,7 +141,7 @@ try {
           await page.screenshot({ path: join(output, `${name}-${width}-errors.png`) });
           // Cache deletion never restarts the frame or changes editor text.
           await open(page, 'libraries');
-          await page.locator('#diagnostic-cache-list > li').filter({ hasText: 'Three.js' }).getByRole('button').click();
+          await libraryTab(page,'saved');await page.locator('#diagnostic-cache-list > li').filter({ hasText: 'Three.js' }).getByRole('button',{name:'Удалить',exact:true}).click();
           await page.locator('#diagnostic-delete-yes').click(); await cacheCount(page, 1);
           assert(await element.evaluate(el => el.isConnected));
           assert((await frame.evaluate(() => ticks)) > 0);
@@ -165,7 +168,7 @@ try {
           assert(await page.locator('#error-ai').isDisabled());
           assert(await page.locator('#error-line').isHidden());
           await open(page, 'libraries');
-          await page.locator('#diagnostic-cache-clear').click(); await page.locator('#diagnostic-delete-yes').click(); await cacheCount(page, 0);
+          await libraryMenu(page,'more');await page.locator('#diagnostic-cache-clear').click(); await page.locator('#diagnostic-delete-yes').click(); await cacheCount(page, 0);
           await page.reload(); await page.waitForFunction(() => !document.querySelector('#code').disabled);
           await open(page, 'libraries'); await cacheCount(page, 0);
           assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
@@ -197,14 +200,14 @@ try {
         await page.locator('.expert-actions').evaluate(el => { el.style.flexBasis = ''; });
         await page.setViewportSize({ width: 390, height: 844 });
         await open(page, 'libraries');
-        await page.locator('#diagnostic-library-list button').click();
+        await page.locator('#diagnostic-library-list').getByRole('button',{name:'Выбрать файл…',exact:true}).click();
         await page.locator('#library-files').setInputFiles([
           { name: 'custom.js', mimeType: 'text/javascript', buffer: Buffer.from('window.custom=true;') },
           { name: 'LICENSE', mimeType: 'text/plain', buffer: Buffer.from(license) }
         ]);
         await cacheCount(page, 1);
         assert.match(await page.locator('#diagnostic-cache-list').innerText(), /Только этот сеанс/);
-        await page.locator('#diagnostic-cache-clear').click(); await page.locator('#diagnostic-delete-yes').click(); await cacheCount(page, 0);
+        await libraryMenu(page,'more');await page.locator('#diagnostic-cache-clear').click(); await page.locator('#diagnostic-delete-yes').click(); await cacheCount(page, 0);
         console.log(`${name}: session-only cache deletion with blocked IndexedDB passed.`);
       } finally { await context.close(); }
     } finally { await browser.close(); }

@@ -22,7 +22,7 @@
         <!-- ICON:app -->
         <h1>OneHTML <span>Lab</span></h1>
         <!-- APP_VERSION -->
-        <button id="help-open" class="icon-button help-button" type="button" aria-label="Как пользоваться" aria-expanded="false" aria-controls="help-panel" title="Как пользоваться"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 8.5a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4M12 16h.01"/></svg></button>
+        <button id="help-open" class="icon-button help-button" type="button" aria-label="Как пользоваться" aria-expanded="false" aria-controls="help-panel" title="Как пользоваться"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4M12 17h.01"/></svg></button>
       </div>
       <div class="actions" role="group" aria-label="Действия с HTML">
         <button id="paste" class="icon-button" type="button" aria-label="Вставить" title="Вставить — заменить весь код">
@@ -249,30 +249,34 @@
             <p class="diagnostic-note">«Скопировать отчёт» включает наблюдения и отметки. Для показа сохраните файл, откройте его отдельно и продемонстрируйте основной сценарий.</p>
           </section>
           <section id="diagnostic-libraries" hidden>
-            <h3>В текущем коде</h3><p id="diagnostic-library-note" class="diagnostic-note"></p><ul id="diagnostic-library-list" class="diagnostic-list"></ul>
-            <details id="library-preparation" class="media-help">
-              <summary>Подготовить библиотеки</summary>
-              <p class="diagnostic-note">Загрузите нужные версии заранее. Для передачи студентам сохраните набор, разместите его в общей папке и установите из файлов на каждом устройстве. Копии сохраняются в браузере; код игры не меняется.</p>
-              <div class="diagnostic-actions"><button id="library-download-selected" type="button" disabled>Скачать выбранные</button><button id="library-download-all" type="button">Скачать все библиотеки</button><button id="library-preparation-cancel" type="button" hidden>Остановить загрузку</button></div>
-              <label class="library-export-option"><input id="library-include-experimental" type="checkbox"> Включать экспериментальные библиотеки в «Скачать все»</label>
-              <div class="diagnostic-actions"><button id="library-import-archive" type="button">Загрузить из архива…</button><button id="library-import-pack" type="button">Загрузить манифест и файлы…</button></div>
-              <input id="library-preparation-archive" type="file" accept=".zip,application/zip" aria-label="Сохранённый архив библиотек OneHTML Lab" hidden>
-              <input id="library-preparation-input" type="file" multiple accept=".zip,.json,.js,.txt,.md" aria-label="Архив библиотек или манифест со всеми файлами" hidden>
-              <input id="library-preparation-raw" type="file" multiple aria-label="JS, зависимости, LICENSE и NOTICE выбранной версии" hidden>
-              <label class="library-export-option">Сохранить <select id="library-export-format"><option value="zip">ZIP-архивом</option><option value="files">Отдельными файлами</option></select></label>
-              <div class="diagnostic-actions"><button id="library-export-selected" type="button" disabled>Сохранить выбранные</button><button id="library-export-all" type="button" disabled>Сохранить все библиотеки</button></div>
-              <p class="diagnostic-note">Сохраняются загруженные копии. «Скачать все библиотеки» загружает основной набор; для экспериментальных отметьте галочку выше или выберите их отдельно.</p>
-              <p id="library-preparation-status" role="status" aria-live="polite" class="diagnostic-note"></p>
-              <ul id="library-preparation-list" class="diagnostic-list"></ul>
-              <h4>Экспериментальные библиотеки</h4>
-              <p class="diagnostic-note">По умолчанию не скачиваются кнопкой «Скачать все библиотеки». Выберите нужную отдельно или включите галочку выше.</p>
-              <ul id="library-experimental-list" class="diagnostic-list"></ul>
-              <div id="library-export-files" hidden><button id="library-export-files-all" type="button">Скачать все файлы</button><p class="diagnostic-note">Браузер может запросить разрешение на несколько скачиваний. Каждый файл также можно скачать отдельно.</p><ul id="library-export-file-list" class="diagnostic-list"></ul></div>
-            </details>
-            <div class="diagnostic-cache-heading"><h3>Сохранённые копии</h3><button id="diagnostic-cache-clear" type="button" disabled>Удалить все</button></div>
-            <p id="diagnostic-cache-size" class="diagnostic-note"></p><ul id="diagnostic-cache-list" class="diagnostic-list"></ul>
-            <div id="diagnostic-confirm" class="diagnostic-confirm" hidden><p id="diagnostic-confirm-text"></p><div class="diagnostic-actions"><button id="diagnostic-delete-yes" type="button">Удалить</button><button id="diagnostic-delete-no" type="button">Отмена</button></div></div>
-            <p id="diagnostic-cache-feedback" role="status" class="diagnostic-note"></p>
+            <div id="library-preparation" class="library-browser">
+              <p id="library-browser-help" hidden>Скачайте нужные версии заранее. Копии можно сохранить набором и установить из файлов на другом устройстве. Подготовка библиотек не меняет код приложения. Экспериментальные не входят в общую загрузку, пока вы не включите их в меню «Ещё».</p>
+              <div class="library-browser-tabs" role="tablist" aria-label="Библиотеки">
+                <button id="library-tab-catalog" type="button" role="tab" data-library-tab="catalog" aria-selected="true" aria-controls="library-view-catalog">Каталог <span id="library-count-catalog"></span></button>
+                <button id="library-tab-code" type="button" role="tab" data-library-tab="code" aria-selected="false" aria-controls="library-view-code" tabindex="-1">В коде <span id="library-count-code"></span></button>
+                <button id="library-tab-saved" type="button" role="tab" data-library-tab="saved" aria-selected="false" aria-controls="library-view-saved" tabindex="-1">Сохранённые <span id="library-count-saved"></span></button>
+              </div>
+              <div class="library-browser-tools"><label class="library-browser-search"><span data-library-icon="search"></span><input id="library-search" type="search" placeholder="Найти библиотеку" aria-label="Найти библиотеку" autocomplete="off"></label><button id="library-more-open" class="library-icon-button" type="button" aria-label="Ещё действия с библиотеками" title="Ещё действия" aria-expanded="false" aria-controls="library-more-menu" data-library-icon="more"></button><button id="library-help-open" class="library-icon-button" type="button" aria-label="Как работают библиотеки" title="Как работают библиотеки" aria-expanded="false" aria-controls="library-browser-help" data-library-icon="help"></button></div>
+              <div class="library-categories" role="group" aria-label="Назначение библиотек"><button type="button" data-library-category="all" aria-pressed="true">Все</button><button type="button" data-library-category="2d" aria-pressed="false">2D</button><button type="button" data-library-category="3d" aria-pressed="false">3D</button><button type="button" data-library-category="physics" aria-pressed="false">Физика</button><button type="button" data-library-category="sound" aria-pressed="false">Звук</button></div>
+              <div class="library-browser-layout">
+                <div class="library-browser-scroll">
+                  <section id="library-view-catalog" role="tabpanel" aria-labelledby="library-tab-catalog"><div class="library-list-heading"><label><input id="library-select-visible" type="checkbox">Выбрать показанные</label><span id="library-visible-count"></span></div><ul id="library-preparation-list" class="library-browser-list"></ul><h3 id="library-experimental-heading">Экспериментальные</h3><ul id="library-experimental-list" class="library-browser-list"></ul></section>
+                  <section id="library-view-code" role="tabpanel" aria-labelledby="library-tab-code" hidden><p id="diagnostic-library-note" class="diagnostic-note"></p><ul id="diagnostic-library-list" class="library-browser-list"></ul></section>
+                  <section id="library-view-saved" role="tabpanel" aria-labelledby="library-tab-saved" hidden><p id="diagnostic-cache-size" class="diagnostic-note"></p><ul id="diagnostic-cache-list" class="library-browser-list"></ul></section>
+                  <p id="library-browser-empty" class="diagnostic-note" hidden>Ничего не найдено. Измените поиск или категорию.</p>
+                  <div id="library-export-files" hidden><div class="library-files-heading"><h3>Файлы набора</h3><button id="library-files-close" type="button" class="library-icon-button" aria-label="Закрыть список файлов" data-library-icon="close"></button></div><button id="library-export-files-all" type="button">Скачать все файлы</button><p class="diagnostic-note">Браузер может запросить разрешение на несколько скачиваний. Каждый файл также можно скачать отдельно.</p><ul id="library-export-file-list" class="diagnostic-list"></ul></div>
+                </div>
+                <aside id="library-browser-inspector" aria-label="Сведения о библиотеке"></aside>
+              </div>
+              <div id="diagnostic-confirm" class="diagnostic-confirm" hidden><p id="diagnostic-confirm-text"></p><div class="diagnostic-actions"><button id="diagnostic-delete-yes" type="button">Удалить</button><button id="diagnostic-delete-no" type="button">Отмена</button></div></div>
+              <p id="diagnostic-cache-feedback" role="status" class="library-browser-feedback"></p>
+              <p id="library-preparation-status" role="status" aria-live="polite" class="library-browser-feedback"></p>
+              <div class="library-browser-footer"><div class="library-footer-tools"><button id="library-import-open" type="button" class="library-icon-button" aria-label="Установить библиотеки из файлов" title="Установить из файлов" aria-expanded="false" aria-controls="library-import-menu" data-library-icon="import"></button><button id="library-export-open" type="button" class="library-icon-button" aria-label="Сохранить набор библиотек" title="Сохранить набор" aria-expanded="false" aria-controls="library-export-menu" data-library-icon="export"></button></div><span id="library-selection-count"></span><button id="library-preparation-cancel" type="button" class="library-primary" hidden>Остановить</button><button id="library-download-selected" type="button" class="library-primary" aria-label="Скачать выбранные" disabled><span data-library-icon="download"></span><span id="library-download-label">Скачать</span></button><button id="library-theme" type="button" class="library-icon-button" aria-label="Переключить тему" title="Переключить тему" data-library-icon="theme"></button></div>
+              <div id="library-more-menu" class="library-menu" role="group" aria-label="Действия с библиотеками" hidden><button id="library-download-all" type="button">Скачать все библиотеки</button><label><input id="library-include-experimental" type="checkbox">Включать экспериментальные</label><button id="library-selection-clear" type="button">Снять выбор</button><hr><button id="library-report-copy" type="button">Скопировать отчёт</button><button id="diagnostic-cache-clear" type="button" disabled>Удалить все сохранённые копии</button></div>
+              <div id="library-import-menu" class="library-menu" role="group" aria-label="Установить библиотеки" hidden><button id="library-import-archive" type="button">Загрузить из архива…</button><button id="library-import-pack" type="button">Загрузить манифест и файлы…</button><p>Для установки отдельного JS откройте сведения о нужной версии.</p></div>
+              <div id="library-export-menu" class="library-menu" role="group" aria-label="Сохранить набор" hidden><label class="library-export-option">Формат <select id="library-export-format"><option value="zip">ZIP-архив</option><option value="files">Отдельные файлы</option></select></label><button id="library-export-selected" type="button" disabled>Сохранить выбранные</button><button id="library-export-all" type="button" disabled>Сохранить все библиотеки</button></div>
+              <input id="library-preparation-archive" type="file" accept=".zip,application/zip" aria-label="Сохранённый архив библиотек OneHTML Lab" hidden><input id="library-preparation-input" type="file" multiple accept=".zip,.json,.js,.txt,.md" aria-label="Архив библиотек или манифест со всеми файлами" hidden><input id="library-preparation-raw" type="file" multiple aria-label="JS, зависимости, LICENSE и NOTICE выбранной версии" hidden>
+            </div>
           </section>
           <section id="diagnostic-resources" hidden>
             <h3>Свои медиа и модели</h3>
