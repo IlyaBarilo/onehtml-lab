@@ -191,6 +191,7 @@ function renderPromptMedia() {
   const field=document.querySelector('#media-prompt-names');field.value=names;field.rows=Math.min(5,Math.max(1,promptMediaSelection.size));
   document.querySelector('#media-prompt-copy').disabled=!names || mediaBusy;
   document.querySelector('#media-prompt-ai').disabled=mediaBusy;
+  document.querySelector('#media-selection-count').textContent=`${formatUIInteger(promptMediaSelection.size)} для ИИ`;
   const rows=mediaPromptRows();
   document.querySelector('#media-prompt-list').replaceChildren(...rows.map(({entry,name})=>{
     const li=document.createElement('li');li.className='prompt-media-row';li.dataset.mediaId=entry.id;li.dataset.mediaName=name;
@@ -198,20 +199,22 @@ function renderPromptMedia() {
     check.addEventListener('change',()=>{if(check.checked)promptMediaSelection.set(name,entry.id);else promptMediaSelection.delete(name);promptMediaFeedback='';savePromptMediaState();promptMediaRendered=null;renderPromptMedia();});
     const text=document.createElement('span'),title=document.createElement('strong');title.textContent=name;
     const note=document.createElement('span');note.className='diagnostic-note';note.textContent=entry.blob ? [mediaDimensions(entry),diagnosticSize(entry.blob.size)].filter(Boolean).join(' · ')+(mediaPersisted.has(entry.id)?'':' · Только этот сеанс') : 'Файл отсутствует — выберите снова';text.append(title,note);label.append(check,text);li.append(label);
-    if(!entry.blob)return li;
+    if(!entry.blob){const icon=document.createElement('span');icon.className='media-preview-icon';icon.append(panelIcon('media'));li.append(icon);return li;}
     appendResourceWarning(text,mediaSizeWarning(entry));
     const actions=document.createElement('div');actions.className='media-prompt-item-actions diagnostic-actions';
-    const copy=diagnosticButton('Копировать имя',()=>void copyOrSelect(name,'Имя файла скопировано.'));actions.append(copy);
-    if(entry.type.startsWith('image/')) {const resize=diagnosticButton('Уменьшить',()=>openImageEdit(entry,name));resize.disabled=mediaBusy;actions.append(resize);}
+    const copy=diagnosticButton('Копировать имя',()=>void copyOrSelect(name,'Имя файла скопировано.'));panelIconButton(copy,'copy','Копировать имя');actions.append(copy);
+    if(entry.type.startsWith('image/')) {const resize=diagnosticButton('Уменьшить',()=>openImageEdit(entry,name));panelIconButton(resize,'media','Уменьшить');resize.disabled=mediaBusy;actions.append(resize);}
     const remove=diagnosticButton('',()=>{
       if(mediaBusy)return;promptMediaDelete=entry;
       document.querySelector('#media-prompt-delete-text').textContent=`Удалить ${name} из браузера?${mediaUsage(entry.id)?' Файл используется в коде или истории. Для запуска этих версий потребуется выбрать его снова.':''} Уже сохранённые автономные HTML сохранят файл.`;
       document.querySelector('#media-prompt-delete').hidden=false;document.querySelector('#media-prompt-delete-no').focus({preventScroll:true});
-    });remove.className='expert-icon-button';remove.disabled=mediaBusy;remove.title=`Удалить ${name}`;remove.setAttribute('aria-label',`Удалить ${name}`);remove.append(document.querySelector('#clear svg').cloneNode(true));li.append(remove);
+    });panelIconButton(remove,'trash',`Удалить ${name}`);remove.disabled=mediaBusy;actions.append(remove);
     const url=URL.createObjectURL(entry.blob);promptMediaUrls.add(url);
     if(entry.type.startsWith('image/')){const image=document.createElement('img');image.src=url;image.alt=name;image.loading='lazy';image.className='media-thumbnail';li.append(image);}
-    else if(entry.type.startsWith('audio/')){const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=url;audio.setAttribute('aria-label',`Прослушать ${name}`);audio.addEventListener('error',()=>{note.textContent+=' · Прослушивание недоступно в этом браузере.';},{once:true});li.append(audio);}
-    else appendModelDetails(li,entry);
+    else {const icon=document.createElement('span');icon.className='media-preview-icon';if(entry.type.startsWith('audio/'))icon.append(panelIcon('audio'));else icon.textContent='3D';li.append(icon);
+      if(entry.type.startsWith('audio/')){const audio=document.createElement('audio');audio.controls=true;audio.preload='none';audio.src=url;audio.setAttribute('aria-label',`Прослушать ${name}`);audio.addEventListener('error',()=>{note.textContent+=' · Прослушивание недоступно в этом браузере.';},{once:true});li.append(audio);}
+      else appendModelDetails(li,entry);
+    }
     li.append(actions);return li;
   }));
 }
@@ -224,7 +227,7 @@ function initPromptMedia() {
   initMediaImages();
   document.querySelector('#media-open').addEventListener('click',()=>openPromptMedia());
   document.querySelector('#ai-media-open').addEventListener('click',()=>openPromptMedia(true));
-  document.querySelector('#media-prompt-close').addEventListener('click',()=>closeWorkspacePanel());
+  document.querySelector('#media-prompt-close').addEventListener('click',()=>{closeImageEdit();closeWorkspacePanel();});
   document.querySelector('#media-prompt-add').addEventListener('click',()=>{if(!mediaBusy)document.querySelector('#media-input').click();});
   document.querySelector('#media-prompt-paste').addEventListener('click',()=>void pastePromptImages(async()=>{
     if (!navigator.clipboard?.read) throw Error('В этом браузере кнопка не может прочитать изображение. Попробуйте обычную вставку в поле ниже или «Добавить файлы».');

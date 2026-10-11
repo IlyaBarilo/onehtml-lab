@@ -50,6 +50,7 @@ try {
     await page.locator('#media-open').click();assert(await page.locator('#code').evaluate(field=>field.inert));
     await add(page,[{name:'cat.png',mimeType:'image/png',buffer:red},{name:'win.wav',mimeType:'audio/wav',buffer:wav}]);
     assert.equal(await page.locator('#media-prompt-names').inputValue(),'cat.png\nwin.wav');
+    assert(await page.locator('#media-prompt-list audio').evaluate(el=>{const r=el.getBoundingClientRect(),p=el.closest('li').getBoundingClientRect();return r.x>=p.x && r.right<=p.right+1;}),'Audio controls stay within the media row');
     await page.locator('#media-prompt-copy').click();assert.equal(await page.evaluate(()=>window.testClipboardWrite),'cat.png\nwin.wav');
     await page.locator('#media-prompt-ai').click();await page.locator('#ai-task').fill('Кот — герой. win.wav — звук победы.');await page.waitForFunction(()=>!document.querySelector('#ai-copy').disabled);
      let prompt=await page.locator('#ai-output').inputValue();assert(prompt.startsWith('Сделай игру про Кот'));assert(prompt.includes('\n\nДоступные медиафайлы:\n- cat.png — 8 × 8 пикселей\n- win.wav'));assert(prompt.indexOf('Верни только полный HTML-код.')<prompt.indexOf('Доступные медиафайлы:'));assert(prompt.includes('srcset или внешнем CSS.'));assert(prompt.includes('drawImage'));assert(prompt.endsWith('не создавай URL звука в JavaScript.'));assert(prompt.includes('без подкаталогов'));assert(prompt.includes('data URL'));assert(!prompt.includes('./media/'));assert(!prompt.includes('onehtml-media:1:'));assert(!prompt.includes('data:image/png;base64'));
@@ -85,15 +86,15 @@ try {
     await paste(page,unicode,true);assert((await page.locator('#code').inputValue()).includes('onehtml-media:1:'));await page.locator('#run').click();await frame.locator('#hero').waitFor();assert.equal(await frame.locator('#hero').getAttribute('src'),'data:image/png;base64,'+red.toString('base64'));await page.locator('#run').click();
     await ai(page);await page.locator('#ai-media-open').click();await page.getByRole('button',{name:'Удалить Герой 1.png',exact:true}).click();await page.locator('#media-prompt-delete-yes').click();await page.waitForFunction(()=>document.querySelector('#media-prompt-feedback').textContent.startsWith('Файл удалён'));
     await page.locator('#media-prompt-ai').click();await page.waitForFunction(()=>document.querySelector('#ai-summary').textContent.includes('отсутствует'));assert(await page.locator('#ai-copy').isDisabled());
-    assert.match(await page.locator('#ai-next-status').innerText(),/Герой 1.png/);assert(await page.locator('#ai-copy-next').isDisabled());
-    assert(await page.locator('#ai-media-repair').isVisible());assert(await page.locator('#ai-copy-next').isHidden());
+    assert.match(await page.locator('#ai-next-status').innerText(),/Герой 1.png/);
+    assert(await page.locator('#ai-media-repair').isVisible());assert.equal(await page.locator('#ai-copy-next').count(),0);
     assert.match(await page.locator('#ai-media-names').innerText(),/Герой 1.png — файл отсутствует/);
     await page.locator('#ai-next-step').scrollIntoViewIfNeeded();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.screenshot({path:join(scratch,`${engineName}-${width}-${editor}-missing.png`)});
     const blockedTask=await page.locator('#ai-task').inputValue(),blockedCode=await page.locator('#code').inputValue();
     await page.locator('#ai-media-repair').click();await add(page,[{name:'Герой 1.png',mimeType:'image/png',buffer:red}]);await page.locator('#media-prompt-close').click();await page.waitForFunction(()=>!document.querySelector('#ai-copy').disabled);
     assert.equal(await page.locator('#ai-task').inputValue(),blockedTask);assert.equal(await page.locator('#code').inputValue(),blockedCode);
-    assert(await page.locator('#ai-media-repair').isHidden());assert(await page.locator('#ai-copy-next').isEnabled());
+    assert(await page.locator('#ai-media-repair').isHidden());assert(await page.locator('#ai-copy').isEnabled());
     assert.match(await page.locator('#ai-next-status').innerText(),/готов к отправке/);await page.locator('#ai-close').click();
      await paste(page,'<!doctype html><img src="wrong.png">');assert.match(await page.locator('#status').innerText(),/wrong.png/);
      // Clipboard images use actual format, keep text/code separate and support a native fallback.

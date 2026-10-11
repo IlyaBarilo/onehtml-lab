@@ -43,6 +43,9 @@ try {
     const context = await browser.newContext({viewport:{width,height:850}}); context.setDefaultTimeout(15000);
     await context.addInitScript(() => {
       Object.defineProperty(navigator, 'clipboard', {configurable:true,value:{readText:async()=>window.clipboardText || '',writeText:async text=>{window.copiedText=text;}}});
+      window.shareMode='shared';
+      Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>window.shareMode!=='unsupported'});
+      Object.defineProperty(navigator,'share',{configurable:true,value:async ({files})=>{if(window.shareMode==='cancelled')throw new DOMException('Cancelled','AbortError');window.sentHtml=await files[0].text();window.sentName=files[0].name;}});
     });
     const page = await context.newPage(), errors = [], external = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -57,6 +60,12 @@ try {
       });
       const image={name:'hero.png',mimeType:'image/png',buffer:Buffer.from(base64,'base64')};
       await add(page, image); assert.match(await row(page,'hero.png').innerText(),/2[\s\u00a0]400 × 1[\s\u00a0]200/);
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      const mediaActions=await row(page,'hero.png').locator('button').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().height));
+      assert(mediaActions.every(height=>height>=44),'Media icon actions keep touch-sized targets');
+      const rowGeometry=await row(page,'hero.png').evaluate(el=>{const rect=node=>{const r=node.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right};};return {check:rect(el.querySelector('input')),thumb:rect(el.querySelector('img')),name:rect(el.querySelector('strong'))};});
+      assert(rowGeometry.check.right<=rowGeometry.thumb.x && rowGeometry.thumb.right<=rowGeometry.name.x,'Checkbox, thumbnail and file name share one compact row');
+      await page.screenshot({path:join(scratch,`${name}-${new URL(url).protocol.slice(0,-1)}-${width}-media.png`)});
       await page.locator('#media-prompt-copy').click(); assert.equal(await page.evaluate(()=>window.copiedText),'hero.png');
       await page.locator('#media-prompt-close').click(); await paste(page,game);
       const original=await page.locator('#code').inputValue(), originalId=links(original)[0].id;
@@ -73,6 +82,13 @@ try {
       assert.match(await page.locator('#media-image-after-info').innerText(),/1[\s\u00a0]024 × 512/);
       assert(await page.locator('#media-image-after').evaluate(image=>{const c=document.createElement('canvas');c.width=1;c.height=1;const x=c.getContext('2d');x.drawImage(image,0,0);return x.getImageData(0,0,1,1).data[3]===0;}),'Transparency survives encoding');
       await page.locator('#media-image-edit').scrollIntoViewIfNeeded();await page.screenshot({path:join(scratch,`${name}-${new URL(url).protocol.slice(0,-1)}-${width}-prepare.png`)});
+      await page.setViewportSize({width,height:390});
+      const imageAction=await page.locator('#media-image-apply').boundingBox();
+      assert(imageAction && imageAction.height>=44 && imageAction.y+imageAction.height<=391,'Image Apply stays visible in a short viewport');
+      await page.locator('#media-panel [data-panel-theme]').click();
+      await page.screenshot({path:join(scratch,`${name}-${new URL(url).protocol.slice(0,-1)}-${width}-prepare-dark-short.png`)});
+      await page.locator('#media-panel [data-panel-theme]').click();
+      await page.setViewportSize({width,height:850});
       await page.locator('#media-image-apply').click();await page.waitForFunction(()=>document.querySelector('#media-image-edit').hidden);
       const optimized=await page.locator('#code').inputValue(), optimizedId=links(optimized)[0].id;
       assert.notEqual(optimizedId,originalId);assert(optimized.includes('src="hero.png"'));assert(optimized.includes('url(hero.png)'),'Existing references keep their paths');
@@ -95,7 +111,30 @@ try {
       assert.equal(await page.locator('#code').inputValue(),optimized);assert(await page.locator('#media-strip-list').isHidden(),'Collapse preference persists');await page.locator('#media-strip-toggle').click();
       await page.locator('#run').click();const frame=page.frameLocator('#preview iframe');await frame.locator('#hero').waitFor();assert.equal(await frame.locator('#hero').evaluate(image=>image.naturalWidth),1024);
       await page.locator('#preview-expand').click();assert(await page.locator('#media-strip').isHidden());await page.locator('#preview-expand').click();await page.locator('#run').click();
-      await page.locator('#save').click();await page.waitForFunction(()=>!document.querySelector('#confirm-save').disabled);const download=page.waitForEvent('download');await page.locator('#confirm-save').click();const file=await download;
+      await page.locator('#save').click();await page.waitForFunction(()=>!document.querySelector('#confirm-save').disabled);
+      await page.locator('#filename').fill('Моя игра.html');await page.waitForFunction(()=>!document.querySelector('#save-send').disabled);
+      await page.locator('#save-send').click();await page.locator('#save-send-status').getByText(/передан/).waitFor();
+      assert.equal(await page.evaluate(()=>window.sentName),'Моя игра.html');
+      assert((await page.evaluate(()=>window.sentHtml)).includes('data:image/'),'Share uses the selected inline media');
+      assert.equal(await page.locator('#code').inputValue(),optimized,'Sharing does not change the source');
+      await page.locator('#save-media').uncheck();await page.waitForFunction(()=>!document.querySelector('#save-send').disabled);
+      await page.locator('#save-send').click();await page.locator('#save-send-status').getByText(/передан/).waitFor();
+      assert.equal(await page.evaluate(()=>window.sentHtml),optimized,'Unchecked media is shared exactly as in the editor');
+      await page.locator('#save-media').check();await page.waitForFunction(()=>!document.querySelector('#save-send').disabled);
+      if(width===320) {
+        await page.setViewportSize({width,height:390});
+        for(const id of ['#save-send','#confirm-save']){const bounds=await page.locator(id).boundingBox();assert(bounds && bounds.height>=44 && bounds.y+bounds.height<=391,'Export actions stay reachable');}
+        const exportRow=await page.locator('#save-dialog .dialog-actions button').evaluateAll(nodes=>nodes.map(el=>el.getBoundingClientRect().y));
+        assert(Math.max(...exportRow)-Math.min(...exportRow)<1,'Export actions stay on one row');
+        assert.equal(await page.locator('#save-dialog .dialog-actions').evaluate(el=>getComputedStyle(el).backgroundColor),await page.locator('#save-dialog .panel-heading').evaluate(el=>getComputedStyle(el).backgroundColor),'Export footer follows the selected theme');
+        await page.screenshot({path:join(scratch,`${name}-${new URL(url).protocol.slice(0,-1)}-${width}-save-short.png`)});
+        await page.setViewportSize({width,height:850});
+        for(const mode of ['cancelled','unsupported']){await page.evaluate(mode=>window.shareMode=mode,mode);await page.locator('#save-send').click();await page.locator('#save-send-status').getByText(mode==='cancelled'?/Отправка отменена/:/Отправка файла здесь недоступна/).waitFor();assert.equal(await page.locator('#code').inputValue(),optimized);}
+        await page.evaluate(()=>window.shareMode='shared');
+      }
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      await page.screenshot({path:join(scratch,`${name}-${new URL(url).protocol.slice(0,-1)}-${width}-save.png`)});
+      const download=page.waitForEvent('download');await page.locator('#confirm-save').click();const file=await download;
       const exported=join(scratch,`${name}-${width}-${new URL(url).protocol.slice(0,-1)}.html`);await file.saveAs(exported);const html=await readFile(exported,'utf8');assert(!html.includes('onehtml-media:1:'));assert(html.includes(webp?'data:image/webp;base64,':'data:image/png;base64,'));
       const standalone=await context.newPage();await standalone.goto(pathToFileURL(exported).href);assert.equal(await standalone.locator('#hero').evaluate(image=>image.naturalWidth),1024);await standalone.close();
       await page.locator('#history-open').click();await page.locator('#history-list [aria-label="Вернуть версию"]').first().click();if(await page.locator('#replace-dialog').isVisible())await page.locator('#replace-dialog [value="replace"]').click();

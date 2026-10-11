@@ -17,7 +17,9 @@ function panelIcon(icon) {
     history: '<path d="M3 11a9 9 0 1 1 2 7M3 5v6h6m3-5v6l4 2"/>',
     compare: '<path d="M4 5h16M4 19h16M8 9l-3 3 3 3m8-6 3 3-3 3"/>',
     back: '<path d="m10 5-7 7 7 7M3 12h18"/>',
-    target: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>'
+    target: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>',
+    share: '<circle cx="6" cy="12" r="3"/><circle cx="18" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><path d="m9 10 6-3m-6 7 6 3"/>',
+    audio: '<path d="M9 17V5l11-2v12M9 8l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/>'
   };
   if (!paths[icon]) return libraryIcon(icon);
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

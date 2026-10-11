@@ -80,17 +80,15 @@
     </div>
     <div id="quality-show-bar" hidden><span id="quality-show-description" role="status" aria-live="polite"></span><button id="quality-show-back" class="import-button" type="button">К замечаниям</button></div>
     <section class="workspace" aria-label="Рабочая область">
-      <section id="media-panel" class="work-panel" aria-labelledby="media-prompt-title" hidden>
-        <div class="panel-heading"><h2 id="media-prompt-title">Медиа</h2><button id="media-prompt-close" type="button" aria-label="Закрыть медиа">✕</button></div>
+      <section id="media-panel" class="work-panel panel-ui tool-screen media-save-ui" aria-labelledby="media-prompt-title" hidden>
+        <div class="panel-heading"><h2 id="media-prompt-title">Медиа</h2><button id="media-prompt-close" type="button" aria-label="Закрыть медиа" data-panel-icon="close"></button></div>
+        <div class="panel-ui-controls media-controls"><div class="media-prompt-actions"><button id="media-prompt-add" type="button" class="ai-primary" data-ai-icon="create">Добавить файлы</button><button id="media-prompt-paste" type="button" data-panel-icon="paste" aria-label="Вставить изображение из буфера"></button><button type="button" data-panel-icon="help" data-panel-help="media-guide" aria-label="Как использовать медиа" aria-controls="media-guide" aria-expanded="false"></button></div><p id="media-guide" class="panel-ui-help" hidden>Отметьте файлы для запроса и опишите их назначение: «1.png — герой, win.wav — звук победы». Имена попадут в запрос; при сохранении файлы можно встроить в HTML. Для анализа картинки прикрепите её в чате ИИ-бота.</p></div>
         <div class="panel-body">
-          <div class="diagnostic-actions media-prompt-actions"><button id="media-prompt-add" type="button">Добавить файлы</button><button id="media-prompt-paste" type="button">Вставить изображение</button><button id="media-prompt-ai" type="button">К запросу ИИ</button></div>
           <div id="media-paste-fallback" hidden><label for="media-paste-field">Вставка изображения из буфера</label><textarea id="media-paste-field" rows="2" aria-describedby="media-paste-help" placeholder="Нажмите здесь и выберите «Вставить» или Ctrl+V"></textarea><p id="media-paste-help" class="diagnostic-note">Если браузер не поддерживает вставку картинки, используйте «Добавить файлы». Звук добавляется через выбор файла.</p></div>
-          <p class="media-prompt-help">Отметьте файлы для запроса. Используйте их имена в пожеланиях: cat.png — герой, win.mp3 — звук победы, robot.glb — 3D-модель.</p>
           <label for="media-prompt-names">Имена выбранных файлов</label><textarea id="media-prompt-names" readonly rows="1" placeholder="Добавьте изображения, звук или GLB-модель"></textarea>
-          <div class="diagnostic-actions"><button id="media-prompt-copy" type="button" disabled>Копировать имена</button></div>
           <p id="media-prompt-feedback" role="status" aria-live="polite" class="diagnostic-note"></p>
           <section id="media-image-edit" class="media-image-edit" aria-labelledby="media-image-title" hidden>
-            <div class="media-image-heading"><h3 id="media-image-title"></h3><button id="media-image-cancel" class="expert-icon-button" type="button" aria-label="Закрыть подготовку изображения">✕</button></div>
+            <div class="media-image-heading"><h3 id="media-image-title"></h3><button id="media-image-cancel" type="button" data-panel-icon="back" aria-label="К списку медиа"></button></div>
             <div class="media-image-options">
               <label>Максимальная сторона<select id="media-image-size"><option value="1024">1 024 пикселя</option><option value="2048" selected>2 048 пикселей</option><option value="0">Исходный размер</option></select></label>
               <label>Формат<select id="media-image-format"><option value="image/webp">WebP</option><option value="original">Исходный формат</option></select></label>
@@ -99,12 +97,12 @@
             <div class="media-image-comparison"><figure><figcaption>Сейчас</figcaption><img id="media-image-before" alt="Исходное изображение"><p id="media-image-before-info"></p></figure><figure><figcaption>Результат</figcaption><img id="media-image-after" alt="Подготовленная копия"><p id="media-image-after-info"></p></figure></div>
             <p id="media-image-feedback" class="diagnostic-note" role="status" aria-live="polite"></p>
             <label id="media-image-code-row"><input id="media-image-code" type="checkbox" checked> Применить к текущему коду, сохранив прошлую версию</label>
-            <div class="diagnostic-actions"><button id="media-image-preview" type="button">Предпросмотр</button><button id="media-image-apply" type="button" disabled>Применить копию</button><button id="media-image-restore" type="button" hidden>Вернуть оригинал</button></div>
           </section>
           <div id="media-prompt-delete" class="diagnostic-confirm" hidden><p id="media-prompt-delete-text"></p><div class="diagnostic-actions"><button id="media-prompt-delete-yes" type="button">Удалить файл</button><button id="media-prompt-delete-no" type="button">Отмена</button></div></div>
           <ul id="media-prompt-list" class="diagnostic-list"></ul>
           <details class="media-help"><summary>Хранение и удаление</summary><p class="diagnostic-note">Файлы хранятся в браузере. Удалить копии и посмотреть привязки истории можно в «Диагностика и библиотеки» → «Ресурсы». Список имён не передаёт содержимое файлов ИИ-боту; для анализа картинки прикрепите её в чате бота.</p></details>
         </div>
+        <div class="panel-ui-footer media-footer"><div class="media-list-actions"><span id="media-selection-count" role="status" aria-live="polite"></span><button id="media-prompt-copy" type="button" data-panel-icon="copy" aria-label="Копировать имена выбранных файлов" disabled></button><button id="media-prompt-ai" type="button" class="ai-primary" data-ai-icon="change">К запросу</button></div><div class="media-image-actions"><button id="media-image-restore" type="button" data-panel-icon="history" aria-label="Вернуть оригинал" hidden></button><button id="media-image-preview" type="button" data-panel-icon="media" aria-label="Предпросмотр"></button><button id="media-image-apply" type="button" class="ai-primary" data-ai-icon="check" disabled>Применить копию</button></div><button type="button" class="panel-ui-theme" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div>
       </section>
       <section id="help-panel" class="work-panel" aria-labelledby="help-title" hidden>
         <div class="panel-heading"><h2 id="help-title">Как пользоваться</h2><button id="help-close" type="button" aria-label="Закрыть памятку">✕</button></div>
@@ -304,25 +302,25 @@
           <p id="local-access-status" class="notice local-access-status" hidden></p>
         </div>
       </section>
-  <section id="save-dialog" class="work-panel" aria-labelledby="save-title" hidden>
+  <section id="save-dialog" class="work-panel panel-ui tool-screen media-save-ui" aria-labelledby="save-title" hidden>
     <form id="save-form">
-      <div class="panel-heading"><h2 id="save-title">Сохранить HTML</h2><button id="save-close" type="button" aria-label="Закрыть сохранение">✕</button></div>
+      <div class="panel-heading"><h2 id="save-title">Сохранить HTML</h2><button id="save-close" type="button" aria-label="Закрыть сохранение" data-panel-icon="close"></button></div>
       <div class="save-content">
         <div id="save-options">
           <label for="filename">Имя HTML-файла</label>
           <input id="filename" name="filename" value="game.html" autocomplete="off" autocapitalize="off" spellcheck="false">
-          <label id="save-libraries-option" class="save-library-option" for="save-libraries"><input id="save-libraries" type="checkbox" aria-describedby="save-libraries-hint"><span id="save-libraries-label">Встроить библиотеки в файл</span></label>
+          <div class="save-choice"><label id="save-libraries-option" class="save-library-option" for="save-libraries"><input id="save-libraries" type="checkbox" aria-describedby="save-libraries-hint"><span id="save-libraries-label">Встроить библиотеки в файл</span></label>
           <select id="save-libraries-mode" class="save-library-mode" aria-label="Как сохранить библиотеки" aria-describedby="save-libraries-hint" hidden><option value="inline">Внутри HTML</option><option value="files">Отдельные файлы</option></select>
-          <p id="save-libraries-hint" class="save-library-hint"></p>
-          <div id="save-media-options" hidden><label class="save-library-option" for="save-media"><input id="save-media" type="checkbox" aria-describedby="save-media-hint"><span>Встроить медиа и 3D-модели</span></label><p id="save-media-hint" class="save-library-hint"></p></div>
-          <p id="save-result-size" class="save-library-hint" role="status"></p>
+          <p id="save-libraries-hint" class="save-library-hint"></p></div>
+          <div id="save-media-options" class="save-choice" hidden><label class="save-library-option" for="save-media"><input id="save-media" type="checkbox" aria-describedby="save-media-hint"><span>Встроить медиа и 3D-модели</span></label><p id="save-media-hint" class="save-library-hint"></p></div>
+          <p id="save-result-size" class="save-library-hint" role="status"></p><p id="save-send-status" class="save-library-hint" role="status" aria-live="polite"></p>
         </div>
         <div id="save-files" hidden>
           <p class="dialog-copy">Сохраните все файлы в одну папку, затем откройте HTML. Если скачались не все — нажмите на нужный файл.</p>
           <ul id="save-file-list" class="save-file-list" aria-label="Файлы игры"></ul>
         </div>
       </div>
-      <div class="dialog-actions"><button id="cancel-save" type="button">Отмена</button><button id="confirm-save" class="primary" type="submit">ОК</button></div>
+      <div class="dialog-actions panel-ui-footer"><button id="cancel-save" type="button" data-panel-icon="back" aria-label="Отмена"></button><button id="save-send" type="button" data-panel-icon="share" aria-label="Отправить HTML-файл" disabled></button><button id="confirm-save" class="ai-primary" type="submit" data-ai-icon="open">Сохранить</button><button type="button" class="panel-ui-theme" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div>
     </form>
   </section>
   <dialog id="clear-dialog" aria-labelledby="clear-title">
@@ -339,7 +337,7 @@
       <div class="dialog-actions"><button value="cancel" type="submit">Отмена</button><button class="primary" value="replace" type="submit">Заменить</button></div>
     </form>
   </dialog>
-  <section id="ai-dialog" class="work-panel guide-panel panel-ui ai-screen" aria-labelledby="ai-title" hidden>
+  <section id="ai-dialog" class="work-panel guide-panel panel-ui tool-screen" aria-labelledby="ai-title" hidden>
     <div class="panel-heading"><h2 id="ai-title">ИИ и запросы</h2><button id="ai-media-open" type="button" data-panel-icon="media" aria-label="Медиа для запроса"></button><button id="ai-prompts-open" type="button" data-panel-icon="history" aria-label="История запросов"></button><button id="ai-close" type="button" aria-label="Закрыть ИИ и запросы" data-panel-icon="close"> </button></div>
     <div id="ai-compose" class="panel-body ai-compose">
     <div class="ai-task-section">
@@ -404,7 +402,7 @@
     <div id="ai-preview-body" class="ai-preview-body" hidden><textarea id="ai-output" readonly spellcheck="false" aria-label="Готовый запрос для ИИ"></textarea></div>
     <div class="ai-footer"><p id="ai-summary" role="status" aria-live="polite"></p><div class="ai-footer-actions"><button id="ai-view" type="button" aria-pressed="false" disabled>Просмотр</button><button id="ai-answer-open" type="button" data-ai-icon="paste">Принять ответ</button><button id="ai-copy" type="button" class="ai-primary" data-ai-icon="copy" disabled>Копировать</button><button type="button" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div></div>
   </section>
-  <section id="ai-prompts-panel" class="work-panel guide-panel panel-ui ai-screen" aria-labelledby="ai-prompts-title" hidden>
+  <section id="ai-prompts-panel" class="work-panel guide-panel panel-ui tool-screen" aria-labelledby="ai-prompts-title" hidden>
     <div class="panel-heading"><h2 id="ai-prompts-title">История запросов</h2><button id="ai-prompts-close" type="button" aria-label="Закрыть историю запросов" data-panel-icon="close"> </button></div>
     <div class="panel-body">
       <p id="ai-prompts-note" class="diagnostic-note" role="status" aria-live="polite"></p>
@@ -413,7 +411,7 @@
     </div>
     <div class="panel-ui-footer"><div class="ai-history-actions"><button id="ai-prompts-reuse" type="button" data-ai-icon="change">С текущим кодом</button><button id="ai-prompts-copy" type="button" class="ai-primary" data-ai-icon="copy">Копировать</button></div><button type="button" class="panel-ui-theme" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div>
   </section>
-  <section id="ai-answer-panel" class="work-panel guide-panel panel-ui ai-screen" aria-labelledby="ai-answer-title" hidden>
+  <section id="ai-answer-panel" class="work-panel guide-panel panel-ui tool-screen" aria-labelledby="ai-answer-title" hidden>
     <div class="panel-heading"><h2 id="ai-answer-title">Ответ ИИ</h2><button id="ai-answer-close" type="button" aria-label="Закрыть приём ответа ИИ" data-panel-icon="close"> </button></div>
     <div class="panel-body">
       <div class="ai-answer-steps" aria-label="Порядок работы с ответом"><span>1 · Ответ</span><span>2 · Сравнение</span><span>3 · Замена</span></div><div id="ai-answer-compose"><label for="ai-answer-text">Вставьте полный ответ или HTML-код</label><textarea id="ai-answer-text" spellcheck="false" placeholder="Вставьте ответ ИИ через меню поля или кнопку"></textarea><div class="diagnostic-actions"><button id="ai-answer-paste" type="button">Вставить из буфера</button></div><div id="ai-answer-block-option" hidden><label for="ai-answer-block">В ответе несколько блоков. Выберите HTML</label><select id="ai-answer-block"></select></div><label id="ai-answer-clean-option" class="ai-shorten-label" hidden><input id="ai-answer-clean" type="checkbox" checked>Взять HTML без Markdown и пояснений</label></div>
@@ -446,7 +444,7 @@
     </div>
     <div class="panel-ui-footer"><span id="example-count" role="status" aria-live="polite"></span><button type="button" class="panel-ui-theme" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div>
   </section>
-  <section id="copy-dialog" class="work-panel panel-ui ai-screen" aria-labelledby="copy-title" hidden>
+  <section id="copy-dialog" class="work-panel panel-ui tool-screen" aria-labelledby="copy-title" hidden>
     <div class="panel-heading"><h2 id="copy-title">Скопируйте текст</h2><button id="copy-close" type="button" aria-label="Закрыть копирование" data-panel-icon="close"> </button></div>
     <div class="panel-body copy-body">
     <p class="dialog-copy">Браузер не разрешил автоматическое копирование. Выделенный текст можно скопировать через меню поля.</p>

@@ -1,13 +1,13 @@
 /* The external AI cycle uses the same compact workspace as the catalog. */
-.ai-screen { font-size:16px; }
-.ai-screen button:not(.panel-icon-button) { display:inline-flex; align-items:center; justify-content:center; gap:7px; font-size:15px; }
-.ai-screen .ai-label-short { display:none; }
-.ai-screen button.ai-primary { background:#2764d8; color:#fff; }
-.ai-screen :is(textarea,select) { max-width:100%; min-width:0; font-size:16px; line-height:1.5; background:var(--lib-bg); color:var(--lib-text); border:1px solid var(--lib-line); border-radius:9px; }
-.ai-screen :is(textarea,select):focus { outline:2px solid var(--lib-blue); outline-offset:-2px; }
-.ai-screen label { font-size:15px; color:var(--lib-text); }
-.ai-screen :is(.diagnostic-note,.ai-instruction) { font-size:14px; line-height:1.45; color:var(--lib-muted); }
-.ai-screen .diagnostic-actions { gap:6px; }
+.tool-screen { font-size:16px; }
+.tool-screen button:not(.panel-icon-button) { display:inline-flex; align-items:center; justify-content:center; gap:7px; font-size:15px; }
+.tool-screen .ai-label-short { display:none; }
+.tool-screen button.ai-primary { background:#2764d8; color:#fff; }
+.tool-screen :is(textarea,select) { max-width:100%; min-width:0; font-size:16px; line-height:1.5; background:var(--lib-bg); color:var(--lib-text); border:1px solid var(--lib-line); border-radius:9px; }
+.tool-screen :is(textarea,select):focus { outline:2px solid var(--lib-blue); outline-offset:-2px; }
+.tool-screen label { font-size:15px; color:var(--lib-text); }
+.tool-screen :is(.diagnostic-note,.ai-instruction) { font-size:14px; line-height:1.45; color:var(--lib-muted); }
+.tool-screen .diagnostic-actions { gap:6px; }
 #ai-dialog .ai-compose { padding-top:8px; gap:16px; grid-template-columns:minmax(0,1fr); }
 #ai-dialog .ai-project-types, #ai-dialog .ai-modes { padding:3px; gap:3px; border-radius:11px; background:var(--lib-soft); margin:0 0 8px; }
 #ai-dialog .ai-project-types button, #ai-dialog .ai-modes button { flex:1; min-width:0; color:var(--lib-muted); background:transparent; border:0; box-shadow:none; }
@@ -81,8 +81,8 @@
   #ai-dialog .ai-task-section { max-width:840px; }
 }
 @media (max-width:600px) {
-  .ai-screen .ai-label-full { display:none; }
-  .ai-screen .ai-label-short { display:inline; }
+  .tool-screen .ai-label-full { display:none; }
+  .tool-screen .ai-label-short { display:inline; }
   #ai-dialog .ai-modes button { flex-direction:column; gap:3px; padding:5px 0; font-size:14px; min-height:57px; }
   #ai-dialog .ai-modes svg { width:20px; height:20px; }
   #ai-dialog .ai-footer { padding-inline:8px; }

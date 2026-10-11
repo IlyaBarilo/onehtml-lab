@@ -373,7 +373,7 @@ try {
         await page.locator('#save-libraries-mode').selectOption('files');
         await page.locator('#confirm-save').click();
         await page.locator('#save-files').waitFor({ state: 'visible' });
-        const names = await page.locator('#save-file-list button').allTextContents();
+        const names = await page.locator('#save-file-list button span:first-child').allTextContents();
         assert.equal(names.length, 10);
         const automaticCount = name === 'webkit' ? 1 : names.length;
         const deadline = Date.now() + 10_000;

@@ -150,14 +150,14 @@ async function runCase(browser, engine, url, mode) {
     await page.locator('#save').click();
     assert.equal(await page.locator('#filename').inputValue(), 'game.html');
     const dialogBounds = await page.locator('#save-dialog').boundingBox();
-    const okBounds = await page.getByRole('button', { name: 'ОК', exact: true }).boundingBox();
+    const okBounds = await page.locator('#save-dialog').getByRole('button', { name: 'Сохранить', exact: true }).boundingBox();
     const workspaceBounds = await page.locator('.workspace').boundingBox();
     assert.equal(dialogBounds.y, workspaceBounds.y, 'Save screen starts at the workspace edge');
     assert.equal(dialogBounds.width, workspaceBounds.width, 'Save screen uses the workspace width');
     assert(okBounds.y + okBounds.height <= viewport.height, 'Save action is visible in the viewport');
     if (url.startsWith('file:')) await page.screenshot({ path: join(output, `${engine}-file-${mode}-save-dialog.png`) });
     let downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'ОК', exact: true }).click();
+    await page.locator('#save-dialog').getByRole('button', { name: 'Сохранить', exact: true }).click();
     let download = await downloadPromise;
     assert.equal(download.suggestedFilename(), 'game.html');
     assert.equal(await readFile(await download.path(), 'utf8'), sample);
@@ -166,7 +166,7 @@ async function runCase(browser, engine, url, mode) {
     await page.locator('#save').click();
     await page.locator('#filename').fill('Кот');
     downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'ОК', exact: true }).click();
+    await page.locator('#save-dialog').getByRole('button', { name: 'Сохранить', exact: true }).click();
     download = await downloadPromise;
     assert.equal(download.suggestedFilename(), 'Кот.html');
     assert.equal(await readFile(await download.path(), 'utf8'), sample);

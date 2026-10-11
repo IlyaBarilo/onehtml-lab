@@ -64,7 +64,7 @@ async function savePackage(page, filename = 'game.html', count = 2, blockMultipl
     assert.equal(downloads.length, automaticCount, 'Automatic downloads must follow the browser policy');
     if (blockMultiple) await page.evaluate(() => { HTMLAnchorElement.prototype.click = window.originalDownloadClick; delete window.originalDownloadClick; });
     const receivedNames = new Set(downloads.map(download => download.suggestedFilename()));
-    const fileNames = await page.locator('#save-file-list button').allTextContents();
+    const fileNames = await page.locator('#save-file-list button span:first-child').allTextContents();
     for (let index = 0; index < fileNames.length; index += 1) {
       if (!receivedNames.has(fileNames[index])) await page.locator('#save-file-list button').nth(index).click();
     }

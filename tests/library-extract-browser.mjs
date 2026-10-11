@@ -63,11 +63,14 @@ async function saveFiles(page) {
     await page.locator('#save').click();
     assert(await page.locator('#save-libraries').isChecked());
     assert.equal(await page.locator('#save-libraries-mode').inputValue(), 'files');
+    await page.waitForFunction(()=>!document.querySelector('#confirm-save').disabled);
+    assert(await page.locator('#save-send').isDisabled(),'A multi-file export cannot be shared as one HTML');
+    assert.match(await page.locator('#save-send-status').innerText(),/Внутри HTML/);
     await page.locator('#confirm-save').click();
     await page.locator('#save-files').waitFor({ state: 'visible' });
     const deadline = Date.now() + 10_000;
     while (!downloads.length && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 50));
-    const names = await page.locator('#save-file-list button').allTextContents();
+    const names = await page.locator('#save-file-list button span:first-child').allTextContents();
     for (let index = 0; index < names.length; index += 1) {
       if (!downloads.some(download => download.suggestedFilename() === names[index])) await page.locator('#save-file-list button').nth(index).click();
     }
@@ -194,7 +197,7 @@ try {
             const style = getComputedStyle(el);
             return el.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
           });
-          assert(usableHeight >= 80, 'Library details must remain readable at keyboard-sized heights');
+          assert(usableHeight >= 80, `Library details must remain readable at keyboard-sized heights: ${usableHeight}px`);
           assert.match(await page.locator('#library-extraction-list').innerText(), /Нет CDN/);
           await page.locator('[data-library-mode="files"]').click();
           await page.waitForFunction(() => !document.querySelector('#library-extract-apply').disabled);

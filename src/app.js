@@ -1621,8 +1621,12 @@ function updateSaveLibrariesDescription() {
 saveLibrariesField.addEventListener('change', () => { updateSaveLibrariesDescription(); void updateSaveMediaDescription(); });
 saveLibrariesMode.addEventListener('change', () => { updateSaveLibrariesDescription(); void updateSaveMediaDescription(); });
 let saveMediaRevision = 0;
+let savePreparedShare = null;
 async function updateSaveMediaDescription() {
   const revision = ++saveMediaRevision;
+  savePreparedShare = null;
+  const send = document.querySelector('#save-send'); send.disabled = true;
+  const sendStatus = document.querySelector('#save-send-status'); sendStatus.textContent = '';
   const field = document.querySelector('#save-media'), hint = document.querySelector('#save-media-hint');
   const code = codeField.value;
   const refs = mediaBindings(codeField.value).filter(ref => ref.id);
@@ -1646,6 +1650,8 @@ async function updateSaveMediaDescription() {
     const warning = resourceSizeWarning(total, 'document');
     result.textContent = `Размер HTML: ${diagnosticSize(bytes)}${prepared.files?.length > 1 ? '; все файлы: ' + diagnosticSize(total) + '. JS скачаются отдельно.' : '.'}${warning ? ' ' + warning : ''}`;
     result.classList.toggle('resource-warning', Boolean(warning));
+    if (prepared.files?.length > 1) sendStatus.textContent = 'Для отправки одним файлом выберите «Внутри HTML».';
+    else { savePreparedShare = { code, name: filenameField.value, html: prepared.html }; send.disabled = false; }
   } catch (error) {
     if (revision === saveMediaRevision) result.textContent = libraryCacheMessage(error, 'Размер не рассчитан. Попробуйте открыть сохранение ещё раз.');
   } finally {
@@ -1664,8 +1670,9 @@ saveButton.addEventListener('click', async () => {
   saveFilesPanel.hidden = true;
   saveFileList.replaceChildren();
   saveTitle.textContent = 'Сохранить HTML';
+  document.querySelector('#save-send').hidden = false;
   confirmSaveButton.hidden = false;
-  cancelSaveButton.textContent = 'Отмена';
+  panelIconButton(cancelSaveButton, 'back', 'Отмена');
   const available = Boolean(prepared.bundledLibraries?.length);
   saveLibrariesField.disabled = !available;
   const preference = extractedSavePreference(code);
@@ -1719,18 +1726,31 @@ shareButton.addEventListener('click', async () => {
   }
 });
 cancelSaveButton.addEventListener('click', () => closeWorkspacePanel());
+document.querySelector('#save-send').addEventListener('click', async () => {
+  const prepared = savePreparedShare, button = document.querySelector('#save-send'), status = document.querySelector('#save-send-status');
+  if (button.disabled || !prepared || prepared.code !== codeField.value || prepared.name !== filenameField.value) return;
+  button.disabled = true;
+  try {
+    const result = await shareHtml(prepared.html, prepared.name);
+    status.textContent = result === 'shared' ? 'Файл передан в меню отправки.' : result === 'cancelled' ? 'Отправка отменена. Код сохранён в редакторе.' : 'Отправка файла здесь недоступна. Сохраните HTML и отправьте его через приложение «Файлы».';
+  } catch { status.textContent = 'Не удалось отправить файл. Сохраните HTML и отправьте его через приложение «Файлы».'; }
+  finally { if (prepared === savePreparedShare) button.disabled = false; }
+});
 function showSaveFiles(files) {
   saveOptions.hidden = true;
   saveFilesPanel.hidden = false;
   saveTitle.textContent = 'Скачать файлы';
   confirmSaveButton.hidden = true;
-  cancelSaveButton.textContent = 'Закрыть';
+  document.querySelector('#save-send').hidden = true;
+  panelIconButton(cancelSaveButton, 'back', 'Закрыть');
   saveFileList.replaceChildren();
   for (const file of files) {
     const item = document.createElement('li');
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = file.name;
+    const name = document.createElement('span'); name.textContent = file.name;
+    const size = document.createElement('span'); size.textContent = diagnosticSize(new Blob([file.content]).size);
+    button.append(name, size);
     button.setAttribute('aria-label', `Скачать ${file.name}`);
     button.addEventListener('click', () => {
       try { downloadGameFile(file); }
