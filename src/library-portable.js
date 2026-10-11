@@ -106,8 +106,8 @@ async function installLibraryPack(entries) {
 }
 async function readRawLibraryFiles(reference, files) {
   const map = portableFilesMap(files);
-  const decoded = [...map].map(([name, bytes]) => ({name, source:portableDecoder.decode(bytes)}));
-  const scripts = decoded.filter(file => /\.js$/i.test(file.name));
+  const decoded = [...map].filter(([name]) => !/\.(?:wasm|tgz|gz)$/i.test(name)).map(([name, bytes]) => ({name, source:portableDecoder.decode(bytes)}));
+  const scripts = decoded.filter(file => /\.(?:js|mjs)$/i.test(file.name));
   const license = decoded.find(file => /(?:^|[-_.])licen[sc]e(?:\.|$)/i.test(file.name))?.source || (scripts.length === 1 ? localLibraryNotices(scripts[0].source).license : '');
   const notice = decoded.find(file => /(?:^|[-_.])notice(?:\.|$)/i.test(file.name))?.source || (scripts.length === 1 ? localLibraryNotices(scripts[0].source).notice : '');
   const entry = {key:reference.key, title:reference.title, sourceUrl:reference.url, licenseUrl:reference.licenseUrl,
@@ -128,7 +128,11 @@ async function readRawLibraryFiles(reference, files) {
     entry.source = JSON.stringify(graph); entry.bytes = moduleEntryData(entry)?.bytes;
   } else {
     if (scripts.length !== 1) throw Error('Выберите один JS-файл этой версии, полный LICENSE и при необходимости NOTICE.');
-    entry.source = scripts[0].source; entry.bytes = portableEncoder.encode(entry.source).length;
+    entry.source = scripts[0].source;
+    if (typeof addedLibraryCatalog !== 'undefined' && addedLibraryCatalog[reference.key] && !addedLibraryValid(entry)) {
+      const binary = [...map].find(([name]) => reference.key === 'p5@2.3.4' ? /\.(?:tgz|gz)$/i.test(name) : /\.wasm$/i.test(name))?.[1];
+      entry.source = wrapAddedLibrary(reference, entry.source, binary);
+    } entry.bytes = portableEncoder.encode(entry.source).length;
   }
   if (!await allowedLibraryCacheEntry(entry)) throw Error('Нужны JS, полный текст лицензии и все зависимости; для Babylon.js — также NOTICE.');
   return [entry];

@@ -26,7 +26,7 @@ async function embeddedLibraryRows(code) {
     const bodyEnd = match[0].search(/<\/script\s*>$/i);
     const source = match[0].slice(8 + match[2].length, bodyEnd).replace(/^\r?\n/, '').replace(/\r?\n$/, '');
     const row = { index: match.index, end: match.index + match[0].length, start: match.index,
-      title: catalog?.title || filename, filename, key, originalUrl, source, license: '', notice: '', cdn: '',
+      title: catalog?.title || filename, filename, key, catalogKey: catalog?.key, originalUrl, source, license: '', notice: '', cdn: '',
       inlineAttributes: libraryInlineAttributes(attributes), reason: '' };
     rows.push(row);
     if (['async', 'defer', 'nomodule'].some(name => attributes.has(name))
@@ -39,7 +39,7 @@ async function embeddedLibraryRows(code) {
     if (value('bundle') === '1') {
       const marker = `onehtml-library:${encodeURIComponent(key)}\n`;
       const titleEnd = commentText.indexOf('\n', marker.length);
-      const type = /, (MIT|Apache-2\.0) license:$/.exec(commentText.slice(marker.length, titleEnd))?.[1];
+      const type = /, (MIT|Apache-2\.0|LGPL-2\.1) license:$/.exec(commentText.slice(marker.length, titleEnd))?.[1];
       if (!commentText.startsWith(marker) || titleEnd < 0 || !type || (value('license') && value('license') !== type)) {
         row.reason = 'Не найдена лицензия встроенной копии.';
         continue;
@@ -68,7 +68,7 @@ async function embeddedLibraryRows(code) {
       row.license = cached.license;
       if (!hash) { row.reason = 'Недоступна проверка исходного кода библиотеки.'; continue; }
     }
-    if (!validLibraryEntry(row)) { row.reason = 'Не удалось проверить библиотеку, лицензию или NOTICE.'; continue; }
+    if (!validLibraryEntry(row) || typeof addedLibraryIntegrity === 'function' && !await addedLibraryIntegrity(row)) { row.reason = 'Не удалось проверить библиотеку, лицензию, зависимость или NOTICE.'; continue; }
     row.start = adjacent.index;
     row.assetKey = 'asset@' + await librarySourceHash(libraryAssetIdentity(source, row.license, row.notice));
     row.catalogKey = catalog?.key;

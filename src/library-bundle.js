@@ -29,10 +29,11 @@ function appendResourceWarning(container, message) {
 
 function libraryLicenseType(license) {
   if (typeof license !== 'string') return '';
-  if (license.includes('Permission is hereby granted') && license.includes('THE SOFTWARE IS PROVIDED') && /Copyright/i.test(license)) return 'MIT';
+  if (license.includes('GNU LESSER GENERAL PUBLIC LICENSE') && license.includes('Version 2.1, February 1999') && license.includes('END OF TERMS AND CONDITIONS')) return 'LGPL-2.1';
   if (/Apache License[\s\S]*?Version 2\.0/.test(license) && license.includes('TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION')
     && ['Definitions', 'Grant of Copyright License', 'Grant of Patent License', 'Redistribution', 'Submission of Contributions',
       'Trademarks', 'Disclaimer of Warranty', 'Limitation of Liability', 'Accepting Warranty or Additional Liability'].every(section => license.includes(section))) return 'Apache-2.0';
+  if (license.includes('Permission is hereby granted') && license.includes('THE SOFTWARE IS PROVIDED') && /Copyright/i.test(license)) return 'MIT';
   return '';
 }
 function validLibraryAsset(source, license, notice = '') {
@@ -43,6 +44,7 @@ function validLibraryAsset(source, license, notice = '') {
 function libraryNeedsNotice(entry) { return /^babylonjs(?:-loaders)?@/.test(entry.catalogKey || entry.key || '') || /^Babylon\.js(?: |$)/.test(entry.title || ''); }
 function validLibraryEntry(entry) {
   return entry && validLibraryAsset(entry.source, entry.license, entry.notice || '')
+    && (typeof addedLibraryValid !== 'function' || addedLibraryValid(entry))
     && (!entry.licenseType || entry.licenseType === libraryLicenseType(entry.license))
     && (!libraryNeedsNotice(entry) || libraryLicenseType(entry.license) === 'Apache-2.0' && /Babylon\.js[\s\S]*Copyright/.test(entry.notice || ''))
     && (!(entry.catalogKey || entry.key || '').startsWith('tone@') || Boolean(toneDistributionLicense) && entry.license.replace(/\r\n?/g, '\n').includes(toneDistributionLicense))
@@ -57,6 +59,8 @@ const knownLibraryBytes = { 'three@0.160.0': 669884, 'matter-js@0.20.0': 83476,
   'babylonjs-loaders@9.30.0:glTF2': 399422, 'babylonjs-loaders@9.30.0:all': 849596 };
 
 function libraryReference(url) {
+  const added = typeof addedLibraryReference === 'function' && addedLibraryReference(url);
+  if (added) return added;
   if (/^https:\/\/(?:cdn\.jsdelivr\.net\/npm\/|unpkg\.com\/)pixi\.js@8\.22\.0\/dist\/packages\/unsafe-eval\.min\.js$/.test(url)) return {
     key: 'pixi.js@8.22.0:unsafe-eval', title: 'PixiJS 8.22.0 · совместимость CSP', url, downloadBytes: 15751, licenseType: 'MIT',
     licenseUrl: 'https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/LICENSE', licenseText: pixiDistributionLicense
@@ -67,6 +71,8 @@ function libraryReference(url) {
   };
   if (/^https:\/\/(?:cdn\.jsdelivr\.net\/npm\/|unpkg\.com\/)tone@15\.1\.22\/build\/Tone\.js$/.test(url)) return {
     key: 'tone@15.1.22', title: 'Tone.js 15.1.22', url, downloadBytes: 345500, licenseType: 'MIT',
+    downloadUrls: ['https://unpkg.com/tone@15.1.22/build/Tone.js', 'https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.js'],
+    sourceSha256: 'e290952fa43d9a7a780182a83c6fccf44d79cb7ae2cba102ef1f2b9d98124e22',
     licenseUrl: 'https://cdn.jsdelivr.net/npm/tone@15.1.22/LICENSE.md', licenseText: toneDistributionLicense
   };
   const loader = /^https:\/\/(?:cdn\.jsdelivr\.net\/npm\/|unpkg\.com\/)babylonjs-loaders@9\.30\.0\/(babylon\.glTF2FileLoader|babylonjs\.loaders)\.min\.js$/.exec(url);
@@ -128,6 +134,8 @@ function localLibraryReference(url) {
   if (!/\.js$/i.test(filename)) return null;
   let reference;
   let title = filename;
+  const added = typeof addedLocalLibraryReference === 'function' && addedLocalLibraryReference(path);
+  if (added) return added;
   const folders = path.split('/').slice(0, -1).reverse();
   if (/^three(?:[._-](?:r\d{3}|v?0\.\d{3}\.0))?(?:\.min)?\.js$/i.test(filename)) {
     title = 'Three.js';
@@ -196,13 +204,14 @@ function cachedLibrary(reference) {
 
 async function librarySourceHash(source) {
   try {
-    const bytes = new TextEncoder().encode(source.replace(/\r\n?/g, '\n'));
+    const bytes = source instanceof Uint8Array ? source : new TextEncoder().encode(source.replace(/\r\n?/g, '\n'));
     const hash = await crypto.subtle.digest('SHA-256', bytes);
     return [...new Uint8Array(hash)].map(value => value.toString(16).padStart(2, '0')).join('');
   } catch { return ''; }
 }
 
 function libraryCatalogReference(key) {
+  if (typeof addedLibraryCatalog !== 'undefined' && addedLibraryCatalog[key]) return addedLibraryReference('https://cdn.jsdelivr.net/npm/' + addedLibraryCatalog[key].file);
   if (key === 'pixi.js@8.22.0:unsafe-eval') return libraryReference('https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/packages/unsafe-eval.min.js');
   if (key === 'pixi.js@8.22.0') return libraryReference('https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/dist/pixi.min.js');
   if (key === 'tone@15.1.22') return libraryReference('https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.js');
@@ -248,6 +257,7 @@ function libraryDatabase() {
 async function allowedLibraryCacheEntry(entry) {
   if (!entry || typeof entry.key !== 'string' || typeof entry.source !== 'string'
     || typeof entry.license !== 'string' || !validLibraryEntry(entry)) return false;
+  if (typeof addedLibraryIntegrity === 'function' && !await addedLibraryIntegrity(entry)) return false;
   const known = libraryReference(entry.sourceUrl)?.key === entry.key;
   const local = /^[a-f\d]{64}$/.test(entry.documentScope)
     && localLibraryReference(entry.localPath) && entry.key === localLibraryKey(entry.documentScope, entry.localPath);
@@ -462,6 +472,10 @@ function packageFilename(value) {
 function libraryFilename(reference, entry) {
   if (reference.filename) return packageFilename(reference.filename);
   const key = entry.catalogKey || entry.key;
+  if (key === 'p5@2.3.4') return 'p5-2.3.4.min.js';
+  if (key === '@babylonjs/havok@1.3.14') return 'havok-1.3.14.js';
+  if (key === '@google/model-viewer@4.4.0') return 'model-viewer-4.4.0.min.js';
+  if (key === 'aframe@1.8.0') return 'aframe-1.8.0.min.js';
   const three = /^three@0\.(\d{3})\.0$/.exec(key);
   if (three) return `three-r${three[1]}.min.js`;
   const matter = /^matter-js@([\d.]+)$/.exec(key);
@@ -564,19 +578,112 @@ async function readLibraryResponse(response) {
   return response.text();
 }
 
+function libraryDownloadError(reference, resource, url, reason) {
+  const filename = url ? decodeURIComponent(new URL(url).pathname.split('/').pop()) : '';
+  const error = new Error(`${reference.title}: не удалось загрузить ${resource}${filename ? ` «${filename}»` : ''}. ${reason}`);
+  Object.assign(error, { libraryDownload: true, libraryKey: reference.key, resource, resourceUrl: url, downloadReason: reason });
+  return error;
+}
+
+function libraryDownloadMessage(error, reference) {
+  return error?.libraryDownload ? error.message
+    : `${reference?.title || 'Библиотека'}: не удалось проверить код, лицензию или зависимости. Повторите загрузку или установите копию из файлов.`;
+}
+
+function libraryResourceUrls(reference, url) {
+  if (url === reference.url && reference.downloadUrls) return [...new Set(reference.downloadUrls)];
+  const urls = [url];
+  const npm = /^https:\/\/(cdn\.jsdelivr\.net\/npm\/|unpkg\.com\/)(.+@\d+\.\d+\.\d+\/[^?#]+)$/.exec(url);
+  if (npm) urls.push((npm[1].startsWith('unpkg') ? 'https://cdn.jsdelivr.net/npm/' : 'https://unpkg.com/') + npm[2]);
+  const cdnjs = /^https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/(three\.js|matter-js|phaser)\/([^/]+)\/([^?#/]+)$/.exec(url);
+  if (cdnjs) {
+    const [, name, version, file] = cdnjs;
+    const packagePath = name === 'three.js' && /^r\d{3}$/.test(version) ? `three@0.${version.slice(1)}.0/build/${file}`
+      : name === 'matter-js' && /^0\.\d+\.\d+$/.test(version) ? `matter-js@${version}/build/${file}`
+      : name === 'phaser' && /^\d+\.\d+\.\d+$/.test(version) ? `phaser@${version}/dist/${file}` : '';
+    if (packagePath) urls.push('https://cdn.jsdelivr.net/npm/' + packagePath, 'https://unpkg.com/' + packagePath);
+  }
+  const p5Source = /^https:\/\/raw\.githubusercontent\.com\/processing\/p5\.js\/(v2\.3\.4)\/([^?#]+)$/.exec(url);
+  if (reference.key === 'p5@2.3.4' && p5Source) urls.push(`https://cdn.jsdelivr.net/gh/processing/p5.js@${p5Source[1]}/${p5Source[2]}`);
+  return [...new Set(urls)];
+}
+
+async function readLibraryResourceBytes(response, progress, signal) {
+  if (!response.body?.getReader) return new Uint8Array(await response.arrayBuffer());
+  const reader = response.body.getReader(), chunks = []; let size = 0;
+  const cancel = () => {reader.cancel(signal.reason).catch(() => {});};
+  signal.addEventListener('abort', cancel, {once:true});
+  if (signal.aborted) cancel();
+  try {
+    for (;;) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      if (value.length) {chunks.push(value); size += value.length; progress();}
+    }
+  } finally {signal.removeEventListener('abort', cancel); reader.releaseLock();}
+  const bytes = new Uint8Array(size); let at = 0;
+  for (const chunk of chunks) {bytes.set(chunk, at); at += chunk.length;}
+  return bytes;
+}
+
+async function downloadLibraryResource(reference, url, resource, options = {}, format = 'text', expected = {}) {
+  const urls = libraryResourceUrls(reference, url);
+  const failures = [];
+  for (const candidate of urls) {
+    if (options.signal?.aborted) throw options.signal.reason || new DOMException('Загрузка отменена', 'AbortError');
+    const controller = new AbortController();
+    const cancel = () => controller.abort(options.signal.reason);
+    options.signal?.addEventListener('abort', cancel, { once: true });
+    let timedOut = false;
+    let timer;
+    const progress = () => {clearTimeout(timer); timer = setTimeout(() => { timedOut = true; controller.abort(); }, 12000);};
+    progress();
+    try {
+      const response = await fetch(candidate, { ...options, signal: controller.signal });
+      progress();
+      if (!response.ok) throw libraryDownloadError(reference, resource, candidate, `HTTP ${response.status}.`);
+      if (format === 'module' && !/^(?:text|application)\/(?:javascript|ecmascript)(?:;|$)/i.test(response.headers.get('content-type') || '')) {
+        throw libraryDownloadError(reference, resource, candidate, 'Сервер вернул файл другого типа вместо JavaScript.');
+      }
+      const bytes = await readLibraryResourceBytes(response, progress, controller.signal); clearTimeout(timer);
+      if (controller.signal.aborted) throw controller.signal.reason;
+      const value = format === 'binary' ? bytes : new TextDecoder().decode(bytes);
+      if (expected.bytes !== undefined && bytes.length !== expected.bytes) throw libraryDownloadError(reference, resource, candidate, 'Размер файла не совпадает с проверенной копией.');
+      if (expected.sha256) {
+        const digest = await crypto.subtle.digest('SHA-256', bytes);
+        const hash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+        if (hash !== expected.sha256) throw libraryDownloadError(reference, resource, candidate, 'Содержимое не совпадает с проверенной версией.');
+      }
+      if (format !== 'binary' && (!value.trim() || /^\s*(?:<!doctype\s+html|<html\b)/i.test(value))) throw libraryDownloadError(reference, resource, candidate, 'Вместо нужного файла получен пустой ответ или HTML-страница.');
+      if (resource === 'лицензию' && !libraryLicenseType(value)) throw libraryDownloadError(reference, resource, candidate, 'Файл не содержит полных условий поддерживаемой лицензии.');
+      if (resource === 'уведомления NOTICE' && !/Babylon\.js[\s\S]*Copyright/.test(value)) throw libraryDownloadError(reference, resource, candidate, 'Файл не содержит обязательных авторских уведомлений.');
+      if (options.signal?.aborted) throw options.signal.reason || new DOMException('Загрузка отменена', 'AbortError');
+      return value;
+    } catch (error) {
+      if (options.signal?.aborted) throw options.signal.reason || error;
+      failures.push(`${candidate}: ${timedOut ? 'нет ответа или новых данных за 12 секунд' : error.libraryDownload ? error.downloadReason : 'браузер не смог получить файл'}`);
+    } finally {
+      clearTimeout(timer);
+      options.signal?.removeEventListener('abort', cancel);
+    }
+  }
+  throw libraryDownloadError(reference, resource, url, `Все источники недоступны или вернули неподходящий файл. ${failures.join(' ')} Повторите загрузку или установите копию из файлов.`);
+}
+
+async function downloadLibraryCode(reference, options) {
+  return downloadLibraryResource(reference, reference.url, 'код библиотеки', options, 'text', reference.sourceSha256 ? {sha256:reference.sourceSha256} : {});
+}
+
 async function downloadLibrary(reference, options = {}) {
   if (reference.format === 'module') return downloadModule(reference, options);
   const fetchOptions = { credentials: 'omit', redirect: 'error', ...options };
-  const [sourceResponse, licenseResponse, noticeResponse] = await Promise.all([
-    fetch(reference.url, fetchOptions),
-    reference.licenseText ? null : fetch(reference.licenseUrl, fetchOptions),
-    reference.noticeUrl ? fetch(reference.noticeUrl, fetchOptions) : null
+  const [originalSource, license, notice] = await Promise.all([
+    downloadLibraryCode(reference, fetchOptions),
+    reference.licenseText || downloadLibraryResource(reference, reference.licenseUrl, 'лицензию', fetchOptions),
+    reference.noticeUrl ? downloadLibraryResource(reference, reference.noticeUrl, 'уведомления NOTICE', fetchOptions) : ''
   ]);
-  const [source, license, notice] = await Promise.all([
-    readLibraryResponse(sourceResponse),
-    reference.licenseText || readLibraryResponse(licenseResponse), noticeResponse ? readLibraryResponse(noticeResponse) : ''
-  ]);
-  if (!source.trim() || !validLibraryEntry({ ...reference, source, license, notice })) throw new Error('invalid library, license or NOTICE');
+  const source = typeof addedLibrarySource === 'function' ? await addedLibrarySource(reference, originalSource, fetchOptions) : originalSource;
+  if (!source.trim() || !validLibraryEntry({ ...reference, source, license, notice })) throw libraryDownloadError(reference, 'код и лицензию', reference.url, 'Полученная копия не прошла проверку содержимого или авторских уведомлений.');
   const entry = { key: reference.catalogKey || reference.key, title: reference.title, source, license: license.trim(),
     licenseType: libraryLicenseType(license), notice: notice.trim(),
     sourceUrl: reference.url, licenseUrl: reference.licenseUrl,

@@ -278,16 +278,17 @@ function requestLibraries(prepared, action, code = codeField.value) {
     + (Number.isFinite(item.downloadBytes) && item.downloadBytes > 0 ? ` (≈${formatLibrarySize(item.downloadBytes)})` : '')).join(', ');
   const downloadable = prepared.missingLibraries.filter(item => item.url && item.licenseUrl);
   const local = prepared.missingLibraries.filter(item => item.localPath);
-  const hosts = [...new Set(downloadable.flatMap(item => [item.url.split('/')[2], item.licenseUrl.split('/')[2]]))].join(', ');
+  const installable = prepared.missingLibraries.filter(item => libraryCatalogReference(item.catalogKey || item.key));
+  const hosts = [...new Set(downloadable.flatMap(item => [item.url, ...(item.licenseText ? [] : [item.licenseUrl]), ...(item.noticeUrl ? [item.noticeUrl] : [])].flatMap(url => libraryResourceUrls(item, url)).map(url => new URL(url).hostname).concat(item.key === 'p5@2.3.4' ? ['raw.githubusercontent.com (processing/p5.js)'] : [])))].join(', ');
   libraryRequestText.textContent = `Для автономной игры нужны: ${titles}.`
     + (downloadable.length ? ` Скачать с ${hosts}.` : '')
-    + (prepared.missingLibraries.some(item => item.downloadBytes > 0) ? ' Размер кода без сетевого сжатия.' : '')
-    + (local.length ? ` Локальный файл: ${local[0].localPath}. Можно выбрать JS, полный текст лицензии MIT или Apache-2.0 и NOTICE.` : '')
+    + (prepared.missingLibraries.some(item => item.downloadBytes > 0) ? ' Размер загрузки без сетевого сжатия.' : '')
+    + (local.length ? ` Локальный файл: ${local[0].localPath}. Можно выбрать подготовленный JS с полными условиями лицензии и NOTICE. Исходные p5.js и Havok установите через «Подготовить библиотеки» вместе с зависимостями.` : '')
     + (action === 'convert' ? ' После получения нажмите «Применить», чтобы встроить копию и лицензию в код.'
       : ' Копия будет доступна для предпросмотра и встраивания при сохранении.');
   libraryDownloadButton.hidden = !downloadable.length;
-  libraryFilesButton.hidden = !local.length;
-  libraryFilesButton.textContent = 'Выбрать JS и лицензию';
+  libraryFilesButton.hidden = !local.length && !installable.length;
+  libraryFilesButton.textContent = local.length ? 'Выбрать JS и лицензию' : 'Установить из файлов';
   libraryRequest.hidden = false;
   setDiagnosticTab(action === 'inspect' ? 'libraries' : 'errors');
   if (currentPanel() !== activityPanel) showWorkspacePanel(activityPanel, false, action === 'compare');
@@ -300,12 +301,14 @@ libraryDownloadButton.addEventListener('click', async () => {
   libraryDownloadButton.disabled = true;
   librarySkipButton.disabled = true;
   libraryFilesButton.disabled = true;
+  let downloading;
   try {
     let persisted = true;
     for (const reference of pending.references.filter(item => item.url && item.licenseUrl)) {
       if (cachedLibrary(reference)) continue;
+      downloading = reference;
       libraryRequestText.textContent = `Загружается ${reference.title} и её лицензия…`;
-      persisted = await downloadLibrary(reference) && persisted;
+      persisted = await downloadLibrary(reference, {onProgress: text => {if (pending === pendingLibraryAction) libraryRequestText.textContent = text + '…';}}) && persisted;
     }
     const prepared = await prepareGameHtml(pending.code);
     if (!libraryActionIsCurrent(pending)) return;
@@ -317,9 +320,13 @@ libraryDownloadButton.addEventListener('click', async () => {
     inform(persisted
       ? 'Библиотеки сохранены в браузере. Повторите запуск, сохранение или отправку.'
       : 'Библиотеки загружены для этого сеанса, но браузер не сохранил их. Повторите действие.', !persisted, !persisted);
-  } catch {
+  } catch (error) {
     if (pending !== pendingLibraryAction) return;
-    libraryRequestText.textContent = 'Не удалось скачать библиотеку и её лицензию. Проверьте сеть или доступ CDN к загрузке из локального файла.';
+    libraryRequestText.textContent = libraryDownloadMessage(error, downloading);
+    pending.fileReference = downloading;
+    if (downloading?.key === 'p5@2.3.4' && ['архив исходников', 'исходник'].includes(error.resource)) {
+      libraryRequestText.textContent += ' Можно установить p5.js из файлов: JS, полная лицензия и p5-source-2.3.4.tar.gz.';
+    }
     libraryDownloadButton.disabled = false;
     librarySkipButton.disabled = false;
     libraryFilesButton.disabled = false;
@@ -328,13 +335,19 @@ libraryDownloadButton.addEventListener('click', async () => {
 
 libraryFilesButton.addEventListener('click', () => {
   if (!pendingLibraryAction) return;
+  const reference = pendingLibraryAction.fileReference || pendingLibraryAction.references.find(item => item.localPath && !cachedLibrary(item))
+    || pendingLibraryAction.references.find(item => !cachedLibrary(item) && libraryCatalogReference(item.catalogKey || item.key));
+  if (!reference) return;
+  pendingLibraryAction.fileReference = reference;
+  if (!reference.localPath) libraryRequestText.textContent = `Выберите файлы для «${reference.title}»: JS, полную лицензию${libraryNeedsNotice(reference) ? ' и NOTICE' : ''}${reference.key === 'p5@2.3.4' ? ' и p5-source-2.3.4.tar.gz' : reference.key === '@babylonjs/havok@1.3.14' ? ' и HavokPhysics.wasm' : ''}.`;
   libraryFiles.value = '';
   libraryFiles.click();
 });
 
 libraryFiles.addEventListener('change', async () => {
   const pending = pendingLibraryAction;
-  const reference = pending?.references.find(item => item.localPath && !cachedLibrary(item));
+  const reference = pending?.fileReference || pending?.references.find(item => item.localPath && !cachedLibrary(item))
+    || pending?.references.find(item => !cachedLibrary(item) && libraryCatalogReference(item.catalogKey || item.key));
   const files = Array.from(libraryFiles.files || []);
   libraryFiles.value = '';
   if (!pending || !reference || !files.length) return;
@@ -343,6 +356,21 @@ libraryFiles.addEventListener('change', async () => {
   libraryFilesButton.disabled = true;
   try {
     if (!libraryActionIsCurrent(pending)) throw new Error('Код изменился. Повторите действие.');
+    if (!reference.localPath) {
+      const entries = await readRawLibraryFiles(libraryCatalogReference(reference.catalogKey || reference.key),
+        await Promise.all(files.map(async file => ({ name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) }))));
+      if (!libraryActionIsCurrent(pending)) return;
+      const persisted = await installLibraryPack(entries);
+      const prepared = await prepareGameHtml(pending.code);
+      if (!libraryActionIsCurrent(pending)) return;
+      hideLibraryRequest();
+      if (pending.action === 'compare') { await startComparisonGame(); return; }
+      if (pending.action === 'convert') { openLibraryExtraction('embed'); return; }
+      if (pending.action === 'inspect') { openDiagnostics('libraries'); inform(persisted ? 'Копия сохранена в браузере.' : 'Копия доступна только в этом сеансе.', !persisted); return; }
+      requestLibraries(prepared, pending.action);
+      inform(persisted ? 'Библиотека и лицензия установлены. Повторите запуск, сохранение или отправку.' : 'Библиотека доступна для этого сеанса. Повторите действие.', !persisted, !persisted);
+      return;
+    }
     const scripts = files.filter(file => /\.js$/i.test(file.name));
     const notices = files.filter(file => /^NOTICE(?:\.[\w-]+)?$/i.test(file.name));
     const licenses = files.filter(file => !/\.js$/i.test(file.name) && !notices.includes(file));
@@ -364,7 +392,7 @@ libraryFiles.addEventListener('change', async () => {
     const notice = notices.length ? await notices[0].text() : pendingLocalLibrarySource.notice || included.notice;
     Object.assign(pendingLocalLibrarySource, { license, notice });
     if (!license) {
-      libraryRequestText.textContent = `${reference.filename} прочитан. Выберите полный текст MIT или Apache-2.0 (LICENSE, .txt или .md) и NOTICE при наличии.`;
+      libraryRequestText.textContent = `${reference.filename} прочитан. Выберите полные условия лицензии (MIT, Apache-2.0 или LGPL-2.1) и NOTICE при наличии.`;
       libraryFilesButton.textContent = 'Выбрать лицензию';
       return;
     }

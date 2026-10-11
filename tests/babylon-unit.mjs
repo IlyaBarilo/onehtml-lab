@@ -6,7 +6,7 @@ import { runInNewContext } from 'node:vm';
 const source = (await Promise.all(['library-bundle.js', 'exporter.js', 'library-extract.js'].map(name => readFile(new URL('../src/' + name, import.meta.url), 'utf8')))).join('\n');
 const license = (await readFile(new URL('../docs/licenses/babylonjs-9.30.0-LICENSE.txt', import.meta.url), 'utf8')).trim().replace(/\r\n/g, '\n');
 const notice = (await readFile(new URL('../docs/licenses/babylonjs-9.30.0-NOTICE.txt', import.meta.url), 'utf8')).trim().replace(/\r\n/g, '\n');
-const context = { TextEncoder, TextDecoder, Blob, crypto: webcrypto, window: {}, fetch: async () => { throw Error('not mocked'); } };
+const context = { TextEncoder, TextDecoder, Blob, URL, AbortController, DOMException, setTimeout, clearTimeout, crypto: webcrypto, window: {}, fetch: async () => { throw Error('not mocked'); } };
 runInNewContext(source + '\nthis.api = { libraryCache, libraryReference, localLibraryReference, validLibraryEntry, libraryAssetIdentity, downloadLibrary, prepareGameHtml, prepareGameFiles, planLibraryExtraction, retainExtractionAssets, importLocalLibrary, localLibraryNotices };', context);
 const api = context.api, url = 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/babylon.js', ref = api.libraryReference(url);
 assert.equal(ref.key, 'babylonjs@9.30.0');
@@ -49,10 +49,10 @@ for (const altered of [embedded.replace(notice, ''), embedded.replace('9.30.0"}}
   assert.equal((await api.planLibraryExtraction(altered)).count, 0);
 }
 const before = api.libraryCache.get(ref.key);
-context.fetch = async requested => ({ ok: true, text: async () => requested === ref.url ? library : requested === ref.licenseUrl ? license : '' });
+context.fetch = async requested => new Response(requested === ref.url ? library : requested === ref.licenseUrl ? license : '');
 await assert.rejects(() => api.downloadLibrary(ref));
 assert.equal(api.libraryCache.get(ref.key), before, 'A missing NOTICE must not replace the working cached asset');
-context.fetch = async requested => ({ ok: true, text: async () => requested === ref.url ? library : requested === ref.licenseUrl ? license : notice });
+context.fetch = async requested => new Response(requested === ref.url ? library : requested === ref.licenseUrl ? license : notice);
 await api.downloadLibrary(ref);
 assert.equal(api.libraryCache.get(ref.key).notice, notice);
 const local = (await api.prepareGameHtml('<script src="./babylon.js"></script>')).missingLibraries[0];

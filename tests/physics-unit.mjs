@@ -15,7 +15,7 @@ for(const path of ['./cannon-es.js','./cannon-es-0.19.0.js','https://unknown.tes
 assert.equal(api.moduleFileUrl(url,url),url);assert.equal(api.moduleFileUrl('./cannon-es.js',url),url);
 for(const dependency of ['./extra.js','../cannon-es.js','https://unknown.test/cannon-es.js','cannon-es'])assert.throws(()=>api.moduleFileUrl(dependency,url),/зависимость/);
 assert(api.aiGameUsesPhysics({dimension:'3d',physics:'bodies'}));assert(api.aiGameUsesPhysics({dimension:'3d',basis:'three',physics:'bodies'}));
-for(const settings of [{dimension:'2d',physics:'bodies'},{dimension:'3d',physics:'simple'},{dimension:'3d',basis:'babylon',physics:'bodies'}])assert(!api.aiGameUsesPhysics(settings));
+for(const settings of [{dimension:'2d',physics:'bodies'},{dimension:'3d',physics:'simple'},{dimension:'3d',basis:'three',physics:'bodies',physicsEngine:'havok'}])assert(!api.aiGameUsesPhysics(settings));
 const prompt=api.aiGameInstructions({dimension:'3d',physics:'bodies'},true);assert(prompt.includes(url));assert(prompt.includes('GLTFLoader'));assert(prompt.includes('CANNON.World'));assert(prompt.includes('quaternion'));assert(!prompt.includes('three.min.js'));
-assert.equal(api.aiGameWarnings({dimension:'3d',physics:'bodies'}).length,0);assert.match(api.aiGameWarnings({dimension:'3d',basis:'babylon',physics:'bodies'}).join(' '),/ваш выбор сохранён/);
+assert.equal(api.aiGameWarnings({dimension:'3d',physics:'bodies'}).length,0);assert(api.aiGameUsesPhysics({dimension:'3d',basis:'babylon',physics:'bodies'}));assert.match(api.aiGameInstructions({dimension:'3d',basis:'babylon',physics:'bodies'}),/HavokPlugin/);assert.match(api.aiGameWarnings({dimension:'3d',basis:'three',physics:'bodies',physicsEngine:'havok'}).join(' '),/выбор сохранён/);
 console.log('cannon-es exact ESM/local versions, byte size, dependency guards and optional 3D physics profiles passed.');

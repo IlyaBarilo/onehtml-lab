@@ -214,7 +214,10 @@ async function runCase(browser, engine, url, mode) {
     assert.equal(context.pages().length, 1);
     // Let asynchronous load attempts reach the interception boundary.
     await page.waitForTimeout(150);
-    assert((await page.locator('#preview > iframe').getAttribute('srcdoc')).includes("script-src 'unsafe-inline' https:"), 'Network-enabled preview permits HTTPS resources');
+    const scriptsPolicy = /script-src ([^;]+)/.exec(await page.locator('#preview > iframe').getAttribute('srcdoc'))?.[1].split(/\s+/);
+    assert(scriptsPolicy?.includes('https:'), 'Network-enabled preview permits HTTPS resources');
+    assert(scriptsPolicy.includes("'wasm-unsafe-eval'"), 'Preview permits WASM compilation');
+    assert(!scriptsPolicy.includes("'unsafe-eval'"), 'Preview still blocks JavaScript eval');
     assert(!escapes.some(request => /\/(?:popup|top|frame|form)$/.test(request)), 'Sandbox still blocks popups, navigation, nested frames and forms');
     check('Sandbox blocks parent DOM and host storage while permitting isolated game storage and HTTPS resources');
     await page.locator('#run').click();

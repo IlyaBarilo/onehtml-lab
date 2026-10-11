@@ -4,7 +4,7 @@ import { webcrypto } from 'node:crypto';
 import { runInNewContext } from 'node:vm';
 
 const source = await readFile(new URL('../src/library-bundle.js', import.meta.url), 'utf8');
-const context = { TextEncoder, TextDecoder, crypto: webcrypto, window: {} };
+const context = { TextEncoder, TextDecoder, URL, AbortController, DOMException, setTimeout, clearTimeout, crypto: webcrypto, window: {} };
 runInNewContext(source + '\nthis.api = { libraryMatches, prepareGameHtml, importLocalLibrary, localLibraryLicense, libraryCache, downloadLibrary };', context);
 const { libraryMatches, prepareGameHtml, importLocalLibrary, localLibraryLicense, libraryCache } = context.api;
 const license = 'The MIT License\nCopyright (c) Library authors\nPermission is hereby granted, free of charge\nTHE SOFTWARE IS PROVIDED AS IS';

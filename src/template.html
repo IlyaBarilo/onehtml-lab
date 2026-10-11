@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https: data:; style-src 'unsafe-inline' https:; img-src data: blob: https:; media-src data: blob: https:; font-src data: https:; connect-src https: wss: data: blob:; webrtc 'block'; frame-src about:; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src blob:">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' https: data:; style-src 'unsafe-inline' https:; img-src data: blob: https:; media-src data: blob: https:; font-src data: https:; connect-src https: wss: data: blob:; webrtc 'block'; frame-src about:; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src blob:">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <meta name="description" content="Вставьте HTML-игру, проверьте её в изолированном окне и сохраните одним файлом.">
@@ -229,7 +229,7 @@
           <div id="library-request" class="library-request" role="group" aria-label="Загрузка библиотеки" hidden>
             <span id="library-request-text"></span>
             <div class="library-request-actions"><button id="library-download" type="button">Скачать</button><button id="library-files-button" type="button" hidden>Выбрать JS и лицензию</button><button id="library-skip" type="button">Без подмены</button></div>
-            <input id="library-files" type="file" multiple hidden aria-label="JS-файл библиотеки, лицензия и NOTICE">
+            <input id="library-files" type="file" multiple hidden aria-label="JS-файлы библиотеки, зависимости, лицензия и NOTICE">
           </div>
           <div id="diagnostic-tabs" class="platform-tabs" role="group" aria-label="Раздел диагностики"><button type="button" class="platform-tab" data-diagnostic-tab="errors" aria-pressed="true">Ошибки</button><button type="button" class="platform-tab" data-diagnostic-tab="libraries" aria-pressed="false">Библиотеки</button><button type="button" class="platform-tab" data-diagnostic-tab="resources" aria-pressed="false">Ресурсы</button><button type="button" class="platform-tab" data-diagnostic-tab="speed" aria-pressed="false">Скорость</button><button type="button" class="platform-tab" data-diagnostic-tab="quality" aria-pressed="false">Проверка</button></div>
           <div class="diagnostic-actions diagnostic-report-actions"><button id="diagnostic-copy" type="button">Скопировать отчёт</button></div>
@@ -254,15 +254,19 @@
               <summary>Подготовить библиотеки</summary>
               <p class="diagnostic-note">Загрузите нужные версии заранее. Для передачи студентам сохраните набор, разместите его в общей папке и установите из файлов на каждом устройстве. Копии сохраняются в браузере; код игры не меняется.</p>
               <div class="diagnostic-actions"><button id="library-download-selected" type="button" disabled>Скачать выбранные</button><button id="library-download-all" type="button">Скачать все библиотеки</button><button id="library-preparation-cancel" type="button" hidden>Остановить загрузку</button></div>
+              <label class="library-export-option"><input id="library-include-experimental" type="checkbox"> Включать экспериментальные библиотеки в «Скачать все»</label>
               <div class="diagnostic-actions"><button id="library-import-archive" type="button">Загрузить из архива…</button><button id="library-import-pack" type="button">Загрузить манифест и файлы…</button></div>
               <input id="library-preparation-archive" type="file" accept=".zip,application/zip" aria-label="Сохранённый архив библиотек OneHTML Lab" hidden>
               <input id="library-preparation-input" type="file" multiple accept=".zip,.json,.js,.txt,.md" aria-label="Архив библиотек или манифест со всеми файлами" hidden>
               <input id="library-preparation-raw" type="file" multiple aria-label="JS, зависимости, LICENSE и NOTICE выбранной версии" hidden>
               <label class="library-export-option">Сохранить <select id="library-export-format"><option value="zip">ZIP-архивом</option><option value="files">Отдельными файлами</option></select></label>
               <div class="diagnostic-actions"><button id="library-export-selected" type="button" disabled>Сохранить выбранные</button><button id="library-export-all" type="button" disabled>Сохранить все библиотеки</button></div>
-              <p class="diagnostic-note">Сохраняются загруженные копии. Чтобы получить полный набор, сначала нажмите «Скачать все библиотеки».</p>
+              <p class="diagnostic-note">Сохраняются загруженные копии. «Скачать все библиотеки» загружает основной набор; для экспериментальных отметьте галочку выше или выберите их отдельно.</p>
               <p id="library-preparation-status" role="status" aria-live="polite" class="diagnostic-note"></p>
               <ul id="library-preparation-list" class="diagnostic-list"></ul>
+              <h4>Экспериментальные библиотеки</h4>
+              <p class="diagnostic-note">По умолчанию не скачиваются кнопкой «Скачать все библиотеки». Выберите нужную отдельно или включите галочку выше.</p>
+              <ul id="library-experimental-list" class="diagnostic-list"></ul>
               <div id="library-export-files" hidden><button id="library-export-files-all" type="button">Скачать все файлы</button><p class="diagnostic-note">Браузер может запросить разрешение на несколько скачиваний. Каждый файл также можно скачать отдельно.</p><ul id="library-export-file-list" class="diagnostic-list"></ul></div>
             </details>
             <div class="diagnostic-cache-heading"><h3>Сохранённые копии</h3><button id="diagnostic-cache-clear" type="button" disabled>Удалить все</button></div>
@@ -363,7 +367,7 @@
       <p id="ai-game-recommendation" class="diagnostic-note"></p>
       <details><summary>Жанр, оформление и другие пожелания</summary><div class="ai-game-grid">
         <label>Жанр<select id="ai-game-genre"></select></label><label>Оформление<select id="ai-game-style"></select></label>
-        <label>Физика<select id="ai-game-physics"></select></label><label>Камера<select id="ai-game-camera"></select></label>
+        <label>Физика<select id="ai-game-physics"></select></label><label>3D-движок физики<select id="ai-game-physicsEngine"></select></label><label>Камера<select id="ai-game-camera"></select></label>
         <label>Экран<select id="ai-game-orientation"></select></label><label>Управление на телефоне<select id="ai-game-controls"></select></label>
         <label>Звук<select id="ai-game-sound"></select></label><label>Нагрузка<select id="ai-game-load"></select></label>
       </div><p class="diagnostic-note">Все пожелания необязательны. Назначение файлов можно написать выше: «1.png — персонаж, 2.jpg — фон».</p></details>

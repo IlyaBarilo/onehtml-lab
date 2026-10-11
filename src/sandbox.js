@@ -2,7 +2,7 @@
 function previewPolicy(networkAllowed) {
   return [
     "default-src 'none'",
-    `script-src 'unsafe-inline'${networkAllowed ? ' https:' : ''} data:`,
+    `script-src 'unsafe-inline' 'wasm-unsafe-eval'${networkAllowed ? ' https:' : ''} data:`,
     `style-src 'unsafe-inline'${networkAllowed ? ' https:' : ''}`,
     `img-src data: blob:${networkAllowed ? ' https:' : ''}`,
     `media-src data: blob:${networkAllowed ? ' https:' : ''}`,

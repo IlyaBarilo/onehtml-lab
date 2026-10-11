@@ -17,13 +17,17 @@ for (const name of ['app', 'paste', 'clear', 'save', 'share', 'play', 'stop', 'e
   template = template.replace(`<!-- ICON:${name} -->`, () => icon.trim());
 }
 const css = await readFile(join(root, 'src/styles.css'), 'utf8');
-const files = ['format.js', 'vendor/codemirror.bundle.js', 'game-storage.js', 'library-bundle.js', 'library-modules.js', 'library-portable.js', 'media-models.js', 'media-assets.js', 'media-prompts.js', 'media-images.js', 'quality.js', 'sandbox.js', 'exporter.js', 'library-extract.js', 'draft.js', 'compare.js', 'comparison-game.js', 'workspace.js', 'syntax.js', 'editor.js', 'alternative-editor.js', 'desktop.js', 'readiness.js', 'diagnostics.js', 'library-preparation.js', 'ai-profiles.js', 'ai-prompts.js', 'ai-session.js', 'preview-picker.js', 'example-lessons.js', 'code-guide.js', 'app.js'];
+const files = ['format.js', 'vendor/codemirror.bundle.js', 'game-storage.js', 'library-bundle.js', 'p5-source.js', 'library-additions.js', 'library-modules.js', 'library-portable.js', 'media-models.js', 'media-assets.js', 'media-prompts.js', 'media-images.js', 'quality.js', 'sandbox.js', 'exporter.js', 'library-extract.js', 'draft.js', 'compare.js', 'comparison-game.js', 'workspace.js', 'syntax.js', 'editor.js', 'alternative-editor.js', 'desktop.js', 'readiness.js', 'diagnostics.js', 'library-preparation.js', 'ai-profiles.js', 'ai-prompts.js', 'ai-session.js', 'preview-picker.js', 'example-lessons.js', 'code-guide.js', 'app.js'];
 const exampleFiles = [
   { id: 'catch-circle', platform: 'mobile', title: 'Поймай круг', description: 'Касайтесь цели на всём экране.' },
   { id: 'memory', platform: 'mobile', title: 'Найди пару', description: 'Открывайте пары касанием карточек.' },
   { id: 'reaction', platform: 'mobile', title: 'Проверь реакцию', description: 'Коснитесь экрана после смены цвета.' },
   { id: 'interactive-poster', category: 'media', platform: 'mobile', title: 'Интерактивная афиша', description: 'Анимация, программа мероприятия и смена темы.' },
   { id: 'pixi-poster', category: 'media', platform: 'all', title: 'Афиша: Canvas и PixiJS', description: 'Одна композиция, маска изображения и движение. Перетаскивайте изображение и сравнивайте способы отрисовки.' },
+  { id: 'generative-art', category: 'media', platform: 'all', title: 'Живая композиция: Canvas и p5.js', description: 'Линии, палитры и касания. Сравните API браузера и библиотеку генеративной графики.' },
+  { id: 'model-exhibit', category: 'media', platform: 'all', title: 'Экспонат: model-viewer', description: 'Карточка GLB-модели: камера, подписи и анимация.' },
+  { id: 'virtual-exhibition', category: 'media', platform: 'all', title: 'Виртуальная выставка: A-Frame', description: 'Три работы, свет и осмотр пространства касаниями или мышью.' },
+  { id: 'physics-comparison', category: 'media', platform: 'all', title: 'Сравнение 3D-физики', description: 'Одна башня: cannon-es, Rapier и Havok. Масса, трение, отскок и FPS.' },
   { id: 'branching-story', category: 'media', platform: 'mobile', title: 'История с выбором', description: 'Развилки, разные окончания и возврат к выбору.' },
   { id: 'interactive-infographic', category: 'media', platform: 'mobile', title: 'Интерактивная инфографика', description: 'Данные, диаграмма и пояснения по нажатию.' },
   { id: 'sound-panel', category: 'media', platform: 'all', title: 'Звуковая панель', description: 'Четыре синтезируемых звука, формы и цвета. Работает без внешних ресурсов.' },
@@ -40,14 +44,16 @@ const exampleFiles = [
 ];
 const examples = await Promise.all(exampleFiles.map(async entry => {
   let code = await readFile(join(root, 'src/examples', entry.id + '.html'), 'utf8');
-  if (entry.id === 'glb-model') code = code.replace('data-model-src="satellite.glb"', `data-model-src="data:model/gltf-binary;base64,${(await readFile(join(root,'src/examples/satellite.glb'))).toString('base64')}"`);
+  if (['glb-model', 'model-exhibit'].includes(entry.id)) code = code.replace('data-model-src="satellite.glb"', `data-model-src="data:model/gltf-binary;base64,${(await readFile(join(root,'src/examples/satellite.glb'))).toString('base64')}"`);
   return { ...entry, code };
 }));
 const toneLicense = (await readFile(join(root, 'src/vendor/tone-LICENSE.txt'), 'utf8')).trim().replace(/\r\n?/g, '\n');
 const pixiLicense = (await readFile(join(root, 'src/vendor/pixi-LICENSE.txt'), 'utf8')).trim().replace(/\r\n?/g, '\n');
+const addedLicenses = Object.fromEntries(await Promise.all([['p5@2.3.4','p5'],['@babylonjs/havok@1.3.14','havok'],['@google/model-viewer@4.4.0','model-viewer'],['aframe@1.8.0','aframe']].map(async ([key,name]) => [key,(await readFile(join(root, 'src/vendor', name+'-LICENSE.txt'), 'utf8')).trim().replace(/\r\n?/g,'\n')])));
+const p5Manifest = JSON.parse(await readFile(join(root, 'src/vendor/p5-source-2.3.4.json'), 'utf8'));
 const script = '(function () {\n"use strict";\n'
   + `const examples = ${JSON.stringify(examples)};\n`
-  + (await Promise.all(files.map(name => readFile(join(root, 'src', name), 'utf8')))).join('\n').replace('/* TONE_LICENSE */ null', () => JSON.stringify(toneLicense)).replace('/* PIXI_LICENSE */ null', () => JSON.stringify(pixiLicense)) + '\n})();';
+  + (await Promise.all(files.map(name => readFile(join(root, 'src', name), 'utf8')))).join('\n').replace('/* TONE_LICENSE */ null', () => JSON.stringify(toneLicense)).replace('/* PIXI_LICENSE */ null', () => JSON.stringify(pixiLicense)).replace('/* ADDED_LICENSES */ null', () => JSON.stringify(addedLicenses)).replace('/* P5_SOURCE_MANIFEST */ null', () => JSON.stringify(p5Manifest)) + '\n})();';
 const license = (await readFile(join(root, 'LICENSE'), 'utf8')).trim();
 const html = template.replace('/* APP_STYLES */', () => css.replace(/<\/style/gi, '<\\/style'))
   .replace('/* APP_SCRIPT */', () => script.replace(/<\/script/gi, '<\\/script'))

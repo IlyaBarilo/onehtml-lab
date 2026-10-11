@@ -7,6 +7,10 @@ const preparationCatalog = [
   ['phaser@3.90.0','Игровой движок Phaser 3.'],
   ['phaser@4.2.1','Игровой движок Phaser 4.'],
   ['cannon-es@0.20.0','3D-физика; графика подключается отдельно.'],
+  ['@dimforge/rapier3d-compat@0.21.0','3D-физика WebAssembly; встроенный WASM, графика отдельно.'],
+  ['@babylonjs/havok@1.3.14','3D-физика для Babylon.js. При загрузке и встраивании также сохраняется WASM.'],
+  ['@google/model-viewer@4.4.0','Карточка GLB-экспоната: камера, анимация, подписи.'],
+  ['aframe@1.8.0','Виртуальная выставка и 3D-сцены через HTML.'],
   ['tone@15.1.22','Музыка, ритм, синтезаторы и эффекты. Для импорта нужна полная лицензия сборки с уведомлениями её компонентов.'],
   ['pixi.js@8.22.0','2D-графика, изображения, маски и фильтры. Для предпросмотра также нужен модуль совместимости CSP. Для импорта нужна полная лицензия сборки с уведомлениями компонентов.'],
   ['pixi.js@8.22.0:unsafe-eval','Официальное дополнение PixiJS для работы без eval в изолированном предпросмотре. Подключается после ядра той же версии.'],
@@ -14,12 +18,16 @@ const preparationCatalog = [
   ['babylonjs-loaders@9.30.0:glTF2','GLB/glTF для Babylon.js; также нужно ядро.'],
   ['babylonjs-loaders@9.30.0:all','Все загрузчики Babylon.js; альтернатива glTF2.']
 ];
+const experimentalPreparationCatalog = [
+  ['p5@2.3.4','Экспериментальная. Генеративная графика и интерактивные композиции. LGPL: исходники скачиваются от разработчиков и сохраняются вместе с копией.']
+];
 const preparationSelection = new Set();
 let preparationController = null, preparationDownloads = [], preparationRawKey = null;
 function preparationDependencies(keys) {
   const result = new Set(keys);
   for (const key of keys) {
     if (key.startsWith('babylonjs-loaders@9.30.0:')) result.add('babylonjs@9.30.0');
+    if (key === '@babylonjs/havok@1.3.14') result.add('babylonjs@9.30.0');
     if (key === 'three-gltf@0.160.0') result.add('three-esm@0.160.0:three.module.js');
   }
   return [...result];
@@ -36,9 +44,9 @@ function preparationControls() {
 }
 function renderLibraryPreparation() {
   const list = document.querySelector('#library-preparation-list'); if (!list) return;
-  const catalog = [...preparationCatalog];
+  const catalog = [...preparationCatalog, ...experimentalPreparationCatalog];
   for (const entry of libraryCache.values()) if (!catalog.some(([key])=>key===entry.key)) catalog.push([entry.key,'Сохранённая копия.']);
-  list.replaceChildren(...catalog.map(([key,note]) => {
+  const rows = catalog.map(([key,note]) => {
     const ref = libraryCatalogReference(key), entry = libraryCache.get(key);
     const row = document.createElement('li'); row.className = 'library-preparation-row';
     const label = document.createElement('label'), checkbox = document.createElement('input');
@@ -59,8 +67,16 @@ function renderLibraryPreparation() {
       });
       row.append(button);
     }
+    if (key === 'p5@2.3.4' && entry) row.append(diagnosticButton('Исходники p5', async () => {
+      try { const copy = await readCachedLibrary({ key }), bytes = p5SourceArchive(copy); if (!bytes) throw Error();
+        const url = URL.createObjectURL(new Blob([bytes], { type: 'application/gzip' })), link = document.createElement('a'); link.href = url; link.download = 'p5-source-2.3.4.tar.gz'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 30000);
+      } catch { preparationMessage('Не удалось прочитать исходники p5.js. Загрузите копию библиотеки заново.'); }
+    }));
     return row;
-  }));
+  });
+  const experimental = new Set(experimentalPreparationCatalog.map(([key])=>key));
+  list.replaceChildren(...rows.filter((row,index)=>!experimental.has(catalog[index][0])));
+  document.querySelector('#library-experimental-list').replaceChildren(...rows.filter((row,index)=>experimental.has(catalog[index][0])));
   preparationControls();
 }
 async function preparationOperation(action) {
@@ -85,10 +101,10 @@ async function preparationDownload(keys) {
           try { ready = Boolean(await readCachedLibrary({ key })); }
           catch (error) { if (!error.libraryCacheRead) throw error; }
         }
-        if (!ready) await downloadLibrary(ref,{signal:preparationController.signal});
+        if (!ready) await downloadLibrary(ref,{signal:preparationController.signal,onProgress:text=>preparationMessage(`${ref.title} · ${text}`)});
         done++;
       }
-      catch(error) { if(preparationController.signal.aborted) break; failures.push(ref.title + ': ' + error.message); }
+      catch(error) { if(preparationController.signal.aborted) break; failures.push(libraryDownloadMessage(error, ref)); }
       renderLibraryPreparation();
     }
     const temporary = chosen.filter(key=>libraryCache.has(key) && persistedLibraries.get(key)!==libraryCache.get(key)).length;
@@ -142,7 +158,9 @@ async function preparationExport(all) {
 }
 function initLibraryPreparation() {
   document.querySelector('#library-download-selected').addEventListener('click',()=>void preparationDownload([...preparationSelection]));
-  document.querySelector('#library-download-all').addEventListener('click',()=>void preparationDownload(preparationCatalog.map(([key])=>key)));
+  document.querySelector('#library-download-all').addEventListener('click',()=>void preparationDownload([
+    ...preparationCatalog, ...(document.querySelector('#library-include-experimental').checked ? experimentalPreparationCatalog : [])
+  ].map(([key])=>key)));
   document.querySelector('#library-preparation-cancel').addEventListener('click',()=>preparationController?.abort());
   const input = document.querySelector('#library-preparation-input'), raw = document.querySelector('#library-preparation-raw'), archive = document.querySelector('#library-preparation-archive');
   document.querySelector('#library-import-archive').addEventListener('click',()=>archive.click());

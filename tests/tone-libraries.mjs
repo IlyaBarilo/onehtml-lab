@@ -7,6 +7,7 @@ import {pathToFileURL} from 'node:url';
 import {chromium,webkit} from 'playwright';
 import {useNativeEditor} from './native-editor.mjs';
 const root=new URL('../',import.meta.url),url='https://cdn.jsdelivr.net/npm/tone@15.1.22/build/Tone.js';
+const downloadUrl='https://unpkg.com/tone@15.1.22/build/Tone.js';
 const [app,example,distribution,license]=await Promise.all(['onehtml-lab.html','src/examples/music-lab.html','node_modules/tone/build/Tone.js','src/vendor/tone-LICENSE.txt'].map(file=>readFile(new URL(file,root),'utf8')));
 const clean=text=>text.replace(/\r\n?/g,'\n').trim();
 assert.equal(Buffer.byteLength(distribution),345500);
@@ -25,7 +26,7 @@ async function signal(page){await page.waitForFunction(()=>window.audioAnalysers
 try {
   for(const [name,type] of engines){const browser=await type.launch();try{
     const page=await browser.newPage();await page.goto(host);const downloads=[];
-    await page.route('https://**/*',route=>{assert.equal(route.request().url(),url);downloads.push(url);return route.fulfill({body:distribution,contentType:'text/javascript',headers:{'Access-Control-Allow-Origin':'*'}});});
+    await page.route('https://**/*',route=>{assert.equal(route.request().url(),downloadUrl);downloads.push(downloadUrl);return route.fulfill({body:distribution,contentType:'text/javascript',headers:{'Access-Control-Allow-Origin':'*'}});});
     await page.addScriptTag({content:scripts+'\nwindow.toneApi={libraryReference,localLibraryReference,libraryCatalogReference,libraryCache,persistedLibraries,loadLibraryCache,downloadLibrary,prepareGameHtml,prepareGameFiles,planLibraryExtraction,retainExtractionAssets,makeLibraryPack,makeLibraryZip,readLibraryZip,readLibraryPack,readRawLibraryFiles,installLibraryPack,allowedLibraryCacheEntry,aiGameInstructions,aiGameConnectionText,makePreview};'});
     const plans=await page.evaluate(async({example,url,license})=>{const a=toneApi,ref=a.libraryReference(url);await a.downloadLibrary(ref);const entry=a.libraryCache.get(ref.key);
       const inline=await a.prepareGameHtml(example),files=await a.prepareGameFiles(example,'music.html'),exact=await a.prepareGameHtml(example,false),short=await a.planLibraryExtraction(inline.html,'cdn');await a.retainExtractionAssets(short);
@@ -75,7 +76,7 @@ try {
     if(supported){await benchmark.locator('#stage').click({position:{x:100,y:80}});await benchmark.waitForFunction(()=>document.querySelector('#scene').dataset.nativeAudio==='running');await signal(benchmark);}
     await benchmark.locator('#pause').click();await benchmark.locator('[data-mode="audio"]').click();assert((await benchmark.locator('#library-description').innerText()).includes('Web Audio'));await benchmark.close();
     const context=await browser.newContext({viewport:{width:390,height:800}}),ui=await context.newPage(),requests=[];await useNativeEditor(ui);await realAudio(ui);
-    await context.route('https://**/*',route=>{assert.equal(route.request().url(),url);requests.push(url);return route.fulfill({body:distribution,contentType:'text/javascript'});});
+    await context.route('https://**/*',route=>{assert.equal(route.request().url(),downloadUrl);requests.push(downloadUrl);return route.fulfill({body:distribution,contentType:'text/javascript'});});
     await ui.goto(new URL('onehtml-lab.html',root).href);await ui.locator('#code').fill(example);await ui.locator('#expert-toggle').click();
     await ui.locator('#examples-open').click();await ui.locator('[data-example-category="media"]').click();assert(await ui.locator('[data-example-id="music-lab"]').isVisible());await ui.locator('#examples-close').click();
     await ui.locator('#run').click();await ui.locator('#library-request').waitFor({state:'visible'});const consent=await ui.locator('#library-request-text').innerText();assert(consent.includes('Tone.js 15.1.22')&&consent.includes('337,4'));assert.equal(requests.length,0);await ui.locator('#library-download').click();await ui.locator('#library-request').waitFor({state:'hidden'});

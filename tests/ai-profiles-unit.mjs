@@ -24,7 +24,7 @@ assert.match(api.aiGameMediaRecipe('babylon'), /DynamicTexture/);
 assert.equal(api.aiGameChoice({ dimension: '3d', basis: 'phaser4' }).id, 'phaser4');
 assert(api.aiGameWarnings({ dimension: '3d', basis: 'phaser4' }).length);
 assert.equal(api.aiGameWarnings({ dimension: '3d', physics: 'bodies' }).length, 0);
-assert(api.aiGameWarnings({ dimension: '3d', basis: 'babylon', physics: 'bodies' }).length);
+assert.equal(api.aiGameWarnings({ dimension: '3d', basis: 'babylon', physics: 'bodies' }).length, 0);
 assert.match(api.aiGameInstructions({ dimension: '3d', physics: 'bodies' }), /cannon-es@0\.20\.0/);
 assert.match(api.aiGameInstructions({ dimension: '3d', physics: 'bodies' }), /world\.step/);
 assert(!api.aiGameInstructions({ dimension: '3d', physics: 'simple' }).includes('cannon-es'));

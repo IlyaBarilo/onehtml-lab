@@ -7,10 +7,12 @@ const source = (await Promise.all(['quality.js', 'sandbox.js'].map(name => readF
 const document = { createElement: () => ({ attributes: {}, setAttribute(name, value) { this.attributes[name] = value; } }) };
 const { online, offline } = runInNewContext(source + '\n({ online: makePreview("<p>Game</p>", true), offline: makePreview("<p>Game</p>", false) })', { document, crypto });
 assert.match(online.srcdoc, /connect-src https: wss:/);
-assert.match(online.srcdoc, /script-src 'unsafe-inline' https:/);
+assert.match(online.srcdoc, /script-src 'unsafe-inline' 'wasm-unsafe-eval' https:/);
 assert.match(online.srcdoc, /PerformanceObserver/);
 assert.match(offline.srcdoc, /connect-src data: blob:;/);
-assert.match(offline.srcdoc, /script-src 'unsafe-inline' data:;/);
+assert.match(offline.srcdoc, /script-src 'unsafe-inline' 'wasm-unsafe-eval' data:;/);
+assert(!online.srcdoc.includes("'unsafe-eval'"));
+assert(!offline.srcdoc.includes("'unsafe-eval'"));
 assert.match(online.srcdoc, /worker-src blob:(?:;|")/);
 assert.match(offline.srcdoc, /worker-src blob:(?:;|")/);
 assert.match(await readFile(new URL('../src/template.html', import.meta.url), 'utf8'), /worker-src blob:(?:;|")/);

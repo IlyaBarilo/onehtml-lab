@@ -2,6 +2,11 @@
 const moduleDataCache = new WeakMap();
 let moduleScanCache = { code: null, plan: null };
 function moduleReference(url) {
+  if (/^https:\/\/(?:cdn\.jsdelivr\.net\/npm|unpkg\.com)\/@dimforge\/rapier3d-compat@0\.21\.0\/dist\/rapier\.mjs$/.test(url)) return {
+    key: '@dimforge/rapier3d-compat@0.21.0', title: 'Rapier 0.21.0 · 3D-физика', format: 'module', downloadBytes: 4340292,
+    url: 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.21.0/dist/rapier.mjs', originalUrl: url,
+    licenseUrl: 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.21.0/LICENSE'
+  };
   if (/^https:\/\/(?:cdn\.jsdelivr\.net\/npm|unpkg\.com)\/cannon-es@0\.20\.0\/dist\/cannon-es\.js$/.test(url)) return {
     key: 'cannon-es@0.20.0', title: 'cannon-es 0.20.0 · 3D-физика', format: 'module', downloadBytes: 346256,
     url: 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js', originalUrl: url,
@@ -21,6 +26,7 @@ function moduleReference(url) {
     licenseUrl: `https://cdn.jsdelivr.net/npm/three@${version}/LICENSE` };
 }
 function moduleCatalog(key) {
+  if (key === '@dimforge/rapier3d-compat@0.21.0') return moduleReference('https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.21.0/dist/rapier.mjs');
   if (key === 'cannon-es@0.20.0') return moduleReference('https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js');
   if (key === 'three-gltf@0.160.0') return moduleReference('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js');
   const m = /^three-esm@(0\.\d{3}\.0):(three\.module(?:\.min)?\.js)$/.exec(key || '');
@@ -31,6 +37,8 @@ function localModuleReference(url) {
   let path = url.replace(/\\/g, '/').split(/[?#]/)[0];
   try { path = decodeURIComponent(path); } catch { return null; }
   const filename = path.split('/').pop(), folders = path.split('/').slice(0, -1);
+  if (/^rapier[._-]v?0\.21\.0\.(?:m?js)$/i.test(filename)
+    || /^rapier\.mjs$/i.test(filename) && folders.some(folder => /^(?:rapier(?:3d-compat)?[@._-])?v?0\.21\.0$/i.test(folder))) return { ...moduleCatalog('@dimforge/rapier3d-compat@0.21.0'), originalUrl: url, modulePath: url, moduleLocal: true, filename };
   const known = /^cannon-es[._-]v?0\.20\.0\.js$/i.test(filename)
     || /^cannon-es\.js$/i.test(filename) && folders.some(folder => /^(?:cannon-es[@._-])?v?0\.20\.0$/i.test(folder));
   return known ? { ...moduleCatalog('cannon-es@0.20.0'), originalUrl: url, modulePath: url, moduleLocal: true, filename } : null;
@@ -136,6 +144,9 @@ function scanModules(code) {
   moduleScanCache = { code, plan }; return plan;
 }
 function moduleFileUrl(path, base) {
+  if (base === 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.21.0/dist/rapier.mjs') {
+    const url = new URL(path, base).href; if (url !== base) throw Error('Неподдерживаемая зависимость Rapier.'); return url;
+  }
   if (base === 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js') {
     const url = new URL(path, base).href;
     if (url !== base) throw Error('Неподдерживаемая зависимость cannon-es.');
@@ -177,8 +188,7 @@ async function downloadModule(reference, options = {}) {
   const ref = moduleCatalog(reference.key);
   if (!ref || ref.url !== reference.url) throw Error('Unknown module');
   const fetchOptions = {credentials:'omit',redirect:'error',...options};
-  const response = await fetch(ref.licenseUrl,fetchOptions);
-  const license = await readLibraryResponse(response), files = [], queue = [ref.url], reused = new Map();
+  const license = await downloadLibraryResource(ref, ref.licenseUrl, 'лицензию', fetchOptions), files = [], queue = [ref.url], reused = new Map();
   for (const entry of libraryCache.values()) if (!entry.lazy && entry.format === 'module' && moduleCatalog(entry.key)) {
     const data = moduleEntryData(entry);
     if (data && entry.license.trim() === license.trim()) for (const file of data.files) reused.set(file.url,file.source);
@@ -196,20 +206,18 @@ async function downloadModule(reference, options = {}) {
       }
     }
     if (source === undefined) {
-      const response=await fetch(queue[i],fetchOptions);
-      if(!/^(?:text|application)\/(?:javascript|ecmascript)(?:;|$)/i.test(response.headers.get('content-type') || '')) throw Error('Module MIME type');
-      source = await readLibraryResponse(response);
+      source = await downloadLibraryResource(ref, queue[i], i ? 'модуль зависимости' : 'код модуля', fetchOptions, 'module');
     }
     bytes += new TextEncoder().encode(source).length;
-    if (!validLibraryAsset(source,license)) throw Error('Invalid module source or license');
+    if (!validLibraryAsset(source,license)) throw libraryDownloadError(ref, 'код модуля и лицензию', queue[i], 'Полученная копия не прошла проверку содержимого или лицензии.');
     files.push({url:queue[i],source});
     for (const item of moduleImports(source)) {
-      if (item.reason) throw Error(item.reason);
+      if (item.reason) throw libraryDownloadError(ref, 'зависимости модуля', queue[i], 'В коде найдены неподдерживаемые импорты.');
       const url = moduleFileUrl(item.value,queue[i]); if (!queue.includes(url)) queue.push(url);
     }
   }
   const entry = { ...ref, sourceUrl:ref.url, source:JSON.stringify(files), license:license.trim(), bytes, savedAt:Date.now() };
-  if (!moduleEntryData(entry)) throw Error('Invalid module graph');
+  if (!moduleEntryData(entry)) throw libraryDownloadError(ref, 'зависимости модуля', ref.url, 'Получен неполный набор модулей.');
   let persisted = true; try { await saveLibraryToCache(entry); } catch { persisted=false; }
   libraryCache.set(entry.key,entry); return persisted;
 }
@@ -250,7 +258,7 @@ async function prepareModuleLibraries(code, mode='inline', reserved=[], copies=n
   for (const {entry,data} of selected.values()) for (const file of data.files) {
     if (outputs.has(file.url)) continue;
     const version=/@0\.(\d{3})\.0/.exec(file.url)?.[1];
-    const base=file.url === moduleCatalog('cannon-es@0.20.0').url ? 'cannon-es-0.20.0.js' : `three-r${version}-${file.url.split('/').pop()}`;
+    const base=file.url === moduleCatalog('cannon-es@0.20.0').url ? 'cannon-es-0.20.0.js' : file.url === moduleCatalog('@dimforge/rapier3d-compat@0.21.0').url ? 'rapier-0.21.0.js' : `three-r${version}-${file.url.split('/').pop()}`;
     let name=base,n=2;while(names.has(name.toLowerCase())) name=base.replace(/\.js$/,`-${n++}.js`);
     names.add(name.toLowerCase()); outputs.set(file.url,{file,entry,name});
     if (mode==='files') targets.set(file.url,'./'+encodeURIComponent(name));

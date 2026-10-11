@@ -244,7 +244,7 @@ try {
         await context.route('https://**/*', async route => {
           requests += 1;
           const url = route.request().url();
-          const source = assets.find(asset => asset.url === url);
+          const source = assets.find(asset => asset.url === url || asset.id === 'tone' && url === 'https://unpkg.com/tone@15.1.22/build/Tone.js');
           const licensed = assets.some(asset => asset.licenseUrl === url);
           const isNotice = url === 'https://cdn.jsdelivr.net/npm/babylonjs@9.30.0/NOTICE.md';
           assert(source || licensed || isNotice, 'Only the exact libraries, licenses and NOTICE may be requested');
@@ -274,7 +274,7 @@ try {
         assert.equal(requests, 0, 'Opening the example must not download libraries without a click');
         await page.locator('#library-download').click();
         await page.locator('#library-request').waitFor({ state: 'hidden' });
-        assert.equal(requests, 16, 'Download nine library scripts, their complete notices and Babylon NOTICE');
+        assert.equal(requests, 16, 'Download nine library scripts, complete notices and Babylon NOTICE');
         await page.locator('#run').click();
         const frame = page.frameLocator('#preview > iframe');
         await libraryLabels(frame, 'Встроена в HTML');
@@ -399,7 +399,7 @@ try {
         assert.equal(requests, beforeLocal, 'Separate libraries must load from files beside HTML');
         await local.close();
         assert.deepEqual(errors, [], 'The application and Canvas test must execute without errors');
-        console.log(`${name} file: three modes, default showcase, descriptions, tower interaction, seven library sizes, 10000 objects, FPS, taps and classic/module exports passed.`);
+        console.log(`${name} file: three modes, default showcase, descriptions, tower interaction, library sizes, 10000 objects, FPS, taps and classic/module exports passed.`);
       } finally { await context.close(); }
     } finally { await browser.close(); }
   }

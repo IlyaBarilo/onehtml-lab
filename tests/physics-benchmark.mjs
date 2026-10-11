@@ -66,6 +66,10 @@ try {
           if (width===320) await page.locator('#stage').tap({position:{x:stage.width*.7,y:stage.height*.65}});
           else await page.locator('#stage').click({position:{x:stage.width*.7,y:stage.height*.65}});
           await page.waitForFunction(() => /Выстрелов: 1/.test(document.querySelector('#scene-stats').textContent));
+          // Exercise a visible knockdown with repeated input; a single hit can deflect only slightly.
+          await page.locator('#scene').focus();
+          await page.keyboard.press('Space'); await page.keyboard.press('Space');
+          await page.waitForFunction(() => /Выстрелов: 3/.test(document.querySelector('#scene-stats').textContent));
           await page.waitForFunction(() => testWorlds.at(-1).bodies.some(body=>body.mass===1 && Math.abs(body.quaternion.w)<.99));
           await page.locator('#fps').filter({hasText:/^\d+$/}).waitFor();
           const motion = await page.evaluate(() => {const world=testWorlds.at(-1);return {contacts:world.contacts.length,rotated:world.bodies.filter(body=>body.mass===1&&Math.abs(body.quaternion.w)<.99).length};});

@@ -49,7 +49,7 @@ Babylon.js 9.30.0 is an optional game engine under Apache-2.0. Its WebGL core is
 
 Babylon.js 9.30.0 — необязательный игровой движок под Apache-2.0. Профиль игры и тест библиотек подключают его ядро WebGL; в редактор оно не включено. Точная зависимость npm предоставляет настоящий дистрибутив для проверок. При загрузке, встраивании, сохранении отдельного JS и сокращении копий сохраняются полные LICENSE и NOTICE из пакета по ссылкам выше. Лицензия OneHTML Lab остаётся MIT.
 
-Project / Проект: [Babylon.js](https://www.babylonjs.com/). Exact release / Точный выпуск: [9.30.0](https://github.com/BabylonJS/Babylon.js/releases/tag/9.30.0). GUI, Havok, inspector and WebGPU are not part of the supported profile. / GUI, Havok, инспектор и WebGPU в поддерживаемый профиль не входят.
+Project / Проект: [Babylon.js](https://www.babylonjs.com/). Exact release / Точный выпуск: [9.30.0](https://github.com/BabylonJS/Babylon.js/releases/tag/9.30.0). GUI, inspector and WebGPU are not part of the supported profile. Havok is available separately below. / GUI, инспектор и WebGPU в поддерживаемый профиль не входят. Havok доступен отдельно, см. ниже.
 
 ## GLB loaders and sample / Загрузчики GLB и пример
 
@@ -92,3 +92,27 @@ The core distribution source map identifies eventemitter3, @pixi/colord, ismobil
 Карта исходников ядра указывает eventemitter3, @pixi/colord, ismobilejs, earcut, parse-svg-path и tiny-lru. Сохранены полные условия MIT, ISC и BSD-3-Clause, включая дополнительное уведомление tiny-lru из готового JS. Модуль совместимости содержит код PixiJS под той же MIT.
 
 Project / Проект: [PixiJS](https://pixijs.com/). Core license / Лицензия ядра: [8.22.0](https://cdn.jsdelivr.net/npm/pixi.js@8.22.0/LICENSE). The poster artwork and animation are authored for OneHTML Lab under the project MIT license. / Графика афиши и анимация созданы для OneHTML Lab и распространяются под MIT проекта.
+
+## p5.js 2.3.4
+
+p5.js is an optional creative-coding library under LGPL-2.1. Its classic distribution is downloaded separately. Full [library and bundled dependency notices](../src/vendor/p5-LICENSE.txt), including MIT, BSD and SGI permissions, accompany every prepared copy. Corresponding source files are downloaded directly from upstream and checked against metadata; the source archive is created in the browser and is not stored in this repository. p5.js belongs to the experimental catalog and is excluded from bulk download by default; the experimental-library checkbox enables it. The [source archive and build instructions](../src/vendor/p5-source.md) are preserved with embedded HTML, adjacent JS and portable sets; the editor can save the archive separately. p5.js code and source are not bundled with the editor. The composition is original project artwork under MIT; no p5 website examples or artwork are copied.
+
+p5.js — экспериментальная библиотека творческого программирования под LGPL-2.1. Она скачивается отдельно по выбору и по умолчанию исключена из общей загрузки; галочка экспериментальных библиотек включает её в общий набор. Полные условия библиотеки и её зависимостей, архив исходников и файлы сборки сохраняются с каждой подготовленной копией. Исходники получаются непосредственно от разработчиков с проверкой контрольных сумм; архив создаётся в браузере и не хранится в репозитории OneHTML Lab. Архив можно скачать отдельно. В редактор входят уведомления и проверочные метаданные; сама композиция создана для проекта под MIT. Примеры и изображения сайта p5 не используются.
+
+Project / Проект: [p5.js](https://p5js.org/). Source / Исходники: [v2.3.4](https://github.com/processing/p5.js/tree/v2.3.4). Licensing / Условия: [p5 copyright](https://p5js.org/copyright/).
+
+## Rapier 0.21.0 and Havok 1.3.14 / Rapier и Havok
+
+Rapier's compatible ES module embeds its WASM and uses the complete [Apache-2.0 license](../src/vendor/rapier-LICENSE.txt). Havok's UMD script and matching WASM use [MIT](../src/vendor/havok-LICENSE.txt); OneHTML Lab adds a wrapper to supply the unchanged WASM bytes locally. Both engines are optional downloads, not editor runtime dependencies. Cached, embedded, adjacent and portable copies retain dependencies and full notices. Babylon.js retains its separate Apache license and NOTICE.
+
+Совместимый ES-модуль Rapier содержит WASM и распространяется под Apache-2.0. Havok включает UMD-скрипт и WASM под MIT; подготовленная копия получает оболочку для передачи неизменённого WASM без сети. Оба движка скачиваются отдельно. Кэш, встроенные и отдельные копии, переносимые наборы сохраняют зависимости и полные уведомления. У Babylon.js остаются собственные Apache-лицензия и NOTICE. Пример общей башни создан для проекта под MIT.
+
+Projects / Проекты: [Rapier](https://rapier.rs/), [Havok for Babylon.js](https://github.com/BabylonJS/havok).
+
+## model-viewer 4.4.0 and A-Frame 1.8.0 / model-viewer и A-Frame
+
+The optional classic model-viewer distribution uses [Apache-2.0 with full bundled notices](../src/vendor/model-viewer-LICENSE.txt); A-Frame uses [MIT and its bundled component notices](../src/vendor/aframe-LICENSE.txt). The release source maps and lockfiles identify their Lit/Three.js and other bundled dependencies. These distributions contain their own Three.js renderer; a second Three.js download is unnecessary. They are not bundled with the editor. The project satellite, geometry and gallery artwork remain under MIT. No AR/VR service, compressed-model decoder or external gallery asset is enabled by these examples.
+
+Классическая сборка model-viewer использует Apache-2.0, A-Frame — MIT; полные уведомления компонентов включены в файлы по ссылкам выше. Зависимости проверены по картам исходников и lock-файлам выпусков. Их собственная Three.js уже входит в сборки; второй экземпляр не нужен. Библиотеки скачиваются отдельно. Спутник, геометрия и оформление выставки распространяются под MIT проекта. В примерах не включены AR/VR-сервисы, декодеры сжатых моделей или внешние материалы выставки.
+
+Projects / Проекты: [model-viewer](https://modelviewer.dev/), [A-Frame](https://aframe.io/).

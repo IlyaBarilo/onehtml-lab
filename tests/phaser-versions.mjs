@@ -78,10 +78,10 @@ async function controls(page, touch) {
     touch ? jump.tap() : jump.click()
   ]);
   await page.locator('#scene').focus();
-  await Promise.all([
-    page.waitForFunction(() => window.testGames.at(-1).scene.getScenes(true)[0].jumps === 2),
-    page.keyboard.press('Space')
-  ]);
+  // Release only after the game's next input frame; a press can finish between slow frames.
+  await page.keyboard.down('Space');
+  try { await page.waitForFunction(() => window.testGames.at(-1).scene.getScenes(true)[0].jumps === 2); }
+  finally { await page.keyboard.up('Space'); }
 }
 async function renderedFrame(page) {
   const url = await page.evaluate(() => new Promise(resolve => {
