@@ -8,12 +8,53 @@ function panelIcon(icon) {
     fix: '<path d="M14 6a5 5 0 0 0-6 6L3 17a3 3 0 0 0 4 4l5-5a5 5 0 0 0 6-6l-3 3-4-4 3-3Z"/>',
     tests: '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M6 12h3l2-4 3 8 2-4h2"/>',
     mobile: '<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10 5h4m-2 14h.01"/>',
-    desktop: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/>'
+    desktop: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/>',
+    application: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 8h18M7 5.5h.01m3 0h.01"/>',
+    create: '<path d="M12 4v16M4 12h16"/>',
+    change: '<path d="m15 4 5 5-11 11-6 1 1-6L15 4ZM12 7l5 5"/>',
+    copy: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V3H3v13h5"/>',
+    paste: '<path d="M8 4H5v17h14V4h-3M9 12h6m-3-3v7m-3-3 3 3 3-3"/><rect x="8" y="2" width="8" height="4" rx="1"/>',
+    history: '<path d="M3 11a9 9 0 1 1 2 7M3 5v6h6m3-5v6l4 2"/>',
+    compare: '<path d="M4 5h16M4 19h16M8 9l-3 3 3 3m8-6 3 3-3 3"/>',
+    back: '<path d="m10 5-7 7 7 7M3 12h18"/>',
+    target: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>'
   };
   if (!paths[icon]) return libraryIcon(icon);
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true'); svg.innerHTML = paths[icon];
   return svg;
+}
+
+function aiLabelButton(button, icon, label, short = label) {
+  button.dataset.aiIcon = icon;
+  button.setAttribute('aria-label', label); button.title = label;
+  const full = document.createElement('span'); full.className = 'ai-label-full'; full.textContent = label;
+  const small = document.createElement('span'); small.className = 'ai-label-short'; small.textContent = short; small.setAttribute('aria-hidden', 'true');
+  button.replaceChildren(panelIcon(icon), full, small);
+}
+
+function initAiUI() {
+  for (const button of document.querySelectorAll('[data-ai-icon]')) aiLabelButton(button, button.dataset.aiIcon, button.textContent.trim());
+  const icons = { create: 'create', change: 'change', fix: 'fix', explain: 'lesson', check: 'check' };
+  const shortLabels = { create: 'Создать', change: 'Правка', fix: 'Ошибка', explain: 'Разбор', check: 'Проверка' };
+  for (const button of document.querySelectorAll('[data-ai-mode]')) aiLabelButton(button, icons[button.dataset.aiMode], button.textContent.trim(), shortLabels[button.dataset.aiMode]);
+  for (const button of document.querySelectorAll('[data-ai-project]')) aiLabelButton(button, button.dataset.aiProject === 'game' ? 'games' : 'application', button.textContent.trim());
+  for (const button of document.querySelectorAll('#ai-dialog [data-platform]')) aiLabelButton(button, button.dataset.platform, button.textContent.trim());
+  for (const [id, icon, label] of [
+    ['ai-view', 'code', 'Просмотр запроса'], ['ai-element-repick', 'target', 'Выбрать другой элемент'], ['ai-element-remove', 'close', 'Убрать выбор элемента'],
+    ['ai-prompts-back', 'back', 'К списку запросов'], ['ai-answer-back', 'back', 'К ответу']
+  ]) panelIconButton(document.getElementById(id), icon, label);
+  aiLabelButton(document.querySelector('#ai-answer-paste'), 'paste', 'Вставить из буфера');
+  const cancel = document.querySelector('#picker-cancel'); cancel.replaceChildren(panelIcon('close'));
+  document.querySelector('#ai-dialog .ai-services').open = matchMedia('(min-width:1000px)').matches;
+  for (const group of document.querySelectorAll('#ai-dialog [role=tablist], #ai-dialog .ai-modes')) group.addEventListener('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const buttons = [...group.querySelectorAll('button:not(:disabled)')]; const index = buttons.indexOf(event.target);
+    if (index < 0) return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : buttons.length - 1)) % buttons.length;
+    buttons[next].focus(); buttons[next].click();
+  });
 }
 function panelIconButton(button, icon, label) {
   button.classList.add('panel-icon-button');

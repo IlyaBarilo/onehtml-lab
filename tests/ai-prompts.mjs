@@ -44,7 +44,7 @@ async function prepared(page) {
 async function cacheAndHistory(page) {
   return page.evaluate(async () => {
     const read = (name, store, key) => new Promise((resolve, reject) => {
-      const request = indexedDB.open(name, 1);
+      const request = indexedDB.open(name);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
         const database = request.result;
@@ -129,10 +129,25 @@ try {
           await page.locator('#prompt-create').click();
           assert.equal(await page.locator('#ai-task').inputValue(), 'космос 😀');
           await prepared(page);
+          assert.equal(await page.locator('#ai-dialog .ai-modes svg').count(), 5, 'All prompt tasks have icons');
+          assert.equal(await page.locator('#ai-copy-next').count(), 0, 'The compose form has one primary copy action');
+          await page.locator('#prompt-create').focus();
+          await page.keyboard.press('ArrowRight');
+          assert.equal(await page.locator('#prompt-change').getAttribute('aria-pressed'), 'true');
+          await page.keyboard.press('Home');
+          assert.equal(await page.locator('#prompt-create').getAttribute('aria-pressed'), 'true');
+          await prepared(page);
           await page.screenshot({ path: join(output, `${name}-${viewport.width}-compose.png`) });
           assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
           const buttons = await page.locator('.ai-footer-actions').boundingBox();
           assert(buttons.y >= 0 && buttons.y + buttons.height <= viewport.height + 1);
+          const footerControls = await page.locator('#ai-dialog .ai-footer-actions button').evaluateAll(nodes => nodes.map(node => ({ height:node.getBoundingClientRect().height, right:node.getBoundingClientRect().right })));
+          assert(footerControls.every(box => box.height >= 44 && box.right <= viewport.width + 1), 'Footer controls stay reachable without horizontal scrolling');
+          await page.locator('#ai-dialog [data-panel-theme]').click();
+          const palette = await page.locator('#ai-task').evaluate(node => { const style = getComputedStyle(node); return { text:style.color, background:style.backgroundColor }; });
+          assert.notEqual(palette.text, palette.background, 'Dark theme keeps the task readable');
+          await page.screenshot({ path: join(output, `${name}-${viewport.width}-compose-dark.png`) });
+          await page.locator('#ai-dialog [data-panel-theme]').click();
           // Keyboard space: the form scrolls and the actions stay on screen.
           await page.evaluate(() => {
             window.__vv = Object.getOwnPropertyDescriptor(window, 'visualViewport');

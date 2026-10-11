@@ -76,7 +76,7 @@
     <div id="picker-bar" hidden>
       <span id="picker-description" role="status" aria-live="polite"></span>
       <button id="picker-accept" class="import-button" type="button" disabled>К запросу</button>
-      <button id="picker-cancel" class="icon-button" type="button" aria-label="Отменить выбор элемента" title="Отменить выбор элемента">✕</button>
+      <button id="picker-cancel" class="icon-button" type="button" aria-label="Отменить выбор элемента" title="Отменить выбор элемента" data-panel-icon="close"> </button>
     </div>
     <div id="quality-show-bar" hidden><span id="quality-show-description" role="status" aria-live="polite"></span><button id="quality-show-back" class="import-button" type="button">К замечаниям</button></div>
     <section class="workspace" aria-label="Рабочая область">
@@ -339,8 +339,8 @@
       <div class="dialog-actions"><button value="cancel" type="submit">Отмена</button><button class="primary" value="replace" type="submit">Заменить</button></div>
     </form>
   </dialog>
-  <section id="ai-dialog" class="work-panel guide-panel" aria-labelledby="ai-title" hidden>
-    <div class="panel-heading"><h2 id="ai-title">ИИ и запросы</h2><button id="ai-close" type="button" aria-label="Закрыть ИИ и запросы">✕</button></div>
+  <section id="ai-dialog" class="work-panel guide-panel panel-ui ai-screen" aria-labelledby="ai-title" hidden>
+    <div class="panel-heading"><h2 id="ai-title">ИИ и запросы</h2><button id="ai-media-open" type="button" data-panel-icon="media" aria-label="Медиа для запроса"></button><button id="ai-prompts-open" type="button" data-panel-icon="history" aria-label="История запросов"></button><button id="ai-close" type="button" aria-label="Закрыть ИИ и запросы" data-panel-icon="close"> </button></div>
     <div id="ai-compose" class="panel-body ai-compose">
     <div class="ai-task-section">
     <div class="ai-project-types" role="group" aria-label="Тип работы"><button type="button" class="ai-project-button" data-ai-project="game" aria-pressed="true">Игра</button><button type="button" class="ai-project-button" data-ai-project="application" aria-pressed="false">Приложение</button></div>
@@ -365,7 +365,6 @@
     <div id="ai-next-step">
       <p id="ai-next-status" role="status" aria-live="polite"></p>
       <p id="ai-next-help" class="ai-instruction">Скопируйте запрос и отправьте его ИИ-боту. Полученный HTML добавьте через «Принять ответ».</p>
-      <button id="ai-copy-next" type="button" disabled>Копировать запрос</button>
       <button id="ai-media-repair" type="button" hidden>Проверить медиа</button>
     </div>
     <div id="ai-game-options" class="ai-game-options">
@@ -380,7 +379,6 @@
       <p id="ai-game-warning" class="diagnostic-note" role="status" aria-live="polite"></p>
     </div>
     <div id="ai-game-improve-option" class="ai-game-options" hidden><label>Добавить пожелание<select id="ai-game-improve"><option value="">Выберите…</option><option value="style" data-task="Улучши оформление игрового мира, сохранив механику.">Улучшить оформление</option><option value="touch" data-task="Сделай управление удобнее на телефоне, сохранив управление на компьютере.">Улучшить управление на телефоне</option><option value="load" data-task="Уменьши нагрузку на телефон, сохранив механику и читаемость.">Уменьшить нагрузку</option><option value="learn" data-task="Добавь короткое обучение в начале, которое можно пропустить.">Добавить обучение</option></select></label></div>
-    <div class="diagnostic-actions"><button id="ai-media-open" type="button">Медиа</button><button id="ai-prompts-open" type="button">История запросов</button><button id="ai-answer-open" type="button">Принять ответ</button></div>
     <p id="ai-media-names" class="media-bindings" hidden></p>
     <p id="ai-settings-note" class="diagnostic-note" hidden></p>
     <div id="ai-error-context" hidden><strong>Ошибка игры</strong><p id="ai-error"></p></div>
@@ -393,36 +391,37 @@
       <p id="ai-libraries" hidden></p>
     </div>
     </div>
-    <div class="ai-services">
-    <h3>ИИ-боты</h3>
+    <details class="ai-services" open>
+    <summary>Куда отправить запрос <span>ИИ-боты</span></summary>
     <ul class="service-list">
       <li><strong>Алиса AI</strong><span class="service-links"><a href="https://alice.yandex.ru/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=com.yandex.aliceapp" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/id6621272550" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
       <li><strong>GigaChat</strong><span class="service-links"><a href="https://giga.chat/" target="_blank" rel="noopener noreferrer">Сайт</a></span></li>
       <li><strong>DeepSeek</strong><span class="service-links"><a href="https://chat.deepseek.com/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=com.deepseek.chat" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/deepseek-ai-%D0%B0%D1%81%D1%81%D0%B8%D1%81%D1%82%D0%B5%D0%BD%D1%82/id6737597349" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
       <li><strong>Qwen Studio</strong><span class="service-links"><a href="https://qwen.ai/" target="_blank" rel="noopener noreferrer">Сайт</a><a href="https://play.google.com/store/apps/details?id=ai.qwenlm.chat.android" target="_blank" rel="noopener noreferrer">Google Play</a><a href="https://apps.apple.com/ru/app/qwen-studio/id6743778442" target="_blank" rel="noopener noreferrer">App Store</a></span></li>
     </ul>
-    </div>
+    </details>
     </div>
     <div id="ai-preview-body" class="ai-preview-body" hidden><textarea id="ai-output" readonly spellcheck="false" aria-label="Готовый запрос для ИИ"></textarea></div>
-    <div class="ai-footer"><p id="ai-summary" role="status" aria-live="polite"></p><div class="ai-footer-actions"><button id="ai-view" type="button" aria-pressed="false" disabled>Просмотр</button><button id="ai-copy" type="button" disabled>Копировать</button></div></div>
+    <div class="ai-footer"><p id="ai-summary" role="status" aria-live="polite"></p><div class="ai-footer-actions"><button id="ai-view" type="button" aria-pressed="false" disabled>Просмотр</button><button id="ai-answer-open" type="button" data-ai-icon="paste">Принять ответ</button><button id="ai-copy" type="button" class="ai-primary" data-ai-icon="copy" disabled>Копировать</button><button type="button" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div></div>
   </section>
-  <section id="ai-prompts-panel" class="work-panel guide-panel" aria-labelledby="ai-prompts-title" hidden>
-    <div class="panel-heading"><h2 id="ai-prompts-title">История запросов</h2><button id="ai-prompts-close" type="button" aria-label="Закрыть историю запросов">✕</button></div>
+  <section id="ai-prompts-panel" class="work-panel guide-panel panel-ui ai-screen" aria-labelledby="ai-prompts-title" hidden>
+    <div class="panel-heading"><h2 id="ai-prompts-title">История запросов</h2><button id="ai-prompts-close" type="button" aria-label="Закрыть историю запросов" data-panel-icon="close"> </button></div>
     <div class="panel-body">
       <p id="ai-prompts-note" class="diagnostic-note" role="status" aria-live="polite"></p>
       <div id="ai-prompts-list-view"><p id="ai-prompts-empty">Скопированные запросы появятся здесь. Сохраняются последние 20.</p><ol id="ai-prompts-list" class="ai-prompts-list"></ol></div>
-      <div id="ai-prompts-detail" hidden><button id="ai-prompts-back" type="button">К списку</button><p id="ai-prompts-meta"></p><p id="ai-prompts-source" class="diagnostic-note"></p><label for="ai-prompts-text">Скопированный запрос</label><textarea id="ai-prompts-text" readonly spellcheck="false"></textarea><div class="diagnostic-actions"><button id="ai-prompts-copy" type="button">Копировать снова</button><button id="ai-prompts-reuse" type="button">Пожелания с текущим кодом</button></div></div>
+      <div id="ai-prompts-detail" hidden><button id="ai-prompts-back" type="button">К списку</button><p id="ai-prompts-meta"></p><p id="ai-prompts-source" class="diagnostic-note"></p><label for="ai-prompts-text">Скопированный запрос</label><textarea id="ai-prompts-text" readonly spellcheck="false"></textarea></div>
     </div>
+    <div class="panel-ui-footer"><div class="ai-history-actions"><button id="ai-prompts-reuse" type="button" data-ai-icon="change">С текущим кодом</button><button id="ai-prompts-copy" type="button" class="ai-primary" data-ai-icon="copy">Копировать</button></div><button type="button" class="panel-ui-theme" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div>
   </section>
-  <section id="ai-answer-panel" class="work-panel guide-panel" aria-labelledby="ai-answer-title" hidden>
-    <div class="panel-heading"><h2 id="ai-answer-title">Ответ ИИ</h2><button id="ai-answer-close" type="button" aria-label="Закрыть приём ответа ИИ">✕</button></div>
+  <section id="ai-answer-panel" class="work-panel guide-panel panel-ui ai-screen" aria-labelledby="ai-answer-title" hidden>
+    <div class="panel-heading"><h2 id="ai-answer-title">Ответ ИИ</h2><button id="ai-answer-close" type="button" aria-label="Закрыть приём ответа ИИ" data-panel-icon="close"> </button></div>
     <div class="panel-body">
-      <div id="ai-answer-compose"><label for="ai-answer-text">Вставьте полный ответ или HTML-код</label><textarea id="ai-answer-text" spellcheck="false" placeholder="Вставьте ответ ИИ через меню поля или кнопку"></textarea><div class="diagnostic-actions"><button id="ai-answer-paste" type="button">Вставить из буфера</button></div><div id="ai-answer-block-option" hidden><label for="ai-answer-block">В ответе несколько блоков. Выберите HTML</label><select id="ai-answer-block"></select></div><label id="ai-answer-clean-option" class="ai-shorten-label" hidden><input id="ai-answer-clean" type="checkbox" checked>Взять HTML без Markdown и пояснений</label></div>
+      <div class="ai-answer-steps" aria-label="Порядок работы с ответом"><span>1 · Ответ</span><span>2 · Сравнение</span><span>3 · Замена</span></div><div id="ai-answer-compose"><label for="ai-answer-text">Вставьте полный ответ или HTML-код</label><textarea id="ai-answer-text" spellcheck="false" placeholder="Вставьте ответ ИИ через меню поля или кнопку"></textarea><div class="diagnostic-actions"><button id="ai-answer-paste" type="button">Вставить из буфера</button></div><div id="ai-answer-block-option" hidden><label for="ai-answer-block">В ответе несколько блоков. Выберите HTML</label><select id="ai-answer-block"></select></div><label id="ai-answer-clean-option" class="ai-shorten-label" hidden><input id="ai-answer-clean" type="checkbox" checked>Взять HTML без Markdown и пояснений</label></div>
       <p id="ai-answer-note" class="diagnostic-note" role="status" aria-live="polite"></p>
       <div class="ai-game-options"><label>Сопоставить с запросом<select id="ai-answer-request"><option value="">Только проверить подключения</option></select></label><p id="ai-answer-basis" class="diagnostic-note"></p></div>
       <div id="ai-answer-review" hidden><button id="ai-answer-back" type="button">К ответу</button><p id="ai-answer-metrics"></p><pre id="ai-answer-diff" class="ai-answer-diff" aria-label="Различия ответа и текущего кода"></pre></div>
     </div>
-    <div class="ai-answer-footer"><button id="ai-answer-compare" type="button" disabled>Сравнить</button><button id="ai-answer-apply" type="button" disabled>Заменить код</button></div>
+    <div class="ai-answer-footer panel-ui-footer"><button id="ai-answer-compare" type="button" data-ai-icon="compare" disabled>Сравнить</button><button id="ai-answer-apply" type="button" class="ai-primary" data-ai-icon="check" disabled>Заменить код</button><button type="button" class="panel-ui-theme" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div>
   </section>
   <section id="examples-dialog" class="work-panel guide-panel panel-ui" aria-labelledby="examples-title" hidden>
     <div class="panel-heading"><h2 id="examples-title">Примеры</h2><button type="button" data-panel-help="example-guide" data-panel-icon="help" aria-label="Как использовать примеры" aria-expanded="false" aria-controls="example-guide"></button><button id="examples-close" type="button" data-panel-icon="close" aria-label="Закрыть примеры"></button></div>
@@ -447,8 +446,8 @@
     </div>
     <div class="panel-ui-footer"><span id="example-count" role="status" aria-live="polite"></span><button type="button" class="panel-ui-theme" data-panel-theme data-panel-icon="theme" aria-label="Переключить тему"></button></div>
   </section>
-  <section id="copy-dialog" class="work-panel" aria-labelledby="copy-title" hidden>
-    <div class="panel-heading"><h2 id="copy-title">Скопируйте текст</h2><button id="copy-close" type="button" aria-label="Закрыть копирование">✕</button></div>
+  <section id="copy-dialog" class="work-panel panel-ui ai-screen" aria-labelledby="copy-title" hidden>
+    <div class="panel-heading"><h2 id="copy-title">Скопируйте текст</h2><button id="copy-close" type="button" aria-label="Закрыть копирование" data-panel-icon="close"> </button></div>
     <div class="panel-body copy-body">
     <p class="dialog-copy">Браузер не разрешил автоматическое копирование. Выделенный текст можно скопировать через меню поля.</p>
     <textarea id="copy-text" readonly aria-label="Текст для копирования"></textarea>

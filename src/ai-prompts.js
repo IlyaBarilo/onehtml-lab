@@ -58,7 +58,10 @@ function updateAiProjectLabels() {
   const application = aiProject === 'application';
   document.querySelector('.ai-task-section').classList.toggle('is-application', application);
   for (const button of document.querySelectorAll('[data-ai-project]')) button.setAttribute('aria-pressed', String(button.dataset.aiProject === aiProject));
-  document.querySelector('#prompt-create').textContent = application ? 'Новое приложение' : 'Новая игра';
+  const create = document.querySelector('#prompt-create');
+  const createLabel = application ? 'Новое приложение' : 'Новая игра';
+  if (create.dataset.aiIcon) aiLabelButton(create, 'create', createLabel, 'Создать');
+  else create.textContent = createLabel;
   document.querySelector('#ai-starter-options').hidden = !application || aiMode !== 'create';
   document.querySelector('#ai-error-context strong').textContent = application ? 'Ошибка приложения' : 'Ошибка игры';
   if (aiMode === 'create') {
@@ -183,7 +186,7 @@ function setAiPreview(value) {
   document.querySelector('#ai-compose').hidden = value;
   document.querySelector('#ai-preview-body').hidden = !value;
   document.querySelector('#ai-title').textContent = value ? 'Готовый запрос' : 'ИИ и запросы';
-  aiView.textContent = value ? 'К задаче' : 'Просмотр';
+  panelIconButton(aiView, value ? 'back' : 'code', value ? 'К задаче' : 'Просмотр запроса');
   aiView.setAttribute('aria-pressed', String(value));
   if (value) aiOutput.scrollTop = 0;
 }
@@ -191,9 +194,7 @@ function setAiPreview(value) {
 function setAiNextStep(message, state = 'waiting', missingMedia = false) {
   document.querySelector('#ai-next-step').dataset.state = state;
   document.querySelector('#ai-next-status').textContent = message;
-  const copy = document.querySelector('#ai-copy-next');
-  copy.disabled = !['ready', 'copied'].includes(state);
-  copy.hidden = missingMedia;
+
   document.querySelector('#ai-media-repair').hidden = !missingMedia;
   const help = document.querySelector('#ai-next-help');
   help.hidden = state === 'error';
@@ -412,8 +413,8 @@ function initAiPrompts() {
     queueMicrotask(() => { if (!event.defaultPrevented) onAiPromptCopied(result); });
   });
   aiCopy.addEventListener('click', copyAiPrompt);
-  document.querySelector('#ai-copy-next').addEventListener('click', copyAiPrompt);
   document.querySelector('#ai-media-repair').addEventListener('click', () => openPromptMedia(true));
   document.querySelector('#error-ai').addEventListener('click', () => openAiPrompts('fix'));
   initAiSession();
+  initAiUI();
 }

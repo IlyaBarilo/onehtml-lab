@@ -16,7 +16,7 @@ for (const name of ['app', 'paste', 'clear', 'save', 'share', 'play', 'stop', 'e
   const icon = await readFile(join(root, 'src/icons', name + '.svg'), 'utf8');
   template = template.replace(`<!-- ICON:${name} -->`, () => icon.trim());
 }
-const css = (await Promise.all(['styles.css', 'library-ui.css', 'panel-ui.css'].map(name => readFile(join(root, 'src', name), 'utf8')))).join('\n');
+const css = (await Promise.all(['styles.css', 'library-ui.css', 'panel-ui.css', 'ai-ui.css'].map(name => readFile(join(root, 'src', name), 'utf8')))).join('\n');
 const files = ['format.js', 'vendor/codemirror.bundle.js', 'game-storage.js', 'library-bundle.js', 'p5-source.js', 'library-additions.js', 'library-modules.js', 'library-portable.js', 'media-models.js', 'media-assets.js', 'media-prompts.js', 'media-images.js', 'quality.js', 'sandbox.js', 'exporter.js', 'library-extract.js', 'draft.js', 'compare.js', 'comparison-game.js', 'workspace.js', 'syntax.js', 'editor.js', 'alternative-editor.js', 'desktop.js', 'readiness.js', 'diagnostics.js', 'library-preparation.js', 'library-ui.js', 'panel-ui.js', 'ai-profiles.js', 'ai-prompts.js', 'ai-session.js', 'preview-picker.js', 'example-lessons.js', 'code-guide.js', 'app.js'];
 const exampleFiles = [
   { id: 'catch-circle', platform: 'mobile', title: 'Поймай круг', description: 'Касайтесь цели на всём экране.' },

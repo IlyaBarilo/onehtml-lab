@@ -99,7 +99,7 @@ try {
       assert.equal(await page.locator('#code').inputValue(),source);
       assert.match(await page.locator('#ai-next-status').innerText(), /готов к отправке/);
       assert.match(await page.locator('#ai-next-help').innerText(), /внешнего ИИ.*Принять ответ/);
-      await page.locator('#ai-copy-next').click(); assert.equal(await page.evaluate(() => window.copied),prompt);
+      await page.locator('#ai-copy').click(); assert.equal(await page.evaluate(() => window.copied),prompt);
       assert.match(await page.locator('#ai-next-status').innerText(), /Теперь отправьте/);
       assert.match(await page.locator('#ai-next-help').innerText(), /Откройте ИИ-бота/);
       assert.equal(await page.locator('#code').inputValue(),source,'Copying the request does not edit the game');

@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { createServer } from 'node:http';
 import { chromium, webkit } from 'playwright';
 import { useNativeEditor } from './native-editor.mjs';
 const appUrl = new URL('../onehtml-lab.html', import.meta.url);
 const html = await readFile(appUrl);
+const shots = join(tmpdir(), 'onehtml-ai-cycle');
+await mkdir(shots, { recursive: true });
 const server = createServer((_, res) => res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end(html));
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const urls = [appUrl.href, `http://127.0.0.1:${server.address().port}/`];
@@ -75,6 +79,10 @@ try {
           await page.locator('#ai-prompts-open').click(); await page.locator('#ai-prompts-list button').first().click();
           assert.equal(await page.locator('#ai-prompts-text').inputValue(), prompt);
           await page.locator('#ai-prompts-source').getByText('Исходник запроса совпадает с текущей версией.', { exact: true }).waitFor();
+          await layout(page, '#ai-prompts-panel');
+          const historyFooter = await page.locator('#ai-prompts-copy').boundingBox();
+          assert(historyFooter && historyFooter.height >= 44 && historyFooter.y + historyFooter.height <= 801, 'History copy action stays reachable');
+          await page.screenshot({ path:join(shots, `${name}-${new URL(url).protocol.slice(0,-1)}-${width}-${editor}-history.png`) });
           await page.locator('#ai-prompts-copy').click(); await stored(page, 2);
           assert.equal(await page.evaluate(() => window.__copied), prompt);
           await page.locator('#ai-prompts-close').click();
@@ -92,6 +100,9 @@ try {
           await layout(page, '#ai-answer-panel');
           const applyBounds = await page.locator('#ai-answer-apply').boundingBox();
           assert(applyBounds && applyBounds.height >= 44 && applyBounds.y + applyBounds.height <= 391, 'Apply stays visible at keyboard-height viewports');
+          const diffBounds = await page.locator('#ai-answer-diff').boundingBox();
+          assert(diffBounds && diffBounds.y < applyBounds.y, 'Comparison starts above the fixed actions in a short viewport');
+          await page.screenshot({ path:join(shots, `${name}-${new URL(url).protocol.slice(0,-1)}-${width}-${editor}-answer.png`) });
           await page.setViewportSize({ width, height: 800 });
           await page.locator('#ai-answer-apply').click(); assert.equal(await page.locator('#code').inputValue(), second);
           if (editor === 'codemirror') assert.match(await page.locator('#alternative-editor .cm-content').innerText(), /Вторая версия/);

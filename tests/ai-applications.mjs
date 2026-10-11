@@ -82,7 +82,7 @@ try {
           await page.locator('#ai-task').fill('Моя выставка');
           await page.locator('[data-ai-project="application"]').click();
           assert.equal(await page.locator('#ai-task').inputValue(), 'Моя выставка', 'Type selection preserves the task');
-          assert.equal(await page.locator('#prompt-create').innerText(), 'Новое приложение');
+          assert.equal(await page.locator('#prompt-create').getAttribute('aria-label'), 'Новое приложение');
           for (const kind of ['poster', 'story', 'infographic', 'quiz']) {
             await page.locator('#ai-starter').selectOption(kind);
             assert((await page.locator('#ai-task').inputValue()).startsWith('Моя выставка'));
