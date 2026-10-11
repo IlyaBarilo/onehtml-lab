@@ -198,6 +198,7 @@
 #edit-inline.code-ui { padding:6px 8px; }
 #edit-inline.code-ui input[type=text] { background:var(--lib-bg); color:var(--lib-text); border-color:var(--lib-line); border-radius:9px; }
 #edit-inline.code-ui button, #edit-quick.code-ui button { border-radius:8px; color:var(--lib-muted); }
+#edit-quick.code-ui button { display:inline-flex; align-items:center; justify-content:center; }
 #edit-inline.code-ui button:hover:not(:disabled), #edit-quick.code-ui button:hover:not(:disabled) { background:var(--lib-selected); color:var(--lib-blue); }
 #edit-inline.code-ui [aria-expanded=true], #edit-quick.code-ui #edit-fold-structure[aria-pressed=true] { background:var(--lib-selected); color:var(--lib-blue); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--lib-blue) 25%,transparent); }
 #edit-inline.code-ui .edit-find-options { font-size:14px; gap:6px; }

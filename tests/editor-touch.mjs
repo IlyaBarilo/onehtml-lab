@@ -22,6 +22,8 @@ async function checkCodeScreens(browser,name,width) {
       assert(panel.scroll<=panel.width && panel.right-panel.theme<=16 && panel.fonts.every(n=>n>=16),'Editor settings fit and remain readable: '+JSON.stringify(panel));
       await page.screenshot({path:join(output,`${name}-${width}-${engine}-${dark?'dark':'light'}-settings.png`)});
       await page.locator('#edit-panel-find').click();await page.locator('#edit-query').fill('Строка');
+      const icons=await page.locator('#edit-quick button svg').evaluateAll(nodes=>nodes.filter(n=>n.getBoundingClientRect().width).map(n=>{const a=n.getBoundingClientRect(),b=n.closest('button').getBoundingClientRect();return {x:Math.abs(a.x+a.width/2-b.x-b.width/2),y:Math.abs(a.y+a.height/2-b.y-b.height/2)};}));
+      assert(icons.length>=5 && icons.every(p=>p.x<=.6 && p.y<=.6),'Footer icons stay centered in both editors/themes: '+JSON.stringify(icons));
       if(await page.locator('#edit-replace-box').isHidden())await page.locator('#edit-replace-toggle').click();
       await page.locator('#edit-replacement').fill('Новая строка');
       await page.setViewportSize({width,height:400});
