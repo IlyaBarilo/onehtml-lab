@@ -54,10 +54,10 @@
 .panel-ui .extraction-size { grid-column:2; grid-row:1; font-size:14px; color:var(--lib-green); }
 .panel-ui .extraction-file { grid-column:1/-1; font-size:14px; color:var(--lib-muted); overflow-wrap:anywhere; }
 .panel-ui .library-extraction-row .extraction-note { color:var(--lib-muted); }
-.panel-ui .library-extraction-footer p { color:var(--lib-muted); flex:1 1 200px; }
+.panel-ui .library-extraction-footer p { color:var(--lib-muted); flex:1 1 100%; margin:0; }
 .panel-ui .library-conversion-actions { margin-left:0; flex-wrap:wrap; }
 .panel-ui .library-extraction-footer .panel-ui-theme { margin-left:auto; }
-/* Media and export share the compact controls and palette. */
+/* Media and export. */
 .media-save-ui .media-prompt-actions { display:flex; gap:6px; padding:8px 0; }
 .media-save-ui .media-prompt-actions button:first-child { margin-right:auto; }
 .media-save-ui #media-prompt-names { height:auto; min-height:44px; padding:8px 10px; margin:4px 0; }
@@ -98,7 +98,7 @@
 #save-dialog #filename { display:block; width:100%; min-height:44px; margin:6px 0 12px; padding:8px 12px; font:16px/1.5 system-ui,sans-serif; color:var(--lib-text); background:var(--lib-bg); border:1px solid var(--lib-line); border-radius:9px; }
 #save-dialog .save-choice { padding:10px 12px; margin:8px 0; border:1px solid var(--lib-line); border-radius:10px; background:var(--lib-bg); }
 #save-dialog .save-library-option { margin:0 0 6px; font-size:16px; color:var(--lib-text); }
-#save-dialog .save-library-hint { color:var(--lib-muted); font-size:14px; line-height:1.45; overflow-wrap:anywhere; }
+#save-dialog .save-library-hint:not(.resource-warning) { color:var(--lib-muted); font-size:14px; line-height:1.45; overflow-wrap:anywhere; }
 #save-dialog #save-result-size { margin:12px 0; padding:10px 12px; background:var(--lib-selected); border-radius:9px; }
 #save-dialog .save-file-list li { border-bottom:1px solid var(--lib-line); }
 #save-dialog .save-file-list button { display:flex; justify-content:space-between; gap:12px; background:transparent; color:var(--lib-text); border-radius:8px; padding:10px 8px; }
@@ -129,9 +129,9 @@
   .panel-ui .panel-ui-footer { padding-inline:8px; gap:4px 8px; }
 }
 
-@media (max-height:400px) { .library-extraction > .panel-ui-controls { max-height:25%; } }
+@media (max-height:400px) { .library-extraction > .panel-ui-controls { max-height:56px; } .library-extraction .platform-tabs { margin-block:6px; } }
 
-/* Diagnostics keep navigation and actions outside the scrolling results. */
+/* Diagnostics. */
 .diagnostic-screen { --diag-error:#b64430; --diag-warning:#92651a; }
 .theme-dark .diagnostic-screen { --diag-error:#ffae99; --diag-warning:#ecd090; }
 .diagnostic-screen > .panel-heading { position:absolute; top:0; right:0; z-index:2; width:48px; height:48px; min-height:48px; padding:2px; border:0; }
@@ -190,7 +190,7 @@
   .diagnostic-screen .quality-check { grid-template-columns:minmax(0,1fr) 136px; }
 }
 
-/* Code tools share the panel palette without changing editor text geometry. */
+/* Code tools. */
 .code-ui .ai-label-short { display:none; }
 .code-ui .theme-sun, .theme-dark .code-ui .theme-moon { display:none; }
 .theme-dark .code-ui .theme-sun { display:block; }

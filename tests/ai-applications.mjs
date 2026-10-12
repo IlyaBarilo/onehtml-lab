@@ -42,6 +42,8 @@ async function picture(frame, png) {
 }
 async function layout(page) {
   assert(await page.locator('#prompt-create').evaluate(button => button.scrollWidth <= button.clientWidth), 'The application action label fits inside its button');
+  const wideFont=await page.addStyleTag({content:'#ai-dialog .ai-modes button { font-family:monospace; }'});
+  try {assert(await page.locator('#prompt-create').evaluate(button=>button.scrollWidth<=button.clientWidth),'Action labels also fit with wider font metrics');}finally{await wideFont.evaluate(el=>el.remove());}
   const bounds = await page.evaluate(() => {
     const footer = document.querySelector('.ai-footer').getBoundingClientRect();
     return { width: innerWidth, height: innerHeight, scroll: document.documentElement.scrollWidth,

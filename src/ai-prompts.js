@@ -60,7 +60,7 @@ function updateAiProjectLabels() {
   for (const button of document.querySelectorAll('[data-ai-project]')) button.setAttribute('aria-pressed', String(button.dataset.aiProject === aiProject));
   const create = document.querySelector('#prompt-create');
   const createLabel = application ? 'Новое приложение' : 'Новая игра';
-  if (create.dataset.aiIcon) aiLabelButton(create, 'create', createLabel, 'Создать');
+  if (create.dataset.aiIcon) aiLabelButton(create, 'create', createLabel, 'Новое');
   else create.textContent = createLabel;
   document.querySelector('#ai-starter-options').hidden = !application || aiMode !== 'create';
   document.querySelector('#ai-error-context strong').textContent = application ? 'Ошибка приложения' : 'Ошибка игры';

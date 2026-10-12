@@ -64,10 +64,27 @@ try {
       assert(await page.locator('#alternative-editor').isVisible());
       assert(await page.locator('#expert-tools').isVisible());
       assert.equal(await page.locator('#theme-toggle').getAttribute('aria-pressed'), 'true');
+      await page.locator('#ai-open').click();await page.locator('[data-ai-project="application"]').click();
+      const font=await page.addStyleTag({content:'#ai-dialog .ai-modes button { font-family:monospace; }'});
+      assert(await page.locator('#prompt-create').evaluate(el=>el.scrollWidth<=el.clientWidth),'Application label fits with wide font metrics');
+      await font.evaluate(el=>el.remove());await page.locator('#ai-close').click();
+      await page.locator('#save').click();await page.waitForFunction(()=>!document.querySelector('#confirm-save').disabled);
+      // Exercise the warning presentation without large binary fixtures in quick CI.
+      await page.locator('#save-result-size').evaluate(el=>{el.classList.add('resource-warning');el.textContent='Большой объём: 32 МБ.';});
+      assert.equal(await page.locator('#save-result-size').evaluate(el=>getComputedStyle(el).color),'rgb(234, 212, 164)','Size warnings retain the dark-theme foreground');
+      await page.locator('#save-close').click();
+      const linked='<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>';
+      await page.evaluate(value=>{window.clipboardSample=value;},linked);await page.locator('#paste').click();await page.locator('#replace-dialog button[value="replace"]').click();
+      await page.waitForFunction(value=>document.querySelector('#code').value===value,linked);
+      await page.locator('#library-extract-open').click();await page.waitForFunction(()=>!document.querySelector('#library-extraction-summary').textContent.includes('Проверяю'));
+      await page.setViewportSize({width:320,height:350});await page.waitForTimeout(50);
+      const usable=await page.locator('.library-extraction-body').evaluate(el=>{const css=getComputedStyle(el);return el.clientHeight-parseFloat(css.paddingTop)-parseFloat(css.paddingBottom);});
+      assert(usable>=80,'Library details remain readable in a short viewport: '+usable);
+      await page.locator('#library-extract-close').click();await page.setViewportSize({width,height:844});
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       assert.deepEqual(requests, [], 'A self-contained game must not require the network');
       assert.deepEqual(errors, []);
-      console.log(`${selected} ${new URL(url).protocol} ${width}: default CodeMirror, paste/edit, run/stop, exact export, import and persisted draft/settings passed.`);
+      console.log(`${selected} ${new URL(url).protocol} ${width}: default CodeMirror, paste/edit, run/stop, exact export, import, persisted draft/settings and critical panel layouts passed.`);
     } finally { await context.close(); }
   }
 } finally { await browser?.close(); server.close(); }

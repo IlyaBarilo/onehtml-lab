@@ -48,7 +48,7 @@ function aiLabelButton(button, icon, label, short = label) {
 function initAiUI() {
   for (const button of document.querySelectorAll('[data-ai-icon]')) aiLabelButton(button, button.dataset.aiIcon, button.textContent.trim(), button.dataset.short);
   const icons = { create: 'create', change: 'change', fix: 'fix', explain: 'lesson', check: 'check' };
-  const shortLabels = { create: 'Создать', change: 'Правка', fix: 'Ошибка', explain: 'Разбор', check: 'Проверка' };
+  const shortLabels = { create: 'Новое', change: 'Правка', fix: 'Ошибка', explain: 'Разбор', check: 'Проверка' };
   for (const button of document.querySelectorAll('[data-ai-mode]')) aiLabelButton(button, icons[button.dataset.aiMode], button.textContent.trim(), shortLabels[button.dataset.aiMode]);
   for (const button of document.querySelectorAll('[data-ai-project]')) aiLabelButton(button, button.dataset.aiProject === 'game' ? 'games' : 'application', button.textContent.trim());
   for (const button of document.querySelectorAll('#ai-dialog [data-platform]')) aiLabelButton(button, button.dataset.platform, button.textContent.trim());
