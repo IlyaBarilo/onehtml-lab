@@ -41,7 +41,7 @@ const matches = [...standalone.matchAll(/class="app-version"/g)];
 if (expectedVersion) {
   assert.match(expectedVersion, /^v\d+(?:\.\d+){0,3}$/);
   assert.equal(matches.length, 1, 'Release must show one version element');
-  assert(standalone.includes(`aria-label="Версия ${expectedVersion}"`));
+  assert(standalone.includes(`<span class="app-version" aria-label="Версия ${expectedVersion.slice(1)}">${expectedVersion.slice(1)}</span>`), 'Visible and accessible version must omit the tag prefix');
 } else {
   assert.equal(matches.length, 0, 'Local build must not show a version');
 }

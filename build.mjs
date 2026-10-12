@@ -7,9 +7,10 @@ const args = process.argv.slice(2);
 const releaseMatch = args.length === 1 ? /^--release-tag=(v\d+(?:\.\d+){0,3})$/.exec(args[0]) : null;
 if (args.length && !releaseMatch) throw new Error('Use: node build.mjs [--release-tag=v1.2.3]');
 const releaseTag = releaseMatch?.[1];
+const releaseVersion = releaseTag?.slice(1);
 let template = await readFile(join(root, 'src/template.html'), 'utf8');
 template = template.replace(/^([ \t]*)<!-- APP_VERSION -->\r?\n/m, (_, indent) =>
-  releaseTag ? `${indent}<span class="app-version" aria-label="Версия ${releaseTag}">${releaseTag}</span>\n` : '');
+  releaseVersion ? `${indent}<span class="app-version" aria-label="Версия ${releaseVersion}">${releaseVersion}</span>\n` : '');
 const appIcon = await readFile(join(root, 'src/icons/app.svg'), 'utf8');
 template = template.replace('<!-- APP_FAVICON -->', `data:image/svg+xml,${encodeURIComponent(appIcon)}`);
 for (const name of ['app', 'paste', 'clear', 'save', 'share', 'play', 'stop', 'expert', 'network-on', 'network-off', 'storage-on', 'storage-off', 'import', 'compare', 'history', 'library-out', 'expand', 'edit', 'split', 'diagnostics']) {
