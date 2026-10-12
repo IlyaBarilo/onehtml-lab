@@ -12,10 +12,16 @@ assert.deepEqual(grouped.sort(), [...names].sort(), 'Release groups must cover t
 const workflow = readFileSync(new URL('../.github/workflows/release.yml', import.meta.url), 'utf8');
 const matrixGroups = workflow.match(/group: \[([a-z, ]+)\]/)?.[1].split(',').map(value => value.trim());
 assert.deepEqual(matrixGroups?.sort(), Object.keys(browserGroups).sort(), 'The release workflow must run every declared group');
+const commitWorkflow=readFileSync(new URL('../.github/workflows/check.yml',import.meta.url),'utf8');
+const commitGroups=commitWorkflow.match(/group: \[([a-z, ]+)\]/)?.[1].split(',').map(value=>value.trim());
+assert.deepEqual(commitGroups?.sort(),matrixGroups,'Commit and release workflows must run the same full groups');
+assert(commitWorkflow.includes('node tests/check.mjs --group="$CHECK_GROUP"') && commitWorkflow.includes('CHECK_GROUP: ${{ matrix.group }}') && !commitWorkflow.includes('test:quick'),'Commit CI must use the full group plan');
+assert(commitWorkflow.includes('ref: ${{ github.sha }}'),'Commit checks must use the exact pushed source');
+assert(commitWorkflow.includes('fail-fast: false') && commitWorkflow.includes('max-parallel: 4') && commitWorkflow.includes('commit-check-failure-${{ matrix.group }}'),'All commit groups must report independently and retain separate artifacts');
 for (const command of full) for (const argument of command.filter(value => value.endsWith('.mjs'))) {
   assert(existsSync(new URL(`../${argument}`, import.meta.url)), `Missing planned check: ${argument}`);
 }
-for (const args of [[], ['--quick'], ...Object.keys(browserGroups).map(group => [`--group=${group}`, '--release-tag=v1.2.3'])]) {
+for (const args of [[], ['--quick'], ...Object.keys(browserGroups).map(group => [`--group=${group}`]), ...Object.keys(browserGroups).map(group => [`--group=${group}`, '--release-tag=v1.2.3'])]) {
   const child = spawnSync(process.execPath, ['tests/check.mjs', ...args, '--list'], { encoding: 'utf8', cwd: new URL('../', import.meta.url) });
   assert.equal(child.status, 0, child.stderr);
   const plan = JSON.parse(child.stdout);
@@ -31,4 +37,4 @@ for (const args of [['--quick', '--group=core'], ['--quick', '--release-tag=v1.2
   assert.notEqual(child.status, 0, 'Invalid arguments must fail before running checks');
   assert.match(child.stderr, /Use: node tests\/check\.mjs/);
 }
-console.log('Quick/release routing, complete nonduplicated groups, pinned tags and CLI argument guards passed.');
+console.log('Commit/release full groups, local quick routing, pinned sources and CLI argument guards passed.');
