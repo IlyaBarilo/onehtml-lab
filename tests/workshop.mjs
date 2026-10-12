@@ -28,21 +28,44 @@ for (const [name, engine] of engines) {
         await page.goto(url);
         await page.waitForFunction(() => !document.querySelector('#code').disabled);
         assert(await page.locator('#help-panel').isHidden(), 'No automatic help on first launch');
-        for (const size of [320, 390, 560, 580, 600, 620, 675, 700, 701, 844, 1365]) {
-          await page.setViewportSize({ width: size, height: 844 });
-          // ResizeObserver updates toolbar wrapping after viewport changes.
-          await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-          const box = await page.locator('#help-open').boundingBox();
-          assert(box.width >= 44 && box.height >= 44 && box.x >= 0 && box.x + box.width <= size);
-          assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-          const controls = await page.locator('.actions').boundingBox();
-          const brand = await page.locator('.brand').boundingBox();
-          assert(brand.y + brand.height <= controls.y + 1 || brand.x + brand.width <= controls.x, 'Brand and controls do not overlap');
-          const layout=await page.locator('.toolbar').evaluate(el=>{const css=getComputedStyle(el),buttons=el.querySelector('.actions'),b=el.querySelector('.brand').getBoundingClientRect(),a=buttons.getBoundingClientRect(),h=el.getBoundingClientRect();return {space:h.width-parseFloat(css.paddingLeft)-parseFloat(css.paddingRight)-parseFloat(css.columnGap)-b.width-a.width,sameRow:Math.abs(b.y+b.height/2-a.y-a.height/2)<1,right:Math.abs(h.right-parseFloat(css.paddingRight)-a.right),gap:getComputedStyle(buttons).justifyContent};});
-          assert(layout.space<1 || layout.sameRow,'Keep controls beside the brand whenever they fit: '+JSON.stringify({size,...layout}));
-          if(size>=600)assert(layout.sameRow,'The default toolbar must fit one row from 600 px');
-          assert(layout.right<1 && layout.gap===(layout.sameRow?'flex-end':'space-evenly'),'Controls stay right aligned in one row and spread in the second');
+        const actualVersion = await page.locator('.app-version').count() ? await page.locator('.app-version').textContent() : null;
+        for (const version of [null, actualVersion || '0.2.1', '123.45.678']) {
+          const wideFont = version === '123.45.678' ? await page.addStyleTag({ content: '.toolbar { font-family:monospace; }' }) : null;
+          // Also cover the release label during local checks of an unversioned build.
+          await page.evaluate(version => {
+            let label = document.querySelector('.app-version');
+            if (version === null) { label?.remove(); return; }
+            if (!label) { label = document.createElement('span'); label.className = 'app-version'; document.querySelector('#help-open').before(label); }
+            label.textContent = version; label.setAttribute('aria-label', 'Версия ' + version);
+          }, version);
+          for (const size of [320, 390, 560, 580, 600, 620, 675, 700, 701, 844, 1365]) {
+            await page.setViewportSize({ width: size, height: 844 });
+            // ResizeObserver updates toolbar wrapping after viewport changes.
+            await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+            const box = await page.locator('#help-open').boundingBox();
+            assert(box.width >= 44 && box.height >= 44 && box.x >= 0 && box.x + box.width <= size);
+            assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+            const controls = await page.locator('.actions').boundingBox();
+            const brand = await page.locator('.brand').boundingBox();
+            assert(brand.y + brand.height <= controls.y + 1 || brand.x + brand.width <= controls.x, 'Brand and controls do not overlap');
+            const layout=await page.locator('.toolbar').evaluate(el=>{
+              const css=getComputedStyle(el),buttons=el.querySelector('.actions'),b=el.querySelector('.brand').getBoundingClientRect(),a=buttons.getBoundingClientRect(),h=el.getBoundingClientRect();
+              // Measure browser intrinsic width rather than the expanded second row.
+              const natural=buttons.cloneNode(true);natural.inert=true;natural.style.cssText='position:absolute;visibility:hidden;width:max-content;';el.append(natural);
+              const required=b.width+natural.getBoundingClientRect().width+parseFloat(css.columnGap);natural.remove();
+              return {required,available:h.width-parseFloat(css.paddingLeft)-parseFloat(css.paddingRight),sameRow:Math.abs(b.y+b.height/2-a.y-a.height/2)<1,right:Math.abs(h.right-parseFloat(css.paddingRight)-a.right),gap:getComputedStyle(buttons).justifyContent};
+            });
+            if (layout.required < layout.available - 1) assert(layout.sameRow,'Keep controls beside the brand whenever they fit: '+JSON.stringify({size,version,...layout}));
+            if (layout.required > layout.available + 1) assert(!layout.sameRow,'Wrap controls when the title and version need more space: '+JSON.stringify({size,version,...layout}));
+            assert(layout.right<1 && layout.gap===(layout.sameRow?'flex-end':'space-evenly'),'Controls stay right aligned in one row and spread in the second');
+          }
+          await wideFont?.evaluate(el => el.remove());
         }
+        await page.evaluate(version => {
+          const label = document.querySelector('.app-version');
+          if (version === null) label?.remove();
+          else { label.textContent = version; label.setAttribute('aria-label', 'Версия ' + version); }
+        }, actualVersion);
         await page.setViewportSize({ width, height: 844 });
         await page.locator('#help-open').click();
         assert(await page.locator('#help-panel').isVisible(), 'Help in simple mode');

@@ -19,6 +19,7 @@ jobs:
         group: [core, ai, libraries, media]
     env:
       CHECK_GROUP: ${{ matrix.group }}
+      RELEASE_TAG: v0.0.0
     steps:
       - uses: actions/checkout@v7
         with:
@@ -29,7 +30,7 @@ jobs:
           package-manager-cache: false
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: node tests/check.mjs --group="$CHECK_GROUP"
+      - run: node tests/check.mjs --group="$CHECK_GROUP" --release-tag="$RELEASE_TAG"
         env:
           ONEHTML_TEST_RESULTS: ${{ runner.temp }}/onehtml-check-results
       - name: Сохранить диагностику сбоя проверок

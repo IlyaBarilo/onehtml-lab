@@ -19,6 +19,9 @@ const commitWorkflow=readFileSync(new URL('../.github/workflows/check.yml',impor
 const commitGroups=commitWorkflow.match(/group: \[([a-z, ]+)\]/)?.[1].split(',').map(value=>value.trim());
 assert.deepEqual(commitGroups?.sort(),matrixGroups,'Commit and release workflows must run the same full groups');
 assert(commitWorkflow.includes('node tests/check.mjs --group="$CHECK_GROUP"') && commitWorkflow.includes('CHECK_GROUP: ${{ matrix.group }}') && !commitWorkflow.includes('test:quick'),'Commit CI must use the full group plan');
+const releaseCommand='node tests/check.mjs --group="$CHECK_GROUP" --release-tag="$RELEASE_TAG"';
+assert(commitWorkflow.includes(releaseCommand) && workflow.includes(releaseCommand),'Commits and releases must both test a release-format artifact');
+assert(commitWorkflow.includes('RELEASE_TAG: v0.0.0'),'Commit CI must include the release version label without publishing a release');
 assert(commitWorkflow.includes('ref: ${{ github.sha }}'),'Commit checks must use the exact pushed source');
 assert(commitWorkflow.includes('fail-fast: false') && commitWorkflow.includes('max-parallel: 4') && commitWorkflow.includes('commit-check-failure-${{ matrix.group }}'),'All commit groups must report independently and retain separate artifacts');
 for (const command of full) for (const argument of command.filter(value => value.endsWith('.mjs'))) {
