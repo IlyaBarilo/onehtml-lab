@@ -87,10 +87,12 @@ try {
             if (editor === 'native') await page.locator('#editor-toggle').click();
             if (dark) await page.locator('#theme-toggle').click();
             await page.locator('#expert-toggle').click();
-            assert.equal(await page.locator('#examples-open').innerText(), 'Примеры');
+            const examplesButton = page.getByRole('button', { name: 'Примеры', exact: true });
+            assert(await examplesButton.isVisible(), 'The icon-only phone button retains its accessible name');
+            assert.equal(await examplesButton.locator('svg').count(), 1);
 
             async function openCatalogue(category) {
-              await page.locator('#examples-open').click();
+              await examplesButton.click();
               await page.locator(`[data-example-category="${category}"]`).click();
               if (category === 'games') await page.locator('#examples-dialog [data-platform="mobile"]').click();
             }
