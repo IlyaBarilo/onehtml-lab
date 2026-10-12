@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const scratch = await mkdtemp(join(tmpdir(), 'onehtml-lab-clean-'));
-const textExtensions = new Set(['.mjs', '.js', '.html', '.css', '.svg', '.json', '.txt']);
+const textExtensions = new Set(['.mjs', '.js', '.html', '.css', '.svg', '.json', '.txt', '.yml']);
 async function convertCheckoutToLF(folder) {
   for (const entry of await readdir(folder, { withFileTypes: true })) {
     const path = join(folder, entry.name);
@@ -21,7 +21,7 @@ try {
   for (const file of ['build.mjs', 'package.json', 'LICENSE']) await cp(join(root, file), join(scratch, file));
   for (const file of (await readdir(join(root, 'tests'))).filter(file => file.endsWith('.mjs'))) await cp(join(root, 'tests', file), join(scratch, 'tests', file));
   await mkdir(join(scratch, '.github', 'workflows'), { recursive: true });
-  await cp(join(root, '.github', 'workflows', 'release.yml'), join(scratch, '.github', 'workflows', 'release.yml'));
+  await cp(join(root, '.github', 'workflows'), join(scratch, '.github', 'workflows'), { recursive: true });
   const scripts = [['build.mjs'], ['tests/build.mjs'], ['tests/paste.mjs'], ['tests/share.mjs'], ['tests/library-paths.mjs'], ['tests/library-package.mjs'], ['tests/library-extract.mjs'], ['tests/media-assets-unit.mjs'], ['tests/model-assets-unit.mjs'], ['tests/physics-unit.mjs'], ['tests/media-prompts-unit.mjs'], ['tests/media-images-unit.mjs'], ['tests/ai-applications-unit.mjs'], ['tests/ai-session-unit.mjs'], ['tests/ai-profiles-unit.mjs'], ['tests/check-plan-test.mjs']];
   for (const script of scripts) {
     const result = spawnSync(process.execPath, script, { cwd: scratch, encoding: 'utf8' });

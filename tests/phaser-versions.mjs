@@ -23,6 +23,11 @@ for (const [url, folder, codePath, licensePath] of [
   const license = await readFile(new URL(`../node_modules/${folder}/${licensePath}`, import.meta.url), 'utf8');
   const probe = folder.startsWith('phaser') ? `
 window.Phaser.Game = new Proxy(window.Phaser.Game, { construct(target, args) {
+  const scene = args[0].scene, create = scene.create;
+  scene.create = function (...values) {
+    create.apply(this, values);
+    this.testInitialState = { x: this.player?.x, coins: this.coins?.getLength(), enemies: this.enemies?.getLength(), health: this.health, checkpoint: this.checkpoint };
+  };
   const game = Reflect.construct(target, args); (window.testGames ||= []).push(game); return game;
 } });` : '';
   fixture = fixture.replace(`<script src="${url}"></script>`, () => `<script>\n/*\n${license}\n*/\n${(source + probe).replace(/<\/script/gi, '<\\/script')}\n</script>`);
@@ -39,8 +44,7 @@ async function scene(page, mode) {
   assert.equal(await page.locator(`[data-mode="${mode}"]`).getAttribute('aria-pressed'), 'true');
   return page.evaluate(() => {
     const game = window.testGames.at(-1), s = game.scene.getScenes(true)[0];
-    return { x: s.player?.x, coins: s.coins?.getLength(), enemies: s.enemies?.getLength(),
-      health: s.health, checkpoint: s.checkpoint, renderer: game.renderer.type };
+    return { ...s.testInitialState, renderer: game.renderer.type };
   });
 }
 async function geometry(page) {
@@ -71,17 +75,33 @@ async function controls(page, touch) {
   try { await page.waitForFunction(x => window.testGames.at(-1).scene.getScenes(true)[0].player.x > x + 20, x); }
   finally { await page.keyboard.up('ArrowRight'); }
   await page.waitForFunction(() => window.testGames.at(-1).scene.getScenes(true)[0].player.body.blocked.down);
-  const jump = page.locator('[data-phaser-action="jump"]');
-  // Observe the brief jump state before the input action; a slow click can outlast it.
-  await Promise.all([
-    page.waitForFunction(() => window.testGames.at(-1).scene.getScenes(true)[0].jumps === 1),
-    touch ? jump.tap() : jump.click()
-  ]);
-  await page.locator('#scene').focus();
-  // Release only after the game's next input frame; a press can finish between slow frames.
-  await page.keyboard.down('Space');
-  try { await page.waitForFunction(() => window.testGames.at(-1).scene.getScenes(true)[0].jumps === 2); }
-  finally { await page.keyboard.up('Space'); }
+  // Keep the airborne state between real pointer and keyboard inputs. On a slow
+  // renderer, the browser/driver round trip can otherwise outlast the whole jump.
+  await page.evaluate(() => {
+    const s = window.testGames.at(-1).scene.getScenes(true)[0], jump = s.jump;
+    s.testJumpStates = []; s.testOriginalJump = jump;
+    s.jump = function (...args) {
+      jump.apply(this, args);
+      this.testJumpStates.push({ jumps: this.jumps, velocity: this.player.body.velocity.y });
+      if (this.jumps === 1) this.physics.world.pause();
+    };
+  });
+  try {
+    const jump = page.locator('[data-phaser-action="jump"]');
+    await (touch ? jump.tap() : jump.click());
+    await page.waitForFunction(() => window.testGames.at(-1).scene.getScenes(true)[0].testJumpStates.length === 1);
+    await page.locator('#scene').focus();
+    await page.keyboard.down('Space');
+    try { await page.waitForFunction(() => window.testGames.at(-1).scene.getScenes(true)[0].testJumpStates.length === 2); }
+    finally { await page.keyboard.up('Space'); }
+    assert.deepEqual(await page.evaluate(() => window.testGames.at(-1).scene.getScenes(true)[0].testJumpStates),
+      [{ jumps: 1, velocity: -430 }, { jumps: 2, velocity: -380 }], 'Pointer and keyboard must perform first and second jumps');
+  } finally {
+    await page.evaluate(() => {
+      const s = window.testGames.at(-1).scene.getScenes(true)[0];
+      s.jump = s.testOriginalJump; delete s.testOriginalJump; s.physics.world.resume();
+    });
+  }
 }
 async function renderedFrame(page) {
   const url = await page.evaluate(() => new Promise(resolve => {

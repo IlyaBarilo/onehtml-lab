@@ -30,6 +30,8 @@ for (const [name, engine] of engines) {
         assert(await page.locator('#help-panel').isHidden(), 'No automatic help on first launch');
         for (const size of [320, 390, 560, 580, 600, 620, 675, 700, 701, 844, 1365]) {
           await page.setViewportSize({ width: size, height: 844 });
+          // ResizeObserver updates toolbar wrapping after viewport changes.
+          await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
           const box = await page.locator('#help-open').boundingBox();
           assert(box.width >= 44 && box.height >= 44 && box.x >= 0 && box.x + box.width <= size);
           assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
@@ -127,7 +129,8 @@ for (const [name, engine] of engines) {
         assert.deepEqual(requests, [], 'The offline exercise makes no HTTP requests');
         console.log(`${name} ${width}: help, offline exercise, simulated AI repair, comparison, restore and downloaded game passed.`);
       } catch (error) {
-        await page.screenshot({ path: join(output, `${name}-${width}-failure.png`) });
+        try { await page.screenshot({ path: join(output, `${name}-${width}-failure.png`) }); }
+        catch (captureError) { console.error('Failure screenshot unavailable:', captureError.message); }
         throw error;
       } finally { await context.close(); }
     }
