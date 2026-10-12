@@ -55,7 +55,8 @@
 .panel-ui .extraction-file { grid-column:1/-1; font-size:14px; color:var(--lib-muted); overflow-wrap:anywhere; }
 .panel-ui .library-extraction-row .extraction-note { color:var(--lib-muted); }
 .panel-ui .library-extraction-footer p { color:var(--lib-muted); flex:1 1 100%; margin:0; }
-.panel-ui .library-conversion-actions { margin-left:0; flex-wrap:wrap; }
+.panel-ui .library-conversion-actions { margin-left:0; flex:1; min-width:0; }
+.library-conversion-actions button { flex:1; min-width:0; }
 .panel-ui .library-extraction-footer .panel-ui-theme { margin-left:auto; }
 /* Media and export. */
 .media-save-ui .media-prompt-actions { display:flex; gap:6px; padding:8px 0; }

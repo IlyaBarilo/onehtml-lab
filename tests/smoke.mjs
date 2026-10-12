@@ -78,8 +78,21 @@ try {
       await page.waitForFunction(value=>document.querySelector('#code').value===value,linked);
       await page.locator('#library-extract-open').click();await page.waitForFunction(()=>!document.querySelector('#library-extraction-summary').textContent.includes('Проверяю'));
       await page.setViewportSize({width:320,height:350});await page.waitForTimeout(50);
-      const usable=await page.locator('.library-extraction-body').evaluate(el=>{const css=getComputedStyle(el);return el.clientHeight-parseFloat(css.paddingTop)-parseFloat(css.paddingBottom);});
-      assert(usable>=80,'Library details remain readable in a short viewport: '+usable);
+      // Wide metrics reproduce the extra footer row seen with Linux system fonts.
+      const extractionFont=await page.addStyleTag({content:'#library-extraction { font-family:monospace; } #library-extraction-summary { line-height:1.5; } #library-extraction .library-conversion-actions button { letter-spacing:1px; }'});
+      for(const mode of ['embed','cdn','files']) {
+        await page.locator(`[data-library-mode="${mode}"]`).click();
+        await page.waitForFunction(()=>!document.querySelector('#library-extraction-summary').textContent.includes('Проверяю'));
+        const layout=await page.locator('#library-extraction').evaluate(el=>{
+          const body=el.querySelector('.library-extraction-body'),css=getComputedStyle(body);
+          const actions=el.querySelector('.library-conversion-actions').getBoundingClientRect(),theme=el.querySelector('.panel-ui-theme').getBoundingClientRect();
+          return {usable:body.clientHeight-parseFloat(css.paddingTop)-parseFloat(css.paddingBottom),actionsCenter:(actions.top+actions.bottom)/2,themeCenter:(theme.top+theme.bottom)/2,themeBottom:theme.bottom,overflow:el.scrollWidth>el.clientWidth};
+        });
+        assert(layout.usable>=80,'Library details remain readable in a short viewport: '+JSON.stringify({mode,...layout}));
+        assert(Math.abs(layout.actionsCenter-layout.themeCenter)<1,'Library actions and theme stay on the same footer row: '+JSON.stringify(layout));
+        assert(layout.themeBottom<=350&&!layout.overflow,'Conversion controls fit the viewport');
+      }
+      await extractionFont.evaluate(el=>el.remove());
       await page.locator('#library-extract-close').click();await page.setViewportSize({width,height:844});
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       assert.deepEqual(requests, [], 'A self-contained game must not require the network');

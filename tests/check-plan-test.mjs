@@ -6,6 +6,9 @@ import { browserGroups, parseCheckOptions, checkCommands } from './check-plan.mj
 const full = checkCommands(parseCheckOptions([]));
 const names = full.filter(command => command[0] === 'tests/run-browser.mjs').map(command => command[1]);
 assert.equal(new Set(names).size, names.length, 'Full browser checks must not be duplicated');
+for(const command of checkCommands(parseCheckOptions(['--quick'])).filter(command=>command[0]==='tests/run-browser.mjs')) {
+  assert(names.includes(command[1]),'Full CI must include every quick browser check: '+command[1]);
+}
 const grouped = Object.keys(browserGroups).flatMap(group => checkCommands(parseCheckOptions([`--group=${group}`])))
   .filter(command => command[0] === 'tests/run-browser.mjs').map(command => command[1]);
 assert.deepEqual(grouped.sort(), [...names].sort(), 'Release groups must cover the complete browser suite exactly once');
