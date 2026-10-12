@@ -193,7 +193,10 @@ try {
             await page.locator('#ai-history').check(); await prepared();
             const geometry = await page.locator('[data-ai-mode]').evaluateAll(els => els.map(el => { const r = el.getBoundingClientRect(); return { x: r.x, right: r.right, y: r.y, height: r.height }; }));
             assert(geometry.every(r => r.x >= 0 && r.right <= width + 1 && r.height >= 44));
-            if (width < 800) assert.equal(new Set(geometry.map(r => r.y)).size, 2);
+            assert.equal(geometry.length, 5, 'All AI modes remain available');
+            assert(geometry.every(r => Math.abs(r.y - geometry[0].y) < 1), 'AI modes use one compact row on phone and desktop');
+            assert(geometry.every((r, index) => !index || r.x >= geometry[index - 1].right - 1), 'AI mode buttons must not overlap');
+            assert.equal(await page.locator('[data-ai-mode] svg').count(), 5, 'Every AI mode retains its icon');
             await page.screenshot({ path: join(output, `${name}-${protocol}-${width}-${editor}-check.png`) });
             await page.locator('#ai-close').click(); await page.locator('#edit-close').click();
             // Removing the chosen baseline falls back to an existing version, never a stale copy.
