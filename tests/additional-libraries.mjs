@@ -42,7 +42,27 @@ try {for(const [name,type]of engines){const browser=await type.launch();try{
  for(const width of [320,1365]){const context=await browser.newContext({viewport:{width,height:850},hasTouch:width<500});let requests=0;await context.route('https://**/*',r=>{requests++;return r.abort();});
  for(const id of Object.keys(examples)){const demo=await context.newPage(),errors=[];demo.setDefaultTimeout(25000);demo.on('pageerror',e=>errors.push(e.message));await demo.goto(pathToFileURL(join(scratch,id+'.html')).href);
  if(id==='generative-art'){await demo.locator('button[data-engine="p5"]:enabled').waitFor();await demo.locator('#pause').click();await demo.locator('#palette').selectOption('1');await demo.locator('button[data-engine="p5"]').click();await demo.locator('#stage[data-engine="p5"]').waitFor();const rgba=await demo.locator('#surface canvas').evaluate(c=>[...c.getContext('2d').getImageData(0,0,1,1).data]);assert.equal(rgba[3],255);assert.equal(await demo.locator('#palette').inputValue(),'1');await demo.locator('#seed').click();assert.equal(await demo.locator('#stage').getAttribute('data-seed'),'8');await demo.locator('button[data-engine="canvas"]').click();await demo.locator('#stage[data-engine="canvas"]').waitFor();const download=demo.waitForEvent('download');await demo.locator('#save-image').click();assert.equal((await download).suggestedFilename(),'composition.png');}
- if(id==='physics-comparison'){for(const mode of ['cannon','rapier','havok']){await demo.locator('button[data-engine="'+mode+'"]:enabled').waitFor();await demo.locator('button[data-engine="'+mode+'"]').click();await demo.locator('#stage[data-engine="'+mode+'"][data-ready="true"]').waitFor();await demo.locator('#fire').click();assert.equal(await demo.locator('#shots').textContent(),'1');await demo.waitForFunction(()=>Number(document.querySelector('#fallen').textContent)>0,{},{timeout:10000});await demo.locator('#pause').click();assert.equal(await demo.locator('#pause').getAttribute('aria-pressed'),'true');await demo.locator('#pause').click();}}
+  if(id==='physics-comparison'){
+    // A default-mass tower can absorb one impact without reaching the HUD's
+    // displacement threshold. Use the same lighter tower for every engine.
+    await demo.locator('#mass').evaluate(field=>{field.value='0.5';field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}));});
+    assert.equal(await demo.locator('#mass-value').textContent(),'0,5 кг');
+    for(const mode of ['cannon','rapier','havok']){
+      await demo.locator('button[data-engine="'+mode+'"]:enabled').waitFor();
+      await demo.locator('button[data-engine="'+mode+'"]').click();
+      await demo.locator('#stage[data-engine="'+mode+'"][data-ready="true"]').waitFor();
+      assert.equal(await demo.locator('#mass').inputValue(),'0.5','Physics engines share the chosen mass');
+      assert.equal(await demo.locator('#fallen').textContent(),'0','A new tower must not be displaced before the shot');
+      await demo.locator('#fire').click();assert.equal(await demo.locator('#shots').textContent(),'1');
+      try {await demo.waitForFunction(()=>Number(document.querySelector('#fallen').textContent)>0,{},{timeout:10000});}
+      catch(error){
+        const state=await demo.evaluate(()=>({status:document.querySelector('#status').textContent,fps:document.querySelector('#fps').textContent,fallen:document.querySelector('#fallen').textContent,mass:document.querySelector('#mass').value,hidden:document.hidden,
+          ball:BABYLON.EngineStore.LastCreatedScene.getMeshByName('ball')?.position.asArray()}));
+        throw Error(`${mode} ${width}: a thrown ball must move the tower: ${JSON.stringify(state)}`,{cause:error});
+      }
+      await demo.locator('#pause').click();assert.equal(await demo.locator('#pause').getAttribute('aria-pressed'),'true');await demo.locator('#pause').click();
+    }
+  }
  if(id==='model-exhibit'){await demo.locator('body[data-ready="true"]').waitFor();await demo.locator('button[slot="hotspot-body"]').click();assert((await demo.locator('#caption').textContent()).includes('Корпус'));await demo.locator('#rotate').click();assert.equal(await demo.locator('#rotate').getAttribute('aria-pressed'),'true');}
  if(id==='virtual-exhibition'){await demo.locator('body[data-ready="true"]').waitFor();await demo.locator('[data-exhibit="2"]').click();assert.equal(await demo.locator('#stage').getAttribute('data-exhibit'),'2');await demo.locator('#stage').focus();await demo.keyboard.press('1');assert.equal(await demo.locator('#stage').getAttribute('data-exhibit'),'0');}
   assert(await demo.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),id+' must fit phone width');await demo.locator('#help-toggle').click();assert(await demo.locator('#help').isVisible());if(id==='physics-comparison')await demo.evaluate(()=>new Promise(resolve=>BABYLON.EngineStore.LastCreatedScene.onAfterRenderObservable.addOnce(()=>resolve())));await demo.screenshot({path:join(scratch,`${name}-${width}-${id}.png`)});assert.deepEqual(errors,[],id);await demo.close();}
